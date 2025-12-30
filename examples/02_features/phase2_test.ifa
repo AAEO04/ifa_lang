@@ -1,0 +1,37 @@
+// Demo of Developer Experience Features
+// 1. Regex (Ìká)
+// 2. Dates (Ìwòrì)
+// 3. Env Vars (Ogbè)
+
+ìbà std.ika;
+ìbà std.iwori;
+ìbà std.ogbe;
+ìbà std.okanran; // Assertions
+
+// 1. REGEX TEST
+ayanmọ email = "user@example.com";
+ayanmọ is_valid = Ìká.wá(r"^[\w\.]+@[\w\.]+$", email);
+Ìrosù.fọ̀("Email Valid: " + is_valid);
+Òkànràn.jé(is_valid, "Email regex failed");
+
+ayanmọ domain = Ìká.pọ̀(r"@([\w\.]+)", email);
+Ìrosù.fọ̀("Domain: " + domain);
+Òkànràn.jé(domain == "example.com", "Domain extraction failed");
+
+
+// 2. DATE TEST
+ayanmọ today = Ìwòrì.ọjọ́("%Y-%m-%d");
+Ìrosù.fọ̀("Today: " + today);
+// We can't assert exact date easily without logic, but check length
+Òkànràn.jé(Ìká.kà(today) == 10, "Date format length error");
+
+
+// 3. ENV TEST
+// Let's assume PATH exists
+ayanmọ path = Ogbè.àyíká("PATH");
+Ìrosù.fọ̀("PATH found: " + (Ìká.kà(path) > 0));
+
+// 4. TEST FAILURE CASE (Commented out to pass)
+// Òkànràn.jé(false, "This should fail the test runner");
+
+ase;

@@ -1,0 +1,43 @@
+// ═══════════════════════════════════════════════════════════════════
+// PANIC HANDLER TEST - Crash Recovery Demo
+// ═══════════════════════════════════════════════════════════════════
+// This demonstrates the Opon's Panic Handler feature.
+// When the program crashes, it automatically dumps the flight recorder
+// showing the last actions before the crash.
+// ═══════════════════════════════════════════════════════════════════
+
+import std.log;
+import std.math;
+
+// 1. Normal operations (these get recorded)
+Log.fo("Starting crash test...");
+Log.fo("Step 1: Initializing");
+
+let x: Int = 100;
+let y: Int = 50;
+Log.fo("Step 2: Variables set");
+
+Math.add(x, y);
+Log.fo("Step 3: Math completed");
+
+// 4. Simulate network call
+Net.ran("Sending data to server...");
+Log.fo("Step 4: Network call made");
+
+// 5. Store something in memory
+File.fi(42, x);
+Log.fo("Step 5: Saved to memory");
+
+// ═══════════════════════════════════════════════════════════════════
+// THE CRASH MOMENT
+// When this panics, the flight recorder will dump automatically!
+// ═══════════════════════════════════════════════════════════════════
+Log.fo("Step 6: About to crash...");
+
+// Uncomment one of these to test crash:
+// Ogunda.ge(x, 0);  // Division by zero!
+// panic!("Test panic");
+
+// Normal end
+Log.fo("No crash occurred (comment out line above to test)");
+end;

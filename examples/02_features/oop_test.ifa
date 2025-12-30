@@ -1,0 +1,36 @@
+# OOP Test in Ifá-Lang
+# Demonstrates instantiation via dá constructor
+
+ìbà Ìrosù;
+
+# Define a Dog class
+odù Dog {
+    ayanmọ name = "";
+    ayanmọ hunger = 100;
+
+    # Constructor (dá = Create)
+    ese dá(n) {
+        name = n;
+    }
+
+    # Method: speak
+    ese speak() {
+        Ìrosù.fọ̀(name + " says Woof!");
+    }
+
+    # Method: eat
+    ese eat() {
+        hunger = hunger - 10;
+    }
+}
+
+# Create an instance
+ayanmọ my_dog = Dog.dá("Bingo");
+
+# Call a method on the instance
+my_dog.speak();
+
+# Access a field
+Ìrosù.fọ̀("Hunger level: " + my_dog.hunger);
+
+àṣẹ;

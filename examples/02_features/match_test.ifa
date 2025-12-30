@@ -1,0 +1,24 @@
+# Match Statement Test (yàn)
+# Demonstrates pattern matching similar to Rust's match
+
+ìbà Ìrosù;
+
+ayanmọ status = 200;
+
+yàn (status) {
+    200 => Ìrosù.fọ̀("✅ Success - Request completed");
+    404 => Ìrosù.fọ̀("❌ Not Found - Resource missing");
+    500 => Ìrosù.fọ̀("💥 Server Error - Internal failure");
+    _   => Ìrosù.fọ̀("❓ Unknown status code");
+}
+
+# Test with different value
+ayanmọ day = "Monday";
+
+match (day) {
+    "Monday" => Ìrosù.fọ̀("Start of the week!");
+    "Friday" => Ìrosù.fọ̀("TGIF!");
+    _        => Ìrosù.fọ̀("Regular day");
+}
+
+àṣẹ;

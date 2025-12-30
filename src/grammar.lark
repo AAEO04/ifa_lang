@@ -1,0 +1,304 @@
+// ============================================================================
+// IFÁ-LANG FORMAL GRAMMAR
+// EBNF Specification for Lark Parser
+// ============================================================================
+// 
+// This grammar defines the complete syntax for Ifá-Lang.
+// Use with Lark: https://lark-parser.readthedocs.io/
+//
+// Key Concepts:
+//   - ìbà     : Import statement
+//   - ayanmo  : Variable declaration (destiny)
+//   - odù     : Class/module definition
+//   - ese     : Method/function definition
+//   - ase/àṣẹ : End of block/program
+// ============================================================================
+
+// ============================================================================
+// TOP-LEVEL: A program is a sequence of statements
+// ============================================================================
+start: statement+
+
+// ============================================================================
+// STATEMENTS
+// ============================================================================
+statement: import_stmt
+         | taboo_stmt
+         | var_decl
+         | assignment_stmt
+         | odu_def
+         | ese_def
+         | instruction
+         | if_stmt
+         | while_stmt
+         | for_stmt
+         | try_stmt
+         | match_stmt
+         | ase_block
+         | return_stmt
+         | end_stmt
+         | COMMENT
+
+// ============================================================================
+// 1. IMPORTS (ìbà std.otura;)
+// ============================================================================
+import_stmt: IMPORT_KW module_path ";"
+module_path: NAME ("." NAME)*
+
+// ============================================================================
+// 1b. ÈÈWỌ̀ (TABOO) - Architectural Constraints
+// ============================================================================
+// Forbidden patterns: èèwọ̀: Ọ̀ṣẹ́(UI) -> Òdí(DB);
+// Block all from module: èèwọ̀: Òtúrá.*;
+taboo_stmt: TABOO_KW ":" taboo_rule ";"
+taboo_rule: taboo_source "->" taboo_target    // Specific dependency ban
+          | taboo_source "." "*"               // Block all calls from module
+taboo_source: odu_name "(" NAME ")"           // Domain(Context)
+            | odu_name                         // Just domain
+taboo_target: odu_name "(" NAME ")"
+            | odu_name
+
+// ============================================================================
+// 1c. ÀṢẸ (AUTHORITY) - Critical/Atomic Block
+// ============================================================================
+// Atomic execution with auto-rollback on failure
+ase_block: ASE_BLOCK_KW "{" statement* "}"
+
+// ============================================================================
+// 2. VARIABLE DECLARATIONS with Optional Type Hints (Orí System)
+// ============================================================================
+// Dynamic (Default):   ayanmo x = 50;           // Wraps in IfaValue
+// Destined (Typed):    ayanmo x: Int = 50;      // Native i64 (fast!)
+//                      ayanmo name: Str = "Adé"; // Native String
+var_decl: VAR_KW NAME type_hint? "=" expression ";"
+
+// Type hints for optional static typing
+type_hint: ":" type_name
+type_name: TYPE_INT         // Int, Number
+         | TYPE_FLOAT       // Float, Ida
+         | TYPE_STR         // Str, Oro
+         | TYPE_BOOL        // Bool, Otito
+         | TYPE_LIST        // List, Akojo
+         | TYPE_MAP         // Map, Aworan
+         | TYPE_ANY         // Any (dynamic)
+
+// ============================================================================
+// 2b. ASSIGNMENT (x = 5; or arr[0] = 5;)
+// ============================================================================
+assignment_stmt: (NAME | index_access) "=" expression ";"
+
+// ============================================================================
+// 3. INSTRUCTIONS / METHOD CALLS (Otura.ran("hello");)
+// ============================================================================
+instruction: odu_call ";"
+odu_call: odu_name "." ese_name "(" arguments? ")"
+
+// Odù names (the 16 principal domains)
+odu_name: ODU_OGBE | ODU_OYEKU | ODU_IWORI | ODU_ODI
+        | ODU_IROSU | ODU_OWONRIN | ODU_OBARA | ODU_OKANRAN
+        | ODU_OGUNDA | ODU_OSA | ODU_IKA | ODU_OTURUPON
+        | ODU_OTURA | ODU_IRETE | ODU_OSE | ODU_OFUN
+        | NAME  // Allow ASCII fallbacks
+
+ese_name: NAME
+
+// ============================================================================
+// 4. ARGUMENTS & EXPRESSIONS
+// ============================================================================
+arguments: expression ("," expression)*
+
+expression: or_expr
+
+or_expr: and_expr (OR_OP and_expr)*
+and_expr: not_expr (AND_OP not_expr)*
+not_expr: NOT_OP not_expr | comparison
+comparison: arith_expr (COMP_OP arith_expr)?
+arith_expr: term ((PLUS | MINUS) term)*
+term: factor ((STAR | SLASH | PERCENT) factor)*
+factor: (PLUS | MINUS)? atom
+
+atom: odu_call
+    | list_literal
+    | map_literal
+    | index_access
+    | NUMBER
+    | FLOAT
+    | STRING
+    | BOOLEAN
+    | NAME
+    | "(" expression ")"
+
+// ============================================================================
+// 4b. DATA STRUCTURES (Ògúndá - Arrays, Òdí - Maps)
+// ============================================================================
+// List/Array: [1, 2, 3]
+list_literal: "[" [expression ("," expression)*] "]"
+
+// HashMap/Dict: { "key": value, "key2": value2 }
+map_literal: "{" [map_entry ("," map_entry)*] "}"
+map_entry: (STRING | NAME) ":" expression
+
+// Index access: arr[0] or map["key"]
+index_access: NAME "[" expression "]"
+
+// ============================================================================
+// 5. ODÙ DEFINITIONS (Classes)
+// ============================================================================
+odu_def: [PUBLIC_MOD] ODU_KW NAME "{" odu_body "}"
+odu_body: (ese_def | var_decl | COMMENT)*
+
+// ============================================================================
+// 6. ESE DEFINITIONS (Methods/Functions)
+// ============================================================================
+ese_def: [PUBLIC_MOD] ESE_KW NAME "(" params? ")" "{" statement* "}"
+params: param ("," param)*
+param: NAME (":" type_hint)?
+type_hint: NAME
+
+// ============================================================================
+// 7. CONTROL FLOW
+// ============================================================================
+if_stmt: IF_KW expression "{" statement* "}" else_clause?
+else_clause: ELSE_KW "{" statement* "}"
+
+while_stmt: WHILE_KW expression "{" statement* "}"
+
+// For loop: fun i ninu items { ... } (for i in items)
+for_stmt: FOR_KW NAME FOR_IN_KW expression "{" statement* "}"
+
+// Try/Catch: dida_ewu { ... } kaka_ewu (err) { ... }
+try_stmt: TRY_KW "{" statement* "}" CATCH_KW "(" NAME ")" "{" statement* "}"
+
+return_stmt: RETURN_KW expression? ";"
+
+// ============================================================================
+// 7b. MATCH STATEMENTS (yàn/match)
+// ============================================================================
+match_stmt: MATCH_KW "(" expression ")" "{" match_arm+ "}"
+match_arm: (expression | "_") "=>" statement
+
+// ============================================================================
+// 7c. LAMBDA EXPRESSIONS (arrow functions)
+// ============================================================================
+lambda_expr: "(" params? ")" "->" "{" statement* "}"
+
+// ============================================================================
+// 8. END STATEMENTS (ase; or àṣẹ;)
+// ============================================================================
+end_stmt: END_KW ";"?
+
+// ============================================================================
+// TERMINALS: Keywords (DUAL-LEXICON - Yoruba + English)
+// ============================================================================
+// Both syntaxes compile to the exact same AST. The cultural soul (Odù names)
+// is preserved while removing linguistic friction (grammar keywords).
+
+// Import: ìbà std.otura; OR import std.otura;
+IMPORT_KW: "ìbà" | "iba" | "import" | "respect"
+
+// Variable: ayanmo x = 5; OR let x = 5; OR destiny x = 5;
+VAR_KW: "ayanmo" | "ayànmọ́" | "let" | "destiny" | "var"
+
+// Class/Module: odù Server { } OR domain Server { } OR class Server { }
+ODU_KW: "odù" | "odu" | "domain" | "class" | "module"
+
+// Function: ese start() { } OR verse start() { } OR fn start() { }
+ESE_KW: "ese" | "ẹsẹ" | "verse" | "fn" | "function" | "def"
+
+// If: ti condition { } OR if condition { }
+IF_KW: "ti" | "bí" | "if" | "divine"
+
+// Else: bibẹkọ { } OR else { } OR otherwise { }
+ELSE_KW: "bibẹkọ" | "else" | "otherwise"
+
+// While: nigba condition { } OR while condition { } OR cycle condition { }
+WHILE_KW: "nigba" | "while" | "cycle"
+
+// For: fun item ninu list { } OR for item in list { }
+FOR_KW: "fun" | "for" | "each"
+FOR_IN_KW: "ninu" | "in"
+
+// Match: yàn (x) { ... } OR match (x) { ... }
+MATCH_KW: "yàn" | "yan" | "match" | "select"
+
+// Try/Catch: dida_ewu { } OR try { }
+TRY_KW: "dida_ewu" | "try" | "attempt"
+CATCH_KW: "kaka_ewu" | "catch" | "recover"
+
+// Taboo (Architectural Constraint): èèwọ̀: OR taboo: OR forbid:
+TABOO_KW: "èèwọ̀" | "eewo" | "taboo" | "forbid"
+
+// Critical Block: àṣẹ_pàtàkì { } OR critical { } OR atomic { }
+ASE_BLOCK_KW: "àṣẹ_pàtàkì" | "ase_pataki" | "critical" | "atomic" | "transaction"
+
+// Return: pada value; OR return value;
+RETURN_KW: "pada" | "return"
+
+// End: ase; OR end;
+END_KW: "ase" | "àṣẹ" | "end"
+
+// ============================================================================
+// TERMINALS: Type Names (Orí System - Optional Static Typing)
+// ============================================================================
+// Yoruba + ASCII variants for each type
+TYPE_INT: "Int" | "Nọmbà" | "Number"
+TYPE_FLOAT: "Float" | "Ìdá" | "Ida"
+TYPE_STR: "Str" | "Ọ̀rọ̀" | "Oro" | "String"
+TYPE_BOOL: "Bool" | "Òtítọ́" | "Otito"
+TYPE_LIST: "List" | "Àkójọ" | "Akojo" | "Array"
+TYPE_MAP: "Map" | "Àwòrán" | "Aworan" | "Dict"
+TYPE_ANY: "Any" | "Àìyẹ" | "Dynamic"
+
+// ============================================================================
+// TERMINALS: The 16 Odù Names (Yoruba + ASCII + English Aliases)
+// ============================================================================
+// The Odù names ARE the cultural soul - kept intact with English shortcuts
+ODU_OGBE: "Ogbè" | "Ogbe" | "Init" | "Start"
+ODU_OYEKU: "Ọ̀yẹ̀kú" | "Oyeku" | "Exit" | "End"
+ODU_IWORI: "Ìwòrì" | "Iwori" | "Time" | "Clock"
+ODU_ODI: "Òdí" | "Odi" | "File" | "Memory"
+ODU_IROSU: "Ìrosù" | "Irosu" | "Log" | "Print"
+ODU_OWONRIN: "Ọ̀wọ́nrín" | "Owonrin" | "Rand" | "Random"
+ODU_OBARA: "Ọ̀bàrà" | "Obara" | "Add" | "Math"
+ODU_OKANRAN: "Ọ̀kànràn" | "Okanran" | "Error" | "Except"
+ODU_OGUNDA: "Ògúndá" | "Ogunda" | "Array" | "List"
+ODU_OSA: "Ọ̀sá" | "Osa" | "Proc" | "System"
+ODU_IKA: "Ìká" | "Ika" | "Text" | "String"
+ODU_OTURUPON: "Òtúúrúpọ̀n" | "Oturupon" | "Sub" | "Subtract"
+ODU_OTURA: "Òtúrá" | "Otura" | "Net" | "Network"
+ODU_IRETE: "Ìrẹtẹ̀" | "Irete" | "Logic" | "Bool"
+ODU_OSE: "Ọ̀ṣẹ́" | "Ose" | "Draw" | "Graphics"
+ODU_OFUN: "Òfún" | "Ofun" | "Meta" | "Reflect"
+
+// ============================================================================
+// TERMINALS: Operators
+// ============================================================================
+PLUS: "+"
+MINUS: "-"
+STAR: "*"
+SLASH: "/"
+PERCENT: "%"
+COMP_OP: "==" | "!=" | "<=" | ">=" | "<" | ">"
+AND_OP: "&&" | "ati" | "and"
+OR_OP: "||" | "tabi" | "or"
+NOT_OP: "!" | "kii" | "not"
+
+// ============================================================================
+// TERMINALS: Literals
+// ============================================================================
+BOOLEAN: "otito" | "eke" | "true" | "false"
+NUMBER: /\d+/
+FLOAT: /\d+\.\d+/
+STRING: /"[^"]*"/ | /'[^']*'/
+NAME: /[a-zA-ZÀ-ỹ_][a-zA-ZÀ-ỹ0-9_]*/
+PUBLIC_MOD: "gbangba" | "public"
+
+// ============================================================================
+// TERMINALS: Comments & Whitespace
+// ============================================================================
+COMMENT: /#[^\n]*/ | /\/\/[^\n]*/
+
+%import common.WS
+%ignore WS
+%ignore COMMENT
+

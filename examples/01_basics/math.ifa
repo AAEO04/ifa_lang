@@ -1,0 +1,9 @@
+# Ifa Complete Demo Program
+# Goal: Initialize, do math, save to file, print result
+
+ayanmo x = 50;
+fikun 10;
+din 5;
+ku 3;
+fo x;
+ase;

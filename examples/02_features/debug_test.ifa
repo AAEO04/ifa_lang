@@ -1,0 +1,46 @@
+// ═══════════════════════════════════════════════════════════════════
+// FLIGHT RECORDER TEST - Ìwòrì's History Trace
+// ═══════════════════════════════════════════════════════════════════
+// This demonstrates the Opon's Ring Buffer Debugger.
+// All stdlib functions automatically log to the flight recorder.
+// Call Iwori.royin() to see what led to any point in time.
+// ═══════════════════════════════════════════════════════════════════
+
+iba std.all;
+
+// 1. Initialize with Ogbè
+ayanmo x = 10;
+Ogbe.bi(x);
+
+// 2. Math operations
+Obara.fikun(x, 5);           // Add
+ayanmo y = 20;
+Oturupon.din(y, 8);          // Subtract
+
+// 3. Output
+Irosu.fo("Hello from Ifá!");
+Irosu.fo(x);
+
+// 4. Network (simulated)
+Otura.ran("Login Payload");
+
+// 5. String operations  
+ayanmo greeting = "Àṣẹ ";
+Ika.sopo(greeting, "World!");
+
+// 6. Memory storage
+Odi.fi(10, x);
+Odi.gba(10);
+
+// ═══════════════════════════════════════════════════════════════════
+// THE DEBUG MOMENT
+// Ask Ìwòrì: "How did we get here? Show me the history."
+// ═══════════════════════════════════════════════════════════════════
+Iwori.royin();
+
+// Optional: Clear history for a fresh start
+// Iwori.nu();
+
+ase;
+
+ib

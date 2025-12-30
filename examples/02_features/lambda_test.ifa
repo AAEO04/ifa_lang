@@ -1,0 +1,28 @@
+# Lambda Test (Arrow Functions)
+# Demonstrates first-class functions in Ifá-Lang
+
+ìbà Ìrosù;
+ìbà Ògúndá;
+
+# 1. Define a lambda (arrow function)
+ayanmọ double = (x) -> { padà x * 2; };
+
+# 2. Call the lambda directly
+ayanmọ result = double(5);
+Ìrosù.fọ̀("Double of 5: " + result);
+
+# 3. Higher-order function example (pass function as argument)
+ayanmọ numbers = [1, 2, 3, 4, 5];
+
+# Map: Apply lambda to each element
+ayanmọ doubled = Ògúndá.map(numbers, double);
+Ìrosù.fọ̀("Doubled list: " + doubled);
+
+# 4. Inline lambda
+ayanmọ triple = (n) -> { padà n * 3; };
+Ìrosù.fọ̀("Triple of 7: " + triple(7));
+
+àṣẹ;
+
+iba
+ase

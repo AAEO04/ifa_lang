@@ -1,0 +1,62 @@
+// ═══════════════════════════════════════════════════════════════════
+// DUAL-LEXICON DEMO - Yoruba Style (Traditional)
+// ═══════════════════════════════════════════════════════════════════
+// This is the traditional Ifá-Lang syntax using Yoruba keywords.
+// Both files compile to the EXACT SAME AST/bytecode!
+// ═══════════════════════════════════════════════════════════════════
+
+ìbà std.irosu;
+ìbà std.otura;
+
+// Variables using 'ayanmo' (destiny) keyword
+ayanmo counter: Int = 0;
+ayanmo message = "Ẹ kú àbọ̀ sí Ifá!";
+
+// Class using 'odù' keyword
+odù Server {
+    ayanmo port = 8080;
+    
+    ese start() {
+        Ìrosù.fọ̀("Starting server...");
+        Òtúrá.dè(port);
+    }
+    
+    ese handle(request) {
+        ti port > 80 {
+            Ìrosù.fọ̀("Handling request");
+        } bibẹkọ {
+            Ìrosù.fọ̀("Invalid port");
+        }
+    }
+}
+
+// Control flow with Yoruba keywords
+nigba counter < 5 {
+    Ìrosù.fọ̀(counter);
+    counter = counter + 1;
+}
+
+// For loop
+ayanmo items = [1, 2, 3, 4, 5];
+fun item ninu items {
+    Ìrosù.fọ̀(item);
+}
+
+// Try/catch
+dida_ewu {
+    Òtúrá.rán("Sending data...");
+} kaka_ewu (err) {
+    Ìrosù.fọ̀("Error occurred");
+}
+
+// Critical section
+àṣẹ_pàtàkì {
+    // Transaction-safe code
+    Ìrosù.fọ̀("Critical operation");
+}
+
+// Output
+Ìrosù.fọ̀(message);
+Ọ̀wọ́nrín.bọ̀(100);
+
+àṣẹ;

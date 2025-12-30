@@ -1,0 +1,53 @@
+# Ifá-Lang Project Configuration
+# Ìwé Àtòjọ - The Manifest
+
+[package]
+name = "ifa-project"
+version = "1.0.0"
+authors = ["Charon"]
+edition = "2025"
+description = "The Yoruba Programming Language"
+license = "MIT"
+repository = "https://github.com/AAEO04/ifa-lang"
+
+[compiler]
+# Default compilation mode: "python" (interpreted) or "rust" (transpiled)
+mode = "python"
+
+# Enable strict Ìwà-Pẹ̀lẹ́ balance checking
+strict_balance = true
+
+# Show verbose compilation output
+verbose = false
+
+[runtime]
+# VM register size
+register_bits = 12
+
+# Memory size in bytes
+memory_size = 65536
+
+# Enable Babalawo debugger for crashes
+debugger = true
+
+[dependencies]
+# Rust crate dependencies for transpiled mode
+# These are pulled in when compiling to Rust with FFI
+
+# tokio = { version = "1", features = ["full"] }  # For Otura Networking
+# serde = "1.0"                                   # For Data Serialization
+# reqwest = "0.11"                                # For HTTP
+
+[stdlib]
+# Standard library modules to load by default
+modules = [
+    "ogbe",      # System
+    "oyeku",     # Exit
+    "iwori",     # Time
+    "odi",       # Files
+    "irosu",     # Console
+    "obara",     # Math+
+    "oturupon",  # Math-
+    "otura",     # Network
+    "ose",       # Graphics
+]

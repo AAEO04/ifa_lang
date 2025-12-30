@@ -1,0 +1,239 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "scopeName": "source.ifa",
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#types"
+        },
+        {
+            "include": "#functions"
+        },
+        {
+            "include": "#classes"
+        },
+        {
+            "include": "#constants"
+        },
+        {
+            "include": "#operators"
+        }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-slash.ifa",
+                    "match": "//.*$"
+                },
+                {
+                    "name": "comment.line.hash.ifa",
+                    "match": "#.*$"
+                },
+                {
+                    "name": "comment.block.ifa",
+                    "begin": "/\\*",
+                    "end": "\\*/"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.ifa",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.ifa",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.ifa",
+                    "begin": "'",
+                    "end": "'",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.ifa",
+                            "match": "\\\\."
+                        }
+                    ]
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "comment": "Import Keywords",
+                    "name": "keyword.control.import.ifa",
+                    "match": "\\b(iba|ìbà|import|respect)\\b"
+                },
+                {
+                    "comment": "Variable Declaration Keywords",
+                    "name": "keyword.other.ifa",
+                    "match": "\\b(ayanmo|ayanmọ|ayànmọ́|let|destiny|var)\\b"
+                },
+                {
+                    "comment": "Class/Module Definition Keywords",
+                    "name": "keyword.other.class.ifa",
+                    "match": "\\b(odù|odu|domain|class|module)\\b"
+                },
+                {
+                    "comment": "Function Definition Keywords",
+                    "name": "keyword.other.function.ifa",
+                    "match": "\\b(ese|ẹsẹ|verse|fn|function|def)\\b"
+                },
+                {
+                    "comment": "Control Flow - Conditionals",
+                    "name": "keyword.control.conditional.ifa",
+                    "match": "\\b(ti|bí|if|divine|bibẹkọ|else|otherwise)\\b"
+                },
+                {
+                    "comment": "Control Flow - Loops",
+                    "name": "keyword.control.loop.ifa",
+                    "match": "\\b(nigba|while|cycle|fun|for|each|ninu|in)\\b"
+                },
+                {
+                    "comment": "Control Flow - Match/Switch",
+                    "name": "keyword.control.switch.ifa",
+                    "match": "\\b(yàn|yan|match|select)\\b"
+                },
+                {
+                    "comment": "Control Flow - Try/Catch",
+                    "name": "keyword.control.trycatch.ifa",
+                    "match": "\\b(dida_ewu|try|attempt|kaka_ewu|catch|recover)\\b"
+                },
+                {
+                    "comment": "Control Flow - Return",
+                    "name": "keyword.control.return.ifa",
+                    "match": "\\b(pada|padà|return)\\b"
+                },
+                {
+                    "comment": "Control Flow - End",
+                    "name": "keyword.control.end.ifa",
+                    "match": "\\b(ase|àṣẹ|end)\\b"
+                },
+                {
+                    "comment": "Taboo/Constraint Keywords",
+                    "name": "keyword.other.taboo.ifa",
+                    "match": "\\b(èèwọ̀|eewo|taboo|forbid)\\b"
+                },
+                {
+                    "comment": "Critical/Atomic Block Keywords",
+                    "name": "keyword.other.critical.ifa",
+                    "match": "\\b(àṣẹ_pàtàkì|ase_pataki|critical|atomic|transaction)\\b"
+                },
+                {
+                    "comment": "Access Modifiers",
+                    "name": "keyword.other.modifier.ifa",
+                    "match": "\\b(gbangba|public)\\b"
+                }
+            ]
+        },
+        "types": {
+            "patterns": [
+                {
+                    "comment": "Type Names - Orí System",
+                    "name": "support.type.ifa",
+                    "match": "\\b(Int|Nọmbà|Number|Float|Ìdá|Ida|Str|Ọ̀rọ̀|Oro|String|Bool|Òtítọ́|Otito|List|Àkójọ|Akojo|Array|Map|Àwòrán|Aworan|Dict|Any|Àìyẹ|Dynamic)\\b"
+                }
+            ]
+        },
+        "functions": {
+            "patterns": [
+                {
+                    "comment": "Standard Library Functions - Yoruba verbs",
+                    "name": "support.function.builtin.ifa",
+                    "match": "\\b(bi|gba|oruko|orúkọ|env|ku|kú|duro|dúró|gbale|gbalẹ|pana|panà|ago|agọ|royin|royìn|mo|mọ|wo|wò|fi|fí|pamo|pamọ́|si|sí|pa|pà|fo|fò|so|sọ|pe|pè|san|sàn|kigbe|kígbé|bo|bò|paaro|pààrọ̀|da|dà|ro|rò|fikun|fíkún|kun|kún|din|dín|pin|pín|ge|gé|kekere|kékeré|aropin|àrópín|oke|òkè|isale|ìsàlẹ̀|mu|mú|ya|yà|to|tó|sa|sá|ka|kà|tu|tú|wa|wá|sopo|sọ̀pọ̀|te|tẹ|di|dì|han|hàn|kunle|kúnlẹ|botini|bọ́tìnì|fihan|fíhàn|tobi|tóbi|ila|ìlà|onigun|onígun|iyokoto|ìyọkọtọ|ka_iwe|kà_ìwé|ran|ràn|de|dé|gbo|gbọ́|so_po|sọ_pọ)\\b"
+                },
+                {
+                    "comment": "Standard Library Functions - English",
+                    "name": "support.function.builtin.ifa",
+                    "match": "\\b(init|input|user|exit|halt|gc|shutdown|time|sleep|report|know|look|write|read|open|close|save|lock|print|log|alert|flush|error|rand|shuffle|flip|add|incr|mul|sum|sub|div|mod|cut|min|max|avg|create|push|pop|split|sort|slice|len|format|compress|encrypt|zip|spawn|jump|draw|show|render|button|display|sudo|grant|docs|send|bind|recv|get|post|put|delete|query|exec|parse|stringify|concat|hash|typeof|config|throw|assert|now|date|secret|getenv)\\b"
+                },
+                {
+                    "comment": "Function Definition Pattern",
+                    "name": "entity.name.function.ifa",
+                    "match": "\\b([a-zA-ZÀ-ỹ_][a-zA-ZÀ-ỹ0-9_]*)\\s*(?=\\()"
+                }
+            ]
+        },
+        "classes": {
+            "patterns": [
+                {
+                    "comment": "Odù Domains - Yoruba names",
+                    "name": "support.class.ifa",
+                    "match": "\\b(Ogbe|Ogbè|Oyeku|Oyẹkú|Ọ̀yẹ̀kú|Iwori|Ìwòrì|Odi|Òdí|Irosu|Ìrosù|Owonrin|Ọ̀wọ́nrín|Obara|Ọ̀bàrà|Okanran|Ọ̀kànràn|Ogunda|Ògúndá|Osa|Ọ̀sá|Ika|Ìká|Oturupon|Òtúúrúpọ̀n|Otura|Òtúrá|Irete|Ìrẹtẹ̀|Ose|Ọ̀ṣẹ́|Ofun|Òfún)\\b"
+                },
+                {
+                    "comment": "Odù Domains - English aliases",
+                    "name": "support.class.ifa",
+                    "match": "\\b(Init|Start|Exit|End|Time|Clock|File|Memory|Log|Print|Rand|Random|Add|Math|Error|Except|Array|List|Proc|System|Text|String|Sub|Subtract|Net|Network|Logic|Bool|Draw|Graphics|Meta|Reflect)\\b"
+                }
+            ]
+        },
+        "constants": {
+            "patterns": [
+                {
+                    "comment": "Booleans - All variants",
+                    "name": "constant.language.boolean.ifa",
+                    "match": "\\b(ooto|òótọ́|iro|irọ́|otito|eke|true|false)\\b"
+                },
+                {
+                    "comment": "Float Numbers",
+                    "name": "constant.numeric.float.ifa",
+                    "match": "\\b\\d+\\.\\d+\\b"
+                },
+                {
+                    "comment": "Integer Numbers",
+                    "name": "constant.numeric.integer.ifa",
+                    "match": "\\b\\d+\\b"
+                }
+            ]
+        },
+        "operators": {
+            "patterns": [
+                {
+                    "comment": "Logical Operators - Symbols",
+                    "name": "keyword.operator.logical.ifa",
+                    "match": "(&&|\\|\\||!)"
+                },
+                {
+                    "comment": "Logical Operators - Words",
+                    "name": "keyword.operator.logical.word.ifa",
+                    "match": "\\b(and|or|not|ati|tabi|kii)\\b"
+                },
+                {
+                    "comment": "Comparison Operators",
+                    "name": "keyword.operator.comparison.ifa",
+                    "match": "(==|!=|<=|>=|<|>)"
+                },
+                {
+                    "comment": "Arithmetic Operators",
+                    "name": "keyword.operator.arithmetic.ifa",
+                    "match": "(\\+|\\-|\\*|\\/|%)"
+                },
+                {
+                    "comment": "Assignment Operator",
+                    "name": "keyword.operator.assignment.ifa",
+                    "match": "="
+                },
+                {
+                    "comment": "Arrow Operator",
+                    "name": "keyword.operator.arrow.ifa",
+                    "match": "(->|=>)"
+                }
+            ]
+        }
+    }
+}
