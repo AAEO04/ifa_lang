@@ -75,7 +75,7 @@ Name: "{group}\Uninstall Ifá-Lang"; Filename: "{uninstallexe}"
 
 [Registry]
 ; Add to PATH for current user
-Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Tasks: addtopath; Check: NeedsAddPath('{app}\bin')
+Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Check: NeedsAddPath('{app}\bin')
 
 [Run]
 ; Install Python dependencies to bundled Python

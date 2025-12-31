@@ -42,11 +42,11 @@ jobs:
           # Download get-pip.py
           Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "python\get-pip.py"
           
-          # Install pip
-          & "python\python.exe" "python\get-pip.py" --quiet
+          # Install pip (verbose for debugging)
+          & "python\python.exe" "python\get-pip.py"
           
           # Install dependencies
-          & "python\python.exe" -m pip install --quiet -r requirements.txt
+          & "python\python.exe" -m pip install -r requirements.txt
           
           # Clean up
           Remove-Item "python\get-pip.py"
@@ -57,7 +57,12 @@ jobs:
 
       - name: Build Windows Installer
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+          # Debug: Check directory structure
+          dir
+          if (Test-Path "python") { dir python }
+          
+          # Run Inno Setup Compiler from PATH (installed by Choco)
+          ISCC installer.iss
 
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4
