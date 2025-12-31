@@ -272,9 +272,12 @@ class BabalawoDebugger:
         print("│              PRESCRIPTION (ẸBỌ)                 │")
         print("├─────────────────────────────────────────────────┤")
         
+        # Prescriptions are static advice strings, not sensitive data
         prescriptions = self._get_prescription(verb, noun)
         for rx in prescriptions:
-            print(f"│ • {rx}")
+            # Use str() to ensure it's treated as a plain string, not traced data
+            safe_rx = str(rx)
+            print(f"│ • {safe_rx}")
         
         print("└─────────────────────────────────────────────────┘")
 

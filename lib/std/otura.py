@@ -75,8 +75,14 @@ class OturaDomain(OduModule):
     # TCP SOCKET API
     # =========================================================================
     
-    def de(self, port: int, host: str = '0.0.0.0') -> bool:
-        """Bind to port and listen for TCP connections."""
+    def de(self, port: int, host: str = '127.0.0.1') -> bool:
+        """Bind to port and listen for TCP connections.
+        
+        Args:
+            port: Port number to listen on
+            host: Host to bind to. Defaults to '127.0.0.1' (localhost only) for security.
+                  Use '0.0.0.0' explicitly to bind to all interfaces.
+        """
         print(f"[Òtúrá] {self.name} binding to {host}:{port}...")
         try:
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -184,8 +190,8 @@ class OturaDomain(OduModule):
             self._ether_recv_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self._ether_recv_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             
-            # Bind to the Ether port
-            self._ether_recv_socket.bind(('', ether_port))
+            # Bind to the Ether port (localhost only for security)
+            self._ether_recv_socket.bind(('127.0.0.1', ether_port))
             
             # Join multicast group
             import struct

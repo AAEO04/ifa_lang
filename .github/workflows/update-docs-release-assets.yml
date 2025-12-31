@@ -1,0 +1,95 @@
+# Updates docs/*.html download links to point at the released assets (browser_download_url)
+# Runs when a release is published.
+
+name: Update Docs Release Assets
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Get release info
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          
+          # Get all asset URLs
+          gh release view "$TAG" --json assets -q '.assets[] | "\(.name)|\(.url)"' > assets.txt
+          
+          # Find Windows asset (.exe or setup)
+          WINDOWS_URL=$(gh release view "$TAG" --json assets -q '.assets[] | select(.name | test("windows.*setup.*\\.exe$|setup.*windows.*\\.exe$|\\.exe$")) | .url' | head -1)
+          echo "windows_url=$WINDOWS_URL" >> $GITHUB_OUTPUT
+          
+          # Find Linux asset (.tar.gz or .tgz)
+          LINUX_URL=$(gh release view "$TAG" --json assets -q '.assets[] | select(.name | test("linux.*\\.(tar\\.gz|tgz|zip)$")) | .url' | head -1)
+          echo "linux_url=$LINUX_URL" >> $GITHUB_OUTPUT
+          
+          echo "Found Windows: $WINDOWS_URL"
+          echo "Found Linux: $LINUX_URL"
+
+      - name: Update docs with new asset URLs
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          WINDOWS_URL: ${{ steps.release.outputs.windows_url }}
+          LINUX_URL: ${{ steps.release.outputs.linux_url }}
+        run: |
+          echo "Updating docs for release $TAG"
+          
+          # Update docs/*.html files
+          for file in docs/*.html; do
+            if [ -f "$file" ]; then
+              echo "Processing $file..."
+              
+              # Update Windows download link
+              if [ -n "$WINDOWS_URL" ]; then
+                # Replace any existing Windows release download URL
+                sed -i -E "s|https://github.com/AAEO04/ifa_lang/releases/download/[^/]+/ifa-lang-[^\"]+windows[^\"]*\.exe|$WINDOWS_URL|g" "$file"
+              fi
+              
+              # Update Linux download link  
+              if [ -n "$LINUX_URL" ]; then
+                # Replace any existing Linux release download URL
+                sed -i -E "s|https://github.com/AAEO04/ifa_lang/releases/download/[^/]+/ifa-lang-[^\"]+linux[^\"]*\.(tar\.gz|tgz|zip)|$LINUX_URL|g" "$file"
+              fi
+              
+              # Fallback: Update version tag in any remaining release URLs
+              sed -i -E "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/|/releases/download/$TAG/|g" "$file"
+            fi
+          done
+          
+          echo "Docs update complete"
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet docs/; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes detected in docs"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changes detected:"
+            git diff docs/
+          fi
+
+      - name: Commit and push changes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          git commit -m "docs: Update download links for release ${{ steps.release.outputs.tag }}"
+          git push
