@@ -1,14 +1,42 @@
 {
   "name": "ifa-lang",
   "displayName": "Ifá Language",
-  "description": "The Yoruba Programming Language - Official Extension",
-  "version": "0.1.1",
+  "description": "The Yoruba Programming Language - Official Extension with syntax highlighting, intellisense, and debugging",
+  "version": "1.0.0",
   "license": "MIT",
   "publisher": "IfaLang",
+  "author": {
+    "name": "Ayomide Alli",
+    "url": "https://github.com/AAEO04"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/AAEO04/ifa-lang"
   },
+  "homepage": "https://github.com/AAEO04/ifa-lang",
+  "bugs": {
+    "url": "https://github.com/AAEO04/ifa-lang/issues"
+  },
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#1a1a2e",
+    "theme": "dark"
+  },
+  "keywords": [
+    "ifa",
+    "yoruba",
+    "programming language",
+    "african",
+    "odu",
+    "ifá"
+  ],
+  "badges": [
+    {
+      "url": "https://img.shields.io/github/license/AAEO04/ifa-lang",
+      "href": "https://github.com/AAEO04/ifa-lang/blob/main/LICENSE",
+      "description": "License"
+    }
+  ],
   "engines": {
     "vscode": "^1.80.0"
   },

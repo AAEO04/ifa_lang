@@ -226,7 +226,7 @@ BANNER = """
 VERSION_INFO = """Ifá-Lang v1.0.0 (Amúlù Edition)
 The Yoruba Programming Language
 8-bit Architecture | 16 Odù Domains | Ìwà-Pẹ̀lẹ́ Balance
-Copyright (c) 2025 Charon
+Copyright (c) 2025 Ayomide Alli (Charon)
 """
 
 

@@ -95,37 +95,66 @@ ifa-lang/
 └── README.md
 ```
 
-##  Quick Start
+## 📥 Download & Install
+
+### Windows (Recommended)
+Download the installer - **no Python required!**
+
+[![Download for Windows](https://img.shields.io/badge/Download-Windows%20Installer-blue?style=for-the-badge&logo=windows)](https://github.com/AAEO04/ifa-lang/releases/latest)
+
+1. Download `ifa-lang-*-windows-setup.exe`
+2. Run the installer
+3. Restart your terminal
+4. Ready! Run `ifa --help`
+
+### macOS (Homebrew)
+```bash
+brew tap AAEO04/ifa-lang
+brew install ifa-lang
+```
+
+### Linux
+```bash
+# Download and extract
+wget https://github.com/AAEO04/ifa-lang/releases/latest/download/ifa-lang-1.0.0-linux.tar.gz
+tar -xzf ifa-lang-*.tar.gz
+cd ifa-lang-*
+
+# Install
+./install.sh
+```
+
+### VS Code Extension
+Search **"Ifá-Lang"** in VS Code Extensions marketplace.
+
+---
+
+## 🚀 Quick Start
 
 ```bash
 # Run a program
-python src/cli.py run examples/hello.ifa
-
-# Build to Rust binary
-python src/cli.py build examples/hello.ifa -o hello
-
-# Manage Packages (Ọjà)
-python src/cli.py oja add https://github.com/user/repo.git
-python src/cli.py oja install
-python src/cli.py oja lock
-
-# Check code balance (Ìwà)
-python src/cli.py check examples/demo.ifa
-
-# Generate Documentation
-python src/cli.py doc src/
-
-# Launch Language Server (LSP)
-python src/cli.py lsp --stdio
-
-# Browse standard library
-python src/cli.py library
+ifa run examples/hello.ifa
 
 # Interactive REPL
-python src/cli.py repl
+ifa repl
+
+# Compile to bytecode
+ifa bytecode examples/hello.ifa
+
+# Compile to native binary (requires Rust)
+ifa build examples/hello.ifa -o myapp
+
+# Browse standard library
+ifa library
+
+# Check code balance (Ìwà)
+ifa check examples/demo.ifa
+
+# Manage Packages (Ọjà)
+ifa oja add https://github.com/user/repo.git
 ```
 
-> **Full Documentation**: See [`DOCS.md`](DOCS.md) for detailed guides on StdLib, API, and Architecture.
+> **Full Documentation**: See [`DOCS.md`](DOCS.md) or visit [aaeo04.github.io/ifa-lang](https://aaeo04.github.io/ifa-lang/)
 
 ## Language Syntax
 

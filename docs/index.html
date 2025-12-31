@@ -1,271 +1,326 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ifá-Lang Corpus</title>
     <style>
-    :root {
-        --bg-dark: #1a1a2e;
-        --bg-card: #16213e;
-        --accent: #e94560;
-        --gold: #ffd700;
-        --text: #eaeaea;
-        --text-dim: #a0a0a0;
-    }
-    
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body {
-        font-family: 'Segoe UI', system-ui, sans-serif;
-        background: var(--bg-dark);
-        color: var(--text);
-        line-height: 1.6;
-    }
-    
-    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-    
-    header {
-        text-align: center;
-        padding: 3rem 0;
-        border-bottom: 2px solid var(--accent);
-        margin-bottom: 2rem;
-    }
-    
-    h1 {
-        font-size: 3rem;
-        background: linear-gradient(135deg, var(--gold), var(--accent));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
-    }
-    
-    h2 {
-        color: var(--gold);
-        border-bottom: 1px solid var(--accent);
-        padding-bottom: 0.5rem;
-        margin: 2rem 0 1rem;
-    }
-    
-    h3 { color: var(--accent); margin: 1.5rem 0 0.5rem; }
-    
-    .odu-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1.5rem;
-        margin: 2rem 0;
-    }
-    
-    .odu-card {
-        background: var(--bg-card);
-        border-radius: 12px;
-        padding: 1.5rem;
-        border: 1px solid rgba(233, 69, 96, 0.3);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    
-    .odu-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(233, 69, 96, 0.2);
-    }
-    
-    .odu-card h3 {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .binary {
-        font-family: monospace;
-        font-size: 0.8rem;
-        color: var(--gold);
-        background: rgba(255, 215, 0, 0.1);
-        padding: 2px 6px;
-        border-radius: 4px;
-    }
-    
-    .meaning { color: var(--text-dim); font-style: italic; }
-    
-    .verse {
-        background: rgba(0, 0, 0, 0.2);
-        border-left: 3px solid var(--accent);
-        padding: 1rem;
-        margin: 1rem 0;
-        border-radius: 0 8px 8px 0;
-    }
-    
-    .verse-name {
-        font-family: monospace;
-        color: var(--gold);
-        font-size: 1.1rem;
-    }
-    
-    .verse-desc { margin-top: 0.5rem; }
-    
-    code {
-        background: rgba(255, 215, 0, 0.1);
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-family: 'Consolas', monospace;
-    }
-    
-    .nav {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 250px;
-        height: 100vh;
-        background: var(--bg-card);
-        padding: 2rem 1rem;
-        overflow-y: auto;
-        border-right: 1px solid var(--accent);
-    }
-    
-    .nav a {
-        display: block;
-        color: var(--text);
-        text-decoration: none;
-        padding: 0.5rem;
-        border-radius: 4px;
-        transition: background 0.2s;
-    }
-    
-    .nav a:hover { background: rgba(233, 69, 96, 0.2); }
-    
-    .main-content { margin-left: 270px; }
-    
-    footer {
-        text-align: center;
-        padding: 2rem;
-        color: var(--text-dim);
-        border-top: 1px solid var(--accent);
-        margin-top: 3rem;
-    }
-    
-    @media (max-width: 768px) {
-        .nav { display: none; }
-        .main-content { margin-left: 0; }
-    }
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --accent: #e94560;
+            --gold: #ffd700;
+            --text: #eaeaea;
+            --text-dim: #a0a0a0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 0;
+            border-bottom: 2px solid var(--accent);
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(135deg, var(--gold), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            color: var(--gold);
+            border-bottom: 1px solid var(--accent);
+            padding-bottom: 0.5rem;
+            margin: 2rem 0 1rem;
+        }
+
+        h3 {
+            color: var(--accent);
+            margin: 1.5rem 0 0.5rem;
+        }
+
+        .odu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .odu-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .odu-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(233, 69, 96, 0.2);
+        }
+
+        .odu-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .binary {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--gold);
+            background: rgba(255, 215, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .meaning {
+            color: var(--text-dim);
+            font-style: italic;
+        }
+
+        .verse {
+            background: rgba(0, 0, 0, 0.2);
+            border-left: 3px solid var(--accent);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .verse-name {
+            font-family: monospace;
+            color: var(--gold);
+            font-size: 1.1rem;
+        }
+
+        .verse-desc {
+            margin-top: 0.5rem;
+        }
+
+        code {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+        }
+
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 100vh;
+            background: var(--bg-card);
+            padding: 2rem 1rem;
+            overflow-y: auto;
+            border-right: 1px solid var(--accent);
+        }
+
+        .nav a {
+            display: block;
+            color: var(--text);
+            text-decoration: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .nav a:hover {
+            background: rgba(233, 69, 96, 0.2);
+        }
+
+        .main-content {
+            margin-left: 270px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-dim);
+            border-top: 1px solid var(--accent);
+            margin-top: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .nav {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
             <h1>🔮 The Ifá Corpus</h1>
-            <p>Documentation for Ifá-Lang</p>
-            <p style="color: var(--text-dim);">Generated 2025-12-30 21:43</p>
+            <p>Documentation for Ifá-Lang - The Yoruba Programming Language</p>
+
+            <!-- Download Buttons -->
+            <div style="margin: 2rem 0; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="https://github.com/AAEO04/ifa-lang/releases/latest"
+                    style="background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;">
+                    🖥️ Download for Windows
+                </a>
+                <a href="https://github.com/AAEO04/ifa-lang/releases/latest"
+                    style="background: linear-gradient(135deg, #e94560, #c73855); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;">
+                    🐧 Download for Linux
+                </a>
+                <a href="https://github.com/AAEO04/ifa-lang"
+                    style="background: linear-gradient(135deg, #333, #555); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;">
+                    ⭐ GitHub
+                </a>
+            </div>
+
+            <!-- Quick Install -->
+            <div
+                style="background: var(--bg-card); border-radius: 12px; padding: 1.5rem; text-align: left; max-width: 600px; margin: 0 auto;">
+                <h3 style="color: var(--gold); margin-bottom: 1rem;">Quick Install</h3>
+                <p><strong>Windows:</strong> Download and run the installer (includes Python!)</p>
+                <p><strong>macOS:</strong> <code>brew tap AAEO04/ifa-lang && brew install ifa-lang</code></p>
+                <p><strong>Linux:</strong> Download, extract, run <code>./install.sh</code></p>
+                <p style="margin-top: 1rem;"><strong>VS Code:</strong> Search "Ifá-Lang" in Extensions</p>
+            </div>
+
+            <p style="color: var(--text-dim); margin-top: 1rem;">v1.0.0</p>
         </header>
-        
+
         <h2>The 16 Odù Domains</h2>
         <div class="odu-grid">
-            
+
             <a href="ika.html" class="odu-card">
                 <h3><span class="binary">0100</span> IKA</h3>
                 <p class="meaning">The Constrictor</p>
                 <p>1 chapters, 35 verses</p>
             </a>
-            
+
             <a href="irete.html" class="odu-card">
                 <h3><span class="binary">1101</span> IRETE</h3>
                 <p class="meaning">The Crusher</p>
                 <p>1 chapters, 5 verses</p>
             </a>
-            
+
             <a href="irosu.html" class="odu-card">
                 <h3><span class="binary">1100</span> IROSU</h3>
                 <p class="meaning">The Speaker</p>
                 <p>1 chapters, 19 verses</p>
             </a>
-            
+
             <a href="iwori.html" class="odu-card">
                 <h3><span class="binary">0110</span> IWORI</h3>
                 <p class="meaning">The Mirror</p>
                 <p>1 chapters, 18 verses</p>
             </a>
-            
+
             <a href="obara.html" class="odu-card">
                 <h3><span class="binary">1000</span> OBARA</h3>
                 <p class="meaning">The King</p>
                 <p>1 chapters, 29 verses</p>
             </a>
-            
+
             <a href="odi.html" class="odu-card">
                 <h3><span class="binary">1001</span> ODI</h3>
                 <p class="meaning">The Vessel</p>
                 <p>1 chapters, 16 verses</p>
             </a>
-            
+
             <a href="ofun.html" class="odu-card">
                 <h3><span class="binary">0101</span> OFUN</h3>
                 <p class="meaning">The Creator</p>
                 <p>1 chapters, 7 verses</p>
             </a>
-            
+
             <a href="ogbe.html" class="odu-card">
                 <h3><span class="binary">1111</span> OGBE</h3>
                 <p class="meaning">The Light</p>
                 <p>1 chapters, 15 verses</p>
             </a>
-            
+
             <a href="ogunda.html" class="odu-card">
                 <h3><span class="binary">1110</span> OGUNDA</h3>
                 <p class="meaning">The Cutter</p>
                 <p>1 chapters, 29 verses</p>
             </a>
-            
+
             <a href="okanran.html" class="odu-card">
                 <h3><span class="binary">0001</span> OKANRAN</h3>
                 <p class="meaning">The Troublemaker</p>
                 <p>1 chapters, 4 verses</p>
             </a>
-            
+
             <a href="osa.html" class="odu-card">
                 <h3><span class="binary">0111</span> OSA</h3>
                 <p class="meaning">The Wind</p>
                 <p>1 chapters, 11 verses</p>
             </a>
-            
+
             <a href="ose.html" class="odu-card">
                 <h3><span class="binary">1010</span> OSE</h3>
                 <p class="meaning">The Beautifier</p>
                 <p>1 chapters, 17 verses</p>
             </a>
-            
+
             <a href="otura.html" class="odu-card">
                 <h3><span class="binary">1011</span> OTURA</h3>
                 <p class="meaning">The Messenger</p>
                 <p>1 chapters, 12 verses</p>
             </a>
-            
+
             <a href="oturupon.html" class="odu-card">
                 <h3><span class="binary">0010</span> OTURUPON</h3>
                 <p class="meaning">The Bearer</p>
                 <p>1 chapters, 8 verses</p>
             </a>
-            
+
             <a href="owonrin.html" class="odu-card">
                 <h3><span class="binary">0011</span> OWONRIN</h3>
                 <p class="meaning">The Chaotic</p>
                 <p>1 chapters, 9 verses</p>
             </a>
-            
+
             <a href="oyeku.html" class="odu-card">
                 <h3><span class="binary">0000</span> OYEKU</h3>
                 <p class="meaning">The Darkness</p>
                 <p>1 chapters, 4 verses</p>
             </a>
-            
+
         </div>
-        
+
         <h2>📦 Ọjà - The Market (Package Manager)</h2>
         <div class="verse">
             <div class="verse-name">Install Libraries from Git</div>
             <div class="verse-desc">
-                <p>Ọjà is the decentralized package manager for Ifá-Lang. Install libraries directly from any Git repository:</p>
+                <p>Ọjà is the decentralized package manager for Ifá-Lang. Install libraries directly from any Git
+                    repository:</p>
                 <p><code>ifa oja add https://github.com/user/my-library.git</code></p>
             </div>
         </div>
-        
+
         <div class="odu-grid">
             <div class="odu-card">
                 <h3>📥 ra (Buy/Add)</h3>
@@ -288,7 +343,7 @@
                 <p class="meaning">Generate checksums</p>
             </div>
         </div>
-        
+
         <h2>🚀 Quick Start</h2>
         <div class="odu-grid">
             <div class="odu-card">
@@ -312,9 +367,10 @@
                 <p class="meaning">Generate documentation</p>
             </div>
         </div>
-        
+
         <h2>⚡ Bytecode Execution</h2>
-        <p style="color: var(--text-dim); margin-bottom: 1rem;">Compile to optimized .ifab bytecode for fast startup and IoT/embedded systems:</p>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Compile to optimized .ifab bytecode for fast startup and
+            IoT/embedded systems:</p>
         <div class="odu-grid">
             <div class="odu-card">
                 <h3>Compile</h3>
@@ -337,7 +393,7 @@
                 <p class="meaning">16 Verbs × 16 Nouns</p>
             </div>
         </div>
-        
+
         <h2>📝 Language Syntax</h2>
         <h3>Variables</h3>
         <div class="verse">
@@ -346,7 +402,7 @@
                 <code>ayanmọ x = 50;</code> (Yoruba) or <code>let x = 50;</code> (English)
             </div>
         </div>
-        
+
         <h3>Control Flow</h3>
         <div class="odu-grid">
             <div class="odu-card">
@@ -370,7 +426,7 @@
                 <p class="meaning">or: match/select</p>
             </div>
         </div>
-        
+
         <h3>Functions & Classes</h3>
         <div class="verse">
             <div class="verse-name">Function (Ese/Verse)</div>
@@ -384,7 +440,7 @@
                 <code>odù Calculator { ayanmọ value = 0; ese add(n) { value = value + n; } }</code>
             </div>
         </div>
-        
+
         <h2>🌍 Dual Lexicon (Yoruba ↔ English)</h2>
         <div class="odu-grid">
             <div class="odu-card">
@@ -428,7 +484,7 @@
                 <p class="meaning">true / false</p>
             </div>
         </div>
-        
+
         <h2>💡 Code Examples</h2>
         <div class="verse">
             <div class="verse-name">Hello World</div>
@@ -455,9 +511,10 @@ ayanmọ msg = Otura.ether_gba();  // Receive
 Otura.ether_pa();     // Leave network</pre>
             </div>
         </div>
-        
+
         <h2>⚖️ Ìwà-Pẹ̀lẹ́ (Balance Rules)</h2>
-        <p style="color: var(--text-dim); margin-bottom: 1rem;">Every resource opened must be closed. The Ìwà Engine enforces good character:</p>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Every resource opened must be closed. The Ìwà Engine
+            enforces good character:</p>
         <div class="odu-grid">
             <div class="odu-card">
                 <h3>📁 Files</h3>
@@ -480,7 +537,7 @@ Otura.ether_pa();     // Leave network</pre>
                 <p class="meaning">Create → Release</p>
             </div>
         </div>
-        
+
         <h2>💻 CLI Reference</h2>
         <div class="odu-grid">
             <div class="odu-card">
@@ -514,7 +571,7 @@ Otura.ether_pa();     // Leave network</pre>
                 <p class="meaning">Language Server</p>
             </div>
         </div>
-        
+
         <h2>🔮 Babalawo Error Guide</h2>
         <p style="color: var(--text-dim); margin-bottom: 1rem;">Errors come with proverbs and wisdom:</p>
         <div class="verse">
@@ -529,7 +586,7 @@ Otura.ether_pa();     // Leave network</pre>
             <div class="verse-name">OTURA-OYEKU (Connection Failed)</div>
             <div class="verse-desc">"The messenger cannot deliver to a house that does not exist."</div>
         </div>
-        
+
         <h2>🎨 VS Code Extension (Ilé Ìwé)</h2>
         <p style="color: var(--text-dim); margin-bottom: 1rem;">Full IDE support for Ifá-Lang development:</p>
         <div class="odu-grid">
@@ -556,11 +613,13 @@ Otura.ether_pa();     // Leave network</pre>
                 <code>cd vscode_extension && npm install && code --extensionDevelopmentPath=.</code>
             </div>
         </div>
-        
+
         <footer>
             <p>Àṣẹ! - Generated by Ifá-Lang Documentation System</p>
-            <p style="margin-top: 0.5rem;"><a href="https://github.com/AAEO04/ifa-lang" style="color: var(--gold);">GitHub Repository</a></p>
+            <p style="margin-top: 0.5rem;"><a href="https://github.com/AAEO04/ifa-lang"
+                    style="color: var(--gold);">GitHub Repository</a></p>
         </footer>
     </div>
 </body>
+
 </html>

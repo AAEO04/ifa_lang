@@ -1,0 +1,70 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// WEB_SERVER.IFA - Simple TCP Echo Server
+// Demonstrates BOTH Yoruba and English syntax
+// ═══════════════════════════════════════════════════════════════════════════
+// Run: ifa run examples/04_apps/web_server.ifa
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPORTS: Mix Yoruba and English freely!
+// ═══════════════════════════════════════════════════════════════════════════
+ìbà Irosu;    // Yoruba: import Output domain
+import Otura; // English: import Network domain
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VARIABLES: ayanmọ (Yoruba) = let (English)
+// ═══════════════════════════════════════════════════════════════════════════
+ayanmọ PORT = 8080;  // Yoruba variable
+
+Irosu.fo("═══════════════════════════════════════════════");
+Irosu.fo("     Ifá-Lang TCP Echo Server");
+Irosu.fo("═══════════════════════════════════════════════");
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONTROL FLOW: ti/bibẹkọ (Yoruba) = if/else (English)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Bind to port - using Yoruba: ti = if
+ti Otura.de(PORT) {
+    Irosu.fo("Server listening on port " + PORT);
+    Irosu.fo("Waiting for connection...");
+    
+    // Accept connection - using Yoruba: ti = if
+    ti Otura.tetisi(30) {
+        Irosu.fo("Client connected!");
+        
+        // Echo loop - using Yoruba: nigba = while, otito = true
+        nigba otito {
+            let data = Otura.gba(1024, 10);  // English: let
+            
+            // Using English: if
+            if Ika.gigun(data) > 0 {
+                Irosu.fo("Received: " + data);
+                
+                // Check for exit - mix Yoruba/English
+                ti data == "exit" {
+                    Irosu.fo("Client requested exit");
+                    Otura.ran("Goodbye from Ifá-Lang!");
+                    dabọ;  // Yoruba: break
+                }
+                
+                // Echo back
+                ayanmọ response = "[Echo] " + data;  // Yoruba variable
+                Otura.ran(response);
+            } else {  // English: else
+                Irosu.fo("Client timeout or disconnected");
+                break;  // English: break
+            }
+        }
+        
+        Otura.pa();  // Close connection
+        Irosu.fo("Connection closed");
+    } bibẹkọ {  // Yoruba: else
+        Irosu.fo("No client connected within timeout");
+    }
+} else {  // English: else (same as bibẹkọ)
+    Irosu.fo("Failed to bind to port " + PORT);
+}
+
+Irosu.fo("Server shutdown");
+àṣẹ;  // Yoruba: end (same as "end;")

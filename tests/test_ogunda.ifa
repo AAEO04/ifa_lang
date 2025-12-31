@@ -1,0 +1,124 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST_OGUNDA.IFA - Unit Tests for Ògúndá (Array) Domain
+// Demonstrates BOTH Yoruba and English syntax
+// ═══════════════════════════════════════════════════════════════════════════
+
+ìbà Irosu;     // Yoruba import
+import Ogunda; // English import
+ìbà Okanran;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: ge() / create() - Create Array
+// ═══════════════════════════════════════════════════════════════════════════
+
+ese test_ge() {                                    // Yoruba: ese = function
+    ayanmọ arr = Ogunda.ge(5);                     // Yoruba: ge = cut/create
+    Okanran.daju(5, Ogunda.gigun(arr), "ge() should create array of size");
+    Irosu.fo("✓ test_ge passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: fi() / push() - Push to Array
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn test_fi() {                                     // English: fn = function
+    let arr = [];                                  // English: let
+    Ogunda.fi(arr, 10);                            // Yoruba: fi = put
+    Ogunda.fi(arr, 20);
+    Ogunda.fi(arr, 30);
+    Okanran.daju(3, Ogunda.gigun(arr), "fi() should push elements");
+    Irosu.fo("✓ test_fi passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: gba() / pop() - Pop from Array
+// ═══════════════════════════════════════════════════════════════════════════
+
+ese test_gba() {
+    ayanmọ arr = [1, 2, 3];
+    ayanmọ last = Ogunda.gba(arr);                 // Yoruba: gba = receive/take
+    Okanran.daju(3, last, "gba() should return last element");
+    Okanran.daju(2, Ogunda.gigun(arr), "gba() should remove element");
+    Irosu.fo("✓ test_gba passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: wa() / find() - Find Element Index
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn test_wa() {
+    let arr = ["a", "b", "c", "d"];
+    let idx = Ogunda.wa(arr, "c");                 // Yoruba: wa = find/search
+    Okanran.daju(2, idx, "wa() should find element index");
+    
+    ayanmọ not_found = Ogunda.wa(arr, "z");        // Mix syntaxes freely!
+    Okanran.daju(-1, not_found, "wa() should return -1 if not found");
+    Irosu.fo("✓ test_wa passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: gigun() / length() - Array Length
+// ═══════════════════════════════════════════════════════════════════════════
+
+ese test_gigun() {
+    ayanmọ arr = [1, 2, 3, 4, 5];
+    Okanran.daju(5, Ogunda.gigun(arr), "gigun() should return length");
+    
+    let empty = [];
+    Okanran.daju(0, Ogunda.gigun(empty), "gigun() of empty should be 0");
+    Irosu.fo("✓ test_gigun passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: dapo() / concat() - Concatenate Arrays
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn test_dapo() {
+    let a = [1, 2];
+    let b = [3, 4];
+    let combined = Ogunda.dapo(a, b);              // Yoruba: dapo = mix/combine
+    Okanran.daju(4, Ogunda.gigun(combined), "dapo() should concat arrays");
+    Irosu.fo("✓ test_dapo passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: to() / sort() - Sort Array
+// ═══════════════════════════════════════════════════════════════════════════
+
+ese test_to() {
+    ayanmọ arr = [3, 1, 4, 1, 5, 9, 2, 6];
+    ayanmọ sorted = Ogunda.to(arr);                // Yoruba: to = arrange
+    Okanran.daju(1, sorted[0], "to() should sort ascending");
+    Okanran.daju(9, sorted[7], "to() last should be max");
+    Irosu.fo("✓ test_to passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: mu() / get() - Get Element at Index
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn test_mu() {
+    let arr = ["Ifá", "Lang", "is", "great"];
+    let elem = Ogunda.mu(arr, 1);                  // Yoruba: mu = take/get
+    Okanran.daju("Lang", elem, "mu() should get element at index");
+    Irosu.fo("✓ test_mu passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RUN ALL TESTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+Irosu.fo("═══ Running Ògúndá (Array) Tests ═══");
+Irosu.fo("Demonstrating dual Yoruba/English syntax\n");
+
+test_ge();
+test_fi();
+test_gba();
+test_wa();
+test_gigun();
+test_dapo();
+test_to();
+test_mu();
+
+Irosu.fo("\n═══ All Ògúndá tests passed! ═══");
+àṣẹ;

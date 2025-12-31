@@ -1,0 +1,115 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST_IKA.IFA - Unit Tests for Ìká (String) Domain
+// Demonstrates BOTH Yoruba and English syntax
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPORTS: Both syntaxes work!
+// ═══════════════════════════════════════════════════════════════════════════
+ìbà Irosu;    // Yoruba: import
+import Ika;   // English: import (same effect!)
+ìbà Okanran;
+ìbà Ogunda;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: so() / concat() - String Concatenation
+// ═══════════════════════════════════════════════════════════════════════════
+
+ese test_so() {                                    // Yoruba: ese = function
+    ayanmọ result = Ika.so("Hello", " ", "World"); // Yoruba: ayanmọ = let
+    Okanran.daju("Hello World", result, "so() should concatenate strings");
+    Irosu.fo("✓ test_so passed");
+}
+
+fn test_concat_english() {                         // English: fn = function
+    let result = Ika.so("Ifá", "-", "Lang");       // English: let = variable
+    Okanran.daju("Ifá-Lang", result, "concat works with English syntax");
+    Irosu.fo("✓ test_concat_english passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: gigun() / length() - String Length
+// ═══════════════════════════════════════════════════════════════════════════
+
+ese test_gigun() {
+    ayanmọ len = Ika.gigun("Ifá-Lang");  // Yoruba function name
+    Okanran.daju(8, len, "gigun() should return string length");
+    Irosu.fo("✓ test_gigun passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: wa() / find() - Find Substring
+// ═══════════════════════════════════════════════════════════════════════════
+
+ese test_wa() {
+    ayanmọ idx = Ika.wa("Hello World", "World");
+    Okanran.daju(6, idx, "wa() should find substring index");
+    
+    let not_found = Ika.wa("Hello", "xyz");  // Mix: let with Yoruba function
+    Okanran.daju(-1, not_found, "wa() should return -1 when not found");
+    Irosu.fo("✓ test_wa passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: ge() / slice() - Substring/Slice
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn test_ge() {                           // English function definition
+    let sub = Ika.ge("Hello World", 0, 5);
+    Okanran.daju("Hello", sub, "ge() should slice string");
+    Irosu.fo("✓ test_ge passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: pada() / reverse() - Reverse String
+// ═══════════════════════════════════════════════════════════════════════════
+
+ese test_pada() {
+    ayanmọ rev = Ika.pada("Ifá");
+    Okanran.daju("áfI", rev, "pada() should reverse string");
+    Irosu.fo("✓ test_pada passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: pin() / split() - Split String
+// ═══════════════════════════════════════════════════════════════════════════
+
+ese test_pin() {
+    ayanmọ parts = Ika.pin("a,b,c", ",");
+    Okanran.daju(3, Ogunda.gigun(parts), "pin() should split into parts");
+    Irosu.fo("✓ test_pin passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TEST: nla() / kekere() - Case Conversion (upper/lower)
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn test_case() {                         // English: fn
+    let upper = Ika.nla("hello");        // English: let
+    Okanran.daju("HELLO", upper, "nla() should uppercase");
+    
+    ayanmọ lower = Ika.kekere("WORLD");  // Yoruba: ayanmọ
+    Okanran.daju("world", lower, "kekere() should lowercase");
+    Irosu.fo("✓ test_case passed");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RUN ALL TESTS
+// Both Yoruba and English keywords compile to the same bytecode!
+// ═══════════════════════════════════════════════════════════════════════════
+
+Irosu.fo("═══ Running Ìká (String) Tests ═══");
+Irosu.fo("Demonstrating dual Yoruba/English syntax\n");
+
+test_so();
+test_concat_english();
+test_gigun();
+test_wa();
+test_ge();
+test_pada();
+test_pin();
+test_case();
+
+Irosu.fo("\n═══ All Ìká tests passed! ═══");
+àṣẹ;   // Yoruba: end
+// end; // English alternative (same effect)
