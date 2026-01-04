@@ -134,15 +134,38 @@ class Calabash4K:
         """Read byte from Odù address."""
         if isinstance(address, str):
             address = Odu12Bit.from_string(address)
+        original = address
         address = address & 0xFFF
+        if original != address:
+            print(f"  ⚠️ Address 0x{original:X} wrapped to 0x{address:03X} (4KB limit)")
         self.access_log.append(("READ", address))
         return self.memory[address]
     
-    def write(self, address, value: int):
-        """Write byte to Odù address."""
+    def write(self, address, value: int, strict: bool = False):
+        """Write byte to Odù address.
+        
+        Args:
+            address: 12-bit address (0-4095)
+            value: Byte value (0-255)
+            strict: If True, raise exception on out-of-bounds. If False, wrap values.
+        """
         if isinstance(address, str):
             address = Odu12Bit.from_string(address)
-        address = address & 0xFFF
+        original_addr = address
+        
+        # Security: Strict mode raises exceptions
+        if strict:
+            if not (0 <= address < 4096):
+                raise IndexError(f"Address {address} out of bounds (0-4095)")
+            if not (0 <= value <= 255):
+                raise ValueError(f"Value {value} out of byte range (0-255)")
+        else:
+            address = address & 0xFFF
+            if original_addr != address:
+                print(f"  ⚠️ Address 0x{original_addr:X} wrapped to 0x{address:03X} (4KB limit)")
+            if value < 0 or value > 255:
+                print(f"  ⚠️ Value {value} truncated to {value & 0xFF} (byte range)")
+        
         self.access_log.append(("WRITE", address, value))
         self.memory[address] = value & 0xFF
     
@@ -307,6 +330,70 @@ class IfaStandardLibrary:
             print(f"0x{addr:03X}    {func['odu']:<25} {func['name']:<20} {func['desc']}")
 
 
+
+# =============================================================================
+# 2026 CEN MODEL - DYNAMIC ỌPỌN (SCALABLE MEMORY)
+# =============================================================================
+
+from enum import Enum
+
+class OponSize(Enum):
+    """Memory size options for Ọpọ́n workspace."""
+    KEKERE = 4 * 1024       # 4KB - IoT/Embedded
+    GIDI = 16 * 1024        # 16KB - Standard
+    NLA = 64 * 1024         # 64KB - Large datasets
+    MEGA = 1024 * 1024      # 1MB - Maximum
+
+
+class OponCalabash:
+    """
+    Dynamic Ọpọ́n (Calabash) - Scalable memory workspace.
+    Sizes range from 4KB to 1MB based on application needs.
+    """
+    
+    def __init__(self, size: OponSize = OponSize.GIDI):
+        self.size = size
+        self.total_bytes = size.value
+        self.memory = bytearray(self.total_bytes)
+        self._regions = {}
+    
+    def write(self, address: int, value: int):
+        """Write a byte to memory."""
+        if 0 <= address < self.total_bytes:
+            self.memory[address] = value & 0xFF
+        else:
+            raise IndexError(f"Address {address} out of bounds (max: {self.total_bytes-1})")
+    
+    def read(self, address: int) -> int:
+        """Read a byte from memory."""
+        if 0 <= address < self.total_bytes:
+            return self.memory[address]
+        raise IndexError(f"Address {address} out of bounds")
+    
+    def allocate_region(self, name: str, size: int) -> int:
+        """Allocate a named region. Returns start address."""
+        used = sum(r['size'] for r in self._regions.values())
+        if used + size > self.total_bytes:
+            raise MemoryError(f"Cannot allocate {size} bytes, only {self.total_bytes - used} free")
+        start = used
+        self._regions[name] = {'start': start, 'size': size}
+        return start
+    
+    def get_region(self, name: str) -> tuple:
+        """Get region (start, size)."""
+        r = self._regions.get(name)
+        return (r['start'], r['size']) if r else None
+    
+    def clear(self):
+        """Zero all memory."""
+        self.memory = bytearray(self.total_bytes)
+        self._regions = {}
+    
+    def __repr__(self):
+        size_name = self.size.name.title()
+        return f"OponCalabash(Ọpọ́n {size_name}, {self.total_bytes:,} bytes)"
+
+
 # =============================================================================
 # EXPORTS
 # =============================================================================
@@ -317,4 +404,7 @@ __all__ = [
     'Odu12Bit',
     'Calabash4K',
     'IfaStandardLibrary',
+    'OponSize',
+    'OponCalabash',
 ]
+

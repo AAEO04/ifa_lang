@@ -137,6 +137,18 @@ class IfaLinter:
     def lint(self) -> List[LintMessage]:
         """Run all lint checks and return messages."""
         
+        # Security: Limit input size to prevent DoS
+        MAX_SOURCE_SIZE = 1024 * 1024  # 1MB max
+        if len(self.source) > MAX_SOURCE_SIZE:
+            self.ctx.add_error("E098", f"File too large ({len(self.source)} bytes > {MAX_SOURCE_SIZE})")
+            return self.ctx.messages
+        
+        # Security: Limit line count
+        MAX_LINES = 50000
+        if len(self.lines) > MAX_LINES:
+            self.ctx.add_error("E099", f"Too many lines ({len(self.lines)} > {MAX_LINES})")
+            return self.ctx.messages
+        
         # Phase 1: Line-based checks (before parsing)
         self._check_line_issues()
         
@@ -339,14 +351,23 @@ class IfaLinter:
     def _check_regex_patterns(self):
         """Fallback regex-based checks when Lark unavailable."""
         
+        # Strip multiline strings to avoid false matches inside string literals
+        # Replace triple-quoted strings with placeholders first
+        source_stripped = self.source
+        source_stripped = re.sub(r'""".*?"""', '""', source_stripped, flags=re.DOTALL)
+        source_stripped = re.sub(r"'''.*?'''", "''", source_stripped, flags=re.DOTALL)
+        # Then single-quoted strings (non-greedy to handle multiple on same line)
+        source_stripped = re.sub(r'"[^"\n]*"', '""', source_stripped)
+        source_stripped = re.sub(r"'[^'\n]*'", "''", source_stripped)
+        
         # Find all variable definitions
         var_pattern = r'(?:ayanmo|let|var)\s+(\w+)'
-        for match in re.finditer(var_pattern, self.source):
+        for match in re.finditer(var_pattern, source_stripped):
             self.ctx.defined_vars.add(match.group(1))
         
         # Find all variable usages (rough approximation)
         word_pattern = r'\b([a-zA-Z_]\w*)\b'
-        for match in re.finditer(word_pattern, self.source):
+        for match in re.finditer(word_pattern, source_stripped):
             word = match.group(1)
             if word not in {'ayanmo', 'let', 'var', 'if', 'else', 'while', 'for', 'in',
                            'true', 'false', 'otito', 'eke', 'iba', 'import'}:

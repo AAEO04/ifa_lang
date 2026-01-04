@@ -86,6 +86,7 @@ class OpCode(IntEnum):
     CONCAT      = 0x60  # Concatenate strings
     STRLEN      = 0x61  # String length
     SUBSTR      = 0x62  # Substring
+    SLICE       = 0x63  # Slice (arr[start:end:step])
     
     # === 0x7X: Array (Ògúndá) ===
     NEW_ARRAY   = 0x70  # Create array
@@ -98,6 +99,7 @@ class OpCode(IntEnum):
     NEW_OBJ     = 0x80  # Create object
     GET_FIELD   = 0x81  # Get object field
     SET_FIELD   = 0x82  # Set object field
+    CALL_METHOD = 0x83  # Call method on object
     
     # === 0xFX: System ===
     HALT        = 0xFF  # Stop execution (Ọ̀yẹ̀kú)
@@ -286,6 +288,47 @@ class BytecodeCompiler:
             self.chunk.emit(OpCode.NEG)
         elif node.op == '!':
             self.chunk.emit(OpCode.NOT)
+    
+    def _compile_sliceaccess(self, node):
+        """Compile slice access (arr[start:end:step])."""
+        # Load the target array/string
+        var_idx = self.chunk.add_constant(node.target)
+        self.chunk.emit(OpCode.LOAD_VAR, var_idx)
+        
+        # Push start, end, step (use None placeholders for omitted values)
+        if node.start is not None:
+            self._compile_node(node.start)
+        else:
+            self.chunk.emit(OpCode.LOAD_CONST, self.chunk.add_constant(None))
+        
+        if node.end is not None:
+            self._compile_node(node.end)
+        else:
+            self.chunk.emit(OpCode.LOAD_CONST, self.chunk.add_constant(None))
+        
+        if node.step is not None:
+            self._compile_node(node.step)
+        else:
+            self.chunk.emit(OpCode.LOAD_CONST, self.chunk.add_constant(None))
+        
+        self.chunk.emit(OpCode.SLICE)
+    
+    def _compile_methodcall(self, node):
+        """Compile method call on object (obj.method(args))."""
+        # Load the object
+        var_idx = self.chunk.add_constant(node.target)
+        self.chunk.emit(OpCode.LOAD_VAR, var_idx)
+        
+        # Push arguments in reverse order
+        for arg in reversed(node.args):
+            self._compile_node(arg)
+        
+        # Push arg count
+        self.chunk.emit(OpCode.LOAD_CONST, self.chunk.add_constant(len(node.args)))
+        
+        # Call the method
+        method_idx = self.chunk.add_constant(node.method)
+        self.chunk.emit(OpCode.CALL_METHOD, method_idx)
     
     def _compile_ifstmt(self, node):
         """Compile if statement."""
@@ -477,12 +520,13 @@ class BytecodeVM:
     Stack-based virtual machine for .ifab bytecode.
     """
     
-    def __init__(self):
+    def __init__(self, output_handler=None):
         self.stack: List[Any] = []
         self.variables: Dict[str, Any] = {}
         self.pc: int = 0  # Program counter
         self.running: bool = False
         self.chunk: BytecodeChunk = None
+        self.output_handler = output_handler  # Custom output handler (default: print)
     
     def run(self, chunk: BytecodeChunk, verbose: bool = False) -> Any:
         """Execute bytecode chunk."""
@@ -520,6 +564,25 @@ class BytecodeVM:
         if idx < len(self.chunk.constants):
             return self.chunk.constants[idx][1]
         return None
+    
+    def _safe_pop(self, expected_type: type = None, default: Any = None) -> Any:
+        """Safely pop from stack with type checking.
+        
+        Args:
+            expected_type: If provided, validates the popped value's type
+            default: Value to return if stack is empty
+            
+        Returns:
+            The popped value or default if stack is empty
+        """
+        if not self.stack:
+            return default
+        value = self.stack.pop()
+        if expected_type and not isinstance(value, expected_type):
+            # Type mismatch - try to convert or return as-is
+            if expected_type in (int, float) and isinstance(value, (int, float)):
+                return expected_type(value)
+        return value
     
     def _execute(self, opcode: int):
         """Execute a single opcode."""
@@ -657,25 +720,178 @@ class BytecodeVM:
         elif opcode == OpCode.STRLEN:
             self.stack.append(len(str(self.stack.pop())))
         
+        elif opcode == OpCode.SUBSTR:
+            # Stack: [string, start, length] -> substring
+            # Supports negative indexing: -1 = last char, -2 = second-to-last, etc.
+            length = self.stack.pop()
+            start = self.stack.pop()
+            string = str(self.stack.pop())
+            # Normalize negative start index
+            if start < 0:
+                start = len(string) + start
+            start = max(0, min(start, len(string)))
+            self.stack.append(string[start:start + length])
+        
+        elif opcode == OpCode.SLICE:
+            # Stack: [sequence, start, end, step] -> sliced sequence
+            # Supports Python-style slicing with negative indices
+            step = self.stack.pop()
+            end = self.stack.pop()
+            start = self.stack.pop()
+            seq = self.stack.pop()
+            
+            # Convert None-like values (0 often means "not specified")
+            if step == 0:
+                step = None
+            if isinstance(seq, (list, str)):
+                # Python handles negative indices natively in slices
+                self.stack.append(seq[start:end:step])
+            else:
+                self.stack.append(seq)
+        
+        # === Array (Ògúndá) ===
+        elif opcode == OpCode.NEW_ARRAY:
+            # Create new array with N elements from stack
+            count = self._read_byte()
+            elements = [self.stack.pop() for _ in range(count)][::-1]
+            self.stack.append(elements)
+        
+        elif opcode == OpCode.ARRAY_GET:
+            # Stack: [array, index] -> element
+            # Supports negative indexing: -1 = last element, -2 = second-to-last, etc.
+            index = self.stack.pop()
+            array = self.stack.pop()
+            if isinstance(array, (list, str)) and len(array) > 0:
+                # Normalize negative index
+                if index < 0:
+                    index = len(array) + index
+                if 0 <= index < len(array):
+                    self.stack.append(array[index])
+                else:
+                    self.stack.append(None)
+            else:
+                self.stack.append(None)
+        
+        elif opcode == OpCode.ARRAY_SET:
+            # Stack: [array, index, value] -> modified array
+            # Supports negative indexing: -1 = last element, -2 = second-to-last, etc.
+            value = self.stack.pop()
+            index = self.stack.pop()
+            array = self.stack.pop()
+            if isinstance(array, list) and len(array) > 0:
+                # Normalize negative index
+                if index < 0:
+                    index = len(array) + index
+                if 0 <= index < len(array):
+                    array[index] = value
+            self.stack.append(array)
+        
+        elif opcode == OpCode.ARRAY_LEN:
+            # Stack: [array] -> length
+            array = self.stack.pop()
+            self.stack.append(len(array) if isinstance(array, list) else 0)
+        
+        elif opcode == OpCode.ARRAY_PUSH:
+            # Stack: [array, value] -> modified array
+            value = self.stack.pop()
+            array = self.stack.pop()
+            if isinstance(array, list):
+                array.append(value)
+            self.stack.append(array)
+        
+        # === Object (Òfún) ===
+        elif opcode == OpCode.NEW_OBJ:
+            # Create new empty object (dictionary)
+            self.stack.append({})
+        
+        elif opcode == OpCode.GET_FIELD:
+            # Stack: [object, field_name] -> value
+            field_idx = self._read_byte()
+            field_name = self._get_constant(field_idx)
+            obj = self.stack.pop()
+            if isinstance(obj, dict):
+                self.stack.append(obj.get(field_name, None))
+            else:
+                self.stack.append(None)
+        
+        elif opcode == OpCode.SET_FIELD:
+            # Stack: [object, value] with field name from operand
+            field_idx = self._read_byte()
+            field_name = self._get_constant(field_idx)
+            value = self.stack.pop()
+            obj = self.stack.pop()
+            if isinstance(obj, dict):
+                obj[field_name] = value
+            self.stack.append(obj)
+        
+        elif opcode == OpCode.CALL_METHOD:
+            # Stack: [object] + method_idx + arg_count + args -> result
+            # Call a method stored in an object's dict
+            method_idx = self._read_byte()
+            method_name = self._get_constant(method_idx)
+            arg_count = self.stack.pop() if self.stack else 0
+            args = [self.stack.pop() for _ in range(int(arg_count))][::-1]
+            obj = self.stack.pop()
+            
+            result = None
+            if isinstance(obj, dict):
+                method = obj.get(method_name)
+                if callable(method):
+                    result = method(*args)
+                elif method is not None:
+                    # Method is a value, not a function - return it
+                    result = method
+            self.stack.append(result)
+        
+        # === Control Flow (additional) ===
+        elif opcode == OpCode.LOOP:
+            # Same as JUMP, used for semantic clarity in loops
+            self.pc = self._read_u16()
+        
+        # === Call Operations (additional) ===
+        elif opcode == OpCode.CALL_FUNC:
+            # Call user-defined function
+            func_idx = self._read_byte()
+            func_name = self._get_constant(func_idx)
+            # Pop arg count
+            arg_count = self.stack.pop() if self.stack else 0
+            # Pop args
+            args = [self.stack.pop() for _ in range(int(arg_count))][::-1]
+            # Look up function in variables (functions stored as callables/addresses)
+            func = self.variables.get(func_name)
+            if callable(func):
+                result = func(*args)
+                self.stack.append(result)
+            elif isinstance(func, int):
+                # Function address - implement call frame later
+                # For now, push args and jump
+                for arg in args:
+                    self.stack.append(arg)
+                self.stack.append(self.pc)  # Return address
+                self.pc = func
+            else:
+                self.stack.append(None)
+        
         # === System ===
         elif opcode == OpCode.HALT:
             self.running = False
         
         elif opcode == OpCode.PRINT:
-            print(f"[Out] {self.stack[-1] if self.stack else 'nil'}")
+            self._emit_output(f"[Out] {self.stack[-1] if self.stack else 'nil'}")
         
         elif opcode == OpCode.DEBUG:
-            print(f"[Debug] PC={self.pc} Stack={self.stack}")
+            self._emit_output(f"[Debug] PC={self.pc} Stack={self.stack}")
     
     def _call_stdlib(self, odu_idx: int, ese_name: str, args: List[Any]) -> Any:
         """Call standard library function."""
         odu_names = list(ODU_INDEX.keys())
         odu_name = odu_names[odu_idx] if odu_idx < len(odu_names) else "unknown"
         
-        # Ìrosù (Output)
+        # Ìrosù (Output) - Use output handler instead of hardcoded print
         if odu_name == "irosu":
             if ese_name in ("fo", "fọ̀"):
-                print(f"[Ìrosù] {args[0] if args else ''}")
+                output = args[0] if args else ''
+                self._emit_output(f"[Ìrosù] {output}")
                 return None
         
         # Ogbè (Init)
@@ -688,9 +904,16 @@ class BytecodeVM:
             if ese_name in ("ro", "rò"):
                 return sum(args)
         
-        # Simulate other calls
-        print(f"[{odu_name}.{ese_name}] Args: {args}")
+        # Unknown call - use output handler for debug info
+        self._emit_output(f"[{odu_name}.{ese_name}] Args: {args}")
         return None
+    
+    def _emit_output(self, message: str):
+        """Emit output through the configured handler (default: print)."""
+        if hasattr(self, 'output_handler') and self.output_handler:
+            self.output_handler(message)
+        else:
+            print(message)
     
     def _debug_instruction(self, opcode: int):
         """Print debug info for instruction."""

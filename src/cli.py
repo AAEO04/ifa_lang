@@ -67,6 +67,14 @@ except ImportError:
         OponVM = None
         BabalawoDebugger = None
 
+# GPC Debugger (Grandparent-Parent-Child call stack)
+try:
+    from src.gpc import GPCStack, GPCDebugger, gpc_debugger
+except ImportError:
+    GPCStack = None
+    GPCDebugger = None
+    gpc_debugger = None
+
 # ISA Matrix
 try:
     from src.isa import IfaISA
@@ -141,6 +149,17 @@ try:
     from src.test_runner import run_cli as test_cli
 except ImportError:
     test_cli = None
+
+# Ìgbálẹ̀ Sandbox
+try:
+    from src.sandbox import (
+        IgbaleRuntime, OgbeConfig, IgbaleContainer,
+        run_sandboxed, PLATFORM
+    )
+    SANDBOX_AVAILABLE = True
+except ImportError:
+    SANDBOX_AVAILABLE = False
+    PLATFORM = "unknown"
 
 def cmd_oja_add(args):
     """
@@ -304,13 +323,28 @@ def cmd_build(args):
     import shutil
     import subprocess
     import tempfile
+    from pathlib import Path
     
     # 1. Check for Rust prerequisites
     check_rust_installed()
 
     filepath = args.file
-    if not os.path.exists(filepath):
-        print(f"Error: File not found: {filepath}")
+    
+    # Security: Validate input file path
+    try:
+        safe_path = Path(filepath).resolve()
+        if not safe_path.exists():
+            print(f"Error: File not found: {filepath}")
+            return 1
+        if safe_path.suffix != '.ifa':
+            print("Error: Only .ifa files can be compiled")
+            return 1
+        # Prevent path traversal
+        if '..' in filepath:
+            print("Error: Invalid file path")
+            return 1
+    except Exception:
+        print(f"Error: Invalid file path: {filepath}")
         return 1
     
     if not IfaRustTranspiler:
@@ -450,10 +484,18 @@ def cmd_debug(args):
         print("Error: BabalawoDebugger not available. Check imports.")
         return 1
     
+    # Check for GPC mode
+    use_gpc = getattr(args, 'gpc', False)
+    if use_gpc and not gpc_debugger:
+        print("Warning: GPC debugger not available. Running without GPC tracing.")
+        use_gpc = False
+    
     with open(filepath, 'r', encoding='utf-8') as f:
         source = f.read()
     
     print(f"\n=== Ifá Debug: {filepath} ===")
+    if use_gpc:
+        print("[GPC] Grandparent-Parent-Child tracing ENABLED")
     
     compiler = EseCompiler()
     debugger = BabalawoDebugger()
@@ -464,9 +506,18 @@ def cmd_debug(args):
         print(f"Compiled {len(bytecode)} instructions.")
         print("Running with debugger attached...\n")
         
+        # Push main frame to GPC stack if enabled
+        if use_gpc:
+            gpc_debugger.stack.push("main", line=1, file=filepath)
+        
         # Execute with debug hooks
         for i, (opcode, value, desc) in enumerate(bytecode):
             print(f"[{i:03d}] {desc}")
+            
+            # Push function calls to GPC stack
+            if use_gpc and "CALL" in desc:
+                func_name = desc.split()[-1] if desc.split() else f"func_{i}"
+                gpc_debugger.stack.push(func_name, line=i, file=filepath)
             
             # Check for division by zero
             if "DIV" in desc and value == 0:
@@ -475,13 +526,25 @@ def cmd_debug(args):
                     'registers': runtime.registers.copy(),
                     'reason': 'Division by Zero'
                 }
+                # Show GPC traceback on error
+                if use_gpc and len(gpc_debugger.stack) > 0:
+                    print("\n╔════ Call Stack (GPC) ════╗")
+                    print(gpc_debugger.stack.traceback())
                 debugger.diagnose(context)
                 return 1
             
+            # Pop function returns from GPC stack
+            if use_gpc and "RET" in desc and len(gpc_debugger.stack) > 1:
+                gpc_debugger.stack.pop()
+            
             if opcode == "00000000":
                 print("\n[Ọ̀yẹ̀kú] Clean Exit.")
+                if use_gpc:
+                    gpc_debugger.stack.clear()
                 return 0
         
+        if use_gpc:
+            gpc_debugger.stack.clear()
         return 0
     except Exception as e:
         context = {
@@ -489,12 +552,19 @@ def cmd_debug(args):
             'registers': {'OKE': 0, 'ISALE': 0, 'OTUN': 0, 'OSI': 0},
             'reason': str(e)
         }
+        # Show GPC traceback on exception
+        if use_gpc and gpc_debugger and len(gpc_debugger.stack) > 0:
+            print("\n╔════ Call Stack (GPC) ════╗")
+            print(gpc_debugger.stack.traceback())
         debugger.diagnose(context)
         return 1
 
 
 def cmd_check(args):
-    """Check code balance (Ìwà-Pẹ̀lẹ́)."""
+    """
+    Check code balance (Ìwà-Pẹ̀lẹ́).
+    With --ebo flag, also validates Ẹbọ sacrifice block lifecycles.
+    """
     filepath = args.file
     if not os.path.exists(filepath):
         print(f"Error: File not found: {filepath}")
@@ -505,13 +575,45 @@ def cmd_check(args):
     
     print(f"\n=== Ifá Check: {filepath} ===")
     
+    # Check for Ebo mode
+    use_ebo = getattr(args, 'ebo', False)
+    if use_ebo:
+        print("[Ẹbọ] Sacrifice block lifecycle validation ENABLED")
+    
     # Use SmartIfaCompiler if available, otherwise basic analysis
     if SmartIfaCompiler:
         print("[Ìwà] Using Smart Compiler for balance check...")
         compiler = SmartIfaCompiler(strict_mode=True)
         compiler.parse(source)
         
-        if compiler.validate():
+        is_valid = compiler.validate()
+        
+        # Additional Ẹbọ lifecycle validation
+        if use_ebo:
+            print("\n[Ẹbọ] Checking sacrifice block lifecycles...")
+            ebo_errors = []
+            
+            # Check for ebo.begin without ebo.sacrifice
+            ebo_begins = source.lower().count('ebo.begin')
+            ebo_sacrifices = source.lower().count('ebo.sacrifice')
+            if ebo_begins != ebo_sacrifices:
+                ebo_errors.append(f"  • ebo.begin: {ebo_begins}, ebo.sacrifice: {ebo_sacrifices} (mismatch)")
+            
+            # Check for ase.begin without ase.end
+            ase_begins = source.lower().count('ase.begin')
+            ase_ends = source.lower().count('ase.end')
+            if ase_begins != ase_ends:
+                ebo_errors.append(f"  • ase.begin: {ase_begins}, ase.end: {ase_ends} (mismatch)")
+            
+            if ebo_errors:
+                print("[Ẹbọ] ✗ Sacrifice block violations found:")
+                for err in ebo_errors:
+                    print(err)
+                is_valid = False
+            else:
+                print("[Ẹbọ] ✓ All sacrifice blocks properly paired.")
+        
+        if is_valid:
             print("[Ìwà] ✓ All resources balanced. The code has good character.")
             return 0
         else:
@@ -873,6 +975,112 @@ def cmd_lint(args):
     return 0
 
 
+def cmd_sandbox(args):
+    """Sandbox command - run code in isolated container."""
+    if not SANDBOX_AVAILABLE:
+        print("Error: Sandbox not available. Check src/sandbox.py")
+        return 1
+    
+    subcmd = getattr(args, 'sandbox_cmd', 'run')
+    
+    if subcmd == 'run':
+        # Run file in sandbox
+        if not hasattr(args, 'file') or not args.file:
+            print("Error: No file specified")
+            return 1
+        
+        timeout = getattr(args, 'timeout', 30.0)
+        
+        try:
+            with open(args.file, 'r', encoding='utf-8') as f:
+                code = f.read()
+        except Exception as e:
+            print(f"Error reading file: {e}")
+            return 1
+        
+        print(f"╔══════════════════════════════════════════╗")
+        print(f"║  ÌGBÁLẸ̀ SANDBOX ({PLATFORM})            ║")
+        print(f"╚══════════════════════════════════════════╝")
+        print(f"Running: {args.file}")
+        print(f"Timeout: {timeout}s")
+        print("-" * 44)
+        
+        result = run_sandboxed(code, timeout=timeout)
+        
+        if result['stdout']:
+            print(result['stdout'])
+        if result['stderr']:
+            print(f"[stderr] {result['stderr']}")
+        
+        print("-" * 44)
+        print(f"Exit: {result['exit_code']} | Duration: {result['duration']:.2f}s")
+        
+        if result['violations']:
+            print(f"Security violations: {len(result['violations'])}")
+        
+        return 0 if result['success'] else 1
+    
+    elif subcmd == 'demo':
+        # Run demo
+        print(f"""
+╔══════════════════════════════════════════════════════════════╗
+║              ÌGBÁLẸ̀ - THE SACRED GROUND                     ║
+║           Ifá-Lang Sandbox ({PLATFORM})                      ║
+╚══════════════════════════════════════════════════════════════╝
+
+Sandbox Features:
+  ✓ Filesystem Isolation (Òdí)
+  ✓ Time/Resource Limits (Ìwòrì)
+  ✓ Process Control (Ògúndá)
+  ✓ Memory Limits (Òtúúrúpọ̀n)
+  ✓ Network Isolation (Ọ̀sá)
+  ✓ Security Monitoring (Ọ̀kànràn)
+
+Usage:
+  ifa sandbox run script.ifa --timeout 30
+  ifa sandbox demo
+
+Docker-Compatible:
+  ✓ Container lifecycle (create/start/stop/destroy)
+  ✓ Resource quotas (CPU, memory, processes)
+  ✓ Virtual filesystem with quotas
+  ✓ I/O capture and logging
+""")
+        
+        # Quick demo
+        runtime = IgbaleRuntime()
+        config = OgbeConfig(name="demo-container")
+        container = runtime.create(config)
+        container.start()
+        
+        container.odi_fs.write_file("workspace/hello.txt", "Àṣẹ from Ìgbálẹ̀!")
+        content = container.odi_fs.read_file("workspace/hello.txt")
+        print(f"Virtual FS test: {content}")
+        
+        info = container.inspect()
+        print(f"Container: {info['Name']} (ID: {info['ID'][:8]}...)")
+        print(f"State: {info['State']}")
+        print(f"RootFS: {info['RootFS']}")
+        
+        container.stop()
+        runtime.gc()
+        
+        print("\n[Ìgbálẹ̀] Demo complete!")
+        return 0
+    
+    elif subcmd == 'list':
+        runtime = IgbaleRuntime()
+        containers = runtime.list()
+        if not containers:
+            print("No containers running")
+        else:
+            for c in containers:
+                print(f"  {c['Name']}: {c['State']}")
+        return 0
+    
+    return 0
+
+
 # =============================================================================
 # MAIN
 # =============================================================================
@@ -913,11 +1121,15 @@ Examples:
     # debug command
     debug_parser = subparsers.add_parser('debug', help='Run with Babalawo debugger')
     debug_parser.add_argument('file', help='Path to .ifa file')
+    debug_parser.add_argument('--gpc', action='store_true', 
+                             help='Enable GPC (Grandparent-Parent-Child) call stack tracing')
     debug_parser.set_defaults(func=cmd_debug)
     
     # check command
     check_parser = subparsers.add_parser('check', help='Check code balance (Ìwà)')
     check_parser.add_argument('file', help='Path to .ifa file')
+    check_parser.add_argument('--ebo', action='store_true',
+                             help='Enable Ẹbọ (sacrifice block) lifecycle validation')
     check_parser.set_defaults(func=cmd_check)
     
     # matrix command
@@ -985,6 +1197,28 @@ Examples:
     # dap command (debug adapter)
     dap_parser = subparsers.add_parser('dap', help='Run Debug Adapter (DAP)')
     dap_parser.set_defaults(func=cmd_dap)
+    
+    # sandbox command (Ìgbálẹ̀ container)
+    sandbox_parser = subparsers.add_parser('sandbox', 
+        help='Run in Ìgbálẹ̀ sandbox (isolated container)')
+    sandbox_subparsers = sandbox_parser.add_subparsers(dest='sandbox_cmd')
+    
+    # sandbox run
+    sandbox_run = sandbox_subparsers.add_parser('run', help='Run file in sandbox')
+    sandbox_run.add_argument('file', help='Ifá file to run')
+    sandbox_run.add_argument('--timeout', '-t', type=float, default=30.0,
+                            help='Max runtime in seconds (default: 30)')
+    sandbox_run.set_defaults(func=cmd_sandbox, sandbox_cmd='run')
+    
+    # sandbox demo
+    sandbox_demo = sandbox_subparsers.add_parser('demo', help='Run sandbox demo')
+    sandbox_demo.set_defaults(func=cmd_sandbox, sandbox_cmd='demo')
+    
+    # sandbox list
+    sandbox_list = sandbox_subparsers.add_parser('list', help='List containers')
+    sandbox_list.set_defaults(func=cmd_sandbox, sandbox_cmd='list')
+    
+    sandbox_parser.set_defaults(func=cmd_sandbox, sandbox_cmd='demo')
     
     args = parser.parse_args()
     

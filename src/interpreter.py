@@ -29,6 +29,12 @@ except ImportError:
     babalawo = None
     speak = None
 
+# Try to import Àjọṣe relationship engine
+try:
+    from src.ajose import AjosePredicateEngine
+except ImportError:
+    AjosePredicateEngine = None
+
 
 # =============================================================================
 # OOP SUPPORT: IfaObject (dá instances)
@@ -79,6 +85,13 @@ class IfaInterpreter:
         # Standard library instances (lazily created)
         self._stdlib: Dict[str, Any] = {}
         
+        # Try to import OturaDomain for proper networking
+        try:
+            from lib.std.otura import OturaDomain
+            self._otura = OturaDomain()
+        except ImportError:
+            self._otura = None
+        
         # File handles for Òdí operations
         self._file_handles: Dict[str, Any] = {}
         
@@ -90,6 +103,21 @@ class IfaInterpreter:
         
         # OOP: Class registry (class_name -> {fields, methods})
         self._classes: Dict[str, Dict[str, Any]] = {}
+        
+        # Àjọṣe: Reactive relationship engine
+        if AjosePredicateEngine:
+            self.ajose = AjosePredicateEngine()
+            
+            # Define reactive relationships
+            self.ajose.define("VariableChange", "Interpreter", "Variable")
+            
+            # Subscribe to variable changes
+            @self.ajose.when("VariableChange")
+            def on_var_change(source, target, context):
+                if self.verbose:
+                    print(f"[Àjọṣe] {context.get('name', '?')}: {context.get('old', '?')} → {context.get('new', '?')}")
+        else:
+            self.ajose = None
     
     def execute(self, instructions: List[Tuple[str, str, str]]):
         """
@@ -174,9 +202,17 @@ class IfaInterpreter:
             parts = self._split_args(args)
             if len(parts) >= 2:
                 name = self._parse_arg(parts[0])
-                value = self._parse_arg(parts[1])
-                self.memory[name] = value
-                return value
+                old_val = self.memory.get(name)
+                new_val = self._parse_arg(parts[1])
+                
+                self.memory[name] = new_val
+                
+                # Notify Àjọṣe of variable change
+                if self.ajose:
+                    self.ajose.link("VariableChange", self, name,
+                                   name=name, old=old_val, new=new_val)
+                
+                return new_val
             return None
             
         elif key == "ogbe.wa" or key == "ogbè.wá":
@@ -249,6 +285,12 @@ class IfaInterpreter:
             parts = self._split_args(args)
             filename = self._parse_arg(parts[0]) if parts else "output.txt"
             mode = self._parse_arg(parts[1]) if len(parts) > 1 else "r"
+            
+            # Security: Validate file path (prevent directory traversal)
+            if not self._validate_file_path(filename):
+                print("[Security] File access denied - path outside allowed directories")
+                return False
+            
             try:
                 self._file_handles[filename] = open(filename, mode, encoding='utf-8')
                 if self.verbose:
@@ -291,14 +333,153 @@ class IfaInterpreter:
         
         # ========== ÒTÚRÁ (NETWORK) ==========
         elif key == "otura.ran" or key == "òtúrá.rán":
-            # Simulate network send
-            print(f"[Òtúrá] Sending → {self._resolve_value(args)}")
-            return True
+            # HTTP POST or TCP send
+            parts = self._split_args(args)
+            url_or_data = self._resolve_value(parts[0]) if parts else ""
+            data = self._resolve_value(parts[1]) if len(parts) > 1 else None
+            
+            if not self._validate_network_target(url_or_data):
+                print(f"[Security] Network access denied - blocked destination")
+                return False
+            
+            # If we have an active socket, send data
+            if hasattr(self, '_active_socket') and self._active_socket:
+                try:
+                    self._active_socket.sendall(str(url_or_data).encode('utf-8'))
+                    if self.verbose:
+                        print(f"[Òtúrá] Sent via socket: {len(str(url_or_data))} bytes")
+                    return True
+                except Exception as e:
+                    print(f"[Òtúrá] Socket send error: {e}")
+                    return False
+            
+            # Otherwise, HTTP POST
+            try:
+                import urllib.request
+                import urllib.parse
+                
+                if data:
+                    # POST request
+                    post_data = urllib.parse.urlencode({'data': str(data)}).encode('utf-8')
+                    req = urllib.request.Request(str(url_or_data), data=post_data, method='POST')
+                else:
+                    # GET request
+                    req = urllib.request.Request(str(url_or_data))
+                
+                req.add_header('User-Agent', 'Ifa-Lang/1.0')
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    result = response.read().decode('utf-8')
+                    self.last_result = result
+                    if self.verbose:
+                        print(f"[Òtúrá] HTTP {'POST' if data else 'GET'} → {url_or_data[:50]}...")
+                    return result
+            except Exception as e:
+                print(f"[Òtúrá] HTTP error: {e}")
+                return False
             
         elif key == "otura.gba" or key == "òtúrá.gbà":
-            # Simulate network receive
-            print(f"[Òtúrá] Listening...")
-            return None
+            # HTTP GET or TCP receive
+            parts = self._split_args(args)
+            url_or_size = self._resolve_value(parts[0]) if parts else 1024
+            timeout = int(self._resolve_value(parts[1])) if len(parts) > 1 else 10
+            
+            # If we have an active socket, receive data
+            if hasattr(self, '_active_socket') and self._active_socket:
+                try:
+                    size = int(url_or_size) if str(url_or_size).isdigit() else 1024
+                    self._active_socket.settimeout(timeout)
+                    data = self._active_socket.recv(size).decode('utf-8')
+                    self.last_result = data
+                    if self.verbose:
+                        print(f"[Òtúrá] Received via socket: {len(data)} bytes")
+                    return data
+                except Exception as e:
+                    print(f"[Òtúrá] Socket recv error: {e}")
+                    return None
+            
+            # Otherwise, HTTP GET
+            url = str(url_or_size)
+            if not self._validate_network_target(url):
+                print(f"[Security] Network access denied - blocked destination")
+                return None
+            
+            try:
+                import urllib.request
+                req = urllib.request.Request(url)
+                req.add_header('User-Agent', 'Ifa-Lang/1.0')
+                with urllib.request.urlopen(req, timeout=timeout) as response:
+                    result = response.read().decode('utf-8')
+                    self.last_result = result
+                    if self.verbose:
+                        print(f"[Òtúrá] HTTP GET ← {url[:50]}...")
+                    return result
+            except Exception as e:
+                print(f"[Òtúrá] HTTP error: {e}")
+                return None
+        
+        elif key == "otura.de" or key == "òtúrá.dé":
+            # TCP Connect: Otura.de(host, port)
+            parts = self._split_args(args)
+            host = self._resolve_value(parts[0]) if parts else "localhost"
+            port = int(self._resolve_value(parts[1])) if len(parts) > 1 else 80
+            
+            if not self._validate_network_target(host):
+                print(f"[Security] Network access denied - blocked destination")
+                return False
+            
+            try:
+                import socket
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(10)
+                sock.connect((str(host), port))
+                self._active_socket = sock
+                self._network_state['connected'] = True
+                if self.verbose:
+                    print(f"[Òtúrá] Connected to {host}:{port}")
+                return True
+            except Exception as e:
+                print(f"[Òtúrá] Connect error: {e}")
+                return False
+        
+        elif key == "otura.tetisi" or key == "òtúrá.tẹ́tisí":
+            # TCP Listen: Otura.tetisi(port)
+            port = int(self._resolve_value(args)) if args else 8080
+            
+            try:
+                import socket
+                server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                server.bind(('0.0.0.0', port))
+                server.listen(1)
+                server.settimeout(30)
+                if self.verbose:
+                    print(f"[Òtúrá] Listening on port {port}...")
+                conn, addr = server.accept()
+                self._active_socket = conn
+                self._network_state['server'] = server
+                self._network_state['client_addr'] = addr
+                if self.verbose:
+                    print(f"[Òtúrá] Client connected from {addr}")
+                return True
+            except Exception as e:
+                print(f"[Òtúrá] Listen error: {e}")
+                return False
+        
+        elif key == "otura.pa" or key == "òtúrá.pà":
+            # Close connection
+            try:
+                if hasattr(self, '_active_socket') and self._active_socket:
+                    self._active_socket.close()
+                    self._active_socket = None
+                if self._network_state.get('server'):
+                    self._network_state['server'].close()
+                self._network_state.clear()
+                if self.verbose:
+                    print(f"[Òtúrá] Connection closed")
+                return True
+            except Exception as e:
+                print(f"[Òtúrá] Close error: {e}")
+                return False
         
         # ========== ÌKÁ (STRINGS) ==========
         elif key == "ika.sopo" or key == "ìká.ṣọpọ̀":
@@ -306,11 +487,82 @@ class IfaInterpreter:
             val = self._parse_arg(args)
             self.last_result = str(self.last_result or "") + str(val)
             return self.last_result
-            
-        elif key == "ika.gun" or key == "ìká.gùn":
+        
+        elif key == "ika.so" or key == "ìká.sọ":
+            # Multi-arg string concatenation: Ika.so(a, b, c, ...) -> "abc..."
+            parts = self._split_args(args)
+            resolved = [str(self._resolve_value(p)) for p in parts]
+            self.last_result = "".join(resolved)
+            return self.last_result
+        
+        elif key == "ika.gigun" or key == "ìká.gígùn":
             # String length
             val = self._resolve_value(args)
             return len(str(val)) if val else 0
+            
+        elif key == "ika.gun" or key == "ìká.gùn":
+            # String length (alternate)
+            val = self._resolve_value(args)
+            return len(str(val)) if val else 0
+        
+        # ========== ỌBÀRÀ (MATH - ADDITION) EXTENDED ==========
+        elif key == "obara.fikun" or key == "ọ̀bàrà.fikun":
+            # Add two values: Obara.fikun(a, b) -> a + b
+            parts = self._split_args(args)
+            if len(parts) >= 2:
+                a = self._resolve_value(parts[0])
+                b = self._resolve_value(parts[1])
+                if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+                    result = a + b
+                else:
+                    result = str(a) + str(b)
+                self.last_result = result
+                return result
+            return 0
+        
+        # ========== ÒGÚNDÁ (ARRAYS/LISTS) ==========
+        elif key == "ogunda.da" or key == "ògúndá.dá":
+            # Create new array: Ogunda.da() -> []
+            return []
+        
+        elif key == "ogunda.fi" or key == "ògúndá.fí":
+            # Add to array: Ogunda.fi(arr, value) -> arr with value appended
+            parts = self._split_args(args)
+            if len(parts) >= 2:
+                arr = self._resolve_value(parts[0])
+                val = self._resolve_value(parts[1])
+                if isinstance(arr, list):
+                    arr.append(val)
+                    return arr
+                else:
+                    # Create new list with value
+                    return [val]
+            return []
+        
+        elif key == "ogunda.gigun" or key == "ògúndá.gígùn":
+            # Array length: Ogunda.gigun(arr) -> len(arr)
+            arr = self._resolve_value(args)
+            if isinstance(arr, list):
+                return len(arr)
+            return 0
+        
+        elif key == "ogunda.gba" or key == "ògúndá.gbà":
+            # Get from array: Ogunda.gba(arr, index) -> arr[index]
+            parts = self._split_args(args)
+            if len(parts) >= 2:
+                arr = self._resolve_value(parts[0])
+                idx = self._resolve_value(parts[1])
+                if isinstance(arr, list) and isinstance(idx, int):
+                    if 0 <= idx < len(arr):
+                        return arr[idx]
+            return None
+        
+        elif key == "ogunda.mu" or key == "ògúndá.mú":
+            # Remove last from array: Ogunda.mu(arr) -> removed element
+            arr = self._resolve_value(args)
+            if isinstance(arr, list) and arr:
+                return arr.pop()
+            return None
         
         # ========== ỌSẸ (GRAPHICS) ==========
         elif key == "ose.ya" or key == "ọ̀ṣẹ́.yà":
@@ -360,6 +612,203 @@ class IfaInterpreter:
                 self.last_result = random.randint(0, 255)
             return self.last_result
         
+        # ========== ÍROSÙ (CONSOLE I/O) ==========
+        elif key == "irosu.fo" or key == "írosù.fọ́":
+            # Print output: Irosu.fo(message)
+            msg = self._resolve_value(args)
+            print(msg)
+            return msg
+        
+        elif key == "irosu.kigbe" or key == "írosù.kígbe":
+            # Print error: Irosu.kigbe(message)
+            msg = self._resolve_value(args)
+            print(f"⚠️ {msg}", file=sys.stderr)
+            return msg
+        
+        elif key == "irosu.gba" or key == "írosù.gbà":
+            # Read input: Irosu.gba(prompt)
+            prompt = self._resolve_value(args) or "> "
+            result = input(str(prompt))
+            self.last_result = result
+            return result
+        
+        elif key == "irosu.so_owo" or key == "írosù.sọ_ọwọ́":
+            # Format with colors (ANSI)
+            parts = self._split_args(args)
+            msg = self._resolve_value(parts[0]) if parts else ""
+            color = self._resolve_value(parts[1]) if len(parts) > 1 else "white"
+            colors = {"red": "\033[91m", "green": "\033[92m", "yellow": "\033[93m", 
+                     "blue": "\033[94m", "white": "\033[97m", "reset": "\033[0m"}
+            code = colors.get(str(color).lower(), "")
+            print(f"{code}{msg}\033[0m")
+            return msg
+        
+        # ========== ỌKÀNRÀN (ERROR HANDLING) ==========
+        elif key == "okanran.ju" or key == "ọkànràn.jù":
+            # Throw error: Okanran.ju(message)
+            msg = self._resolve_value(args)
+            raise RuntimeError(f"[Ọkànràn] {msg}")
+        
+        elif key == "okanran.mu" or key == "ọkànràn.mú":
+            # Store error handler (simplified - stores in memory)
+            handler = self._resolve_value(args)
+            self.memory['_error_handler'] = handler
+            return True
+        
+        elif key == "okanran.gba_asise" or key == "ọkànràn.gbà_àṣìṣe":
+            # Get last error
+            return self.memory.get('_last_error', None)
+        
+        # ========== ỌSÀ (CONCURRENCY/LOCKING) ==========
+        elif key == "osa.khoa" or key == "ọ̀sà.kóà":
+            # Acquire lock: Osa.khoa(name)
+            import threading
+            lock_name = self._resolve_value(args)
+            if '_locks' not in self.memory:
+                self.memory['_locks'] = {}
+            if lock_name not in self.memory['_locks']:
+                self.memory['_locks'][lock_name] = threading.Lock()
+            self.memory['_locks'][lock_name].acquire()
+            if self.verbose:
+                print(f"[Ọ̀sà] Lock acquired: {lock_name}")
+            return True
+        
+        elif key == "osa.si" or key == "ọ̀sà.sí":
+            # Release lock: Osa.si(name)
+            lock_name = self._resolve_value(args)
+            if '_locks' in self.memory and lock_name in self.memory['_locks']:
+                try:
+                    self.memory['_locks'][lock_name].release()
+                    if self.verbose:
+                        print(f"[Ọ̀sà] Lock released: {lock_name}")
+                    return True
+                except RuntimeError:
+                    return False
+            return False
+        
+        # ========== ÌRẸTẸ̀ (MEMORY MANAGEMENT) ==========
+        elif key == "irete.ya" or key == "ìrẹtẹ̀.yá":
+            # Allocate memory region: Irete.ya(size)
+            size = int(self._resolve_value(args) or 256)
+            # Security: Limit allocation size
+            MAX_ALLOC = 1024 * 1024  # 1MB max
+            if size > MAX_ALLOC:
+                print(f"[Security] Allocation too large: {size} > {MAX_ALLOC}")
+                return None
+            addr = len(self.memory.get('_heap', []))
+            if '_heap' not in self.memory:
+                self.memory['_heap'] = []
+            self.memory['_heap'].extend([0] * size)
+            if self.verbose:
+                print(f"[Ìrẹtẹ̀] Allocated {size} bytes at {addr}")
+            return addr
+        
+        elif key == "irete.tu" or key == "ìrẹtẹ̀.tú":
+            # Free memory (mark as available - simplified GC)
+            addr = int(self._resolve_value(args) or 0)
+            if self.verbose:
+                print(f"[Ìrẹtẹ̀] Freed address {addr}")
+            return True
+        
+        # ========== ỌFÚN (OBJECTS) ==========
+        elif key == "ofun.da" or key == "ọ̀fún.dá":
+            # Create new object: Ofun.da()
+            return {}
+        
+        elif key == "ofun.fi" or key == "ọ̀fún.fí":
+            # Set property: Ofun.fi(obj, key, value)
+            parts = self._split_args(args)
+            if len(parts) >= 3:
+                obj = self._resolve_value(parts[0])
+                key_name = self._resolve_value(parts[1])
+                value = self._resolve_value(parts[2])
+                if isinstance(obj, dict):
+                    obj[str(key_name)] = value
+                    return obj
+            return None
+        
+        elif key == "ofun.gba" or key == "ọ̀fún.gbà":
+            # Get property: Ofun.gba(obj, key)
+            parts = self._split_args(args)
+            if len(parts) >= 2:
+                obj = self._resolve_value(parts[0])
+                key_name = self._resolve_value(parts[1])
+                if isinstance(obj, dict):
+                    return obj.get(str(key_name))
+            return None
+        
+        # ========== EXTENDED ÒDÍ (FILE I/O) ==========
+        elif key == "odi.wa" or key == "òdí.wà":
+            # Check file exists: Odi.wa(path)
+            path = self._resolve_value(args)
+            return os.path.exists(str(path))
+        
+        elif key == "odi.fi" or key == "òdí.fí":
+            # Append to file: Odi.fi(path, content)
+            parts = self._split_args(args)
+            if len(parts) >= 2:
+                path = self._resolve_value(parts[0])
+                content = self._resolve_value(parts[1])
+                if not self._validate_file_path(str(path)):
+                    print("[Security] File access denied")
+                    return False
+                with open(str(path), 'a', encoding='utf-8') as f:
+                    f.write(str(content))
+                return True
+            return False
+        
+        elif key == "odi.akojo" or key == "òdí.àkójọ":
+            # List directory: Odi.akojo(path)
+            path = self._resolve_value(args) or "."
+            if not self._validate_file_path(str(path)):
+                print("[Security] Directory access denied")
+                return []
+            try:
+                return os.listdir(str(path))
+            except:
+                return []
+        
+        # ========== EXTENDED ÌKÁ (STRINGS) ==========
+        elif key == "ika.ge" or key == "ìká.gé":
+            # Substring: Ika.ge(str, start, len)
+            parts = self._split_args(args)
+            if len(parts) >= 3:
+                s = str(self._resolve_value(parts[0]))
+                start = int(self._resolve_value(parts[1]))
+                length = int(self._resolve_value(parts[2]))
+                return s[start:start + length]
+            return ""
+        
+        elif key == "ika.nla" or key == "ìká.nlá":
+            # Uppercase: Ika.nla(str)
+            s = self._resolve_value(args)
+            return str(s).upper() if s else ""
+        
+        elif key == "ika.kekere" or key == "ìká.kékeré":
+            # Lowercase: Ika.kekere(str)
+            s = self._resolve_value(args)
+            return str(s).lower() if s else ""
+        
+        elif key == "ika.wa" or key == "ìká.wá":
+            # Find substring: Ika.wa(str, substr)
+            parts = self._split_args(args)
+            if len(parts) >= 2:
+                s = str(self._resolve_value(parts[0]))
+                sub = str(self._resolve_value(parts[1]))
+                return s.find(sub)
+            return -1
+        
+        elif key == "ika.pin" or key == "ìká.pín":
+            # Split string: Ika.pin(str, delim)
+            parts = self._split_args(args)
+            if len(parts) >= 2:
+                s = str(self._resolve_value(parts[0]))
+                delim = str(self._resolve_value(parts[1]))
+                return s.split(delim)
+            elif parts:
+                return str(self._resolve_value(parts[0])).split()
+            return []
+        
         # ========== UNKNOWN ==========
         else:
             print(f"⚠️ Runtime Warning: Spirit '{key}' not found in Interpreter.")
@@ -405,6 +854,63 @@ class IfaInterpreter:
         if not arg or arg == "":
             return self.last_result
         return self._parse_arg(arg)
+    
+    def _validate_file_path(self, filepath: str) -> bool:
+        """Validate file path to prevent directory traversal attacks.
+        
+        Only allows access to files within:
+        - Current working directory
+        - data/ subdirectory
+        - output/ subdirectory
+        """
+        if not filepath:
+            return False
+        
+        # Block obvious traversal attempts
+        if '..' in filepath:
+            return False
+        
+        # Resolve to absolute path
+        abs_path = os.path.abspath(filepath)
+        cwd = os.getcwd()
+        
+        # Must be within working directory
+        if not abs_path.startswith(cwd):
+            return False
+        
+        return True
+    
+    def _validate_network_target(self, url: str) -> bool:
+        """Validate network target for SSRF protection.
+        
+        Blocks:
+        - Localhost (127.x.x.x)
+        - Private IPs (10.x, 172.16-31.x, 192.168.x)
+        - Link-local (169.254.x.x)
+        - Cloud metadata (169.254.169.254)
+        """
+        if not url:
+            return False
+        
+        url_lower = str(url).lower()
+        
+        # Block common SSRF targets
+        blocked_patterns = [
+            '127.0.0.1', 'localhost', '0.0.0.0',
+            '169.254.169.254',  # AWS/GCP metadata
+            '10.', '172.16.', '172.17.', '172.18.', '172.19.',
+            '172.20.', '172.21.', '172.22.', '172.23.',
+            '172.24.', '172.25.', '172.26.', '172.27.',
+            '172.28.', '172.29.', '172.30.', '172.31.',
+            '192.168.', '169.254.',
+            'file://', 'gopher://', 'dict://',
+        ]
+        
+        for pattern in blocked_patterns:
+            if pattern in url_lower:
+                return False
+        
+        return True
     
     def _split_args(self, args: str) -> List[str]:
         """Split comma-separated arguments, respecting quotes."""
@@ -1002,6 +1508,54 @@ def run_code(source: str, verbose: bool = False):
     interpreter.execute(instructions)
     
     return interpreter
+
+
+# =============================================================================
+# 2026 CEN MODEL - DÍFÁ (DIVINATION BLOCK)
+# =============================================================================
+
+class DivinationBlock:
+    """
+    Maps numeric values to Odù patterns using formal thresholds.
+    
+    Usage:
+        div = DivinationBlock()
+        odu = div.evaluate(0.75)  # Returns "Ọ̀sá" for values 0.5-0.75
+    """
+    
+    THRESHOLDS = [
+        (0.0, 0.125, "Ogbè", "OGBE"),
+        (0.125, 0.25, "Ọ̀yẹ̀kú", "OYEKU"),
+        (0.25, 0.375, "Ìwòrì", "IWORI"),
+        (0.375, 0.5, "Ìrẹtẹ̀", "IRETE"),
+        (0.5, 0.625, "Ọ̀sá", "OSA"),
+        (0.625, 0.75, "Ògúndá", "OGUNDA"),
+        (0.75, 0.875, "Ìká", "IKA"),
+        (0.875, 1.0, "Òfún", "OFUN"),
+    ]
+    
+    def evaluate(self, value: float) -> str:
+        """Map a float (0-1) to an Odù pattern."""
+        for low, high, yoruba, _ in self.THRESHOLDS:
+            if low <= value < high:
+                return yoruba
+        return self.THRESHOLDS[-1][2]
+    
+    def get_domain(self, value: float) -> str:
+        """Get the domain code (uppercase ASCII)."""
+        for low, high, _, domain in self.THRESHOLDS:
+            if low <= value < high:
+                return domain
+        return self.THRESHOLDS[-1][3]
+    
+    def branch(self, value: float, branches: dict) -> any:
+        """Execute the branch corresponding to the Odù threshold."""
+        domain = self.get_domain(value).upper()
+        if domain in branches:
+            return branches[domain]() if callable(branches[domain]) else branches[domain]
+        if "DEFAULT" in branches:
+            return branches["DEFAULT"]() if callable(branches["DEFAULT"]) else branches["DEFAULT"]
+        return None
 
 
 # =============================================================================

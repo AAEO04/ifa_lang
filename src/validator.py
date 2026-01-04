@@ -47,6 +47,10 @@ LIFECYCLE_RULES = {
     
     # Loops (special tracking)
     "iwori.yipo": "iwori.pada",   # Loop start -> Return
+    
+    # Ẹbọ-aware rules (Sacrifice/Atomic blocks)
+    "ebo.begin":   "ebo.sacrifice",  # Start sacrifice block → End block
+    "ase.begin":   "ase.end",        # Start atomic block → End block
 }
 
 # Resources that auto-close at program end (don't need explicit close)
@@ -201,6 +205,8 @@ class IwaEngine:
         Check token stream for balance violations.
         Returns True if balanced, False otherwise.
         """
+        MAX_ITERATIONS = 10000  # Security: Prevent DoS via infinite loops
+        
         print("\n╔════════════════════════════════════════════════════════╗")
         print("║         ÌWÀ ENGINE - Checking for Balance              ║")
         print("╚════════════════════════════════════════════════════════╝")
@@ -208,6 +214,12 @@ class IwaEngine:
         self.debt_ledger = []
         self.errors = []
         self.warnings = []
+        
+        # Security: Check iteration limit
+        if len(tokens) > MAX_ITERATIONS:
+            self.errors.append(f"Token limit exceeded: {len(tokens)} > {MAX_ITERATIONS}")
+            print(f"  ⚠️ Security: Token limit exceeded ({len(tokens)} tokens)")
+            return False
         
         for i, token in enumerate(tokens):
             normalized = self.normalize(token)
@@ -320,12 +332,15 @@ class SmartIfaCompiler:
         """Run Ìwà Engine validation."""
         return self.iwa_engine.check(self.tokens, self.source_lines)
     
-    def compile(self, source_code: str) -> Optional[str]:
+    def compile(self, source_code: str) -> dict:
         """
         Full compilation pipeline:
         1. Parse
         2. Validate (Ìwà Engine)
         3. Transpile (if valid)
+        
+        Returns:
+            dict with 'status' key: 'valid' on success, 'error' on failure
         """
         print("\n" + "=" * 60)
         print("SMART IFÁ COMPILER - Compilation Started")
@@ -341,7 +356,7 @@ class SmartIfaCompiler:
         is_balanced = self.validate()
         
         if not is_balanced:
-            return None
+            return {"status": "error", "message": "Balance check failed"}
         
         # Step 3: Transpile
         print("\n[3/3] Proceeding to Rust Transpilation...")
@@ -351,7 +366,7 @@ class SmartIfaCompiler:
         print("COMPILATION SUCCESSFUL")
         print("=" * 60)
         
-        return rust_code
+        return {"status": "valid", "code": rust_code}
     
     def _transpile(self) -> str:
         """Generate Rust code from validated tokens."""
@@ -362,6 +377,63 @@ class SmartIfaCompiler:
             return transpiler.transpile(";".join(self.source_lines))
         except ImportError:
             return "// Rust code would be generated here"
+
+
+# =============================================================================
+# 2026 CEN MODEL - TAINT TRACKER (Static Data Flow Analysis)
+# =============================================================================
+
+class TaintTracker:
+    """
+    Tracks data flow taint for static analysis.
+    Catches indirect violations where tainted data flows to forbidden domains.
+    """
+    
+    def __init__(self):
+        self.taint_map = {}
+        self.forbidden_flows = []
+        self.violations = []
+    
+    def add_forbidden_flow(self, source: str, target: str):
+        """Add a forbidden data flow rule."""
+        self.forbidden_flows.append((source.lower(), target.lower()))
+    
+    def taint_variable(self, var_name: str, domain: str, line: int = 0):
+        """Mark a variable as tainted by a domain."""
+        if var_name not in self.taint_map:
+            self.taint_map[var_name] = set()
+        self.taint_map[var_name].add(domain.lower())
+    
+    def propagate_taint(self, source_var: str, target_var: str):
+        """Propagate taint from one variable to another."""
+        if source_var in self.taint_map:
+            if target_var not in self.taint_map:
+                self.taint_map[target_var] = set()
+            self.taint_map[target_var].update(self.taint_map[source_var])
+    
+    def check_flow(self, var_name: str, target_domain: str, line: int = 0) -> bool:
+        """Check if a variable can flow to a target domain. Returns True if allowed."""
+        taints = self.taint_map.get(var_name, set())
+        for source, target in self.forbidden_flows:
+            if source in taints and target_domain.lower() == target:
+                self.violations.append({
+                    'variable': var_name,
+                    'source': source,
+                    'target': target,
+                    'line': line
+                })
+                return False
+        return True
+    
+    def get_taint(self, var_name: str) -> set:
+        return self.taint_map.get(var_name, set())
+    
+    def is_clean(self) -> bool:
+        return len(self.violations) == 0
+    
+    def report_violations(self):
+        for v in self.violations:
+            print(f"  ⚠️ TAINT VIOLATION: '{v['variable']}' tainted by {v['source']} flows to {v['target']}")
 
 
 # =============================================================================
