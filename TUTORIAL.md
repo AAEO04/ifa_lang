@@ -502,7 +502,47 @@ Check out the `examples/05_advanced/` folder for complex, real-world examples:
    - `ifa debug --gpc program.ifa` - GPC call stack tracing
    - `ifa check --ebo program.ifa` - Ẹbọ lifecycle validation
 
+7. **Sandbox Execution**:
+   - `ifa sandbox run script.ifa` - Run in isolated container
+   - `ifa sandbox demo` - Demo sandbox features
+   - See [sandbox.html](docs/sandbox.html) for full documentation
+
+---
+
+## Ìgbálẹ̀ Sandbox (Secure Execution)
+
+Run untrusted code safely using the Ìgbálẹ̀ sandbox:
+
+```bash
+# Run script in sandbox with 30s timeout
+ifa sandbox run script.ifa --timeout 30
+
+# Demo sandbox features
+ifa sandbox demo
+
+# List active containers
+ifa sandbox list
+```
+
+### Security Features
+
+| Feature | Description |
+|---------|-------------|
+| **Filesystem** | Isolated virtual filesystem |
+| **Network** | Blocked by default |
+| **CPU** | Time limits with watchdog |
+| **Memory** | 100MB default limit |
+| **Processes** | Max 10 child processes |
+
+### When to Use
+
+- Running untrusted user code
+- Online playgrounds
+- Testing potentially dangerous scripts
+- Multi-tenant code execution
+
 ---
 
 **Àṣẹ!** *(It is done!)*
+
 
