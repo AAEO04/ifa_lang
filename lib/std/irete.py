@@ -43,25 +43,34 @@ class IreteDomain(OduModule):
     
     def di(self, value: Any, algorithm: str = "sha256") -> str:
         """
-        dì (Hash/Bind) - Compute hash of value
+        dì (Hash/Bind) - Compute hash of value (SECURITY HARDENED)
         
-        Yoruba: Ìrẹtẹ̀.dì()
-        English: Crypto.hash(), Hash.compute()
-        
-        Algorithms: md5, sha1, sha256, sha512
+        SECURE algorithms only: sha256, sha384, sha512, sha3_256, sha3_512
+        MD5 and SHA1 are REMOVED due to known vulnerabilities.
         """
         data = str(value).encode('utf-8')
         
-        if algorithm == "md5":
-            h = hashlib.md5(data)
-        elif algorithm == "sha1":
-            h = hashlib.sha1(data)
-        elif algorithm == "sha512":
-            h = hashlib.sha512(data)
-        else:  # default sha256
-            h = hashlib.sha256(data)
+        # Only secure algorithms
+        SECURE_ALGORITHMS = {
+            'sha256': hashlib.sha256,
+            'sha384': hashlib.sha384,
+            'sha512': hashlib.sha512,
+            'sha3_256': hashlib.sha3_256,
+            'sha3_512': hashlib.sha3_512,
+        }
         
-        return h.hexdigest()
+        algorithm = algorithm.lower().replace('-', '_')
+        
+        if algorithm in ('md5', 'sha1'):
+            print(f"[Security] Insecure algorithm blocked: {algorithm}")
+            print("[Security] Using sha256 instead")
+            algorithm = 'sha256'
+        
+        if algorithm not in SECURE_ALGORITHMS:
+            algorithm = 'sha256'
+        
+        hash_func = SECURE_ALGORITHMS[algorithm]
+        return hash_func(data).hexdigest()
     
     # =========================================================================
     # COMPRESSION

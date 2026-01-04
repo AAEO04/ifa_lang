@@ -221,28 +221,53 @@ class IkaDomain(OduModule):
             return ""
     
     def hash_(self, text: str) -> str:
-        """MD5 hash."""
-        return hashlib.md5(text.encode()).hexdigest()
+        """SHA-256 hash (MD5 deprecated for security)."""
+        return hashlib.sha256(text.encode()).hexdigest()
     
     def sha256_(self, text: str) -> str:
         """SHA-256 hash."""
         return hashlib.sha256(text.encode()).hexdigest()
     
     # =========================================================================
-    # REGEX
+    # REGEX (SECURITY HARDENED - ReDoS Protection)
     # =========================================================================
     
+    MAX_PATTERN_LENGTH = 100
+    BLOCKED_REGEX_PATTERNS = [
+        r'\(\?',           # Lookahead/lookbehind
+        r'\(.*\+\)\+',     # Nested quantifiers
+        r'\(.+\)\+',       # Greedy quantifiers repeated
+    ]
+    
+    def _validate_pattern(self, pattern: str) -> bool:
+        """Validate regex pattern for ReDoS safety."""
+        if not pattern or len(pattern) > self.MAX_PATTERN_LENGTH:
+            print("[Security] Pattern too long or empty")
+            return False
+        
+        # Check for dangerous constructs
+        for blocked in self.BLOCKED_REGEX_PATTERNS:
+            if re.search(blocked, pattern):
+                print("[Security] Dangerous regex pattern detected")
+                return False
+        return True
+    
     def baamu(self, pattern: str, text: str) -> bool:
-        """Regex match - returns True if pattern matches."""
+        """Regex match with ReDoS protection."""
+        if not self._validate_pattern(pattern):
+            return False
         try:
-            return bool(re.search(pattern, text))
+            # Limit text length for safety
+            return bool(re.search(pattern, text[:10000]))
         except re.error:
             return False
     
     def wa_gbogbo(self, pattern: str, text: str) -> List[str]:
-        """Find all regex matches."""
+        """Find all regex matches with ReDoS protection."""
+        if not self._validate_pattern(pattern):
+            return []
         try:
-            return re.findall(pattern, text)
+            return re.findall(pattern, text[:10000])
         except re.error:
             return []
 

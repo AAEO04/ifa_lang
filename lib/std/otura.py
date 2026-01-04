@@ -18,16 +18,28 @@ from .base import OduModule
 
 
 class OturaDomain(OduModule):
-    """The Messenger - Network operations using real sockets."""
+    """The Messenger - Network operations (SECURITY HARDENED)."""
     
-    # Default Ether network settings
-    ETHER_PORT = 9256  # Default port for Ether broadcast
-    ETHER_GROUP = '239.255.255.250'  # Multicast group for Ether
+    # Network settings
+    ETHER_PORT = 9256
+    ETHER_GROUP = '239.255.255.250'
+    
+    # SSRF Protection
+    BLOCKED_HOSTS = {'localhost', 'localhost.localdomain', 'metadata.google.internal', 'instance-data'}
+    BLOCKED_PORTS = {22, 23, 25, 3306, 5432, 6379, 27017}
+    MAX_BUFFER_SIZE = 65536
+    TIMEOUT = 10
+    
+    # Rate limiting
+    MAX_CONNECTIONS_PER_MINUTE = 10
+    _connection_times: List[float] = []
+    
+    # Security audit log
+    _security_log: List[Dict] = []
     
     def __init__(self, name: str = "Orunmila"):
         super().__init__("Òtúrá", "1011", "The Messenger - Network")
         
-        # Instance identification
         self.name = name
         
         # TCP Socket state
@@ -48,28 +60,116 @@ class OturaDomain(OduModule):
         
         # High-level API
         self._register("de", self.de, "Bind to port (TCP)")
-        self._register("so", self.so, "TCP Connect to host (different from Ika.so=concat, Obara.so=multiply)")
+        self._register("so", self.so, "TCP Connect to host")
         self._register("ran", self.ran, "Send data (TCP)")
-        self._register("gba", self.gba, "TCP Receive data (different from Ogbe.gba=args, Ogunda.gba=pop)")
+        self._register("gba", self.gba, "TCP Receive data")
         self._register("pa", self.pa, "Close connection")
         self._register("tẹtisi", self.tetisi, "Accept incoming connection")
         
-        # Ether (Real UDP Multicast) API
+        # Ether API
         self._register("ether_de", self.ether_de, "Join Ether network")
         self._register("ether_ran", self.ether_ran, "Broadcast to Ether")
         self._register("ether_gba", self.ether_gba, "Receive from Ether")
         self._register("ether_pa", self.ether_pa, "Leave Ether network")
         
-        # Spec Functions
         self._register("gbo", self.gbo, "Listen/Receive (Alias)")
         self._register("so_po", self.so_po, "Connect (Alias)")
         
-        # VM-style opcodes
         self.OPCODES = {
             "BIND": "10111011",
             "SEND": "10111111",
             "RECV": "10110000",
         }
+    
+    def _validate_target(self, host: str, port: int = None) -> bool:
+        """Comprehensive SSRF protection with IP resolution - Audit Hardened."""
+        import ipaddress
+        
+        if not host:
+            return False
+        
+        host_lower = host.lower().strip()
+        
+        # Block known dangerous hostnames
+        if host_lower in self.BLOCKED_HOSTS:
+            print(f"[Security] Blocked hostname: {host}")
+            return False
+        
+        # Block wildcards
+        if '*' in host or '?' in host:
+            print("[Security] Wildcards not allowed")
+            return False
+        
+        # Block dangerous ports
+        if port and port in self.BLOCKED_PORTS:
+            print(f"[Security] Port blocked: {port}")
+            return False
+        
+        try:
+            # Resolve hostname to IP
+            ip_str = socket.gethostbyname(host)
+            ip = ipaddress.ip_address(ip_str)
+            
+            # Block private/reserved networks
+            if ip.is_private or ip.is_loopback or ip.is_reserved or ip.is_link_local:
+                print(f"[Security] Blocked network: {ip}")
+                return False
+            
+            # Block multicast (except our Ether)
+            if ip.is_multicast and not str(ip).startswith('239.255.255.'):
+                print(f"[Security] Blocked multicast: {ip}")
+                return False
+            
+            return True
+            
+        except socket.gaierror:
+            self._log_security_event("SSRF_BLOCKED", f"Cannot resolve: {host}")
+            print(f"[Security] Cannot resolve: {host}")
+            return False
+        except (ValueError, OSError) as e:
+            self._log_security_event("SSRF_BLOCKED", f"Invalid target: {e}")
+            print(f"[Security] Invalid target: {e}")
+            return False
+    
+    def _check_rate_limit(self) -> bool:
+        """Enforce rate limiting for connections."""
+        import time
+        current = time.time()
+        
+        # Clean old entries (older than 60 seconds)
+        OturaDomain._connection_times = [
+            t for t in OturaDomain._connection_times 
+            if current - t < 60
+        ]
+        
+        # Check limit
+        if len(OturaDomain._connection_times) >= self.MAX_CONNECTIONS_PER_MINUTE:
+            self._log_security_event("RATE_LIMITED", "Connection rate limit exceeded")
+            print("[Security] Rate limit exceeded - 10 connections/minute")
+            return False
+        
+        # Record this connection
+        OturaDomain._connection_times.append(current)
+        return True
+    
+    def _log_security_event(self, event_type: str, details: str):
+        """Log security event for audit."""
+        import time
+        from datetime import datetime
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "type": event_type,
+            "details": details,
+            "instance": self.name
+        }
+        OturaDomain._security_log.append(entry)
+        # Keep log size bounded
+        if len(OturaDomain._security_log) > 1000:
+            OturaDomain._security_log = OturaDomain._security_log[-500:]
+    
+    def get_security_log(self) -> List[Dict]:
+        """Get security audit log."""
+        return OturaDomain._security_log.copy()
     
     # =========================================================================
     # TCP SOCKET API
@@ -115,11 +215,21 @@ class OturaDomain(OduModule):
             return False
     
     def so(self, host: str, port: int) -> bool:
-        """Connect to remote host via TCP."""
+        """Connect to remote host via TCP (rate limited)."""
+        # SSRF Protection
+        if not self._validate_target(host, port):
+            return False
+        
+        # Rate limiting
+        if not self._check_rate_limit():
+            return False
+        
         print(f"[Òtúrá] {self.name} connecting to {host}:{port}...")
         try:
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._socket.settimeout(10)
             self._socket.connect((host, port))
+            self._log_security_event("TCP_CONNECT", f"Connected to {host}:{port}")
             print(f"[Òtúrá] {self.name} connected to {host}:{port}")
             return True
         except Exception as e:

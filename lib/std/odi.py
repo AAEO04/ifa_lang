@@ -16,25 +16,40 @@ from .base import OduModule
 
 
 class OdiDomain(OduModule):
-    """The Womb - File operations and data storage."""
+    """The Womb - File operations and data storage (SECURITY HARDENED)."""
+    
+    # Security: Safe directories whitelist
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+    BLOCKED_EXTENSIONS = {
+        '.exe', '.dll', '.so', '.dylib', '.sh', '.bat', '.cmd',
+        '.py', '.js', '.php', '.jsp', '.asp', '.aspx', '.rb', '.pl'
+    }
     
     def __init__(self):
         super().__init__("Òdí", "1001", "The Vessel - Files & Storage")
         self._handles = {}
         self._data = {}
-        self._active_handle = None  # For VM-style sequential operations
+        self._active_handle = None
         self._active_path = None
+        
+        # Define safe directories at init time
+        from pathlib import Path
+        self._safe_dirs = [
+            Path.cwd(),
+            Path.cwd() / 'data',
+            Path.cwd() / 'output',
+        ]
         
         # High-level API
         self._register("si", self.si, "Open file")
         self._register("pa", self.pa, "Close file")
-        self._register("ka", self.ka, "Read entire file contents (different from Ika.ka=string length)")
+        self._register("ka", self.ka, "Read entire file contents")
         self._register("ka_ila", self.ka_ila, "Read file line by line")
         self._register("ka_nomba", self.ka_nomba, "Read next number from file")
         self._register("ko", self.ko, "Write to file")
         self._register("ko_nomba", self.ko_nomba, "Write number to file")
         self._register("fi", self.fi, "Append to file")
-        self._register("wa", self.wa, "Check if file exists (different from Ika.wa=find substring, Ogunda.wa=find in array)")
+        self._register("wa", self.wa, "Check if file exists")
         self._register("pa_faili", self.pa_faili, "Delete file")
         self._register("akojo", self.akojo, "List directory")
         self._register("da_folder", self.da_folder, "Create directory")
@@ -45,28 +60,59 @@ class OdiDomain(OduModule):
         self._register("pamo", self.pamo, "Save/Commit (Flush)")
         self._register("ti", self.ti, "Close/Lock (Alias)")
         
-        # VM-style opcodes (for bytecode execution)
         self.OPCODES = {
-            "F_OPEN": "10011111",   # Odi-Ogbe (Open)
-            "F_WRITE": "10011100",  # Odi-Irosu (Write)
-            "F_READ": "10010110",   # Odi-Iwori (Read)
-            "F_CLOSE": "10010000",  # Odi-Oyeku (Close)
+            "F_OPEN": "10011111",
+            "F_WRITE": "10011100",
+            "F_READ": "10010110",
+            "F_CLOSE": "10010000",
         }
     
+    def _validate_path(self, path: str, mode: str = 'r'):
+        """Validate file path for security - audit hardened."""
+        from pathlib import Path
+        
+        if not path:
+            raise ValueError("Empty path")
+        
+        try:
+            abs_path = Path(path).resolve()
+        except (OSError, ValueError) as e:
+            raise ValueError(f"Invalid path: {e}")
+        
+        # Block dangerous extensions
+        if abs_path.suffix.lower() in self.BLOCKED_EXTENSIONS:
+            raise ValueError(f"Blocked file type: {abs_path.suffix}")
+        
+        # Check if within safe directories
+        is_safe = any(
+            str(abs_path).startswith(str(safe_dir.resolve()))
+            for safe_dir in self._safe_dirs
+        )
+        
+        if not is_safe:
+            raise ValueError(f"Path outside safe directories")
+        
+        # Block hidden files for write operations
+        if mode in ('w', 'a') and abs_path.name.startswith('.'):
+            raise ValueError("Cannot write to hidden files")
+        
+        return abs_path
+    
     # =========================================================================
-    # HIGH-LEVEL API
+    # HIGH-LEVEL API (SECURITY HARDENED)
     # =========================================================================
     
     def si(self, path: str, mode: str = "r") -> bool:
-        """Open file for reading or writing. Returns success status."""
+        """Open file (SECURED)."""
         try:
-            self._handles[path] = open(path, mode, encoding='utf-8')
+            safe_path = self._validate_path(path, mode)
+            self._handles[path] = open(safe_path, mode, encoding='utf-8')
             self._active_handle = self._handles[path]
             self._active_path = path
-            print(f"[Òdí] Womb Opened: '{path}' in mode '{mode}'.")
+            print(f"[Òdí] Opened: '{path}'")
             return True
         except Exception as e:
-            print(f"[Òdí] Error: Could not open vessel. {e}")
+            print(f"[Security] File access denied: {e}")
             return False
     
     def pa(self, path: str = None):
@@ -81,77 +127,103 @@ class OdiDomain(OduModule):
                 self._active_path = None
     
     def ka(self, path: str) -> str:
-        """Read entire file."""
+        """Read entire file (SECURED)."""
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            safe_path = self._validate_path(path, 'r')
+            # Check file size
+            if safe_path.stat().st_size > self.MAX_FILE_SIZE:
+                return f"Error: File too large (max {self.MAX_FILE_SIZE} bytes)"
+            with open(safe_path, 'r', encoding='utf-8') as f:
                 return f.read()
         except Exception as e:
-            return f"Error: {e}"
+            return f"[Security] Read denied: {e}"
     
     def ka_ila(self, path: str) -> List[str]:
-        """Read file line by line."""
+        """Read file line by line (SECURED)."""
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            safe_path = self._validate_path(path, 'r')
+            if safe_path.stat().st_size > self.MAX_FILE_SIZE:
+                return []
+            with open(safe_path, 'r', encoding='utf-8') as f:
                 return [line.rstrip('\n') for line in f]
         except Exception:
             return []
     
     def ka_nomba(self) -> Optional[int]:
-        """Read next line as number from active file (VM-style)."""
+        """Read next line as number from active file."""
         if self._active_handle and not self._active_handle.closed:
             try:
                 line = self._active_handle.readline()
                 if line:
                     value = int(line.strip())
-                    print(f"[Òdí] Remembered: Retrieved '{value}' from history.")
                     return value
             except (ValueError, Exception):
                 pass
-        else:
-            print("[Òdí] Error: The vessel is not open!")
         return None
     
     def ko(self, path: str, content: str):
-        """Write content to file (overwrite)."""
-        with open(path, 'w', encoding='utf-8') as f:
-            f.write(content)
+        """Write content to file (SECURED)."""
+        try:
+            safe_path = self._validate_path(path, 'w')
+            if len(content) > self.MAX_FILE_SIZE:
+                print(f"[Security] Content too large")
+                return
+            with open(safe_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+        except Exception as e:
+            print(f"[Security] Write denied: {e}")
     
     def ko_nomba(self, value: int):
-        """Write number to active file (VM-style)."""
+        """Write number to active file."""
         if self._active_handle and not self._active_handle.closed:
-            data = f"{value}\n"
-            self._active_handle.write(data)
-            print(f"[Òdí] Carved '{value}' into the vessel.")
+            self._active_handle.write(f"{value}\n")
         else:
-            print("[Òdí] Error: The vessel is not open!")
+            print("[Òdí] Error: File not open")
     
     def fi(self, path: str, content: str):
-        """Append content to file."""
-        with open(path, 'a', encoding='utf-8') as f:
-            f.write(content + '\n')
+        """Append content to file (SECURED)."""
+        try:
+            safe_path = self._validate_path(path, 'a')
+            with open(safe_path, 'a', encoding='utf-8') as f:
+                f.write(content + '\n')
+        except Exception as e:
+            print(f"[Security] Append denied: {e}")
     
     def wa(self, path: str) -> bool:
-        """Check if file exists."""
-        return os.path.exists(path)
+        """Check if file exists (SECURED)."""
+        try:
+            safe_path = self._validate_path(path, 'r')
+            return safe_path.exists()
+        except:
+            return False
     
     def pa_faili(self, path: str) -> bool:
-        """Delete file."""
+        """Delete file (SECURED)."""
         try:
-            os.remove(path)
+            safe_path = self._validate_path(path, 'w')
+            safe_path.unlink()
             return True
-        except (IOError, OSError):
+        except Exception as e:
+            print(f"[Security] Delete denied: {e}")
             return False
     
     def akojo(self, path: str = ".") -> List[str]:
-        """List directory contents."""
-        return os.listdir(path)
+        """List directory (SECURED)."""
+        try:
+            safe_path = self._validate_path(path, 'r')
+            # Only show non-hidden files
+            return [f.name for f in safe_path.iterdir() if not f.name.startswith('.')]
+        except Exception:
+            return []
     
     def da_folder(self, path: str) -> bool:
-        """Create directory."""
+        """Create directory (SECURED)."""
         try:
-            os.makedirs(path, exist_ok=True)
+            safe_path = self._validate_path(path, 'w')
+            safe_path.mkdir(parents=True, exist_ok=True)
             return True
-        except (IOError, OSError):
+        except Exception as e:
+            print(f"[Security] Mkdir denied: {e}")
             return False
     
     def fi_data(self, key: str, value: Any):

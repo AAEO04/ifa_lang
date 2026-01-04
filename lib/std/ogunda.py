@@ -243,19 +243,133 @@ class OgundaDomain(OduModule):
             arr = self._arrays.get(arr, [])
         return any(predicate(x) for x in arr)
     
-    # =========================================================================
-    # PROCESS CONTROL
-    # =========================================================================
+    # SECURE: Very restrictive command whitelist with arg limits
+    ALLOWED_COMMANDS = {
+        'echo': {'max_args': 5},
+        'date': {'max_args': 0},
+        'pwd': {'max_args': 0},
+        'whoami': {'max_args': 0},
+        'hostname': {'max_args': 0},
+    }
     
-    def si(self, cmd: str) -> int:
-        """Execute shell command. Returns exit code."""
-        return os.system(cmd)
+    # Block ALL dangerous characters
+    BLOCKED_CHARS = set(';&|<>`$(){}[]\n\r\\\'\"')
+    MAX_CMD_LENGTH = 100
+    
+    def _validate_command(self, cmd: str) -> bool:
+        """Strict command validation - audit hardened."""
+        if not cmd or len(cmd) > self.MAX_CMD_LENGTH:
+            print("[Security] Command empty or too long")
+            return False
+        
+        # Block dangerous characters
+        if any(c in self.BLOCKED_CHARS for c in cmd):
+            print("[Security] Illegal character in command")
+            return False
+        
+        parts = cmd.strip().split()
+        if not parts:
+            return False
+        
+        base_cmd = parts[0].lower()
+        
+        # Check if command is whitelisted
+        if base_cmd not in self.ALLOWED_COMMANDS:
+            print(f"[Security] Command not allowed: {base_cmd}")
+            print(f"[Security] Allowed: {', '.join(self.ALLOWED_COMMANDS.keys())}")
+            return False
+        
+        # Validate argument count
+        max_args = self.ALLOWED_COMMANDS[base_cmd].get('max_args', 0)
+        if len(parts) - 1 > max_args:
+            print(f"[Security] Too many arguments for {base_cmd}")
+            return False
+        
+        # Validate arguments are alphanumeric only
+        for arg in parts[1:]:
+            if not all(c.isalnum() or c in ' _-.' for c in arg):
+                print(f"[Security] Illegal characters in argument")
+                return False
+        
+        return True
+    
+    def si(self, cmd: str, use_sandbox: bool = True) -> int:
+        """Execute shell command (SECURE - uses Ìgbálẹ̀ sandbox by default)."""
+        if not self._validate_command(cmd):
+            return -1
+        
+        try:
+            import subprocess
+            import os
+            parts = cmd.strip().split()
+            
+            # Use sandbox for isolation if available
+            if use_sandbox:
+                try:
+                    from src.sandbox import IgbaleRuntime, OgbeConfig
+                    
+                    runtime = IgbaleRuntime()
+                    config = OgbeConfig(
+                        name=f"ogunda_cmd_{int(time.time())}",
+                        command=parts,
+                        auto_remove=True
+                    )
+                    container = runtime.create(config)
+                    container.iwori_monitor.max_runtime = 5  # 5 second limit
+                    container.start()
+                    
+                    if container.process:
+                        try:
+                            container.process.wait(timeout=5)
+                            result = container.process.returncode
+                        except subprocess.TimeoutExpired:
+                            container.stop(force=True)
+                            print("[Security] Command timeout (sandbox)")
+                            result = -1
+                    else:
+                        result = 0
+                    
+                    container.stop()
+                    runtime.gc()
+                    return result
+                    
+                except ImportError:
+                    pass  # Fall back to direct execution
+            
+            # Fallback: direct execution with restricted env
+            result = subprocess.run(
+                parts,
+                capture_output=True,
+                timeout=5,
+                text=True,
+                env={'PATH': '/usr/bin:/bin'} if os.name != 'nt' else None
+            )
+            return result.returncode
+        except subprocess.TimeoutExpired:
+            print("[Security] Command timeout")
+            return -1
+        except Exception as e:
+            print(f"[Security] Command failed: {e}")
+            return -1
     
     def si_pipe(self, cmd: str) -> str:
-        """Execute command and capture output."""
+        """Execute command and capture output (HEAVILY restricted)."""
+        if not self._validate_command(cmd):
+            return "[Security] Command blocked"
         try:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            import subprocess
+            import os
+            parts = cmd.strip().split()
+            result = subprocess.run(
+                parts,
+                capture_output=True,
+                text=True,
+                timeout=5,
+                env={'PATH': '/usr/bin:/bin'} if os.name != 'nt' else None
+            )
             return result.stdout
+        except subprocess.TimeoutExpired:
+            return "[Security] Command timeout"
         except Exception as e:
             return f"Error: {e}"
 

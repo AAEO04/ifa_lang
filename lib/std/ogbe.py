@@ -88,13 +88,24 @@ class OgbeDomain(OduModule):
     def ile(self) -> str: return os.path.expanduser("~")
     
     def pa_system(self, action: str = "shutdown"):
-        if platform.system() == "Windows":
-            cmd = "shutdown /s /t 1" if action == "shutdown" else "shutdown /r /t 1"
-        else:
-            cmd = "shutdown -h now" if action == "shutdown" else "reboot"
-        os.system(cmd)
+        """[DISABLED] System shutdown/reboot - disabled for security."""
+        print("[Security] pa_system() is disabled for security reasons")
+        print("[Security] Use operating system controls for shutdown/reboot")
+        return False
     
     def jade(self, code: int = 0): sys.exit(code)
     def sun(self, seconds: float): time.sleep(seconds)
+    
     def pa_pip(self, package: str):
+        """Install pip package with validation."""
+        # Security: Only allow alphanumeric package names
+        if not package or not package.replace('-', '').replace('_', '').isalnum():
+            print(f"[Security] Invalid package name: {package}")
+            return False
+        # Security: Block known dangerous packages
+        blocked = {'os', 'sys', 'subprocess', 'eval', 'exec'}
+        if package.lower() in blocked:
+            print(f"[Security] Package blocked: {package}")
+            return False
         subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        return True
