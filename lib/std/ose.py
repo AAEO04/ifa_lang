@@ -2,18 +2,37 @@
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║           ỌṢẸ́ - THE BEAUTIFIER (1010)                                        ║
-║                    Graphics & Display                                        ║
+║                    Graphics, Display & Web UI                                ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
+
+Unified graphics domain handling:
+- Console canvas (ASCII art)
+- Web UI generation (HTML/CSS)
+- Odù-themed components
 """
 
 from .base import OduModule
 
+# Import web mixin (optional - graceful fallback)
+try:
+    from lib.ext.ose_web import OseWebMixin
+    HAS_WEB = True
+except ImportError:
+    HAS_WEB = False
+    class OseWebMixin:
+        """Stub mixin when ose_web not available."""
+        def __init_web__(self): pass
 
-class OseDomain(OduModule):
-    """The Beautifier - Graphics and display."""
+
+class OseDomain(OduModule, OseWebMixin):
+    """The Beautifier - Graphics, Display & Web UI."""
     
     def __init__(self):
-        super().__init__("Ọ̀ṣẹ́", "1010", "The Beautifier - Graphics")
+        super().__init__("Ọ̀ṣẹ́", "1010", "The Beautifier - Graphics & UI")
+        
+        # Initialize web capabilities
+        if HAS_WEB:
+            self.__init_web__()
         
         # Configurable canvas
         self.width = 30
@@ -48,6 +67,19 @@ class OseDomain(OduModule):
         self._register("awo", self.awo, "Color (Stub)")
         self._register("botini", self.botini, "Button (Stub)")
         self._register("fihan", self.fihan, "Show (Alias for han)")
+        
+        # Web UI (from mixin)
+        if HAS_WEB:
+            self._register("html_div", self.html_div, "Generate HTML div")
+            self._register("html_botini", self.html_botini, "Generate HTML button")
+            self._register("html_igbanwo", self.html_igbanwo, "Generate HTML input")
+            self._register("css_odu", self.css_odu, "Generate Odù CSS theme")
+            self._register("css_akojo", self.css_akojo, "Generate full CSS collection")
+            self._register("da_nkan", self.da_nkan, "Create UI component")
+            self._register("han_nkan", self.han_nkan, "Render UI component")
+            self._register("html_oju_opo", self.html_oju_opo, "Generate full HTML page")
+            self._register("yi_odu", self.yi_odu, "Set Odù theme")
+            self._register("odu_awo", self.odu_awo, "Get Odù colors")
         
         # VM opcodes
         self.OPCODES = {

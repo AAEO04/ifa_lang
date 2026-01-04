@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ìgbálẹ̀ Sandbox - Ifá-Lang Documentation</title>
+    <style>
+        :root {
+            --primary: #8B4513;
+            --secondary: #D2691E;
+            --bg: #FFF8DC;
+            --text: #2F1810;
+            --code-bg: #F5DEB3;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        h1 {
+            color: var(--primary);
+            border-bottom: 3px solid var(--secondary);
+        }
+
+        h2 {
+            color: var(--secondary);
+            margin-top: 30px;
+        }
+
+        h3 {
+            color: var(--primary);
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+        }
+
+        pre {
+            background: var(--code-bg);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 4px solid var(--secondary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--secondary);
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: var(--secondary);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background: rgba(210, 105, 30, 0.1);
+        }
+
+        .banner {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .feature-box {
+            background: white;
+            border: 2px solid var(--secondary);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .warning {
+            background: #FFF3CD;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .success {
+            background: #D4EDDA;
+            border-left: 4px solid #28A745;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="banner">
+        <h1>🏺 ÌGBÁLẸ̀ - THE SACRED GROUND</h1>
+        <p>Ifá-Lang Sandbox Container System</p>
+        <p><em>Cross-Platform Secure Execution Environment</em></p>
+    </div>
+
+    <h2>Overview</h2>
+    <p>
+        Ìgbálẹ̀ (The Sacred Ground) is a Docker-like sandbox system built on the 16 Odù domains
+        that provides secure, isolated execution for Ifá-Lang code. It protects against:
+    </p>
+    <ul>
+        <li>Command injection attacks</li>
+        <li>Path traversal vulnerabilities</li>
+        <li>Resource exhaustion (CPU, memory, time)</li>
+        <li>Unauthorized network access</li>
+        <li>Malicious file operations</li>
+    </ul>
+
+    <h2>Quick Start</h2>
+    <pre><code># Run sandbox demo
+ifa sandbox demo
+
+# Execute script in sandbox with 30-second timeout
+ifa sandbox run script.ifa --timeout 30
+
+# List active containers
+ifa sandbox list</code></pre>
+
+    <h2>Architecture (16 Odù Domains)</h2>
+    <table>
+        <tr>
+            <th>Odù</th>
+            <th>Component</th>
+            <th>Function</th>
+        </tr>
+        <tr>
+            <td>Ogbè</td>
+            <td>OgbeLifecycle</td>
+            <td>Container lifecycle (create/start/stop)</td>
+        </tr>
+        <tr>
+            <td>Ọ̀yẹ̀kú</td>
+            <td>OyekuTerminator</td>
+            <td>Termination &amp; cleanup</td>
+        </tr>
+        <tr>
+            <td>Ìwòrì</td>
+            <td>IworiMonitor</td>
+            <td>Time limits &amp; watchdog</td>
+        </tr>
+        <tr>
+            <td>Òdí</td>
+            <td>OdiVirtualFS</td>
+            <td>Filesystem isolation (10MB/100MB quotas)</td>
+        </tr>
+        <tr>
+            <td>Ìrosù</td>
+            <td>IrosuLogger</td>
+            <td>I/O capture &amp; logging (1MB max)</td>
+        </tr>
+        <tr>
+            <td>Ọ̀wọ́nrín</td>
+            <td>OwonrinEntropy</td>
+            <td>Isolated randomness</td>
+        </tr>
+        <tr>
+            <td>Ọ̀bàrà</td>
+            <td>ObaraCPULimiter</td>
+            <td>CPU time limits</td>
+        </tr>
+        <tr>
+            <td>Ọ̀kànràn</td>
+            <td>OkanranSecurityMonitor</td>
+            <td>Security violation detection</td>
+        </tr>
+        <tr>
+            <td>Ògúndá</td>
+            <td>OgundaProcessController</td>
+            <td>Process limits (max 10)</td>
+        </tr>
+        <tr>
+            <td>Ọ̀sá</td>
+            <td>OsaNetworkNamespace</td>
+            <td>Network isolation</td>
+        </tr>
+        <tr>
+            <td>Ìká</td>
+            <td>IkaSanitizer</td>
+            <td>Data sanitization</td>
+        </tr>
+        <tr>
+            <td>Òtúúrúpọ̀n</td>
+            <td>OturuponMemoryLimiter</td>
+            <td>Memory limits (100MB)</td>
+        </tr>
+        <tr>
+            <td>Òtúrá</td>
+            <td>OturaICC</td>
+            <td>Inter-container communication</td>
+        </tr>
+        <tr>
+            <td>Ìrẹtẹ̀</td>
+            <td>IreteGarbageCollector</td>
+            <td>Container garbage collection</td>
+        </tr>
+        <tr>
+            <td>Ọ̀ṣẹ́</td>
+            <td>OseDisplayVirtualizer</td>
+            <td>Virtual display</td>
+        </tr>
+        <tr>
+            <td>Òfún</td>
+            <td>OfunCapabilities</td>
+            <td>Permissions &amp; capabilities</td>
+        </tr>
+    </table>
+
+    <h2>Security Benefits</h2>
+    <div class="success">
+        <strong>Defense in Depth:</strong> Multiple layers of protection ensure security even if one layer is bypassed.
+    </div>
+
+    <table>
+        <tr>
+            <th>Threat</th>
+            <th>Protection</th>
+        </tr>
+        <tr>
+            <td>Command Injection</td>
+            <td>Whitelist + sandbox isolation</td>
+        </tr>
+        <tr>
+            <td>Path Traversal</td>
+            <td>Virtual filesystem with jail</td>
+        </tr>
+        <tr>
+            <td>SSRF</td>
+            <td>Network isolation (blocked by default)</td>
+        </tr>
+        <tr>
+            <td>Fork Bombs</td>
+            <td>Process limit (max 10)</td>
+        </tr>
+        <tr>
+            <td>Infinite Loops</td>
+            <td>Watchdog timeout</td>
+        </tr>
+        <tr>
+            <td>Memory Exhaustion</td>
+            <td>100MB memory limit</td>
+        </tr>
+        <tr>
+            <td>Disk Exhaustion</td>
+            <td>100MB storage quota</td>
+        </tr>
+    </table>
+
+    <h2>API Usage</h2>
+
+    <h3>Quick Sandboxed Execution</h3>
+    <pre><code>from src.sandbox import run_sandboxed
+
+result = run_sandboxed('''
+fo("Hello from sandbox!")
+''', timeout=10.0)
+
+print(result['stdout'])
+print(f"Exit code: {result['exit_code']}")</code></pre>
+
+    <h3>Manual Container Control</h3>
+    <pre><code>from src.sandbox import IgbaleRuntime, OgbeConfig
+
+runtime = IgbaleRuntime()
+config = OgbeConfig(
+    name="my-container",
+    command=["python", "-c", "print('Hello')"],
+    auto_remove=True
+)
+
+container = runtime.create(config)
+container.start()
+
+# Use virtual filesystem
+container.odi_fs.write_file("workspace/data.txt", "Some data")
+content = container.odi_fs.read_file("workspace/data.txt")
+
+container.stop()
+runtime.gc()  # Cleanup</code></pre>
+
+    <h2>Ogunda Integration</h2>
+    <p>
+        The <code>Ogunda.si()</code> command now uses Ìgbálẹ̀ by default for secure command execution:
+    </p>
+    <pre><code># In Ifá-Lang
+jẹ́ result = Ògúndá.si("echo Hello")  # Runs in sandbox
+
+# To disable sandbox (trusted code only)
+jẹ́ result = Ògúndá.si("echo Hello", use_sandbox=False)</code></pre>
+
+    <h2>When to Use Sandbox</h2>
+    <div class="feature-box">
+        <h3>✅ Use Sandbox For:</h3>
+        <ul>
+            <li>Running untrusted user code</li>
+            <li>Online playgrounds / code editors</li>
+            <li>Testing potentially dangerous scripts</li>
+            <li>Multi-tenant code execution</li>
+        </ul>
+    </div>
+
+    <div class="warning">
+        <h3>⚠️ Consider Normal Execution For:</h3>
+        <ul>
+            <li>Your own trusted scripts</li>
+            <li>Scripts needing full filesystem access</li>
+            <li>Long-running processes</li>
+            <li>Network-heavy applications</li>
+        </ul>
+    </div>
+
+    <h2>Platform Support</h2>
+    <table>
+        <tr>
+            <th>Platform</th>
+            <th>Status</th>
+            <th>Notes</th>
+        </tr>
+        <tr>
+            <td>Windows</td>
+            <td>✅ Full</td>
+            <td>Uses subprocess timeout</td>
+        </tr>
+        <tr>
+            <td>macOS</td>
+            <td>✅ Full</td>
+            <td>Uses resource limits</td>
+        </tr>
+        <tr>
+            <td>Linux</td>
+            <td>✅ Full</td>
+            <td>Uses resource limits + cgroups ready</td>
+        </tr>
+    </table>
+
+    <h2>Configuration</h2>
+    <pre><code>config = OgbeConfig(
+    name="my-container",
+    command=["python", "script.py"],
+    environment={"IFA_ENV": "sandbox"},
+    auto_remove=True  # Auto-cleanup on exit
+)
+
+# Time/resource limits (set on container)
+container.iwori_monitor.max_runtime = 60  # 60 seconds
+container.oturupon_memory.max_memory = 50 * 1024 * 1024  # 50MB</code></pre>
+
+    <hr>
+    <p style="text-align: center; color: #888;">
+        Ìgbálẹ̀ Sandbox &bull; Ifá-Lang &copy; 2025 Ayomide Alli (Charon)
+    </p>
+</body>
+
+</html>
+</code></pre>
