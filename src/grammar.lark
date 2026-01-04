@@ -118,8 +118,10 @@ term: factor ((STAR | SLASH | PERCENT) factor)*
 factor: (PLUS | MINUS)? atom
 
 atom: odu_call
+    | method_call
     | list_literal
     | map_literal
+    | slice_access
     | index_access
     | NUMBER
     | FLOAT
@@ -140,6 +142,12 @@ map_entry: (STRING | NAME) ":" expression
 
 // Index access: arr[0] or map["key"]
 index_access: NAME "[" expression "]"
+
+// Slice access: arr[0:5] or arr[::2] or arr[1:10:2]
+slice_access: NAME "[" expression? ":" expression? (":" expression?)? "]"
+
+// Method call on object: obj.method(args)
+method_call: NAME "." ese_name "(" arguments? ")"
 
 // ============================================================================
 // 5. ODÙ DEFINITIONS (Classes)

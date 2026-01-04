@@ -551,8 +551,13 @@ Otura.ether_pa();     // Leave network</pre>
                 <p class="meaning">Compile to Rust binary</p>
             </div>
             <div class="odu-card">
+                <h3>debug</h3>
+                <p><code>ifa debug &lt;file&gt; [--gpc]</code></p>
+                <p class="meaning">Run with Babalawo debugger</p>
+            </div>
+            <div class="odu-card">
                 <h3>check</h3>
-                <p><code>ifa check &lt;file&gt;</code></p>
+                <p><code>ifa check &lt;file&gt; [--ebo]</code></p>
                 <p class="meaning">Validate Ìwà balance</p>
             </div>
             <div class="odu-card">
@@ -569,6 +574,48 @@ Otura.ether_pa();     // Leave network</pre>
                 <h3>lsp</h3>
                 <p><code>ifa lsp --stdio</code></p>
                 <p class="meaning">Language Server</p>
+            </div>
+            <div class="odu-card">
+                <h3>lint</h3>
+                <p><code>ifa lint &lt;file&gt;</code></p>
+                <p class="meaning">Static analysis</p>
+            </div>
+        </div>
+
+        <h2>🔬 Advanced Debugging</h2>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Advanced debugging features for complex applications:
+        </p>
+        <div class="odu-grid">
+            <div class="odu-card">
+                <h3>🔗 GPC Call Stack</h3>
+                <p><code>ifa debug --gpc program.ifa</code></p>
+                <p class="meaning">Grandparent-Parent-Child tracing shows full call hierarchy on errors</p>
+            </div>
+            <div class="odu-card">
+                <h3>🔮 Ẹbọ Lifecycle</h3>
+                <p><code>ifa check --ebo program.ifa</code></p>
+                <p class="meaning">Validates sacrifice block pairs (ebo.begin/sacrifice, ase.begin/end)</p>
+            </div>
+        </div>
+        <div class="verse">
+            <div class="verse-name">GPC Debugging Example</div>
+            <div class="verse-desc">
+                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x:auto;">$ ifa debug --gpc server.ifa
+[GPC] Grandparent-Parent-Child tracing ENABLED
+...
+╔════ Call Stack (GPC) ════╗
+→ main (server.ifa:1)
+  → handleRequest (server.ifa:25)
+    → processData (server.ifa:42)  ← Error here</pre>
+            </div>
+        </div>
+        <div class="verse">
+            <div class="verse-name">Ẹbọ Validation Example</div>
+            <div class="verse-desc">
+                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x:auto;">$ ifa check --ebo transaction.ifa
+[Ẹbọ] Sacrifice block lifecycle validation ENABLED
+[Ẹbọ] Checking sacrifice block lifecycles...
+[Ẹbọ] ✓ All sacrifice blocks properly paired.</pre>
             </div>
         </div>
 

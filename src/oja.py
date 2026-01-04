@@ -115,6 +115,15 @@ import hashlib
 from datetime import datetime
 
 
+def _git_available() -> bool:
+    """Check if git is installed and available."""
+    try:
+        subprocess.run(["git", "--version"], capture_output=True, check=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
 class OjaMarket:
     """
     The Ọjà (Market) - Package Manager for Ifá-Lang.
@@ -431,6 +440,12 @@ ase;
             print(f"\n📦 Downloading '{name}' from Ọjà Market...")
             print(f"   Source: {url}")
             
+            # Check git availability first
+            if not _git_available():
+                print(f"   ❌ Git is not installed. Please install git first:")
+                print(f"      https://git-scm.com/downloads")
+                return False
+            
             try:
                 # Clone with depth=1 for speed
                 subprocess.check_call(
@@ -441,10 +456,7 @@ ase;
                 print(f"   ✅ Installed to libs/{name}/")
             except subprocess.CalledProcessError:
                 print(f"   ❌ Failed to download from {url}")
-                print(f"      Check that the URL is correct and git is installed.")
-                return False
-            except FileNotFoundError:
-                print(f"   ❌ Git command not found. Please install git.")
+                print(f"      Check that the URL is correct.")
                 return False
         
         # Update ifa.toml

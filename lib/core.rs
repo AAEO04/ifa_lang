@@ -11,17 +11,18 @@
 
 use std::fmt;
 use std::cmp::Ordering;
-use std::ops::{Add, Sub, Mul, Div, Not, Neg};
+use std::ops::{Add, Sub, Mul, Div, Rem, Not, Neg, BitAnd, BitOr};
 use std::collections::HashMap;
 use std::io::{self, Write, BufRead};
 use std::panic;
 use std::cell::RefCell;
 use std::sync::Once;
-use std::rc::Rc;  // For shared ownership of Objects
+use std::rc::Rc;  // For shared ownership of Objects and Opon
 
 // Thread-local storage for Opon (needed for panic handler access)
+// SAFETY FIX: Use Rc<RefCell<>> instead of raw pointer to prevent use-after-free
 thread_local! {
-    pub static OPON: RefCell<Option<*mut Opon>> = RefCell::new(None);
+    pub static OPON: RefCell<Option<Rc<RefCell<Opon>>>> = RefCell::new(None);
 }
 
 // Ensure panic handler is only installed once
@@ -189,6 +190,49 @@ impl Div for IfaValue {
     }
 }
 
+// MODULO (%) - Òtúúrúpọ̀n.kù
+impl Rem for IfaValue {
+    type Output = IfaValue;
+
+    fn rem(self, other: IfaValue) -> IfaValue {
+        match (self, other) {
+            (IfaValue::Int(a), IfaValue::Int(b)) => {
+                if b == 0 { panic!("[Ọ̀kànràn] Math Error: Modulo by Zero (Void)"); }
+                IfaValue::Int(a % b)
+            },
+            (IfaValue::Float(a), IfaValue::Float(b)) => {
+                if b == 0.0 { panic!("[Ọ̀kànràn] Math Error: Modulo by Zero (Void)"); }
+                IfaValue::Float(a % b)
+            },
+            (IfaValue::Int(a), IfaValue::Float(b)) => {
+                if b == 0.0 { panic!("[Ọ̀kànràn] Math Error: Modulo by Zero (Void)"); }
+                IfaValue::Float((a as f64) % b)
+            },
+            (IfaValue::Float(a), IfaValue::Int(b)) => {
+                if b == 0 { panic!("[Ọ̀kànràn] Math Error: Modulo by Zero (Void)"); }
+                IfaValue::Float(a % (b as f64))
+            },
+            _ => panic!("[Ọ̀kànràn] Runtime Error: Cannot MODULO these types."),
+        }
+    }
+}
+
+// BITWISE AND (&&) for logical operations
+impl BitAnd for IfaValue {
+    type Output = IfaValue;
+    fn bitand(self, other: IfaValue) -> IfaValue {
+        IfaValue::Bool(self.is_truthy() && other.is_truthy())
+    }
+}
+
+// BITWISE OR (||) for logical operations
+impl BitOr for IfaValue {
+    type Output = IfaValue;
+    fn bitor(self, other: IfaValue) -> IfaValue {
+        IfaValue::Bool(self.is_truthy() || other.is_truthy())
+    }
+}
+
 // NEGATION (-x)
 impl Neg for IfaValue {
     type Output = IfaValue;
@@ -264,6 +308,8 @@ impl IfaValue {
             IfaValue::Str(s) => !s.is_empty(),
             IfaValue::List(l) => !l.is_empty(),
             IfaValue::Map(m) => !m.is_empty(),
+            IfaValue::Object(o) => !o.borrow().is_empty(),
+            IfaValue::Fn(_) => true,  // Functions are always truthy
             IfaValue::Null => false,
         }
     }
@@ -279,18 +325,63 @@ impl IfaValue {
     }
     
     /// Index access for lists and maps
+    /// Supports Python-style negative indexing (list[-1] = last element)
     pub fn get(&self, index: &IfaValue) -> IfaValue {
         match (self, index) {
             (IfaValue::List(l), IfaValue::Int(i)) => {
-                l.get(*i as usize).cloned().unwrap_or(IfaValue::Null)
+                // Support negative indices (Python-style: -1 = last element)
+                let len = l.len() as i64;
+                let idx = if *i < 0 {
+                    if -*i > len { return IfaValue::Null; }
+                    (len + *i) as usize
+                } else {
+                    *i as usize
+                };
+                l.get(idx).cloned().unwrap_or(IfaValue::Null)
             },
             (IfaValue::Map(m), IfaValue::Str(k)) => {
-                m.get(k).cloned().unwrap_or(IfaValue::Null)
+                // Strip quotes if present (for JSON compatibility)
+                let clean_key = k.trim_matches('"').trim_matches('\'');
+                m.get(clean_key).cloned()
+                    .or_else(|| m.get(k).cloned())
+                    .unwrap_or(IfaValue::Null)
             },
             (IfaValue::Str(s), IfaValue::Int(i)) => {
-                s.chars().nth(*i as usize)
+                // Support negative indices for strings too
+                let chars: Vec<char> = s.chars().collect();
+                let len = chars.len() as i64;
+                let idx = if *i < 0 {
+                    if -*i > len { return IfaValue::Null; }
+                    (len + *i) as usize
+                } else {
+                    *i as usize
+                };
+                chars.get(idx)
                     .map(|c| IfaValue::Str(c.to_string()))
                     .unwrap_or(IfaValue::Null)
+            },
+            _ => IfaValue::Null,
+        }
+    }
+
+    /// String slicing: slice(start, end) -> substring
+    pub fn slice(&self, start: &IfaValue, end: &IfaValue) -> IfaValue {
+        match (self, start, end) {
+            (IfaValue::Str(s), IfaValue::Int(i), IfaValue::Int(j)) => {
+                let chars: Vec<char> = s.chars().collect();
+                let len = chars.len() as i64;
+                let start_idx = (*i).max(0) as usize;
+                let end_idx = (*j).min(len) as usize;
+                if start_idx >= end_idx { return IfaValue::Str(String::new()); }
+                let slice: String = chars[start_idx..end_idx].iter().collect();
+                IfaValue::Str(slice)
+            },
+            (IfaValue::List(l), IfaValue::Int(i), IfaValue::Int(j)) => {
+                let len = l.len() as i64;
+                let start_idx = (*i).max(0) as usize;
+                let end_idx = (*j).min(len) as usize;
+                if start_idx >= end_idx { return IfaValue::List(vec![]); }
+                IfaValue::List(l[start_idx..end_idx].to_vec())
             },
             _ => IfaValue::Null,
         }
@@ -365,7 +456,8 @@ impl Opon {
     }
     
     /// Create a new Opon WITH panic handler that dumps flight recorder on crash
-    pub fn new_with_panic_handler() -> Self {
+    /// SAFETY: Uses Rc<RefCell<>> to prevent use-after-free vulnerabilities
+    pub fn new_with_panic_handler() -> Rc<RefCell<Self>> {
         // Install panic handler once
         INIT_PANIC_HANDLER.call_once(|| {
             let default_hook = panic::take_hook();
@@ -398,16 +490,17 @@ impl Opon {
                 
                 eprintln!();
                 
-                // Try to dump flight recorder from thread-local storage
+                // SAFE: Use Rc<RefCell<>> to prevent dangling pointer
                 OPON.with(|opon_cell| {
-                    if let Some(opon_ptr) = *opon_cell.borrow() {
-                        // Safety: We're in single-threaded context during panic
-                        unsafe {
-                            let opon = &*opon_ptr;
+                    if let Some(ref opon_rc) = *opon_cell.borrow() {
+                        // Safe borrow - Rc keeps the Opon alive
+                        if let Ok(opon) = opon_rc.try_borrow() {
                             eprintln!("┌─────────────────────────────────────────────────────────────┐");
                             eprintln!("│          📜 ÌWÒRÌ'S DYING REPORT (Last Events)              │");
                             eprintln!("└─────────────────────────────────────────────────────────────┘");
                             opon.dump_history();
+                        } else {
+                            eprintln!("⚠️  Flight recorder locked (panic during borrow).");
                         }
                     } else {
                         eprintln!("⚠️  No flight recorder data available.");
@@ -422,11 +515,11 @@ impl Opon {
             }));
         });
         
-        let mut opon = Self::new();
+        let opon = Rc::new(RefCell::new(Self::new()));
         
-        // Register this Opon instance for the panic handler
+        // Register this Opon instance safely using Rc
         OPON.with(|opon_cell| {
-            *opon_cell.borrow_mut() = Some(&mut opon as *mut Opon);
+            *opon_cell.borrow_mut() = Some(Rc::clone(&opon));
         });
         
         opon
@@ -913,9 +1006,37 @@ pub mod opon {
             IfaValue::Bool(_) => "Bool",
             IfaValue::List(_) => "List",
             IfaValue::Map(_) => "Map",
+            IfaValue::Object(_) => "Object",
+            IfaValue::Fn(_) => "Fn",
             IfaValue::Null => "Null",
         };
         IfaValue::Str(type_name.to_string())
+    }
+
+    // === ÒTÚÚRÚPÒN: Modulo ===
+    /// Òtúúrúpọ̀n.kù (Modulo) - Remainder after division
+    pub fn oturupon_ku(opon: &mut Opon, a: &IfaValue, b: &IfaValue) -> IfaValue {
+        let result = a.clone() % b.clone();
+        opon.record("Òtúúrúpọ̀n", "kù (modulo)", &result);
+        result
+    }
+
+    /// Òtúúrúpọ̀n.pin_int (Integer Division) - Division without remainder
+    pub fn oturupon_pin_int(opon: &mut Opon, a: &IfaValue, b: &IfaValue) -> IfaValue {
+        match (a, b) {
+            (IfaValue::Int(x), IfaValue::Int(y)) => {
+                if *y == 0 { panic!("[Ọ̀kànràn] Math Error: Division by Zero (Void)"); }
+                let result = IfaValue::Int(x / y);
+                opon.record("Òtúúrúpọ̀n", "pin_int (int div)", &result);
+                result
+            },
+            _ => {
+                // Fall back to regular division
+                let result = a.clone() / b.clone();
+                opon.record("Òtúúrúpọ̀n", "pin (divided)", &result);
+                result
+            }
+        }
     }
     
     // ═══════════════════════════════════════════════════════════════════

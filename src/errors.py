@@ -350,6 +350,16 @@ class Babalawo:
         if error.technical:
             message += f"     Details: {error.technical}\n"
         
+        # Add GPC context if available
+        try:
+            from src.gpc import gpc_debugger
+            if len(gpc_debugger.stack) > 0:
+                message += "\n╔════ Call Stack (GPC) ════╗\n"
+                message += gpc_debugger.stack.traceback()
+                message += "\n"
+        except ImportError:
+            pass
+        
         message += "\n  Àṣẹ.\n"
         
         return message
@@ -423,6 +433,61 @@ def warn(message: str, line: int = 0):
 def hint(message: str):
     """Print a helpful hint."""
     print(f"💡 [Wisdom]: {message}")
+
+
+# =============================================================================
+# 2026 CEN MODEL - DEBUGGING TOOLS
+# =============================================================================
+
+class StateHistoryBuffer:
+    """32-step circular buffer for time-travel debugging."""
+    
+    def __init__(self, size: int = 32):
+        self.size = size
+        self.buffer = []
+        self.index = 0
+    
+    def push(self, state: dict):
+        """Push a state snapshot to the buffer."""
+        if len(self.buffer) < self.size:
+            self.buffer.append(state)
+        else:
+            self.buffer[self.index] = state
+        self.index = (self.index + 1) % self.size
+    
+    def rewind(self, steps: int = 1) -> dict:
+        """Go back N steps in history."""
+        if not self.buffer:
+            return None
+        idx = (self.index - 1 - steps) % len(self.buffer)
+        return self.buffer[idx]
+    
+    def __len__(self):
+        return len(self.buffer)
+
+
+class HarmonyHeatmap:
+    """16x16 Odù domain interaction matrix for visualizing discord."""
+    
+    ODU_DOMAINS = ['OGBE', 'OYEKU', 'IWORI', 'ODI', 'IROSU', 'OWONRIN', 
+                   'OBARA', 'OKANRAN', 'OGUNDA', 'OSA', 'IKA', 'OTURUPON',
+                   'OTURA', 'IRETE', 'OSE', 'OFUN']
+    
+    def __init__(self):
+        self.matrix = {}
+    
+    def record_interaction(self, source: str, target: str, harmony: float = 1.0):
+        """Record an interaction between two domains."""
+        key = (source.upper(), target.upper())
+        self.matrix[key] = harmony
+    
+    def get_harmony(self, source: str, target: str) -> float:
+        """Get harmony level between two domains."""
+        return self.matrix.get((source.upper(), target.upper()), 1.0)
+    
+    def find_discord(self, threshold: float = 0.5) -> list:
+        """Find all interactions below harmony threshold."""
+        return [(k, v) for k, v in self.matrix.items() if v < threshold]
 
 
 # =============================================================================

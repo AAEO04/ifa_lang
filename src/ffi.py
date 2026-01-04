@@ -403,6 +403,52 @@ def create_stdlib_api():
 
 
 # =============================================================================
+# 2026 CEN MODEL - SECURE FFI (Sandboxed Imports)
+# =============================================================================
+
+class SecurityError(Exception):
+    """Raised when a security violation is detected."""
+    pass
+
+
+class SecureFFI:
+    """
+    Secure Foreign Function Interface with module whitelisting.
+    Blocks dangerous operations while allowing safe Python imports.
+    """
+    
+    DEFAULT_WHITELIST = {'math', 'json', 'datetime', 'collections', 'itertools', 
+                         'functools', 'statistics', 'random', 'string', 're'}
+    FORBIDDEN_ATTRS = {'system', 'popen', 'spawn', 'exec', 'eval', 'compile',
+                       'remove', 'rmdir', 'unlink', 'rmtree', '__import__', 
+                       '__builtins__', 'subprocess', 'Popen'}
+    
+    def __init__(self, whitelist: set = None, strict_mode: bool = True):
+        self.whitelist = whitelist or self.DEFAULT_WHITELIST.copy()
+        self.strict_mode = strict_mode
+        self.imported_modules = {}
+    
+    def import_module(self, name: str, alias: str = None):
+        """Safely import a Python module."""
+        if name not in self.whitelist:
+            raise SecurityError(f"Module '{name}' is not in the whitelist. "
+                              f"Allowed: {sorted(self.whitelist)}")
+        
+        import importlib
+        mod = importlib.import_module(name)
+        key = alias or name
+        self.imported_modules[key] = mod
+        return mod
+    
+    def add_to_whitelist(self, name: str):
+        """Add a module to the whitelist."""
+        self.whitelist.add(name)
+    
+    def __repr__(self):
+        return f"SecureFFI(whitelist={sorted(self.whitelist)}, strict={self.strict_mode})"
+
+
+# =============================================================================
 # DEMO
 # =============================================================================
 if __name__ == "__main__":

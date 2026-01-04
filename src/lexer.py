@@ -66,10 +66,110 @@ ODU_DOMAINS = {
     "ofun": "OFUN", "òfún": "OFUN",
 }
 
-# Ifá Keywords
-KEYWORDS = {
-    "ayanmo", "ase", "iba", "ìbà", "let", "if", "else",
-    "while", "for", "return", "true", "false", "nil"
+# =============================================================================
+# DUAL LEXICON - Context-Sensitive Keywords
+# =============================================================================
+
+# Reserved Keywords - These cannot be used as identifiers
+RESERVED_KEYWORDS = {
+    # === CONTROL FLOW (English) ===
+    "if", "else", "elif", "for", "while", "break", "continue", "return",
+    "try", "catch", "throw", "match", "case", "default",
+    
+    # === CONTROL FLOW (Yoruba) ===
+    "ti", "bí", "bibẹkọ", "bíbẹ́kọ́", "fun", "nigba", "pada", "da", "gbiyanju",
+    "mu", "sọ", "yàn", "ìran",
+    
+    # === DECLARATIONS (English) ===
+    "let", "var", "const", "class", "function", "fn", "def", "import", "export",
+    "public", "private", "static", "async", "await",
+    
+    # === DECLARATIONS (Yoruba) ===
+    "ayanmo", "àyànmọ́", "ọdù", "odu", "ẹsẹ", "ese", "ìbà", "iba", "gbangba",
+    "àṣírí", "asiri",
+    
+    # === LITERALS ===
+    "true", "false", "nil", "null", "otito", "iro", "ohunkohun",
+    
+    # === CEN MODEL CORE ===
+    "ebo", "ẹbọ", "sacrifice", "ajose", "àjọṣe", "relationship",
+    "difa", "dífá", "divination", "opon", "ọpọ́n", "board",
+    "gpc", "ase", "àṣẹ", "taboo", "ewọ", "èèwọ̀",
+    
+    # === SEMANTIC DISPATCH ===
+    "dispatch", "verb", "domain",
+}
+
+# Soft Keywords - Can be used as identifiers when not in keyword context
+SOFT_KEYWORDS = {
+    # === SIZE SPECIFIERS ===
+    "small", "mini", "kekere", "kékeré",
+    "standard", "gidi",  # Removed 'default' - it's reserved for match/case
+    "large", "big", "nla", "nlá",
+    "mega", "huge", "tobi",
+    
+    # === TYPES (can be identifiers) ===
+    "int", "float", "string", "str", "bool", "array", "list", "dict", "map",
+    "any", "void", "number", "object", "type",
+    
+    # === GPC HIERARCHY ===
+    "parent", "child", "grandparent", "baba", "omo", "babanla",
+    
+    # === RELATIONSHIP PATTERNS ===
+    "source", "target", "from", "to", "link", "unlink",
+    
+    # === ODUN DOMAINS ===
+    "ogbe", "oyeku", "iwori", "odi", "irosu", "owonrin", "obara", "okanran",
+    "ogunda", "osa", "ika", "oturupon", "otura", "irete", "ose", "ofun",
+    
+    # === OPERATION KEYWORDS ===
+    "create", "delete", "update", "read", "send", "receive",
+    "open", "close", "start", "stop", "begin", "end",
+    
+    # === MODIFIERS ===
+    "readonly", "mutable", "optional", "required",
+}
+
+# Combined set for quick lookup
+KEYWORDS = RESERVED_KEYWORDS | SOFT_KEYWORDS
+
+# English to Yoruba keyword aliases
+KEYWORD_ALIASES = {
+    # Control flow
+    "import": "iba",
+    "if": "ti",
+    "else": "bibẹkọ",
+    "for": "fun",
+    "while": "nigba",
+    "return": "pada",
+    "try": "gbiyanju",
+    "catch": "mu",
+    "throw": "sọ",
+    "match": "yàn",
+    
+    # Declarations
+    "class": "odu",
+    "function": "ese",
+    "let": "ayanmo",
+    "public": "gbangba",
+    "private": "asiri",
+    
+    # CEN Model
+    "sacrifice": "ebo",
+    "relationship": "ajose",
+    "divination": "difa",
+    "board": "opon",
+    "taboo": "ewọ",
+    
+    # Sizes
+    "small": "kekere",
+    "large": "nla",
+    "mega": "tobi",
+    
+    # GPC
+    "parent": "baba",
+    "child": "omo",
+    "grandparent": "babanla",
 }
 
 

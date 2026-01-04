@@ -375,13 +375,134 @@ Otura.ether_pa();
 
 ---
 
+## IDE Support (LSP)
+
+Ifá-Lang includes a full Language Server Protocol (LSP) implementation for IDE integration.
+
+### VS Code Setup
+
+1. Install the Ifá-Lang extension (if available) or configure manually:
+
+```json
+// .vscode/settings.json
+{
+    "ifa.lsp.path": "python",
+    "ifa.lsp.args": ["-m", "src.lsp"]
+}
+```
+
+2. Or run the LSP server manually:
+```bash
+python -m src.lsp
+```
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Autocompletion** | Context-aware suggestions for variables, functions, Odù domains |
+| **Hover** | Documentation for keywords, Odù methods, and your own symbols |
+| **Go to Definition** | Jump to variable/function definitions |
+| **Document Symbols** | Outline view of all symbols in file |
+| **Signature Help** | Parameter hints when calling functions |
+| **Diagnostics** | Real-time error detection |
+
+---
+
+## Benchmarking
+
+Compare Ifá-Lang performance across different execution modes.
+
+### Running Benchmarks
+
+```bash
+# Run all benchmarks
+python benchmarks/benchmark.py
+
+# Run specific tests
+python benchmarks/benchmark.py --fib      # Fibonacci
+python benchmarks/benchmark.py --primes   # Prime sieve
+python benchmarks/benchmark.py --strings  # String ops
+python benchmarks/benchmark.py --arrays   # Array ops
+
+# More iterations for accuracy
+python benchmarks/benchmark.py -n 10
+```
+
+### Execution Modes
+
+| Mode | Command | Speed |
+|------|---------|-------|
+| **Interpreter** | `ifa run file.ifa` | Baseline |
+| **Bytecode** | `ifa runb file.ifab` | ~2-5x faster |
+| **Native (Rust)** | `./compiled_binary` | ~10-50x faster |
+
+### Compiling for Speed
+
+```bash
+# Compile to bytecode
+ifa bytecode program.ifa -o program.ifab
+ifa runb program.ifab
+
+# Compile to native binary (requires Rust)
+ifa build program.ifa -o program
+./program
+```
+
+---
+
+## Advanced Examples
+
+Check out the `examples/05_advanced/` folder for complex, real-world examples:
+
+### Blockchain (`blockchain.ifa`)
+- Custom classes for Block and Blockchain
+- SHA256 hashing with proof-of-work
+- Chain validation
+
+### API Client (`api_client.ifa`)
+- HTTP GET/POST requests
+- JSON parsing and serialization
+- REST API integration
+
+### Database (`database.ifa`)
+- File-based JSON database
+- CRUD operations (Create, Read, Update, Delete)
+- Query by field
+
+### Chat Server (`chat_server.ifa`)
+- TCP socket server
+- Multi-client support
+- Room-based messaging
+
+---
+
 ## Next Steps
 
 1. **Explore Examples**: Check `examples/` folder
-2. **Read DOCS.md**: Full API reference
-3. **Try Bytecode**: `ifa bytecode program.ifa`
-4. **Build Native**: `ifa build program.ifa -o app`
+   - `01_basics/` - Hello world, variables, math
+   - `02_features/` - OOP, lambdas, pattern matching
+   - `03_compounds/` - Custom Odù definitions
+   - `04_apps/` - Web server, file processor
+   - `05_advanced/` - Blockchain, API client, database
+
+2. **Read DOCS.md**: Full API reference for all 16 Odù domains
+
+3. **Performance Optimization**:
+   - `ifa bytecode program.ifa` - Compile to bytecode
+   - `ifa build program.ifa` - Compile to native
+
+4. **IDE Integration**: Set up LSP for autocompletion
+
+5. **Package Management**: 
+   - `ifa oja init` - Create new project
+   - `ifa oja add <url>` - Add dependencies
+
+6. **Debugging**:
+   - `ifa debug --gpc program.ifa` - GPC call stack tracing
+   - `ifa check --ebo program.ifa` - Ẹbọ lifecycle validation
 
 ---
 
 **Àṣẹ!** *(It is done!)*
+

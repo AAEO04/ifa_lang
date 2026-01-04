@@ -179,6 +179,29 @@ class IndexAccess(ASTNode):
 
 
 @dataclass
+class SliceAccess(ASTNode):
+    """Slice access (arr[0:5] or arr[::2] or arr[1:10:2])
+    
+    Supports Python-style slicing with negative indices.
+    """
+    target: str = ""
+    start: Any = None   # None = from beginning
+    end: Any = None     # None = to end
+    step: Any = None    # None = step of 1
+
+
+@dataclass
+class MethodCall(ASTNode):
+    """Method call on an object (obj.method(args))
+    
+    Used for calling methods on object instances created via odù.dá().
+    """
+    target: str = ""                           # The variable/object name
+    method: str = ""                           # Method name
+    args: List[Any] = field(default_factory=list)
+
+
+@dataclass
 class AssignmentStmt(ASTNode):
     """Assignment (x = 5; or arr[0] = 5;)"""
     target: Any = None  # Identifier or IndexAccess
@@ -389,6 +412,46 @@ if LARK_AVAILABLE:
             if hasattr(target, 'name'):
                 target = target.name
             return IndexAccess(target=str(target), index=index)
+        
+        def slice_access(self, target, *args):
+            """Parse slice syntax: arr[start:end] or arr[::step] or arr[start:end:step]
+            
+            Grammar: NAME "[" expression? ":" expression? (":" expression?)? "]"
+            """
+            if hasattr(target, 'name'):
+                target = target.name
+            
+            # Extract start, end, step from args
+            # args contains only the expressions that were provided (not empty slots)
+            start = None
+            end = None
+            step = None
+            
+            # Parse based on number of arguments
+            if len(args) == 0:
+                # [:] - all elements
+                pass
+            elif len(args) == 1:
+                # [start:] or [:end]
+                start = args[0]
+            elif len(args) == 2:
+                # [start:end] or [start::step] or [::step] depending on positions
+                start = args[0]
+                end = args[1]
+            elif len(args) >= 3:
+                # [start:end:step]
+                start = args[0]
+                end = args[1]
+                step = args[2] if len(args) > 2 else None
+            
+            return SliceAccess(target=str(target), start=start, end=end, step=step)
+        
+        def method_call(self, target, method, *args):
+            """Parse method call: obj.method(args)"""
+            if hasattr(target, 'name'):
+                target = target.name
+            arg_list = list(args[0]) if args else []
+            return MethodCall(target=str(target), method=str(method), args=arg_list)
         
         # === Assignment ===
         

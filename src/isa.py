@@ -154,6 +154,53 @@ def disassemble(binary: str):
 
 
 # =============================================================================
+# 2026 CEN MODEL - 16-BIT ISA (65,536 Instructions)
+# =============================================================================
+
+class Ifa16BitISA:
+    """
+    16-bit ISA for Ifá-Lang. 65,536 instructions.
+    Prefix (8-bit Domain/Omo-Odù) + Suffix (8-bit Action/Modifier)
+    """
+    
+    DOMAINS = {0: "OGBE", 1: "OYEKU", 2: "IWORI", 3: "ODI", 
+               4: "IROSU", 5: "OWONRIN", 6: "OBARA", 7: "OKANRAN",
+               8: "OGUNDA", 9: "OSA", 10: "IKA", 11: "OTURUPON",
+               12: "OTURA", 13: "IRETE", 14: "OSE", 15: "OFUN"}
+    
+    ACTIONS = {
+        0: "NOP", 1: "MOV", 2: "LOAD", 3: "STORE", 4: "PUSH", 5: "POP",
+        6: "JMP", 7: "JZ", 8: "CALL", 9: "RET", 10: "PRINT", 11: "INPUT",
+        12: "ADD", 13: "SUB", 14: "MUL", 15: "DIV", 16: "WRITE", 17: "READ"
+    }
+    
+    INSTRUCTIONS = 65536
+    
+    def encode_semantic(self, domain_name: str, action_name: str) -> int:
+        """Encode domain.action to 16-bit opcode."""
+        domain = next((k for k, v in self.DOMAINS.items() if v == domain_name.upper()), 0)
+        action = next((k for k, v in self.ACTIONS.items() if v == action_name.upper()), 0)
+        return (domain << 8) | action
+    
+    def decode(self, opcode: int) -> dict:
+        """Decode 16-bit opcode to components."""
+        domain_code = (opcode >> 8) & 0xFF
+        action_code = opcode & 0xFF
+        return {
+            'opcode': opcode,
+            'domain_code': domain_code,
+            'action_code': action_code,
+            'domain': self.DOMAINS.get(domain_code % 16, f"DOM_{domain_code}"),
+            'action': self.ACTIONS.get(action_code, f"ACT_{action_code}"),
+        }
+    
+    def disassemble(self, opcode: int) -> str:
+        """Disassemble opcode to human-readable string."""
+        d = self.decode(opcode)
+        return f"{d['domain']}.{d['action']}"
+
+
+# =============================================================================
 # EXPORTS
 # =============================================================================
 __all__ = [
@@ -164,4 +211,6 @@ __all__ = [
     'IfaISA',
     'assemble',
     'disassemble',
+    'Ifa16BitISA',
 ]
+
