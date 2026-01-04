@@ -1,0 +1,255 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// CHAT_SERVER.IFA - Multi-Client Chat Server
+// Demonstrates networking, concurrent connections, and message broadcasting
+// ═══════════════════════════════════════════════════════════════════════════
+// Run: ifa run examples/05_advanced/chat_server.ifa
+// ═══════════════════════════════════════════════════════════════════════════
+
+ìbà Irosu;    // Output
+ìbà Otura;    // Network
+ìbà Ogunda;   // Arrays
+ìbà Ika;      // Strings
+ìbà Iwori;    // Time
+ìbà Osa;      // Concurrency
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MESSAGE CLASS
+// ═══════════════════════════════════════════════════════════════════════════
+
+odù Message {
+    ayanmọ sender = "";
+    ayanmọ content = "";
+    ayanmọ timestamp = "";
+    
+    ese dá(from, text) {
+        sender = from;
+        content = text;
+        timestamp = Iwori.royin("%H:%M:%S");
+    }
+    
+    ese format() {
+        padà Ika.so("[", timestamp, "] ", sender, ": ", content);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHATROOM CLASS
+// ═══════════════════════════════════════════════════════════════════════════
+
+odù ChatRoom {
+    ayanmọ name = "";
+    ayanmọ clients = [];
+    ayanmọ history = [];
+    ayanmọ max_history = 100;
+    
+    ese dá(room_name) {
+        name = room_name;
+        clients = [];
+        history = [];
+    }
+    
+    ese join(client_id, username) {
+        ayanmọ client = {
+            "id": client_id,
+            "name": username
+        };
+        clients = Ogunda.fi(clients, client);
+        
+        // Announce to room
+        ayanmọ msg = Message.dá("System", username + " joined the room");
+        broadcast(msg);
+        
+        Irosu.fo("👤 " + username + " joined " + name);
+    }
+    
+    ese leave(client_id) {
+        ayanmọ new_clients = [];
+        ayanmọ username = "Unknown";
+        
+        fun client ninu clients {
+            ti client.id == client_id {
+                username = client.name;
+            } bibẹkọ {
+                new_clients = Ogunda.fi(new_clients, client);
+            }
+        }
+        
+        clients = new_clients;
+        
+        ayanmọ msg = Message.dá("System", username + " left the room");
+        broadcast(msg);
+        
+        Irosu.fo("👋 " + username + " left " + name);
+    }
+    
+    ese send_message(client_id, content) {
+        ayanmọ username = get_username(client_id);
+        ayanmọ msg = Message.dá(username, content);
+        
+        // Add to history
+        history = Ogunda.fi(history, msg);
+        ti Ogunda.gigun(history) > max_history {
+            history = Ogunda.ge(history, 1, max_history);
+        }
+        
+        broadcast(msg);
+    }
+    
+    ese broadcast(message) {
+        ayanmọ formatted = message.format();
+        
+        fun client ninu clients {
+            Otura.send_to(client.id, formatted);
+        }
+    }
+    
+    ese get_username(client_id) {
+        fun client ninu clients {
+            ti client.id == client_id {
+                padà client.name;
+            }
+        }
+        padà "Anonymous";
+    }
+    
+    ese get_online_count() {
+        padà Ogunda.gigun(clients);
+    }
+    
+    ese get_history(limit) {
+        ayanmọ len = Ogunda.gigun(history);
+        ayanmọ start = len - limit;
+        ti start < 0 {
+            start = 0;
+        }
+        padà Ogunda.ge(history, start, len);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHAT SERVER
+// ═══════════════════════════════════════════════════════════════════════════
+
+odù ChatServer {
+    ayanmọ port = 8888;
+    ayanmọ rooms = {};
+    ayanmọ running = iro;
+    
+    ese dá(server_port) {
+        port = server_port;
+        
+        // Create default rooms
+        rooms["general"] = ChatRoom.dá("general");
+        rooms["random"] = ChatRoom.dá("random");
+        rooms["help"] = ChatRoom.dá("help");
+    }
+    
+    ese start() {
+        Irosu.fo("╔═══════════════════════════════════════════════════════════╗");
+        Irosu.fo("║        Ifá-Lang Chat Server                               ║");
+        Irosu.fo("╚═══════════════════════════════════════════════════════════╝");
+        
+        ti Otura.de(port) {
+            running = otito;
+            Irosu.fo("🚀 Server started on port " + port);
+            Irosu.fo("📋 Available rooms: general, random, help");
+            Irosu.fo("⏳ Waiting for connections...\n");
+            
+            accept_loop();
+        } bibẹkọ {
+            Irosu.fo("❌ Failed to bind to port " + port);
+        }
+    }
+    
+    ese accept_loop() {
+        nigba running {
+            ti Otura.tetisi(1) {
+                ayanmọ client_id = Otura.get_client_id();
+                Irosu.fo("🔗 New connection: " + client_id);
+                
+                // Send welcome message
+                Otura.send_to(client_id, "Welcome to Ifá-Lang Chat!");
+                Otura.send_to(client_id, "Commands: /join <room>, /leave, /rooms, /who, /quit");
+                
+                // Handle client in background
+                Osa.spawn(handle_client, client_id);
+            }
+        }
+    }
+    
+    ese handle_client(client_id) {
+        ayanmọ current_room = "";
+        ayanmọ username = "User" + client_id;
+        
+        nigba otito {
+            ayanmọ data = Otura.recv_from(client_id, 1024, 30);
+            
+            ti Ika.gigun(data) == 0 {
+                // Client disconnected
+                ti current_room != "" {
+                    rooms[current_room].leave(client_id);
+                }
+                dabọ;
+            }
+            
+            // Parse command
+            ti Ika.ge(data, 0, 1) == "/" {
+                handle_command(client_id, data, current_room, username);
+            } bibẹkọ {
+                // Regular message
+                ti current_room != "" {
+                    rooms[current_room].send_message(client_id, data);
+                } bibẹkọ {
+                    Otura.send_to(client_id, "Join a room first: /join <room>");
+                }
+            }
+        }
+        
+        Irosu.fo("🔌 Client disconnected: " + client_id);
+    }
+    
+    ese handle_command(client_id, cmd, room, username) {
+        ayanmọ parts = Ika.pin(cmd, " ");
+        ayanmọ command = parts[0];
+        
+        ti command == "/join" {
+            ayanmọ room_name = parts[1];
+            ti rooms[room_name] {
+                rooms[room_name].join(client_id, username);
+                Otura.send_to(client_id, "Joined room: " + room_name);
+            } bibẹkọ {
+                Otura.send_to(client_id, "Room not found: " + room_name);
+            }
+        }
+        
+        ti command == "/rooms" {
+            Otura.send_to(client_id, "Available rooms: general, random, help");
+        }
+        
+        ti command == "/who" {
+            ti room != "" {
+                ayanmọ count = rooms[room].get_online_count();
+                Otura.send_to(client_id, "Users online: " + count);
+            }
+        }
+        
+        ti command == "/quit" {
+            Otura.close_client(client_id);
+        }
+    }
+    
+    ese stop() {
+        running = iro;
+        Otura.pa();
+        Irosu.fo("🛑 Server stopped");
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════════════════════════════════
+
+ayanmọ server = ChatServer.dá(8888);
+server.start();
+
+àṣẹ;

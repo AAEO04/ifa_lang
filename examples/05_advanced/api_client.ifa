@@ -1,0 +1,135 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// API_CLIENT.IFA - REST API Client Example
+// Demonstrates HTTP requests, JSON parsing, and async operations
+// ═══════════════════════════════════════════════════════════════════════════
+// Run: ifa run examples/05_advanced/api_client.ifa
+// ═══════════════════════════════════════════════════════════════════════════
+
+ìbà Irosu;    // Output
+ìbà Otura;    // Network
+ìbà Ika;      // Strings
+ìbà Ogunda;   // Arrays
+ìbà Ofun;     // Objects
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HTTP CLIENT CLASS
+// ═══════════════════════════════════════════════════════════════════════════
+
+odù HttpClient {
+    ayanmọ base_url = "";
+    ayanmọ headers = {};
+    
+    ese dá(url) {
+        base_url = url;
+        headers = Ofun.da();
+        headers = Ofun.fi(headers, "Content-Type", "application/json");
+        headers = Ofun.fi(headers, "User-Agent", "Ifa-Lang/1.0");
+    }
+    
+    ese set_header(key, value) {
+        headers = Ofun.fi(headers, key, value);
+    }
+    
+    ese get(endpoint) {
+        ayanmọ url = Ika.so(base_url, endpoint);
+        Irosu.fo("📤 GET " + url);
+        
+        ayanmọ response = Otura.http_get(url, headers);
+        
+        ti response.status == 200 {
+            Irosu.fo("✅ Success: " + response.status);
+            padà response.body;
+        } bibẹkọ {
+            Irosu.fo("❌ Error: " + response.status);
+            padà iro;
+        }
+    }
+    
+    ese post(endpoint, data) {
+        ayanmọ url = Ika.so(base_url, endpoint);
+        Irosu.fo("📤 POST " + url);
+        
+        ayanmọ response = Otura.http_post(url, headers, data);
+        
+        ti response.status >= 200 && response.status < 300 {
+            Irosu.fo("✅ Success: " + response.status);
+            padà response.body;
+        } bibẹkọ {
+            Irosu.fo("❌ Error: " + response.status);
+            padà iro;
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JSON HELPER
+// ═══════════════════════════════════════════════════════════════════════════
+
+odù Json {
+    ese parse(text) {
+        // Parse JSON string to object
+        padà Ofun.from_json(text);
+    }
+    
+    ese stringify(obj) {
+        // Convert object to JSON string
+        padà Ofun.to_json(obj);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXAMPLE: FETCH USERS FROM API
+// ═══════════════════════════════════════════════════════════════════════════
+
+Irosu.fo("╔═══════════════════════════════════════════════════════════╗");
+Irosu.fo("║        Ifá-Lang API Client Demo                          ║");
+Irosu.fo("╚═══════════════════════════════════════════════════════════╝");
+
+// Create HTTP client
+ayanmọ client = HttpClient.dá("https://jsonplaceholder.typicode.com");
+
+// Fetch users
+Irosu.fo("\n📋 Fetching users...");
+ayanmọ users_json = client.get("/users");
+
+ti users_json {
+    ayanmọ users = Json.parse(users_json);
+    
+    Irosu.fo("\n👥 Users found: " + Ogunda.gigun(users));
+    
+    // Display first 3 users
+    ayanmọ i = 0;
+    fun user ninu users {
+        ti i < 3 {
+            Irosu.fo("  - " + user.name + " (" + user.email + ")");
+        }
+        i = i + 1;
+    }
+}
+
+// Create a new post
+Irosu.fo("\n📝 Creating new post...");
+ayanmọ new_post = Ofun.da();
+new_post = Ofun.fi(new_post, "title", "Hello from Ifá-Lang!");
+new_post = Ofun.fi(new_post, "body", "This post was created using Ifá-Lang.");
+new_post = Ofun.fi(new_post, "userId", 1);
+
+ayanmọ result = client.post("/posts", Json.stringify(new_post));
+
+ti result {
+    Irosu.fo("📬 Post created successfully!");
+    ayanmọ created = Json.parse(result);
+    Irosu.fo("   ID: " + created.id);
+}
+
+// Fetch a single post
+Irosu.fo("\n📄 Fetching post #1...");
+ayanmọ post = client.get("/posts/1");
+
+ti post {
+    ayanmọ data = Json.parse(post);
+    Irosu.fo("   Title: " + data.title);
+}
+
+Irosu.fo("\n🎉 API demo complete!");
+àṣẹ;

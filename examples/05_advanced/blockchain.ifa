@@ -1,0 +1,152 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// BLOCKCHAIN.IFA - Simple Blockchain Implementation
+// Demonstrates hashing, data structures, and verification
+// ═══════════════════════════════════════════════════════════════════════════
+// Run: ifa run examples/05_advanced/blockchain.ifa
+// ═══════════════════════════════════════════════════════════════════════════
+
+ìbà Irosu;    // Output
+ìbà Irete;    // Crypto/Hashing
+ìbà Ogunda;   // Arrays
+ìbà Iwori;    // Time
+ìbà Ika;      // Strings
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BLOCK CLASS
+// ═══════════════════════════════════════════════════════════════════════════
+
+odù Block {
+    ayanmọ index = 0;
+    ayanmọ timestamp = "";
+    ayanmọ data = "";
+    ayanmọ previous_hash = "";
+    ayanmọ hash = "";
+    ayanmọ nonce = 0;
+    
+    ese dá(idx, data, prev_hash) {
+        index = idx;
+        timestamp = Iwori.ago();
+        this.data = data;
+        previous_hash = prev_hash;
+        hash = calculate_hash();
+    }
+    
+    ese calculate_hash() {
+        ayanmọ content = Ika.so(index, timestamp, data, previous_hash, nonce);
+        padà Irete.sha256(content);
+    }
+    
+    ese mine(difficulty) {
+        ayanmọ target = Ika.repeat("0", difficulty);
+        
+        nigba Ika.ge(hash, 0, difficulty) != target {
+            nonce = nonce + 1;
+            hash = calculate_hash();
+        }
+        
+        Irosu.fo("⛏️  Block mined: " + Ika.ge(hash, 0, 16) + "...");
+    }
+    
+    ese to_string() {
+        padà Ika.so(
+            "Block #", index, "\n",
+            "  Timestamp: ", timestamp, "\n",
+            "  Data: ", data, "\n",
+            "  Hash: ", hash, "\n",
+            "  Previous: ", previous_hash
+        );
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BLOCKCHAIN CLASS
+// ═══════════════════════════════════════════════════════════════════════════
+
+odù Blockchain {
+    ayanmọ chain = [];
+    ayanmọ difficulty = 2;
+    
+    ese dá() {
+        // Create genesis block
+        ayanmọ genesis = Block.dá(0, "Genesis Block", "0");
+        chain = Ogunda.fi(chain, genesis);
+        Irosu.fo("🌍 Genesis block created");
+    }
+    
+    ese get_latest_block() {
+        ayanmọ len = Ogunda.gigun(chain);
+        padà chain[len - 1];
+    }
+    
+    ese add_block(data) {
+        ayanmọ latest = get_latest_block();
+        ayanmọ new_index = latest.index + 1;
+        ayanmọ new_block = Block.dá(new_index, data, latest.hash);
+        
+        Irosu.fo("⛏️  Mining block #" + new_index + "...");
+        new_block.mine(difficulty);
+        
+        chain = Ogunda.fi(chain, new_block);
+        Irosu.fo("✅ Block added to chain");
+    }
+    
+    ese is_valid() {
+        ayanmọ i = 1;
+        ayanmọ len = Ogunda.gigun(chain);
+        
+        nigba i < len {
+            ayanmọ current = chain[i];
+            ayanmọ previous = chain[i - 1];
+            
+            // Check hash integrity
+            ti current.hash != current.calculate_hash() {
+                Irosu.fo("❌ Invalid hash at block #" + i);
+                padà iro;
+            }
+            
+            // Check chain link
+            ti current.previous_hash != previous.hash {
+                Irosu.fo("❌ Invalid chain link at block #" + i);
+                padà iro;
+            }
+            
+            i = i + 1;
+        }
+        
+        Irosu.fo("✅ Blockchain is valid");
+        padà otito;
+    }
+    
+    ese print_chain() {
+        Irosu.fo("\n═══ BLOCKCHAIN ═══");
+        fun block ninu chain {
+            Irosu.fo(block.to_string());
+            Irosu.fo("─────────────────────────────────");
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN PROGRAM
+// ═══════════════════════════════════════════════════════════════════════════
+
+Irosu.fo("╔═══════════════════════════════════════════════════════════╗");
+Irosu.fo("║        Ifá-Lang Blockchain Demo                          ║");
+Irosu.fo("╚═══════════════════════════════════════════════════════════╝");
+
+// Create blockchain
+ayanmọ bc = Blockchain.dá();
+
+// Add some blocks
+bc.add_block("Transaction: Alice -> Bob: 50 IFA");
+bc.add_block("Transaction: Bob -> Charlie: 25 IFA");
+bc.add_block("Transaction: Charlie -> Alice: 10 IFA");
+
+// Validate chain
+bc.is_valid();
+
+// Print chain
+bc.print_chain();
+
+Irosu.fo("\n🎉 Blockchain demo complete!");
+àṣẹ;

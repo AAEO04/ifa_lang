@@ -1,0 +1,197 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// DATABASE.IFA - Simple File-Based Database
+// Demonstrates file I/O, JSON persistence, and CRUD operations
+// ═══════════════════════════════════════════════════════════════════════════
+// Run: ifa run examples/05_advanced/database.ifa
+// ═══════════════════════════════════════════════════════════════════════════
+
+ìbà Irosu;    // Output
+ìbà Odi;      // File I/O
+ìbà Ogunda;   // Arrays
+ìbà Ofun;     // Objects
+ìbà Ika;      // Strings
+ìbà Owonrin;  // Random (for IDs)
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATABASE CLASS
+// ═══════════════════════════════════════════════════════════════════════════
+
+odù Database {
+    ayanmọ filepath = "";
+    ayanmọ data = [];
+    
+    ese dá(path) {
+        filepath = path;
+        load();
+    }
+    
+    ese load() {
+        ti Odi.wa(filepath) {
+            ayanmọ content = Odi.ka(filepath);
+            data = Ofun.from_json(content);
+            Irosu.fo("📂 Loaded " + Ogunda.gigun(data) + " records from " + filepath);
+        } bibẹkọ {
+            data = [];
+            Irosu.fo("📂 Created new database: " + filepath);
+        }
+    }
+    
+    ese save() {
+        ayanmọ content = Ofun.to_json(data);
+        Odi.ko(filepath, content);
+        Irosu.fo("💾 Saved " + Ogunda.gigun(data) + " records");
+    }
+    
+    ese insert(record) {
+        // Generate unique ID
+        ayanmọ id = Owonrin.da(10000, 99999);
+        record = Ofun.fi(record, "id", id);
+        
+        data = Ogunda.fi(data, record);
+        Irosu.fo("✅ Inserted record with ID: " + id);
+        padà id;
+    }
+    
+    ese find_by_id(id) {
+        fun record ninu data {
+            ti record.id == id {
+                padà record;
+            }
+        }
+        padà iro;
+    }
+    
+    ese find_all() {
+        padà data;
+    }
+    
+    ese find_where(field, value) {
+        ayanmọ results = [];
+        
+        fun record ninu data {
+            ti Ofun.gba(record, field) == value {
+                results = Ogunda.fi(results, record);
+            }
+        }
+        
+        padà results;
+    }
+    
+    ese update(id, updates) {
+        ayanmọ i = 0;
+        
+        fun record ninu data {
+            ti record.id == id {
+                // Merge updates into record
+                fun key ninu Ofun.keys(updates) {
+                    ayanmọ val = Ofun.gba(updates, key);
+                    data[i] = Ofun.fi(data[i], key, val);
+                }
+                Irosu.fo("✅ Updated record ID: " + id);
+                padà otito;
+            }
+            i = i + 1;
+        }
+        
+        Irosu.fo("❌ Record not found: " + id);
+        padà iro;
+    }
+    
+    ese delete(id) {
+        ayanmọ new_data = [];
+        ayanmọ found = iro;
+        
+        fun record ninu data {
+            ti record.id != id {
+                new_data = Ogunda.fi(new_data, record);
+            } bibẹkọ {
+                found = otito;
+            }
+        }
+        
+        ti found {
+            data = new_data;
+            Irosu.fo("🗑️  Deleted record ID: " + id);
+        } bibẹkọ {
+            Irosu.fo("❌ Record not found: " + id);
+        }
+        
+        padà found;
+    }
+    
+    ese count() {
+        padà Ogunda.gigun(data);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN PROGRAM
+// ═══════════════════════════════════════════════════════════════════════════
+
+Irosu.fo("╔═══════════════════════════════════════════════════════════╗");
+Irosu.fo("║        Ifá-Lang File Database Demo                       ║");
+Irosu.fo("╚═══════════════════════════════════════════════════════════╝");
+
+// Create/open database
+ayanmọ db = Database.dá("users.json");
+
+// Insert some records
+Irosu.fo("\n📝 Inserting records...");
+
+ayanmọ user1 = Ofun.da();
+user1 = Ofun.fi(user1, "name", "Adé Olúwa");
+user1 = Ofun.fi(user1, "email", "ade@example.com");
+user1 = Ofun.fi(user1, "age", 28);
+ayanmọ id1 = db.insert(user1);
+
+ayanmọ user2 = Ofun.da();
+user2 = Ofun.fi(user2, "name", "Tayo Adébáyọ̀");
+user2 = Ofun.fi(user2, "email", "tayo@example.com");
+user2 = Ofun.fi(user2, "age", 34);
+ayanmọ id2 = db.insert(user2);
+
+ayanmọ user3 = Ofun.da();
+user3 = Ofun.fi(user3, "name", "Kẹ́mi Ọládélé");
+user3 = Ofun.fi(user3, "email", "kemi@example.com");
+user3 = Ofun.fi(user3, "age", 28);
+db.insert(user3);
+
+// Query records
+Irosu.fo("\n🔍 Querying records...");
+
+ayanmọ all_users = db.find_all();
+Irosu.fo("Total records: " + db.count());
+
+// Find by ID
+ayanmọ found = db.find_by_id(id1);
+ti found {
+    Irosu.fo("Found user: " + found.name);
+}
+
+// Find by field
+ayanmọ age_28 = db.find_where("age", 28);
+Irosu.fo("Users age 28: " + Ogunda.gigun(age_28));
+
+// Update a record
+Irosu.fo("\n✏️ Updating record...");
+ayanmọ updates = Ofun.da();
+updates = Ofun.fi(updates, "age", 29);
+db.update(id1, updates);
+
+// Delete a record
+Irosu.fo("\n🗑️ Deleting record...");
+db.delete(id2);
+
+// Save to disk
+Irosu.fo("\n💾 Saving database...");
+db.save();
+
+// Print final state
+Irosu.fo("\n📋 Final database contents:");
+ayanmọ final = db.find_all();
+fun user ninu final {
+    Irosu.fo("  - " + user.name + " (age: " + user.age + ")");
+}
+
+Irosu.fo("\n🎉 Database demo complete!");
+àṣẹ;
