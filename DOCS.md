@@ -198,10 +198,10 @@ pip install -r requirements.txt
 Ifá-Lang supports three modes of execution:
 
 #### A. Interpreted Mode (Default)
-Fastest for development. Runs directly on the Python VM.
+Fastest for development. Runs on the Rust interpreter.
 ```bash
 # Run a file
-python src/cli.py run examples/hello.ifa
+ifa run examples/hello.ifa
 ```
 
 #### B. Bytecode Mode (.ifab)
@@ -209,25 +209,27 @@ Compiles to an efficient `.ifab` binary format, optimized for IoT/Embedded syste
 
 ```bash
 # Compile to bytecode
-python src/cli.py bytecode examples/hello.ifa
+ifa bytecode examples/hello.ifa
 
 # With custom output file
-python src/cli.py bytecode examples/hello.ifa -o hello.ifab
-
-# With verbose disassembly output
-python src/cli.py bytecode examples/hello.ifa -V
+ifa bytecode examples/hello.ifa -o hello.ifab
 
 # Run bytecode (Fast startup)
-python src/cli.py runb hello.ifab
-
-# Disassemble bytecode to view instructions
-python src/cli.py disasm hello.ifab
+ifa runb hello.ifab
 ```
 
 **8-bit Amúlù ISA**: The bytecode uses 256 instructions (16 Verbs × 16 Nouns), making it compact for embedded devices.
 
-#### C. Native Mode (Rust)
-Transpiles to Rust for maximum performance. Requires `rustc`.
+## Building & Deployment
+
+### Native Compilation (Rust)
+
+Ifá-Lang can compile your code to a native binary using the host's Rust toolchain.
+
+**Prerequisites:**
+- Rust Toolchain (`rustc`, `cargo`) available in PATH.
+
+**Command:**
 ```bash
 # Transpile to hello.rs and compile to binary
 python src/cli.py build examples/hello.ifa -o hello
@@ -854,46 +856,91 @@ ifa lint ./src
 
 ---
 
+## Domain Stacks
+
+Pre-built libraries for common application domains:
+
+| Stack | Description | Path |
+|-------|-------------|------|
+| **Frontend** | HTML/CSS generation, components | `ifa-std/stacks/frontend.rs` |
+| **Backend** | HTTP servers, routing, middleware | `ifa-std/stacks/backend.rs` |
+| **Crypto** | Encryption, hashing, digital signatures | `ifa-std/stacks/crypto.rs` |
+| **GameDev** | Sprites, physics engine, game loop | `ifa-std/stacks/gamedev.rs` |
+| **IoT** | Sensors, GPIO, embedded systems | `ifa-std/stacks/iot.rs` |
+| **ML** | Machine learning, neural networks | `ifa-std/stacks/ml.rs` |
+
+### Opele Chain & Divination
+
+Unique Ifá-Lang features inspired by the Ifá divination system:
+
+| Feature | Description |
+|---------|-------------|
+| **OpeleChain** | Tamper-evident, append-only log (blockchain-like audit trail) |
+| **Opele.cast()** | Cryptographically secure RNG for Odù divination |
+| **Odù Patterns** | 16 binary patterns (0000-1111) for pattern matching |
+| **Ìwà Balance** | Resource lifecycle management (Open/Close, Acquire/Release) |
+
+---
+
 ## Project Architecture
 
 ```
 ifa_lang/
-├── src/                    # Core Python implementation
-│   ├── cli.py             # Command-line interface
-│   ├── grammar.lark       # Formal EBNF grammar (dual-lexicon)
-│   ├── lark_parser.py     # AST parser (Lark-based)
-│   ├── interpreter.py     # Python interpreter
-│   ├── transpiler.py      # Rust code generator
-│   ├── bytecode.py        # .ifab bytecode compiler
-│   ├── vm.py              # Virtual machine + debugger
-│   ├── errors.py          # Babalawo error system
-│   ├── linter.py          # Static analysis (ifa lint)
-│   ├── oja.py             # Package manager + verification
-│   ├── docgen.py          # Documentation generator
-│   ├── isa.py             # 8-bit ISA definitions
-│   ├── memory.py          # 12-bit Odù encoding, 4KB memory
-│   ├── ffi.py             # Foreign function interface
-│   └── __init__.py        # Package exports
+├── crates/                 # Rust workspace crates
+│   ├── ifa-core/          # Core language implementation
+│   │   ├── src/
+│   │   │   ├── ast.rs     # Abstract Syntax Tree
+│   │   │   ├── lexer.rs   # Tokenizer (dual lexicon)
+│   │   │   ├── parser.rs  # LALR(1) parser
+│   │   │   ├── interpreter.rs  # Tree-walking interpreter
+│   │   │   ├── compiler.rs     # Bytecode compiler
+│   │   │   ├── vm.rs      # Virtual machine
+│   │   │   ├── transpiler.rs   # Rust code generator
+│   │   │   └── lib.rs     # Crate exports
+│   │   └── Cargo.toml
+│   │
+│   ├── ifa-std/           # Standard library (16 Odù domains)
+│   │   ├── src/
+│   │   │   ├── ffi.rs     # FFI bindings for all domains
+│   │   │   ├── opele.rs   # OpeleChain (tamper-evident log)
+│   │   │   ├── stacks/    # Domain stacks
+│   │   │   │   ├── frontend.rs  # HTML/CSS generation
+│   │   │   │   ├── backend.rs   # HTTP servers
+│   │   │   │   ├── crypto.rs    # Encryption/hashing
+│   │   │   │   ├── gamedev.rs   # Game development
+│   │   │   │   ├── iot.rs       # Sensors/GPIO
+│   │   │   │   └── ml.rs        # Machine learning
+│   │   │   └── lib.rs
+│   │   └── Cargo.toml
+│   │
+│   ├── ifa-babalawo/      # Linter & type checker
+│   │   ├── src/
+│   │   │   ├── diagnose.rs     # Error diagnostics
+│   │   │   ├── checks.rs       # Static analysis
+│   │   │   ├── wisdom.rs       # Odù-based error messages
+│   │   │   └── lib.rs
+│   │   └── Cargo.toml
+│   │
+│   ├── ifa-cli/           # Command-line interface
+│   │   ├── src/
+│   │   │   ├── main.rs    # CLI entry point
+│   │   │   ├── repl.rs    # Interactive REPL
+│   │   │   ├── docgen.rs  # Documentation generator
+│   │   │   ├── sandbox.rs # Sandboxed execution
+│   │   │   └── oja.rs     # Package manager
+│   │   └── Cargo.toml
+│   │
+│   └── ifa-wasm/          # WebAssembly bindings
+│       └── src/lib.rs
 │
-├── lib/                    # Runtime libraries
-│   ├── core.rs            # Rust runtime (IfaValue, panic handler)
-│   └── std/               # Standard library (16 Odù modules)
-│       ├── ogbe.py        # Initialization
-│       ├── oyeku.py       # Termination
-│       ├── iwori.py       # Time
-│       ├── odi.py         # Files
-│       ├── irosu.py       # Output
-│       ├── owonrin.py     # Random
-│       ├── obara.py       # Addition
-│       ├── okanran.py     # Errors
-│       ├── ogunda.py      # Arrays
-│       ├── osa.py         # System
-│       ├── ika.py         # Strings
-│       ├── oturupon.py    # Subtraction
-│       ├── otura.py       # Network
-│       ├── irete.py       # Logic
-│       ├── ose.py         # Graphics
-│       └── ofun.py        # Reflection
+├── lib/                    # Legacy Python libraries (deprecated)
+│   └── std/               # Python stdlib (for reference)
+│
+├── docs/                   # Generated HTML documentation
+│   ├── index.html
+│   ├── playground.html
+│   ├── sandbox.html
+│   └── [16 Odù pages].html
 │
 ├── examples/              # Example programs
 │   ├── hello.ifa
@@ -901,13 +948,10 @@ ifa_lang/
 │   └── math.ifa
 │
 ├── tests/                 # Unit tests
-│   └── test_balance.py
+│   └── *.ifa
 │
-├── bin/                   # Executable scripts
-│   └── ifa               # Main entry point
-│
-├── requirements.txt       # Python dependencies
-├── ifa.toml              # Project configuration
+├── Cargo.toml             # Workspace manifest
+├── ifa.toml               # Project configuration
 └── README.md             # Project overview
 ```
 
@@ -915,32 +959,31 @@ ifa_lang/
 
 ## Building & Deployment
 
-### Interpreted Mode (Python)
+### Interpreted Mode
 
 ```bash
-python src/cli.py run hello.ifa
+ifa run hello.ifa
 ```
 
-### Compiled Mode (Rust)
+### Compiled Mode (Native Binary)
 
 ```bash
-# Generate Rust code
-python src/cli.py build hello.ifa -o hello
+# Build native executable
+ifa build hello.ifa -o hello
 
-# The generated code uses lib/core.rs runtime
-# Compile with rustc:
-rustc hello.rs -o hello
-./hello
+# Run the binary
+./hello      # Linux/Mac
+./hello.exe  # Windows
 ```
 
 ### Bytecode Mode
 
 ```bash
 # Compile to bytecode
-python src/cli.py bytecode hello.ifa
+ifa bytecode hello.ifa
 
 # Run bytecode (fast startup)
-python src/cli.py runb hello.ifab
+ifa runb hello.ifab
 ```
 
 ### File Formats
@@ -959,7 +1002,7 @@ Errors are displayed with Yoruba proverbs for wisdom:
 
 ```
 ══════════════════════════════════════════════════════════════
-🔮 BABALAWO DIAGNOSTICS
+ BABALAWO DIAGNOSTICS
 ══════════════════════════════════════════════════════════════
 
    ⛔ ERROR at line 5:

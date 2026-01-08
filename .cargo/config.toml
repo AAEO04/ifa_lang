@@ -1,0 +1,66 @@
+# Ifa-Lang Cargo Configuration
+# Optimizes builds for distribution - zero runtime dependencies
+
+# =============================================================================
+# WINDOWS - Static CRT linking (no Visual C++ Redistributable needed)
+# =============================================================================
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.i686-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+# =============================================================================
+# LINUX (musl) - Fully static binaries, maximum portability
+# =============================================================================
+[target.x86_64-unknown-linux-musl]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-unknown-linux-musl]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+# =============================================================================
+# LINUX (glibc) - Dynamic linking (static glibc causes issues)
+# =============================================================================
+[target.x86_64-unknown-linux-gnu]
+# Default dynamic linking - works on most distros
+
+[target.aarch64-unknown-linux-gnu]
+# Default dynamic linking
+
+# =============================================================================
+# macOS - Dynamic linking (Apple requires it)
+# =============================================================================
+[target.x86_64-apple-darwin]
+# Default - Apple doesn't allow static system libs
+
+[target.aarch64-apple-darwin]
+# Default - Apple Silicon
+
+# =============================================================================
+# BUILD SETTINGS
+# =============================================================================
+[build]
+# Optimize for release by default
+# rustflags = ["-C", "opt-level=3"]
+
+[profile.release]
+# Already configured in Cargo.toml, but can add more here
+# strip = true  # Strip debug symbols (smaller binary)
+# lto = true    # Link-time optimization (slower build, faster binary)
+
+# =============================================================================
+# ALIASES for convenient commands
+# =============================================================================
+[alias]
+# Build release for current platform
+br = "build --release -p ifa-cli"
+# Run with release optimizations
+rr = "run --release -p ifa-cli --"
+# Test all packages
+ta = "test --workspace"
+# Check all with all features
+ca = "check --workspace --all-features"

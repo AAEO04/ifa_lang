@@ -9,99 +9,191 @@ import {
 } from 'vscode-languageclient/node';
 
 let client: LanguageClient | undefined;
+let outputChannel: vscode.OutputChannel;
 
 export function activate(context: ExtensionContext) {
-    // 1. Try to find the Ifá Language Server
-    // Check for 'ifa' in PATH first, then fallback to python script
-    const config = workspace.getConfiguration('ifa');
-    const serverPath = config.get<string>('serverPath') || findIfaExecutable();
+    outputChannel = vscode.window.createOutputChannel('Ifa-Lang');
+    outputChannel.appendLine('Ifa-Lang extension activating...');
 
-    if (!serverPath) {
-        // No LSP available - extension still provides syntax highlighting
-        console.log('Ifá Language Server not found. Syntax highlighting only.');
-        vscode.window.showInformationMessage(
-            'Ifá-Lang: Syntax highlighting active. Install ifa-lang for intellisense.'
-        );
-        return; // Exit early - syntax highlighting still works!
+    const config = workspace.getConfiguration('ifa');
+    const lspEnabled = config.get<boolean>('languageServer.enable', true);
+
+    // Register commands
+    registerCommands(context);
+
+    // Start LSP if enabled
+    if (lspEnabled) {
+        startLanguageServer(context);
+    }
+
+    outputChannel.appendLine('Ifa-Lang extension activated');
+}
+
+function registerCommands(context: ExtensionContext) {
+    // Run current file
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ifa.run', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor || editor.document.languageId !== 'ifa') {
+                vscode.window.showErrorMessage('Open an .ifa file first');
+                return;
+            }
+
+            await editor.document.save();
+            const filePath = editor.document.fileName;
+            const ifaPath = workspace.getConfiguration('ifa').get<string>('path', 'ifa');
+
+            const terminal = vscode.window.createTerminal('Ifa');
+            terminal.show();
+            terminal.sendText(`${ifaPath} run "${filePath}"`);
+        })
+    );
+
+    // Run in WASM sandbox
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ifa.runSandboxWasm', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor || editor.document.languageId !== 'ifa') {
+                vscode.window.showErrorMessage('Open an .ifa file first');
+                return;
+            }
+
+            await editor.document.save();
+            const filePath = editor.document.fileName;
+            const ifaPath = workspace.getConfiguration('ifa').get<string>('path', 'ifa');
+
+            const terminal = vscode.window.createTerminal('Ifa (WASM Sandbox)');
+            terminal.show();
+            terminal.sendText(`${ifaPath} run "${filePath}" --sandbox=wasm`);
+        })
+    );
+
+    // Run in native sandbox
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ifa.runSandboxNative', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor || editor.document.languageId !== 'ifa') {
+                vscode.window.showErrorMessage('Open an .ifa file first');
+                return;
+            }
+
+            await editor.document.save();
+            const filePath = editor.document.fileName;
+            const ifaPath = workspace.getConfiguration('ifa').get<string>('path', 'ifa');
+
+            const terminal = vscode.window.createTerminal('Ifa (Native Sandbox)');
+            terminal.show();
+            terminal.sendText(`${ifaPath} run "${filePath}" --sandbox=native`);
+        })
+    );
+
+    // Open REPL
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ifa.repl', () => {
+            const ifaPath = workspace.getConfiguration('ifa').get<string>('path', 'ifa');
+            const terminal = vscode.window.createTerminal('Ifa REPL');
+            terminal.show();
+            terminal.sendText(`${ifaPath} repl`);
+        })
+    );
+
+    // Format document (placeholder)
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ifa.format', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) return;
+
+            // TODO: Implement formatter via LSP or external tool
+            vscode.window.showInformationMessage('Ifa formatter coming soon!');
+        })
+    );
+
+    // Restart language server
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ifa.restartServer', async () => {
+            if (client) {
+                await client.stop();
+            }
+            startLanguageServer(context);
+            vscode.window.showInformationMessage('Ifa language server restarted');
+        })
+    );
+}
+
+function startLanguageServer(context: ExtensionContext) {
+    const config = workspace.getConfiguration('ifa');
+    const serverPath = config.get<string>('languageServer.path');
+
+    // Find ifa executable
+    const ifaPath = serverPath || findIfaExecutable();
+
+    if (!ifaPath) {
+        outputChannel.appendLine('Ifa language server not found - syntax highlighting only');
+        return;
     }
 
     try {
-        // 2. Define Server Options
-        const serverArgs = serverPath.endsWith('.py') ? ['lsp'] : ['lsp'];
-        const serverCommand = serverPath.endsWith('.py') ? 'python' : serverPath;
-        const serverArgsWithPath = serverPath.endsWith('.py') ? [serverPath, 'lsp'] : ['lsp'];
-
         const serverOptions: ServerOptions = {
-            run: { command: serverCommand, args: serverArgsWithPath, transport: TransportKind.stdio },
-            debug: { command: serverCommand, args: serverArgsWithPath, transport: TransportKind.stdio }
-        };
-
-        // 3. Define Client Options
-        const clientOptions: LanguageClientOptions = {
-            documentSelector: [{ scheme: 'file', language: 'ifa' }],
-            synchronize: {
-                fileEvents: workspace.createFileSystemWatcher('**/*.ifa')
+            run: {
+                command: ifaPath,
+                args: ['lsp'],
+                transport: TransportKind.stdio
+            },
+            debug: {
+                command: ifaPath,
+                args: ['lsp', '--debug'],
+                transport: TransportKind.stdio
             }
         };
 
-        // 4. Create and Start Client
+        const clientOptions: LanguageClientOptions = {
+            documentSelector: [
+                { scheme: 'file', language: 'ifa' }
+            ],
+            synchronize: {
+                fileEvents: workspace.createFileSystemWatcher('**/*.ifa')
+            },
+            outputChannel: outputChannel,
+            traceOutputChannel: outputChannel
+        };
+
         client = new LanguageClient(
-            'ifaLanguageServer',
-            'Ifá Language Server',
+            'ifa-lang',
+            'Ifa Language Server',
             serverOptions,
             clientOptions
         );
 
-        client.start().catch((error) => {
-            console.error('Failed to start Ifá Language Server:', error);
+        client.start().then(() => {
+            outputChannel.appendLine('Ifa language server started');
+        }).catch((error) => {
+            outputChannel.appendLine(`Language server failed: ${error}`);
             vscode.window.showWarningMessage(
-                'Ifá-Lang: Language server not available. Syntax highlighting only.'
+                'Ifa language server not available. Syntax highlighting only.'
             );
         });
 
-    } catch (error) {
-        console.error('Error initializing Ifá Language Client:', error);
-    }
+        context.subscriptions.push(client);
 
-    // 5. Register Debug Adapter (optional)
-    try {
-        const factory = new IfaDebugAdapterDescriptorFactory(serverPath);
-        context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('ifa', factory));
     } catch (error) {
-        console.error('Debug adapter registration failed:', error);
+        outputChannel.appendLine(`Error starting language server: ${error}`);
     }
 }
 
 function findIfaExecutable(): string | undefined {
-    // Check common locations
+    // Check common locations for ifa binary
     const possiblePaths = [
         'ifa',  // In PATH
-        'C:\\ifa-lang\\bin\\ifa.bat',  // Windows installed
-        '/usr/local/bin/ifa',  // Unix installed
-        path.join(__dirname, '..', '..', 'src', 'cli.py')  // Dev environment
+        'C:\\Program Files\\ifa-lang\\bin\\ifa.exe',
+        'C:\\ifa-lang\\bin\\ifa.exe',
+        '/usr/local/bin/ifa',
+        '/usr/bin/ifa',
+        path.join(process.env.HOME || '', '.ifa', 'bin', 'ifa')
     ];
 
-    // For now, just try the PATH version
-    // In production, we'd check if the file exists
-    return undefined;  // Let it fail gracefully if not found
-}
-
-class IfaDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
-    private serverPath: string;
-
-    constructor(serverPath: string) {
-        this.serverPath = serverPath;
-    }
-
-    createDebugAdapterDescriptor(
-        session: vscode.DebugSession,
-        executable: vscode.DebugAdapterExecutable | undefined
-    ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-        if (this.serverPath.endsWith('.py')) {
-            return new vscode.DebugAdapterExecutable('python', [this.serverPath, 'dap']);
-        }
-        return new vscode.DebugAdapterExecutable(this.serverPath, ['dap']);
-    }
+    // Return first path that might work (actual check happens at runtime)
+    // In practice, the 'ifa' in PATH is the most common case
+    return 'ifa';
 }
 
 export function deactivate(): Thenable<void> | undefined {

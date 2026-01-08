@@ -1,0 +1,28 @@
+[package]
+name = "ifa-wasm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "WebAssembly bindings for Ifa-Lang playground"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Use ifa-core without native/sandbox features
+ifa-core = { path = "../ifa-core", default-features = false }
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["console"] }
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-O', '--enable-bulk-memory', '--enable-nontrapping-float-to-int']
+
+[package.metadata.wasm-pack.profile.dev]
+wasm-opt = false
+
+
+[profile.release]
+opt-level = "s"
+lto = true

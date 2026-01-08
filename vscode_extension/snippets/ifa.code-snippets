@@ -1,0 +1,400 @@
+{
+    "Doc Comment (Yoruba)": {
+        "prefix": "doc-yoruba",
+        "body": [
+            "àlàyé {",
+            "    @orúkọ ${1:function_name}",
+            "    @àpèjúwe ${2:Description of what it does}",
+            "    @àṣàyàn ${3:param} - ${4:parameter description}",
+            "    @èsì ${5:return type/description}",
+            "    @àpẹẹrẹ ${6:usage example}",
+            "}"
+        ],
+        "description": "Yoruba documentation block"
+    },
+    "Doc Comment (English)": {
+        "prefix": "doc",
+        "body": [
+            "/// ${1:Brief description}",
+            "/// ",
+            "/// @param ${2:name} - ${3:description}",
+            "/// @return ${4:description}"
+        ],
+        "description": "Documentation comment"
+    },
+    "Block Comment": {
+        "prefix": "comment-block",
+        "body": [
+            "/*",
+            " * ${1:Comment text}",
+            " */"
+        ],
+        "description": "Multi-line block comment"
+    },
+    "TODO Comment": {
+        "prefix": "todo",
+        "body": "// TODO: ${1:description}",
+        "description": "TODO marker comment"
+    },
+    "FIXME Comment": {
+        "prefix": "fixme",
+        "body": "// FIXME: ${1:description}",
+        "description": "FIXME marker comment"
+    },
+    "Hello World": {
+        "prefix": "hello",
+        "body": [
+            "ìbà Irosu;",
+            "Irosu.fo(\"${1:Hello, World!}\");",
+            "àṣẹ;"
+        ],
+        "description": "Basic Ifa-Lang hello world"
+    },
+    "Hello World (English)": {
+        "prefix": "hello-en",
+        "body": [
+            "import Log;",
+            "Log.print(\"${1:Hello, World!}\");",
+            "end;"
+        ],
+        "description": "Basic hello world with English syntax"
+    },
+    "Variable": {
+        "prefix": "let",
+        "body": "ayanmọ ${1:name} = ${2:value};",
+        "description": "Declare a variable (Yoruba)"
+    },
+    "Function": {
+        "prefix": "fn",
+        "body": [
+            "ẹsẹ ${1:name}(${2:params}) {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "Define a function (Yoruba)"
+    },
+    "Function (English)": {
+        "prefix": "fn-en",
+        "body": [
+            "fn ${1:name}(${2:params}) {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "Define a function (English)"
+    },
+    "If Statement": {
+        "prefix": "if",
+        "body": [
+            "bí ${1:condition} {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "If statement (Yoruba)"
+    },
+    "If-Else": {
+        "prefix": "ifelse",
+        "body": [
+            "bí ${1:condition} {",
+            "    ${2}",
+            "} bibẹkọ {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "If-else statement (Yoruba)"
+    },
+    "While Loop": {
+        "prefix": "while",
+        "body": [
+            "nígbà ${1:condition} {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "While loop (Yoruba)"
+    },
+    "For Loop": {
+        "prefix": "for",
+        "body": [
+            "fún ${1:item} nínú ${2:list} {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "For-each loop (Yoruba)"
+    },
+    "Domain/Class": {
+        "prefix": "domain",
+        "body": [
+            "odù ${1:Name} {",
+            "    ẹsẹ ${2:method}() {",
+            "        ${0}",
+            "    }",
+            "}"
+        ],
+        "description": "Define a domain/class (Yoruba)"
+    },
+    "Print": {
+        "prefix": "print",
+        "body": "Irosu.fo(${1:\"message\"});",
+        "description": "Print to console"
+    },
+    "Read File": {
+        "prefix": "readfile",
+        "body": "ayanmọ ${1:content} = Odi.ka(\"${2:filename}\");",
+        "description": "Read file contents"
+    },
+    "Write File": {
+        "prefix": "writefile",
+        "body": "Odi.ko(\"${1:filename}\", ${2:content});",
+        "description": "Write to file"
+    },
+    "Math Add": {
+        "prefix": "add",
+        "body": "Obara.fikun(${1:a}, ${2:b})",
+        "description": "Add two numbers"
+    },
+    "Math Multiply": {
+        "prefix": "mul",
+        "body": "Obara.isodipupo(${1:a}, ${2:b})",
+        "description": "Multiply two numbers"
+    },
+    "Math Subtract": {
+        "prefix": "sub",
+        "body": "Oturupon.din(${1:a}, ${2:b})",
+        "description": "Subtract two numbers"
+    },
+    "Math Divide": {
+        "prefix": "div",
+        "body": "Oturupon.pin(${1:a}, ${2:b})",
+        "description": "Divide two numbers"
+    },
+    "Random Number": {
+        "prefix": "rand",
+        "body": "Owonrin.afesona(${1:min}, ${2:max})",
+        "description": "Generate random number"
+    },
+    "Current Time": {
+        "prefix": "now",
+        "body": "Iwori.akoko()",
+        "description": "Get current time"
+    },
+    "String Length": {
+        "prefix": "strlen",
+        "body": "Ika.gigun(${1:string})",
+        "description": "Get string length"
+    },
+    "String Concat": {
+        "prefix": "concat",
+        "body": "Ika.so(${1:str1}, ${2:str2})",
+        "description": "Concatenate strings"
+    },
+    "HTTP GET": {
+        "prefix": "httpget",
+        "body": [
+            "ayanmọ ${1:response} = Otura.gba(\"${2:url}\");",
+            "Irosu.fo(${1:response});"
+        ],
+        "description": "HTTP GET request"
+    },
+    "SHA256 Hash": {
+        "prefix": "hash",
+        "body": "Irete.hash(${1:data})",
+        "description": "Compute SHA256 hash"
+    },
+    "FFI Load Library": {
+        "prefix": "ffi-load",
+        "body": [
+            "ayanmọ ffi = IfaFfi.new();",
+            "ffi.load(\"${1:library}\", null);"
+        ],
+        "description": "Load external library via FFI"
+    },
+    "FFI Bind Function": {
+        "prefix": "ffi-bind",
+        "body": "ffi.bind(\"${1:lib}\", \"${2:func}\", [\"${3:i32}\", \"${4:i32}\"], \"${5:i32}\");",
+        "description": "Bind FFI function"
+    },
+    "FFI Call": {
+        "prefix": "ffi-call",
+        "body": "ayanmọ ${1:result} = ffi.call(\"${2:lib}\", \"${3:func}\", [${4:args}]);",
+        "description": "Call FFI function"
+    },
+    "API Expose": {
+        "prefix": "api-expose",
+        "body": [
+            "api.expose(\"${1:name}\", [IfaType.${2:I32}], IfaType.${3:I32}, |args| {",
+            "    ${0}",
+            "});"
+        ],
+        "description": "Expose function via API"
+    },
+    "RPC Server": {
+        "prefix": "rpc-server",
+        "body": [
+            "ayanmọ api = create_stdlib_api();",
+            "ayanmọ server = IfaRpcServer.new(api, ${1:8080});",
+            "server.start();"
+        ],
+        "description": "Start JSON-RPC server"
+    },
+    "Try-Catch": {
+        "prefix": "try",
+        "body": [
+            "dida_ewu {",
+            "    ${1}",
+            "} kaka_ewu ${2:e} {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "Try-catch block (Yoruba)"
+    },
+    "Main Program": {
+        "prefix": "main",
+        "body": [
+            "// ${1:Program Name}",
+            "ìbà Irosu;",
+            "ìbà Obara;",
+            "",
+            "${0}",
+            "",
+            "àṣẹ;"
+        ],
+        "description": "Main program template"
+    },
+    "Ẹbọ (RAII Guard)": {
+        "prefix": "ebo",
+        "body": [
+            "ayanmọ _guard = Ebo.new(|| {",
+            "    ${1:// cleanup code}",
+            "});",
+            "${0}"
+        ],
+        "description": "RAII cleanup guard - runs on scope exit"
+    },
+    "Ẹbọ Scoped (Typed)": {
+        "prefix": "ebo-scope",
+        "body": [
+            "ayanmọ ${1:resource} = EboScope.new(",
+            "    ${2:// acquire resource},",
+            "    |r| { ${3:// cleanup code} }",
+            ");",
+            "${0}"
+        ],
+        "description": "Typed RAII scope with resource access"
+    },
+    "Àjọṣe Signal": {
+        "prefix": "signal",
+        "body": "ayanmọ ${1:name} = Signal.new(${2:initial_value});",
+        "description": "Create reactive signal"
+    },
+    "Àjọṣe Effect": {
+        "prefix": "effect",
+        "body": [
+            "effect(|| {",
+            "    ${1:// reactive code - runs when dependencies change}",
+            "});"
+        ],
+        "description": "Create reactive effect"
+    },
+    "Àjọṣe Computed": {
+        "prefix": "computed",
+        "body": [
+            "ayanmọ ${1:derived} = Computed.new(|| {",
+            "    ${2:// compute derived value}",
+            "});"
+        ],
+        "description": "Create computed (derived) reactive value"
+    },
+    "Èèwọ̀ (Taboo Directive)": {
+        "prefix": "ewọ",
+        "body": "#ewọ ${1:DomainA} -> ${2:DomainB}  // Forbid ${1} from calling ${2}",
+        "description": "Declare architectural taboo/boundary"
+    },
+    "Ìwà Pẹ̀lẹ́ (Graceful Error)": {
+        "prefix": "iwa-pele",
+        "body": [
+            "${1:result}.or_gentle(${2:default_value})"
+        ],
+        "description": "Graceful error handling with default"
+    },
+    "Ìwà Pẹ̀lẹ́ (With Retry)": {
+        "prefix": "iwa-retry",
+        "body": [
+            "with_patience(${1:3}, Duration::from_secs(${2:1}), || {",
+            "    ${3:// operation that may fail}",
+            "})"
+        ],
+        "description": "Retry operation with patience"
+    },
+    "Sandbox Run (WASM)": {
+        "prefix": "sandbox-wasm",
+        "body": "ifa run ${1:script.ifa} --sandbox=wasm ${0}",
+        "description": "Run in WASM sandbox"
+    },
+    "Sandbox Run (Native)": {
+        "prefix": "sandbox-native",
+        "body": "ifa run ${1:script.ifa} --sandbox=native ${0}",
+        "description": "Run in native OS sandbox"
+    },
+    "Allow Read Permission": {
+        "prefix": "allow-read",
+        "body": "--allow-read=${1:path}",
+        "description": "Grant file read permission"
+    },
+    "Allow Net Permission": {
+        "prefix": "allow-net",
+        "body": "--allow-net=${1:domain.com}",
+        "description": "Grant network permission to domain"
+    },
+    "CapabilitySet": {
+        "prefix": "caps",
+        "body": [
+            "ayanmọ caps = CapabilitySet.new();",
+            "caps.grant(Ofun.${1:Stdio});",
+            "${0}"
+        ],
+        "description": "Create capability set with permissions"
+    },
+    "Password Hash (Argon2)": {
+        "prefix": "password-hash",
+        "body": "ayanmọ ${1:hash} = password.hash(${2:password_str});",
+        "description": "Hash password with Argon2"
+    },
+    "Password Verify": {
+        "prefix": "password-verify",
+        "body": "ayanmọ ${1:valid} = password.verify(${2:password_str}, ${3:stored_hash});",
+        "description": "Verify password against hash"
+    },
+    "HMAC Sign": {
+        "prefix": "hmac-sign",
+        "body": "ayanmọ ${1:tag} = hash.hmac_sha256(${2:key}, ${3:data});",
+        "description": "Create HMAC-SHA256 signature"
+    },
+    "OpeleChain": {
+        "prefix": "opele-chain",
+        "body": [
+            "ayanmọ chain = OpeleChain.new();",
+            "chain.cast(${1:data});",
+            "chain.verify();"
+        ],
+        "description": "Create tamper-evident audit log"
+    },
+    "Opon Small": {
+        "prefix": "opon-small",
+        "body": "#opon kekere  // 256 slots",
+        "description": "Set small memory configuration (256 slots)"
+    },
+    "Opon Medium": {
+        "prefix": "opon-medium",
+        "body": "#opon arinrin  // 1024 slots",
+        "description": "Set medium memory configuration (1024 slots)"
+    },
+    "Opon Large": {
+        "prefix": "opon-large",
+        "body": "#opon nla  // 4096 slots",
+        "description": "Set large memory configuration (4096 slots)"
+    },
+    "Opon Unlimited": {
+        "prefix": "opon-unlimited",
+        "body": "#opon ailopin  // No limit",
+        "description": "Set unlimited memory configuration"
+    }
+}

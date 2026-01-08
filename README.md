@@ -14,7 +14,7 @@
 - **256 Amúlù Instructions** - 8-bit ISA with 16 Verbs × 16 Nouns
 - **16 Odù Domains** - Each principal Odù represents a computing domain
 - **Balance Checker (Ìwà-Pẹ̀lẹ́)** - Semantically meaningful lifecycle management
-- **Dual Runtime** - Interpreted (Python) or transpiled to native (Rust)
+- **Native Compilation** - Build standalone executables with `ifa build`
 - **User Libraries (Ọjà)** - Create and publish libraries using Git
 - **VS Code Extension** - Full Intellisense and Debugging support
 
@@ -97,31 +97,24 @@ ifa-lang/
 
 ## 📥 Download & Install
 
-### Windows (Recommended)
-Download the installer - **no Python required!**
+### 🚀 Quick Install
 
-[![Download for Windows](https://img.shields.io/badge/Download-Windows%20Installer-blue?style=for-the-badge&logo=windows)](https://github.com/AAEO04/ifa-lang/releases/latest)
-
-1. Download `ifa-lang-*-windows-setup.exe`
-2. Run the installer
-3. Restart your terminal
-4. Ready! Run `ifa --help`
-
-### macOS (Homebrew)
+**Unix (Linux / macOS)**
 ```bash
-brew tap AAEO04/ifa-lang
-brew install ifa-lang
+curl -sSL https://raw.githubusercontent.com/AAEO04/ifa-lang/main/install.sh | bash
 ```
 
-### Linux
-```bash
-# Download and extract
-wget https://github.com/AAEO04/ifa-lang/releases/latest/download/ifa-lang-1.0.0-linux.tar.gz
-tar -xzf ifa-lang-*.tar.gz
-cd ifa-lang-*
+**Windows (PowerShell)**
+```powershell
+iwr https://raw.githubusercontent.com/AAEO04/ifa-lang/main/install.ps1 -useb | iex
+```
 
-# Install
-./install.sh
+### 📦 Manual Download
+Download the latest binary for your platform from the [Releases Page](https://github.com/AAEO04/ifa-lang/releases).
+
+### 🦀 From Source (Rust)
+```bash
+cargo install ifa-cli --git https://github.com/AAEO04/ifa-lang
 ```
 
 ### VS Code Extension
@@ -141,14 +134,17 @@ ifa repl
 # Compile to bytecode
 ifa bytecode examples/hello.ifa
 
-# Compile to native binary (requires Rust)
-ifa build examples/hello.ifa -o myapp
+# Compile to native binary (Coming Soon)
+# ifa build examples/hello.ifa -o myapp
 
 # Browse standard library
 ifa library
 
 # Check code balance (Ìwà)
 ifa check examples/demo.ifa
+
+# Update Ifá-Lang
+ifa oja upgrade
 
 # Manage Packages (Ọjà)
 ifa oja add https://github.com/user/repo.git

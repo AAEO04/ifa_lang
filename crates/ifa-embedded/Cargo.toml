@@ -1,0 +1,22 @@
+[package]
+name = "ifa-embedded"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Embedded/no_std runtime for Ifá-Lang"
+
+[lib]
+name = "ifa_embedded"
+path = "src/lib.rs"
+
+[dependencies]
+# Core without std
+ifa-core = { path = "../ifa-core", default-features = false }
+
+[features]
+default = []
+# Enable for specific targets
+esp32 = []
+stm32 = []
+rp2040 = []

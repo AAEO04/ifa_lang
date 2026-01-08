@@ -1,0 +1,762 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ifá-Lang Playground</title>
+    <meta name="description" content="Interactive code playground for Ifá-Lang - The Yoruba Programming Language">
+    <style>
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --bg-editor: #0f0f1a;
+            --accent: #e94560;
+            --gold: #ffd700;
+            --text: #eaeaea;
+            --text-dim: #a0a0a0;
+            --success: #4ade80;
+            --error: #f87171;
+            --border: #2d2d44;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-dark));
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--gold), var(--accent));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        select,
+        button {
+            font-family: inherit;
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:hover,
+        button:hover {
+            border-color: var(--gold);
+        }
+
+        button.primary {
+            background: linear-gradient(135deg, var(--accent), #c73e54);
+            border: none;
+            font-weight: 600;
+        }
+
+        button.primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        .editor-pane,
+        .output-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .pane-header {
+            background: var(--bg-card);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-wrapper {
+            flex: 1;
+            display: flex;
+            background: var(--bg-editor);
+            overflow: hidden;
+        }
+
+        .line-numbers {
+            padding: 1rem 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-dim);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            text-align: right;
+            user-select: none;
+            border-right: 1px solid var(--border);
+        }
+
+        #editor {
+            flex: 1;
+            padding: 1rem;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            overflow: auto;
+        }
+
+        .output-pane {
+            border-left: 1px solid var(--border);
+        }
+
+        #output {
+            flex: 1;
+            padding: 1rem;
+            background: var(--bg-editor);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+
+        .output-line {
+            padding: 0.1rem 0;
+        }
+
+        .output-error {
+            color: var(--error);
+        }
+
+        .output-success {
+            color: var(--success);
+        }
+
+        .status-bar {
+            background: var(--bg-card);
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            border-top: 1px solid var(--border);
+        }
+
+        .examples-bar {
+            background: var(--bg-card);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .examples-bar span {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-right: 0.5rem;
+        }
+
+        .example-btn {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid var(--gold);
+            color: var(--gold);
+        }
+
+        .example-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .output-pane {
+                border-left: none;
+                border-top: 1px solid var(--border);
+            }
+
+            .editor-pane,
+            .output-pane {
+                height: 50%;
+            }
+        }
+
+        .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-dim);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading .spinner {
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">
+            <span style="font-size: 1.8rem;">🔮</span>
+            <h1>Ifá-Lang Playground</h1>
+        </div>
+        <div class="controls">
+            <select id="syntax-mode" title="Syntax Mode">
+                <option value="yoruba">Yoruba (àṣẹ)</option>
+                <option value="english">English (end)</option>
+            </select>
+            <button class="primary" id="run-btn" title="Run (Ctrl+Enter)">
+                <span class="spinner"></span>
+                ▶ Run
+            </button>
+            <button id="share-btn" title="Share">📤 Share</button>
+            <button id="clear-btn" title="Clear Output">🗑️ Clear</button>
+        </div>
+    </header>
+
+    <div class="examples-bar">
+        <span>Examples:</span>
+        <button class="example-btn" data-example="hello">Hello World</button>
+        <button class="example-btn" data-example="math">Math Demo</button>
+        <button class="example-btn" data-example="opele">Opele/Oracle</button>
+        <button class="example-btn" data-example="charonboat">Charonboat</button>
+        <button class="example-btn" data-example="ewo">Ewo/Assert</button>
+        <button class="example-btn" data-example="domains">All Domains</button>
+    </div>
+
+    <div class="main-container">
+        <div class="editor-pane">
+            <div class="pane-header">
+                <span>CODE</span>
+                <span id="line-count">Lines: 0</span>
+            </div>
+            <div class="editor-wrapper">
+                <div class="line-numbers" id="line-numbers">1</div>
+                <textarea id="editor" placeholder="// Write your Ifá-Lang code here..." spellcheck="false"></textarea>
+            </div>
+        </div>
+        <div class="output-pane">
+            <div class="pane-header">
+                <span>OUTPUT</span>
+                <span id="exec-time"></span>
+            </div>
+            <div id="output"></div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="status">Ready</span>
+        <span>Ifá-Lang v1.2.0 | WASM Playground</span>
+    </div>
+
+    <script>
+        // =============================================================================
+        // EXAMPLE PROGRAMS
+        // =============================================================================
+        const examples = {
+            hello: {
+                yoruba: `// Hello World - Yoruba Style
+
+Irosu.fo("Ẹ kú àbọ̀ sí Ifá-Lang!");
+Irosu.fo("Welcome to the Yoruba Programming Language!");
+
+ase;`,
+                english: `// Hello World - English Style
+
+Irosu.fo("Welcome to Ifa-Lang!");
+Irosu.fo("The Yoruba Programming Language!");
+
+ase;`
+            },
+            math: {
+                yoruba: `// Math Operations - Obara Domain
+
+ayanmo a = 15;
+ayanmo b = 4;
+
+Irosu.fo("a = 15, b = 4");
+Irosu.fo("---");
+Irosu.fo("Addition:");
+Irosu.fo(Obara.fikun(a, b));
+Irosu.fo("Subtraction:");
+Irosu.fo(Oturupon.din(a, b));
+Irosu.fo("Multiplication:");
+Irosu.fo(Obara.isodipupo(a, b));
+
+ase;`,
+                english: `// Math Operations - Obara Domain
+
+ayanmo a = 15;
+ayanmo b = 4;
+
+Irosu.fo("a = 15, b = 4");
+Irosu.fo("---");
+Irosu.fo("Addition:");
+Irosu.fo(Obara.add(a, b));
+Irosu.fo("Subtraction:");
+Irosu.fo(Oturupon.sub(a, b));
+Irosu.fo("Multiplication:");
+Irosu.fo(Obara.mul(a, b));
+
+ase;`
+            },
+            opele: {
+                yoruba: `// Opele Divination - Compound Odu
+
+Irosu.fo("--- Opele Divination ---");
+Irosu.fo("");
+
+Irosu.fo("2-Level Compound (256 patterns):");
+ayanmo compound2 = Opele.cast_compound(2);
+Irosu.fo(compound2);
+
+Irosu.fo("");
+Irosu.fo("3-Level GPC (4,096 patterns):");
+ayanmo gpc = Opele.cast_compound(3);
+Irosu.fo(gpc);
+
+Irosu.fo("");
+Irosu.fo("Lineage:");
+Irosu.fo(Opele.lineage(gpc));
+
+Irosu.fo("");
+Irosu.fo("Divine:");
+Irosu.fo(Opele.divine("What path should I take?"));
+
+ase;`,
+                english: `// Oracle Divination - Compound Odu
+
+Irosu.fo("--- Oracle Divination ---");
+Irosu.fo("");
+
+Irosu.fo("2-Level Compound (256 patterns):");
+ayanmo compound2 = Oracle.cast_compound(2);
+Irosu.fo(compound2);
+
+Irosu.fo("");
+Irosu.fo("3-Level GPC (4,096 patterns):");
+ayanmo gpc = Oracle.cast_compound(3);
+Irosu.fo(gpc);
+
+Irosu.fo("");
+Irosu.fo("Lineage:");
+Irosu.fo(Oracle.lineage(gpc));
+
+Irosu.fo("");
+Irosu.fo("Divine:");
+Irosu.fo(Oracle.divine("What path should I take?"));
+
+ase;`
+            },
+            charonboat: {
+                yoruba: `// Charonboat - Ose Canvas Demo
+
+Ose.nu();
+Ose.iwon(40, 20);
+
+// Draw boat hull
+Ose.ila(5, 15, 35, 15, "#");
+Ose.ila(5, 15, 10, 18, "#");
+Ose.ila(35, 15, 30, 18, "#");
+Ose.ila(10, 18, 30, 18, "#");
+
+// Draw mast
+Ose.ila(20, 5, 20, 15, "|");
+
+// Draw sail
+Ose.ila(20, 5, 28, 10, "/");
+Ose.ila(20, 5, 12, 10, "\\\\");
+Ose.ila(12, 10, 28, 10, "-");
+
+// Water waves
+Ose.ko(2, 19, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+
+// Render
+Ose.han();
+Irosu.fo("[Charonboat - The Ferryman's Vessel]");
+
+ase;`,
+                english: `// Charonboat - Ose Canvas Demo (English)
+
+Ose.clear();
+Ose.size(40, 20);
+
+// Draw boat hull
+Ose.line(5, 15, 35, 15, "#");
+Ose.line(5, 15, 10, 18, "#");
+Ose.line(35, 15, 30, 18, "#");
+Ose.line(10, 18, 30, 18, "#");
+
+// Draw mast
+Ose.line(20, 5, 20, 15, "|");
+
+// Draw sail
+Ose.line(20, 5, 28, 10, "/");
+Ose.line(20, 5, 12, 10, "\\\\");
+Ose.line(12, 10, 28, 10, "-");
+
+// Water waves
+Ose.text(2, 19, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+
+// Render
+Ose.render();
+Irosu.fo("[Charonboat - The Ferryman's Vessel]");
+
+ase;`
+            },
+            ewo: {
+                yoruba: `// Ewo Assertions - Constraints
+
+Irosu.fo("Testing Ewo (Taboo/Assertions)");
+Irosu.fo("");
+
+ayanmo balance = 100;
+Irosu.fo("Balance: 100");
+
+// This assertion passes
+ewo balance > 0;
+Irosu.fo("Assertion passed: balance > 0");
+
+ayanmo amount = 50;
+ewo amount > 0;
+Irosu.fo("Assertion passed: amount > 0");
+
+Irosu.fo("");
+Irosu.fo("All taboos respected!");
+
+ase;`,
+                english: `// Assert Constraints - Ewo System
+
+Irosu.fo("Testing Assert (Constraints)");
+Irosu.fo("");
+
+ayanmo balance = 100;
+Irosu.fo("Balance: 100");
+
+// This assertion passes  
+assert balance > 0;
+Irosu.fo("Assertion passed: balance > 0");
+
+ayanmo amount = 50;
+assert amount > 0;
+Irosu.fo("Assertion passed: amount > 0");
+
+Irosu.fo("");
+Irosu.fo("All constraints satisfied!");
+
+ase;`
+            },
+            domains: {
+                yoruba: `// 16 Principal Odu + Pseudo-domains
+
+Irosu.fo("--- The 16 Principal Odu ---");
+Irosu.fo("Ogbe (1111) - System/Lifecycle");
+Irosu.fo("Oyeku (0000) - Exit/Sleep");
+Irosu.fo("Iwori (0110) - Time");
+Irosu.fo("Odi (1001) - Files");
+Irosu.fo("Irosu (1100) - Console");
+Irosu.fo("Owonrin (0011) - Random");
+Irosu.fo("Obara (1000) - Math+");
+Irosu.fo("Okanran (0001) - Errors");
+Irosu.fo("Ogunda (1110) - Arrays");
+Irosu.fo("Osa (0111) - Concurrency");
+Irosu.fo("Ika (0100) - Strings");
+Irosu.fo("Oturupon (0010) - Division");
+Irosu.fo("Otura (1011) - Network");
+Irosu.fo("Irete (1101) - Crypto");
+Irosu.fo("Ose (1010) - Graphics");
+Irosu.fo("Ofun (0101) - Permissions");
+Irosu.fo("");
+Irosu.fo("--- Pseudo-domains ---");
+Irosu.fo("Opele - Divination/Oracle");
+Irosu.fo("Coop - FFI Bridge");
+
+ase;`,
+                english: `// All 16 Odu Domains + Extensions
+
+Irosu.fo("--- Domain Reference ---");
+Irosu.fo("");
+Irosu.fo("Principal Odu:");
+Irosu.fo("  Ogbe - System");
+Irosu.fo("  Irosu - Console/Logging");
+Irosu.fo("  Obara - Math (add, mul)");
+Irosu.fo("  Oturupon - Math (sub, div)");
+Irosu.fo("  Ose - Graphics/Canvas");
+Irosu.fo("  Ika - Strings");
+Irosu.fo("  Ogunda - Arrays");
+Irosu.fo("  Iwori - Time");
+Irosu.fo("  Owonrin - Random");
+Irosu.fo("");
+Irosu.fo("Pseudo-domains:");
+Irosu.fo("  Oracle/Opele - Divination");
+Irosu.fo("  Coop - FFI Bridge");
+
+ase;`
+            }
+        };
+
+        // =============================================================================
+        // WASM INTERPRETER
+        // =============================================================================
+        class IfaInterpreter {
+            constructor() {
+                this.output = [];
+                this.wasmLoaded = false;
+                this.initWasm();
+            }
+
+            async initWasm() {
+                try {
+                    // Import WASM module
+                    const { default: init, run_code, get_version } = await import('./pkg/ifa_wasm.js');
+                    await init();
+                    this.wasmLoaded = true;
+
+                    // Display version
+                    const version = get_version();
+                    document.getElementById('output').innerHTML += `<div class="log-line system">✓ Loaded: ${version}</div>`;
+
+                    // Expose run_code to class instance
+                    this.run_code = run_code;
+                    document.getElementById('status').textContent = 'Ready (WASM)';
+                } catch (e) {
+                    console.error("Failed to load WASM:", e);
+                    document.getElementById('output').innerHTML += `<div class="log-line error">Error loading WASM runtime: ${e.message}</div>`;
+                    document.getElementById('status').textContent = 'WASM Error';
+                }
+            }
+
+            run(code) {
+                this.output = [];
+
+                if (!this.wasmLoaded) {
+                    return "⌛ WASM runtime initializing... please wait.";
+                }
+
+                if (!code.trim()) return "";
+
+                try {
+                    // Execute using WASM
+                    const result = this.run_code(code);
+                    return result;
+                } catch (e) {
+                    return `Error: ${e}`;
+                }
+            }
+        }
+
+        // =============================================================================
+        // UI LOGIC
+        // =============================================================================
+        const editor = document.getElementById('editor');
+        const output = document.getElementById('output');
+        const lineNumbers = document.getElementById('line-numbers');
+        const lineCount = document.getElementById('line-count');
+        const execTime = document.getElementById('exec-time');
+        const status = document.getElementById('status');
+        const runBtn = document.getElementById('run-btn');
+        const syntaxMode = document.getElementById('syntax-mode');
+
+        const interpreter = new IfaInterpreter();
+
+        // Update line numbers
+        function updateLineNumbers() {
+            const lines = editor.value.split('\n').length;
+            lineNumbers.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
+            lineCount.textContent = `Lines: ${lines}`;
+        }
+
+        // Run code
+        function runCode() {
+            const source = editor.value;
+            if (!source.trim()) {
+                output.innerHTML = '<span class="output-error">No code to run</span>';
+                return;
+            }
+
+            runBtn.classList.add('loading');
+            status.textContent = 'Running...';
+
+            const startTime = performance.now();
+
+            setTimeout(() => {
+                try {
+                    const result = interpreter.run(source);
+                    const endTime = performance.now();
+                    const duration = (endTime - startTime).toFixed(2);
+
+                    output.innerHTML = result
+                        .split('\n')
+                        .map(line => `<div class="output-line">${escapeHtml(line)}</div>`)
+                        .join('');
+
+                    execTime.textContent = `✓ ${duration}ms`;
+                    execTime.style.color = 'var(--success)';
+                    status.textContent = 'Execution complete';
+                } catch (err) {
+                    output.innerHTML = `<span class="output-error">Error: ${escapeHtml(err.message)}</span>`;
+                    execTime.textContent = '✗ Failed';
+                    execTime.style.color = 'var(--error)';
+                    status.textContent = 'Execution failed';
+                }
+
+                runBtn.classList.remove('loading');
+            }, 50);
+        }
+
+        // Load example
+        function loadExample(name) {
+            const mode = syntaxMode.value;
+            const example = examples[name];
+            if (example) {
+                editor.value = example[mode];
+                updateLineNumbers();
+                output.innerHTML = '';
+                execTime.textContent = '';
+                status.textContent = `Loaded: ${name}`;
+            }
+        }
+
+        // Share via URL
+        function shareCode() {
+            const code = editor.value;
+            const encoded = btoa(unescape(encodeURIComponent(code)));
+            const url = `${location.origin}${location.pathname}#${encoded}`;
+
+            navigator.clipboard.writeText(url).then(() => {
+                status.textContent = 'Link copied to clipboard!';
+                setTimeout(() => { status.textContent = 'Ready'; }, 2000);
+            }).catch(() => {
+                status.textContent = 'Failed to copy link';
+            });
+        }
+
+        // Load from URL
+        function loadFromUrl() {
+            const hash = location.hash.slice(1);
+            if (hash) {
+                try {
+                    const code = decodeURIComponent(escape(atob(hash)));
+                    editor.value = code;
+                    updateLineNumbers();
+                    status.textContent = 'Code loaded from URL';
+                } catch (e) {
+                    console.error('Failed to load from URL:', e);
+                }
+            }
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Event listeners
+        editor.addEventListener('input', updateLineNumbers);
+        editor.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = editor.scrollTop;
+        });
+
+        runBtn.addEventListener('click', runCode);
+        document.getElementById('share-btn').addEventListener('click', shareCode);
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            output.innerHTML = '';
+            execTime.textContent = '';
+            status.textContent = 'Output cleared';
+        });
+
+        syntaxMode.addEventListener('change', () => {
+            // If an example is loaded, reload it in new syntax
+            status.textContent = `Syntax mode: ${syntaxMode.value === 'yoruba' ? 'Yoruba' : 'English'}`;
+        });
+
+        // Example buttons
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', () => loadExample(btn.dataset.example));
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runCode();
+            }
+        });
+
+        // Initialize
+        loadFromUrl();
+        if (!editor.value) {
+            loadExample('hello');
+        }
+        updateLineNumbers();
+    </script>
+</body>
+
+</html>

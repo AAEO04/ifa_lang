@@ -1,217 +1,79 @@
-# ═══════════════════════════════════════════════════════════════════════════
-# GitHub Actions - Build and Release Ifá-Lang
-# Bundles Python embeddable - NO external Python required for users!
-# ═══════════════════════════════════════════════════════════════════════════
-
-name: Build Release
+name: Release
 
 on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-
-env:
-  PYTHON_EMBED_VERSION: "3.11.7"
-  PYTHON_EMBED_URL: "https://www.python.org/ftp/python/3.11.7/python-3.11.7-embed-amd64.zip"
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: ifa-linux-x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: ifa-windows-x86_64.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            name: ifa-macos-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: ifa-macos-arm64
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python (for build tools)
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          python-version: '3.11'
-
-      - name: Download Python Embeddable
+          targets: ${{ matrix.target }}
+      
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }} -p ifa-cli
+      
+      - name: Rename binary
+        shell: bash
         run: |
-          # Download Python embeddable package
-          Invoke-WebRequest -Uri "${{ env.PYTHON_EMBED_URL }}" -OutFile "python-embed.zip"
-          
-          # Extract to python folder
-          Expand-Archive -Path "python-embed.zip" -DestinationPath "python" -Force
-          
-          # Enable pip in embedded Python
-          # Remove the ._pth file restriction
-          Remove-Item "python\python311._pth" -ErrorAction SilentlyContinue
-          
-          # Download get-pip.py
-          Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "python\get-pip.py"
-          
-          # Install pip (verbose for debugging)
-          & "python\python.exe" "python\get-pip.py"
-          
-          # Install dependencies
-          & "python\python.exe" -m pip install -r requirements.txt
-          
-          # Clean up
-          Remove-Item "python\get-pip.py"
-          Remove-Item "python-embed.zip"
-
-      - name: Install Inno Setup
-        run: choco install innosetup -y
-
-      - name: Build Windows Installer
-        run: |
-          # Debug: Check directory structure
-          dir
-          if (Test-Path "python") { dir python }
-          
-          # Run Inno Setup Compiler from PATH (installed by Choco)
-          ISCC installer.iss
-
-      - name: Upload Windows Installer
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            mv target/${{ matrix.target }}/release/ifa.exe ${{ matrix.name }}
+          else
+            mv target/${{ matrix.target }}/release/ifa ${{ matrix.name }}
+          fi
+      
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
-          path: dist/*.exe
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}
 
-  build-unix:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Create Unix Package
-        run: |
-          VERSION=${{ steps.version.outputs.VERSION }}
-          mkdir -p dist/ifa-lang-$VERSION
-          
-          # Copy files
-          cp -r bin src lib examples docs dist/ifa-lang-$VERSION/
-          cp README.md DOCS.md TUTORIAL.md LICENSE requirements.txt dist/ifa-lang-$VERSION/
-          cp install.sh uninstall.sh dist/ifa-lang-$VERSION/
-          
-          # Make scripts executable
-          chmod +x dist/ifa-lang-$VERSION/bin/ifa
-          chmod +x dist/ifa-lang-$VERSION/install.sh
-          chmod +x dist/ifa-lang-$VERSION/uninstall.sh
-          
-          # Create tarball
-          cd dist
-          tar -czvf ifa-lang-$VERSION-linux.tar.gz ifa-lang-$VERSION
-
-      - name: Upload Unix Package
-        uses: actions/upload-artifact@v4
-        with:
-          name: unix-package
-          path: dist/*.tar.gz
-
-  update-homebrew:
-    needs: [build-unix]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout main repo
-        uses: actions/checkout@v4
-
-      - name: Download Unix Package
-        uses: actions/download-artifact@v4
-        with:
-          name: unix-package
-          path: ./release
-
-      - name: Calculate SHA256
-        id: sha
-        run: |
-          SHA=$(sha256sum ./release/*.tar.gz | awk '{print $1}')
-          echo "SHA256=$SHA" >> $GITHUB_OUTPUT
-
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Update Homebrew Formula
-        run: |
-          VERSION=${{ steps.version.outputs.VERSION }}
-          SHA=${{ steps.sha.outputs.SHA256 }}
-          
-          sed -i "s|url \".*\"|url \"https://github.com/AAEO04/ifa-lang/releases/download/v$VERSION/ifa-lang-$VERSION-linux.tar.gz\"|" homebrew/ifa-lang.rb
-          sed -i "s|sha256 \".*\"|sha256 \"$SHA\"|" homebrew/ifa-lang.rb
-          sed -i "s|version \".*\"|version \"$VERSION\"|" homebrew/ifa-lang.rb
-
-      - name: Upload Updated Formula
-        uses: actions/upload-artifact@v4
-        with:
-          name: homebrew-formula
-          path: homebrew/ifa-lang.rb
-
-  create-release:
-    needs: [build-windows, build-unix, update-homebrew]
+  release:
+    name: Create Release
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download Windows Installer
+      - uses: actions/checkout@v4
+      
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: windows-installer
-          path: ./release
-
-      - name: Download Unix Package
-        uses: actions/download-artifact@v4
-        with:
-          name: unix-package
-          path: ./release
-
-      - name: Download Homebrew Formula
-        uses: actions/download-artifact@v4
-        with:
-          name: homebrew-formula
-          path: ./release
-
-      - name: Create GitHub Release
+          path: artifacts
+          merge-multiple: true
+      
+      - name: List artifacts
+        run: ls -R artifacts
+      
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "Ifa-Lang ${{ github.ref_name }}"
-          body: |
-            ## Ifa-Lang ${{ github.ref_name }}
-            
-            **The Yoruba Programming Language**
-            
-            ---
-            
-            ### Downloads
-            
-            | Platform | File | Instructions |
-            |----------|------|--------------|
-            | **Windows** | `ifa-lang-*-windows-setup.exe` | Run installer (includes Python!) |
-            | **macOS** | Homebrew | `brew tap AAEO04/ifa-lang && brew install ifa-lang` |
-            | **Linux** | `ifa-lang-*-linux.tar.gz` | Extract, run `./install.sh` |
-            
-            **Note:** Windows installer includes bundled Python - no external Python required!
-            
-            ---
-            
-            ### Quick Start
-            
-            ```bash
-            ifa --help                    # Show all commands
-            ifa run hello.ifa             # Run a program
-            ifa repl                      # Interactive REPL
-            ifa bytecode app.ifa          # Compile to bytecode
-            ifa build app.ifa -o myapp    # Compile to native binary
-            ```
-            
-            ---
-            
-            ### VS Code Extension
-            
-            Search **"Ifa-Lang"** in VS Code Extensions marketplace.
-            
-            ---
-            
-            **Ase!** *(It is done!)*
-          files: |
-            ./release/*.exe
-            ./release/*.tar.gz
-            ./release/*.rb
+          files: artifacts/*
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

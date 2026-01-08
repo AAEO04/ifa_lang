@@ -1,0 +1,33 @@
+# Math utilities module for Ifá-Lang
+# Demonstrates how to create reusable modules
+
+# Define a function to calculate factorial
+ese factorial(n) {
+    ti n <= 1 {
+        pada 1;
+    }
+    pada n * factorial(n - 1);
+}
+
+# Define a function to check if prime
+ese is_prime(n) {
+    ti n < 2 {
+        pada false;
+    }
+    ayanmo i = 2;
+    nigba i * i <= n {
+        ti n % i == 0 {
+            pada false;
+        }
+        i = i + 1;
+    }
+    pada true;
+}
+
+# Define a fibonacci function
+ese fibonacci(n) {
+    ti n <= 1 {
+        pada n;
+    }
+    pada fibonacci(n - 1) + fibonacci(n - 2);
+}

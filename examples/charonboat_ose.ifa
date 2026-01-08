@@ -1,0 +1,46 @@
+// Ose Example: Drawing "charonboat" as ASCII art
+// This script uses the Ose (Beauty/Graphics) domain to create canvas art
+// Note: Ose and Irosu are built-in domains - no imports needed
+
+// Initialize and configure canvas
+Ose.tobi(60, 20);     // Resize canvas to 60x20
+Ose.nu(" ");           // Clear canvas with spaces
+
+// Draw a decorative border
+Ose.ila(1, 1, 58, 1, "═");        // Top border
+Ose.ila(1, 1, 1, 18, "║");        // Left border
+Ose.ila(58, 1, 58, 18, "║");      // Right border
+Ose.ila(1, 18, 58, 18, "═");      // Bottom border
+
+// Draw corners
+Ose.ya(1, 1, "╔");
+Ose.ya(58, 1, "╗");
+Ose.ya(1, 18, "╚");
+Ose.ya(58, 18, "╝");
+
+// Draw the title "CHARONBOAT" in large ASCII art style
+Ose.ko(15, 3, " ██████ ██   ██  █████  ██████   ██████  ███    ██");
+Ose.ko(15, 4, "██      ██   ██ ██   ██ ██   ██ ██    ██ ████   ██");
+Ose.ko(15, 5, "██      ███████ ███████ ██████  ██    ██ ██ ██  ██");
+Ose.ko(15, 6, "██      ██   ██ ██   ██ ██   ██ ██    ██ ██  ██ ██");
+Ose.ko(15, 7, " ██████ ██   ██ ██   ██ ██   ██  ██████  ██   ████");
+
+// Draw a simple boat shape below
+Ose.ko(20, 10, "         ~~~~~~~~~");
+Ose.ko(18, 11, "       /           \\");
+Ose.ko(16, 12, "     /     ⚓︎       \\");
+Ose.ko(14, 13, "   /________________\\");
+Ose.ko(13, 14, "  ~~~~~~~~~~~~~~~~~~~");
+
+// Add a subtitle
+Ose.ko(18, 16, "⚡ Crossing the Digital River ⚡");
+
+// Render the canvas
+Ose.han();
+
+// Log completion message
+Irosu.fo("");
+Irosu.fo("'Charonboat' art rendered successfully!");
+Irosu.fo("The ferryman awaits...");
+
+àṣẹ;

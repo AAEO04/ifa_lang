@@ -1,0 +1,31 @@
+# Example showing how to import modules in Ifá-Lang
+# Run with: ifa run examples/import_demo.ifa
+
+# Import the math module
+iba math;
+
+# Use imported functions
+Irosu.fo("=== Ifá-Lang Import Demo ===");
+
+# Test factorial
+ayanmo result = factorial(5);
+Irosu.fo("5! = ");
+Irosu.fo(result);
+
+# Test fibonacci
+Irosu.fo("Fibonacci sequence:");
+fun i ninu [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] {
+    ayanmo fib = fibonacci(i);
+    Irosu.fo(fib);
+}
+
+# Test is_prime
+Irosu.fo("Prime numbers 1-20:");
+fun n ninu [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] {
+    ti is_prime(n) {
+        Irosu.fo(n);
+    }
+}
+
+Irosu.fo("=== Demo Complete ===");
+ase;

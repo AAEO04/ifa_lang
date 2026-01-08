@@ -1,0 +1,44 @@
+// Compound Odù Demo - GPC (Grandparent-Parent-Child)
+// Uses the Opele/Oracle domain for divination and compound casting
+
+Irosu.fo("═══ Compound Odù System Demo ═══");
+Irosu.fo("");
+
+// Cast 2-level compound (256 patterns)
+Irosu.fo("2-Level Compound (Parent-Child):");
+ayanmo compound2 = Opele.cast_compound(2);
+Irosu.fo("  " + compound2);
+
+// Cast 3-level GPC (4,096 patterns)
+Irosu.fo("");
+Irosu.fo("3-Level GPC (Grandparent-Parent-Child):");
+ayanmo gpc = Opele.cast_compound(3);
+Irosu.fo("  " + gpc);
+Irosu.fo("  Depth:");
+Irosu.fo(Opele.depth(gpc));
+Irosu.fo("  Lineage:");
+Irosu.fo(Opele.lineage(gpc));
+
+// Cast 4-level (65,536 patterns)
+Irosu.fo("");
+Irosu.fo("4-Level Compound:");
+ayanmo deep4 = Opele.cast_compound(4);
+Irosu.fo("  " + deep4);
+
+// Cast 5-level (1,048,576 patterns)
+Irosu.fo("");
+Irosu.fo("5-Level Compound:");
+ayanmo deep5 = Opele.cast_compound(5);
+Irosu.fo("  " + deep5);
+
+// Simple cast and divination
+Irosu.fo("");
+Irosu.fo("Simple Cast:");
+ayanmo simple = Opele.cast();
+Irosu.fo("  " + simple);
+
+Irosu.fo("");
+Irosu.fo("Divine:");
+Irosu.fo(Opele.divine("What path should I take?"));
+
+ase;

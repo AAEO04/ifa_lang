@@ -31,17 +31,42 @@
         "comments": {
             "patterns": [
                 {
+                    "comment": "Doc comment (triple slash)",
+                    "name": "comment.block.documentation.ifa",
+                    "match": "///.*$"
+                },
+                {
+                    "comment": "Yoruba doc comment - àlàyé (explanation)",
+                    "name": "comment.block.documentation.yoruba.ifa",
+                    "begin": "àlàyé\\s*\\{",
+                    "end": "\\}",
+                    "patterns": [
+                        {
+                            "name": "keyword.other.documentation.ifa",
+                            "match": "@(orúkọ|oruko|name|àpèjúwe|description|àṣàyàn|param|èsì|return|àpẹẹrẹ|example)"
+                        }
+                    ]
+                },
+                {
+                    "comment": "Single line comment",
                     "name": "comment.line.double-slash.ifa",
                     "match": "//.*$"
                 },
                 {
+                    "comment": "Hash comment (Python/Shell style)",
                     "name": "comment.line.hash.ifa",
-                    "match": "#.*$"
+                    "match": "#(?!opon|ewọ).*$"
                 },
                 {
+                    "comment": "Block comment",
                     "name": "comment.block.ifa",
                     "begin": "/\\*",
                     "end": "\\*/"
+                },
+                {
+                    "comment": "Yoruba inline comment - ọrọ (note)",
+                    "name": "comment.line.yoruba.ifa",
+                    "match": "ọ̀rọ̀:.*$"
                 }
             ]
         },
@@ -129,6 +154,11 @@
                     "match": "\\b(èèwọ̀|eewo|taboo|forbid)\\b"
                 },
                 {
+                    "comment": "Assertion Keywords - Ewo",
+                    "name": "keyword.control.assert.ifa",
+                    "match": "\\b(ewo|ẹ̀wọ̀|assert)\\b"
+                },
+                {
                     "comment": "Critical/Atomic Block Keywords",
                     "name": "keyword.other.critical.ifa",
                     "match": "\\b(àṣẹ_pàtàkì|ase_pataki|critical|atomic|transaction)\\b"
@@ -137,6 +167,31 @@
                     "comment": "Access Modifiers",
                     "name": "keyword.other.modifier.ifa",
                     "match": "\\b(gbangba|public)\\b"
+                },
+                {
+                    "comment": "Opon Memory Configuration - Orange/Amber coloring",
+                    "name": "constant.other.opon.ifa",
+                    "match": "\\b(opon|Opon|kekere|Kekere|small|arinrin|Arinrin|medium|nla|Nla|large|ailopin|Ailopin|unlimited)\\b"
+                },
+                {
+                    "comment": "Ẹbọ RAII - Special cleanup syntax",
+                    "name": "keyword.other.ebo.ifa",
+                    "match": "\\b(ebo|ẹbọ|Ebo|Ẹbọ|EboScope)\\b"
+                },
+                {
+                    "comment": "Àjọṣe Reactive - Signal/Effect/Computed",
+                    "name": "keyword.other.ajose.ifa",
+                    "match": "\\b(ajose|àjọṣe|Ajose|Àjọṣe|Signal|Effect|Computed|effect)\\b"
+                },
+                {
+                    "comment": "Ìwà Pẹ̀lẹ́ - Graceful error handling",
+                    "name": "keyword.other.iwa.ifa",
+                    "match": "\\b(iwa_pele|ìwà_pẹ̀lẹ́|or_gentle|with_patience)\\b"
+                },
+                {
+                    "comment": "Capability/Sandbox Keywords",
+                    "name": "keyword.other.capability.ifa",
+                    "match": "\\b(CapabilitySet|Ofun|Ofún|sandbox|allow|grant|revoke)\\b"
                 }
             ]
         },
@@ -173,12 +228,42 @@
                 {
                     "comment": "Odù Domains - Yoruba names",
                     "name": "support.class.ifa",
-                    "match": "\\b(Ogbe|Ogbè|Oyeku|Oyẹkú|Ọ̀yẹ̀kú|Iwori|Ìwòrì|Odi|Òdí|Irosu|Ìrosù|Owonrin|Ọ̀wọ́nrín|Obara|Ọ̀bàrà|Okanran|Ọ̀kànràn|Ogunda|Ògúndá|Osa|Ọ̀sá|Ika|Ìká|Oturupon|Òtúúrúpọ̀n|Otura|Òtúrá|Irete|Ìrẹtẹ̀|Ose|Ọ̀ṣẹ́|Ofun|Òfún)\\b"
+                    "match": "\\b(Ogbe|Ogbè|Oyeku|Oyẹkú|Ọ̀yẹ̀kú|Iwori|Ìwòrì|Odi|Òdí|Irosu|Ìrosù|Owonrin|Ọ̀wọ́nrín|Obara|Ọ̀bàrà|Okanran|Ọ̀kànràn|Ogunda|Ògúndá|Osa|Ọ̀sá|Ika|Ìká|Oturupon|Òtúúrúpọ̀n|Otura|Òtúrá|Irete|Ìrẹtẹ̀|Ose|Ọ̀ṣẹ́|Ofun|Òfún|Opele|Ọpẹlẹ|Coop|Àjọṣe)\\b"
                 },
                 {
                     "comment": "Odù Domains - English aliases",
                     "name": "support.class.ifa",
-                    "match": "\\b(Init|Start|Exit|End|Time|Clock|File|Memory|Log|Print|Rand|Random|Add|Math|Error|Except|Array|List|Proc|System|Text|String|Sub|Subtract|Net|Network|Logic|Bool|Draw|Graphics|Meta|Reflect)\\b"
+                    "match": "\\b(Init|Start|Exit|End|Time|Clock|File|Memory|Log|Print|Rand|Random|Add|Math|Error|Except|Array|List|Proc|System|Text|String|Sub|Subtract|Net|Network|Logic|Bool|Draw|Graphics|Meta|Reflect|Oracle)\\b"
+                },
+                {
+                    "comment": "FFI Module",
+                    "name": "support.class.ffi.ifa",
+                    "match": "\\b(IfaFfi|SecureFfi|IfaApi|IfaRpcServer|FfiValue|FfiSignature|Endpoint|RpcRequest|RpcResponse)\\b"
+                },
+                {
+                    "comment": "FFI Types",
+                    "name": "support.type.ffi.ifa",
+                    "match": "\\b(IfaType|U8|I32|I64|F64|Str|Ptr|Void)\\b"
+                },
+                {
+                    "comment": "Priority Stacks",
+                    "name": "support.class.stack.ifa",
+                    "match": "\\b(IoT|ML|Gamedev|Crypto|Frontend|Backend)\\b"
+                },
+                {
+                    "comment": "Stack Functions - IoT",
+                    "name": "support.function.stack.iot.ifa",
+                    "match": "\\b(gpio_init|gpio_set|gpio_read|i2c_init|spi_transfer|serial_open|flash_firmware)\\b"
+                },
+                {
+                    "comment": "Stack Functions - Crypto",
+                    "name": "support.function.stack.crypto.ifa",
+                    "match": "\\b(sha256|hmac|verify_hmac|base64_encode|base64_decode|hex_encode|secure_random)\\b"
+                },
+                {
+                    "comment": "Stack Functions - ML",
+                    "name": "support.function.stack.ml.ifa",
+                    "match": "\\b(tensor|relu|sigmoid|softmax|matmul|backward|sgd_step)\\b"
                 }
             ]
         },

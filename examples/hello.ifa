@@ -1,0 +1,18 @@
+# Ifá-Lang Hello World
+# ─────────────────────
+
+# Variable declaration
+ayanmo greeting = "Ẹ kú àárọ̀! (Good morning!)";
+
+# Print output
+Irosu.fo(greeting);
+Irosu.fo("Welcome to Ifá-Lang!");
+
+# Math operations
+ayanmo x = 10;
+ayanmo y = 5;
+Irosu.fo("Math demo:");
+Irosu.fo(x + y);
+
+# End
+ase;

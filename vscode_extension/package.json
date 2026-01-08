@@ -2,7 +2,7 @@
   "name": "ifa-lang",
   "displayName": "Ifá Language",
   "description": "The Yoruba Programming Language - Official Extension with syntax highlighting, intellisense, and debugging",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "license": "MIT",
   "publisher": "IfaLang",
   "author": {
@@ -28,7 +28,10 @@
     "programming language",
     "african",
     "odu",
-    "ifá"
+    "ifá",
+    "sandbox",
+    "capability",
+    "security"
   ],
   "badges": [
     {
@@ -53,7 +56,8 @@
           "ifa"
         ],
         "extensions": [
-          ".ifa"
+          ".ifa",
+          ".ifá"
         ],
         "configuration": "./language-configuration.json"
       }
@@ -65,10 +69,93 @@
         "path": "./syntaxes/ifa.tmLanguage.json"
       }
     ],
+    "snippets": [
+      {
+        "language": "ifa",
+        "path": "./snippets/ifa.code-snippets"
+      }
+    ],
+    "commands": [
+      {
+        "command": "ifa.run",
+        "title": "Ifa: Run Current File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "ifa.runSandboxWasm",
+        "title": "Ifa: Run in WASM Sandbox",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "ifa.runSandboxNative",
+        "title": "Ifa: Run in Native Sandbox",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "ifa.repl",
+        "title": "Ifa: Open REPL"
+      },
+      {
+        "command": "ifa.format",
+        "title": "Ifa: Format Document"
+      },
+      {
+        "command": "ifa.restartServer",
+        "title": "Ifa: Restart Language Server"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Ifa-Lang",
+      "properties": {
+        "ifa.path": {
+          "type": "string",
+          "default": "ifa",
+          "description": "Path to ifa executable"
+        },
+        "ifa.languageServer.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Ifa language server"
+        },
+        "ifa.languageServer.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to ifa-lsp executable (leave empty to use bundled)"
+        },
+        "ifa.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace communication with the language server"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "ifa.run",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorLangId == ifa"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "editorLangId == ifa",
+          "command": "ifa.run",
+          "group": "navigation"
+        }
+      ]
+    },
     "debuggers": [
       {
         "type": "ifa",
-        "label": "Ifá Debugger (Babalawo)",
+        "label": "Ifa Debugger",
         "program": "./out/extension.js",
         "runtime": "node",
         "configurationAttributes": {
@@ -79,7 +166,7 @@
             "properties": {
               "program": {
                 "type": "string",
-                "description": "Ifá file to debug",
+                "description": "Ifa file to debug",
                 "default": "${workspaceFolder}/${command:AskForProgramName}"
               },
               "stopOnEntry": {
@@ -91,6 +178,24 @@
                 "type": "boolean",
                 "description": "Enable logging of the Debug Adapter Protocol.",
                 "default": true
+              },
+              "sandbox": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "wasm",
+                  "native"
+                ],
+                "description": "Sandbox mode: none (default), wasm (WASM sandbox), native (OS sandbox)",
+                "default": "none"
+              },
+              "capabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Permissions to grant (e.g., ['read', 'write', 'net'])",
+                "default": []
               }
             }
           }
@@ -99,9 +204,29 @@
           {
             "type": "ifa",
             "request": "launch",
-            "name": "Launch Ifá Program",
+            "name": "Launch Ifa Program",
             "program": "${workspaceFolder}/examples/demo.ifa",
             "stopOnEntry": true
+          },
+          {
+            "type": "ifa",
+            "request": "launch",
+            "name": "Launch (WASM Sandbox)",
+            "program": "${workspaceFolder}/examples/demo.ifa",
+            "stopOnEntry": true,
+            "sandbox": "wasm"
+          },
+          {
+            "type": "ifa",
+            "request": "launch",
+            "name": "Launch (Native Sandbox)",
+            "program": "${workspaceFolder}/examples/demo.ifa",
+            "stopOnEntry": true,
+            "sandbox": "native",
+            "capabilities": [
+              "read",
+              "write"
+            ]
           }
         ]
       }

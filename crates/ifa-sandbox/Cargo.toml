@@ -1,0 +1,32 @@
+[package]
+name = "ifa-sandbox"
+version.workspace = true
+edition.workspace = true
+description = "Igbale Sandbox - Secure WASM/Native runtime with Ofun capabilities"
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Error handling
+thiserror.workspace = true
+eyre.workspace = true
+
+# Serialization
+serde.workspace = true
+
+# Capability-based security
+cap-std = "2.0"
+cap-fs-ext = "2.0"
+
+# WASM Runtime
+wasmtime = "17.0"
+wasmtime-wasi = "17.0"
+
+# Filesystem
+walkdir = "2.4"
+
+# Logging
+tracing = "0.1"
+
+[dev-dependencies]
+tempfile = "3.10"

@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ifá-Lang Corpus</title>
+    <title>Ifá-Lang Documentation</title>
     <style>
         :root {
             --bg-dark: #1a1a2e;
@@ -46,6 +46,7 @@
             background: linear-gradient(135deg, var(--gold), var(--accent));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 0.5rem;
         }
 
@@ -74,6 +75,8 @@
             padding: 1.5rem;
             border: 1px solid rgba(233, 69, 96, 0.3);
             transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: inherit;
         }
 
         .odu-card:hover {
@@ -124,6 +127,13 @@
             padding: 2px 6px;
             border-radius: 4px;
             font-family: 'Consolas', monospace;
+        }
+
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
         }
 
         .nav {
@@ -178,230 +188,137 @@
 <body>
     <div class="container">
         <header>
-            <h1> The Ifá Corpus</h1>
+            <h1>The Ifá Corpus</h1>
             <p>Documentation for Ifá-Lang - The Yoruba Programming Language</p>
-
-            <!-- Download Buttons -->
-            <div style="margin: 2rem 0; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                <a href="https://github.com/AAEO04/ifa_lang/releases/download/v1.0.0/ifa-lang-v1.0.0-windows-setup.exe"
-                    style="background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;">
-                    🖥️ Download for Windows
-                </a>
-                <a href="https://github.com/AAEO04/ifa_lang/releases/download/v1.0.0/ifa-lang-v1.0.0-linux.tar.gz"
-                    style="background: linear-gradient(135deg, #e94560, #c73855); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;">
-                    🐧 Download for Linux
-                </a>
-                <a href="https://github.com/AAEO04/ifa_lang"
-                    style="background: linear-gradient(135deg, #333, #555); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;">
-                    ⭐ GitHub
-                </a>
-            </div>
-
-            <!-- Quick Install -->
-            <div
-                style="background: var(--bg-card); border-radius: 12px; padding: 1.5rem; text-align: left; max-width: 600px; margin: 0 auto;">
-                <h3 style="color: var(--gold); margin-bottom: 1rem;">Quick Install</h3>
-                <p><strong>Windows:</strong> Download and run the installer (includes Python!)</p>
-                <p><strong>macOS:</strong> <code>brew tap AAEO04/ifa-lang && brew install ifa-lang</code></p>
-                <p><strong>Linux:</strong> Download, extract, run <code>./install.sh</code></p>
-                <p style="margin-top: 1rem;"><strong>VS Code:</strong> Search "Ifá-Lang" in Extensions</p>
-            </div>
-
-            <p style="color: var(--text-dim); margin-top: 1rem;">v1.0.0</p>
+            <p style="color: var(--text-dim);">Generated 2026-01-07 21:39</p>
         </header>
 
         <h2>The 16 Odù Domains</h2>
         <div class="odu-grid">
 
-            <a href="ika.html" class="odu-card">
-                <h3><span class="binary">0100</span> IKA</h3>
-                <p class="meaning">The Constrictor</p>
-                <p>1 chapters, 35 verses</p>
-            </a>
-
-            <a href="irete.html" class="odu-card">
-                <h3><span class="binary">1101</span> IRETE</h3>
-                <p class="meaning">The Crusher</p>
-                <p>1 chapters, 5 verses</p>
-            </a>
-
-            <a href="irosu.html" class="odu-card">
-                <h3><span class="binary">1100</span> IROSU</h3>
-                <p class="meaning">The Speaker</p>
-                <p>1 chapters, 19 verses</p>
-            </a>
-
-            <a href="iwori.html" class="odu-card">
-                <h3><span class="binary">0110</span> IWORI</h3>
-                <p class="meaning">The Mirror</p>
-                <p>1 chapters, 18 verses</p>
-            </a>
-
-            <a href="obara.html" class="odu-card">
-                <h3><span class="binary">1000</span> OBARA</h3>
-                <p class="meaning">The King</p>
-                <p>1 chapters, 29 verses</p>
-            </a>
-
-            <a href="odi.html" class="odu-card">
-                <h3><span class="binary">1001</span> ODI</h3>
-                <p class="meaning">The Vessel</p>
-                <p>1 chapters, 16 verses</p>
-            </a>
-
-            <a href="ofun.html" class="odu-card">
-                <h3><span class="binary">0101</span> OFUN</h3>
-                <p class="meaning">The Creator</p>
-                <p>1 chapters, 7 verses</p>
-            </a>
-
             <a href="ogbe.html" class="odu-card">
-                <h3><span class="binary">1111</span> OGBE</h3>
+                <h3><span class="binary">1111</span> Ogbè <span class="meaning">(System)</span></h3>
                 <p class="meaning">The Light</p>
-                <p>1 chapters, 15 verses</p>
-            </a>
-
-            <a href="ogunda.html" class="odu-card">
-                <h3><span class="binary">1110</span> OGUNDA</h3>
-                <p class="meaning">The Cutter</p>
-                <p>1 chapters, 29 verses</p>
-            </a>
-
-            <a href="okanran.html" class="odu-card">
-                <h3><span class="binary">0001</span> OKANRAN</h3>
-                <p class="meaning">The Troublemaker</p>
-                <p>1 chapters, 4 verses</p>
-            </a>
-
-            <a href="osa.html" class="odu-card">
-                <h3><span class="binary">0111</span> OSA</h3>
-                <p class="meaning">The Wind</p>
-                <p>1 chapters, 11 verses</p>
-            </a>
-
-            <a href="ose.html" class="odu-card">
-                <h3><span class="binary">1010</span> OSE</h3>
-                <p class="meaning">The Beautifier</p>
-                <p>1 chapters, 17 verses</p>
-            </a>
-
-            <a href="otura.html" class="odu-card">
-                <h3><span class="binary">1011</span> OTURA</h3>
-                <p class="meaning">The Messenger</p>
-                <p>1 chapters, 12 verses</p>
-            </a>
-
-            <a href="oturupon.html" class="odu-card">
-                <h3><span class="binary">0010</span> OTURUPON</h3>
-                <p class="meaning">The Bearer</p>
-                <p>1 chapters, 8 verses</p>
-            </a>
-
-            <a href="owonrin.html" class="odu-card">
-                <h3><span class="binary">0011</span> OWONRIN</h3>
-                <p class="meaning">The Chaotic</p>
-                <p>1 chapters, 9 verses</p>
+                <p>System initialization, beginnings, CLI arguments</p>
             </a>
 
             <a href="oyeku.html" class="odu-card">
-                <h3><span class="binary">0000</span> OYEKU</h3>
+                <h3><span class="binary">0000</span> Ọ̀yẹ̀kú <span class="meaning">(Exit)</span></h3>
                 <p class="meaning">The Darkness</p>
-                <p>1 chapters, 4 verses</p>
+                <p>Process termination, endings, sleep</p>
+            </a>
+
+            <a href="iwori.html" class="odu-card">
+                <h3><span class="binary">0110</span> Ìwòrì <span class="meaning">(Time)</span></h3>
+                <p class="meaning">The Mirror</p>
+                <p>Reflection, time, iteration, loops</p>
+            </a>
+
+            <a href="odi.html" class="odu-card">
+                <h3><span class="binary">1001</span> Òdí <span class="meaning">(File)</span></h3>
+                <p class="meaning">The Vessel</p>
+                <p>Storage, file operations, containment</p>
+            </a>
+
+            <a href="irosu.html" class="odu-card">
+                <h3><span class="binary">1100</span> Ìrosù <span class="meaning">(Log)</span></h3>
+                <p class="meaning">The Speaker</p>
+                <p>Communication, console I/O, expression</p>
+            </a>
+
+            <a href="owonrin.html" class="odu-card">
+                <h3><span class="binary">0011</span> Ọ̀wọ́nrín <span class="meaning">(Random)</span></h3>
+                <p class="meaning">The Chaotic</p>
+                <p>Randomness, chance, unpredictability</p>
+            </a>
+
+            <a href="obara.html" class="odu-card">
+                <h3><span class="binary">1000</span> Ọ̀bàrà <span class="meaning">(Math)</span></h3>
+                <p class="meaning">The King</p>
+                <p>Expansion, addition, multiplication</p>
+            </a>
+
+            <a href="okanran.html" class="odu-card">
+                <h3><span class="binary">0001</span> Ọ̀kànràn <span class="meaning">(Error)</span></h3>
+                <p class="meaning">The Troublemaker</p>
+                <p>Errors, exceptions, warnings</p>
+            </a>
+
+            <a href="ogunda.html" class="odu-card">
+                <h3><span class="binary">1110</span> Ògúndá <span class="meaning">(Array)</span></h3>
+                <p class="meaning">The Cutter</p>
+                <p>Arrays, process control, separation</p>
+            </a>
+
+            <a href="osa.html" class="odu-card">
+                <h3><span class="binary">0111</span> Ọ̀sá <span class="meaning">(Flow)</span></h3>
+                <p class="meaning">The Wind</p>
+                <p>Control flow, jumps, conditionals</p>
+            </a>
+
+            <a href="ika.html" class="odu-card">
+                <h3><span class="binary">0100</span> Ìká <span class="meaning">(String)</span></h3>
+                <p class="meaning">The Constrictor</p>
+                <p>Strings, compression, binding</p>
+            </a>
+
+            <a href="oturupon.html" class="odu-card">
+                <h3><span class="binary">0010</span> Òtúúrúpọ̀n <span class="meaning">(Reduce)</span></h3>
+                <p class="meaning">The Bearer</p>
+                <p>Reduction, subtraction, division</p>
+            </a>
+
+            <a href="otura.html" class="odu-card">
+                <h3><span class="binary">1011</span> Òtúrá <span class="meaning">(Net)</span></h3>
+                <p class="meaning">The Messenger</p>
+                <p>Network, communication, sending</p>
+            </a>
+
+            <a href="irete.html" class="odu-card">
+                <h3><span class="binary">1101</span> Ìrẹtẹ̀ <span class="meaning">(Crypto)</span></h3>
+                <p class="meaning">The Crusher</p>
+                <p>Memory management, garbage collection</p>
+            </a>
+
+            <a href="ose.html" class="odu-card">
+                <h3><span class="binary">1010</span> Ọ̀ṣẹ́ <span class="meaning">(UI)</span></h3>
+                <p class="meaning">The Beautifier</p>
+                <p>Graphics, display, aesthetics</p>
+            </a>
+
+            <a href="ofun.html" class="odu-card">
+                <h3><span class="binary">0101</span> Òfún <span class="meaning">(Root)</span></h3>
+                <p class="meaning">The Creator</p>
+                <p>Object creation, inheritance</p>
             </a>
 
         </div>
 
-        <h2>📦 Ọjà - The Market (Package Manager)</h2>
-        <div class="verse">
-            <div class="verse-name">Install Libraries from Git</div>
-            <div class="verse-desc">
-                <p>Ọjà is the decentralized package manager for Ifá-Lang. Install libraries directly from any Git
-                    repository:</p>
-                <p><code>ifa oja add https://github.com/user/my-library.git</code></p>
-            </div>
-        </div>
-
+        <h2>Quick Start</h2>
         <div class="odu-grid">
             <div class="odu-card">
-                <h3>📥 ra (Buy/Add)</h3>
-                <p><code>ifa oja add &lt;url&gt;</code></p>
-                <p class="meaning">Download & add dependency</p>
-            </div>
-            <div class="odu-card">
-                <h3>📤 ta (Sell/Remove)</h3>
-                <p><code>ifa oja remove &lt;name&gt;</code></p>
-                <p class="meaning">Remove a dependency</p>
-            </div>
-            <div class="odu-card">
-                <h3>🔄 install</h3>
-                <p><code>ifa oja install</code></p>
-                <p class="meaning">Sync all dependencies</p>
-            </div>
-            <div class="odu-card">
-                <h3>🔐 lock</h3>
-                <p><code>ifa oja lock</code></p>
-                <p class="meaning">Generate checksums</p>
-            </div>
-        </div>
-
-        <h2>🏺 Ìgbálẹ̀ Sandbox</h2>
-        <div class="verse">
-            <div class="verse-name">Secure Code Execution</div>
-            <div class="verse-desc">
-                <p>Ìgbálẹ̀ (The Sacred Ground) provides Docker-like isolation for running untrusted code safely.
-                    Based on the 16 Odù domains architecture.</p>
-                <p><a href="sandbox.html" style="color: var(--gold);">📖 Read Full Documentation</a></p>
-            </div>
-        </div>
-
-        <div class="odu-grid">
-            <div class="odu-card">
-                <h3>🚀 sandbox run</h3>
-                <p><code>ifa sandbox run script.ifa</code></p>
-                <p class="meaning">Run in isolated container</p>
-            </div>
-            <div class="odu-card">
-                <h3>🎭 sandbox demo</h3>
-                <p><code>ifa sandbox demo</code></p>
-                <p class="meaning">Demo sandbox features</p>
-            </div>
-            <div class="odu-card">
-                <h3>📋 sandbox list</h3>
-                <p><code>ifa sandbox list</code></p>
-                <p class="meaning">List active containers</p>
-            </div>
-            <div class="odu-card">
-                <h3>🛡️ Security Features</h3>
-                <p>Filesystem, Network, CPU, Memory isolation</p>
-                <p class="meaning">Cross-platform (Windows/Mac/Linux)</p>
-            </div>
-        </div>
-
-        <h2>🚀 Quick Start</h2>
-        <div class="odu-grid">
-            <div class="odu-card">
-                <h3>▶️ Run</h3>
+                <h3>Run</h3>
                 <p><code>ifa run program.ifa</code></p>
                 <p class="meaning">Interpreted execution</p>
             </div>
             <div class="odu-card">
-                <h3>🔨 Build</h3>
+                <h3>Build</h3>
                 <p><code>ifa build program.ifa -o app</code></p>
                 <p class="meaning">Compile to native binary</p>
             </div>
             <div class="odu-card">
-                <h3>🔍 Check</h3>
+                <h3>Check</h3>
                 <p><code>ifa check program.ifa</code></p>
-                <p class="meaning">Validate balance (Ìwà)</p>
+                <p class="meaning">Validate syntax</p>
             </div>
             <div class="odu-card">
-                <h3>📚 Docs</h3>
-                <p><code>ifa doc lib/ docs/</code></p>
+                <h3>Docs</h3>
+                <p><code>ifa doc src/ -o docs/</code></p>
                 <p class="meaning">Generate documentation</p>
             </div>
         </div>
 
-        <h2>⚡ Bytecode Execution</h2>
+        <h2>Bytecode Execution</h2>
         <p style="color: var(--text-dim); margin-bottom: 1rem;">Compile to optimized .ifab bytecode for fast startup and
             IoT/embedded systems:</p>
         <div class="odu-grid">
@@ -415,19 +332,105 @@
                 <p><code>ifa runb program.ifab</code></p>
                 <p class="meaning">Execute bytecode (fast)</p>
             </div>
-            <div class="odu-card">
-                <h3>Disassemble</h3>
-                <p><code>ifa disasm program.ifab</code></p>
-                <p class="meaning">View bytecode instructions</p>
-            </div>
-            <div class="odu-card">
-                <h3>8-bit ISA</h3>
-                <p><code>256 Amulu instructions</code></p>
-                <p class="meaning">16 Verbs × 16 Nouns</p>
+        </div>
+
+        <h2>Native Compilation</h2>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Compile to standalone executable using Rust:</p>
+        <div class="verse">
+            <div class="verse-name">Build Command</div>
+            <div class="verse-desc">
+                <pre>ifa build myapp.ifa -o myapp
+./myapp.exe  # Windows
+./myapp      # Linux/Mac</pre>
             </div>
         </div>
 
-        <h2>📝 Language Syntax</h2>
+        <h2>Interactive Tools</h2>
+        <div class="odu-grid">
+            <a href="playground.html" class="odu-card">
+                <h3>Playground</h3>
+                <p>Interactive code editor with examples</p>
+                <p class="meaning">Try Ifá-Lang in your browser</p>
+            </a>
+            <a href="sandbox.html" class="odu-card">
+                <h3>Ìgbálẹ̀ Sandbox</h3>
+                <p>Sandboxed execution documentation</p>
+                <p class="meaning">Security & isolation features</p>
+            </a>
+            <a href="api.html" class="odu-card">
+                <h3>API Reference</h3>
+                <p>Complete language specification</p>
+                <p class="meaning">Keywords, domains, syntax</p>
+            </a>
+            <a href="advanced.html" class="odu-card">
+                <h3>Advanced Features</h3>
+                <p>Ebo, Ajose, Ewo, Opon</p>
+                <p class="meaning">RAII, reactive, assertions</p>
+            </a>
+        </div>
+
+        <h2>Domain Stacks</h2>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Pre-built libraries for common application domains:</p>
+        <div class="odu-grid">
+            <div class="odu-card">
+                <h3>Frontend</h3>
+                <p>HTML/CSS generation, components</p>
+                <p class="meaning">ifa-std/stacks/frontend</p>
+            </div>
+            <div class="odu-card">
+                <h3>Backend</h3>
+                <p>HTTP servers, routing, middleware</p>
+                <p class="meaning">ifa-std/stacks/backend</p>
+            </div>
+            <div class="odu-card">
+                <h3>Crypto</h3>
+                <p>Encryption, hashing, signatures</p>
+                <p class="meaning">ifa-std/stacks/crypto</p>
+            </div>
+            <div class="odu-card">
+                <h3>GameDev</h3>
+                <p>Sprites, physics, game loop</p>
+                <p class="meaning">ifa-std/stacks/gamedev</p>
+            </div>
+            <div class="odu-card">
+                <h3>IoT</h3>
+                <p>Sensors, GPIO, embedded systems</p>
+                <p class="meaning">ifa-std/stacks/iot</p>
+            </div>
+            <div class="odu-card">
+                <h3>ML</h3>
+                <p>Machine learning, neural networks</p>
+                <p class="meaning">ifa-std/stacks/ml</p>
+            </div>
+        </div>
+
+        <h2>Opele Chain & Divination</h2>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Unique Ifá-Lang features inspired by the Ifá divination
+            system:</p>
+        <div class="odu-grid">
+            <div class="odu-card">
+                <h3>OpeleChain</h3>
+                <p>Tamper-evident, append-only log</p>
+                <p class="meaning">Blockchain-like audit trail</p>
+            </div>
+            <div class="odu-card">
+                <h3>Opele.cast()</h3>
+                <p>Random Odù selection for divination</p>
+                <p class="meaning">Cryptographically secure RNG</p>
+            </div>
+            <div class="odu-card">
+                <h3>Odù Patterns</h3>
+                <p>16 binary patterns (0000-1111)</p>
+                <p class="meaning">Pattern matching & wisdom</p>
+            </div>
+            <div class="odu-card">
+                <h3>Ìwà Balance</h3>
+                <p>Resource lifecycle management</p>
+                <p class="meaning">Open/Close, Acquire/Release</p>
+            </div>
+        </div>
+
+        <h2>Language Syntax</h2>
         <h3>Variables</h3>
         <div class="verse">
             <div class="verse-name">Declaration</div>
@@ -440,12 +443,12 @@
         <div class="odu-grid">
             <div class="odu-card">
                 <h3>If/Else</h3>
-                <p><code>ti x &gt; 5 { ... } bibẹkọ { ... }</code></p>
+                <p><code>ti x > 5 { ... } bibẹkọ { ... }</code></p>
                 <p class="meaning">or: if/else</p>
             </div>
             <div class="odu-card">
                 <h3>While Loop</h3>
-                <p><code>nigba x &lt; 10 { ... }</code></p>
+                <p><code>nigba x < 10 { ... }</code></p>
                 <p class="meaning">or: while</p>
             </div>
             <div class="odu-card">
@@ -455,7 +458,7 @@
             </div>
             <div class="odu-card">
                 <h3>Match</h3>
-                <p><code>yàn (x) { 1 =&gt; ... }</code></p>
+                <p><code>yàn (x) { 1 => ... }</code></p>
                 <p class="meaning">or: match/select</p>
             </div>
         </div>
@@ -464,21 +467,32 @@
         <div class="verse">
             <div class="verse-name">Function (Ese/Verse)</div>
             <div class="verse-desc">
-                <code>ese greet(name) { Irosu.fo("Hello " + name); }</code>
+                <pre>ese greet(name) {
+    Irosu.fo("Hello " + name);
+}</pre>
             </div>
         </div>
         <div class="verse">
             <div class="verse-name">Class (Odù/Domain)</div>
             <div class="verse-desc">
-                <code>odù Calculator { ayanmọ value = 0; ese add(n) { value = value + n; } }</code>
+                <pre>odù Calculator {
+    ayanmọ value = 0;
+    ese add(n) {
+        value = value + n;
+    }
+}</pre>
             </div>
         </div>
 
-        <h2>🌍 Dual Lexicon (Yoruba ↔ English)</h2>
+        <h2>Dual Lexicon (Yoruba ↔ English)</h2>
         <div class="odu-grid">
             <div class="odu-card">
                 <h3>ìbà</h3>
                 <p class="meaning">import, respect</p>
+                <p style="font-size: 0.85em; margin-top: 0.5rem; color: var(--text-dim);">
+                    <strong>Note:</strong> The 16 Odù domains are built-in and don't require imports.
+                    Use <code>ìbà</code> only for user modules or compound Odù.
+                </p>
             </div>
             <div class="odu-card">
                 <h3>ayanmọ</h3>
@@ -518,60 +532,7 @@
             </div>
         </div>
 
-        <h2>💡 Code Examples</h2>
-        <div class="verse">
-            <div class="verse-name">Hello World</div>
-            <div class="verse-desc">
-                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x:auto;">ìbà Irosu;
-Irosu.fo("Ẹ kú àbọ̀ sí Ifá-Lang!");
-àṣẹ;</pre>
-            </div>
-        </div>
-        <div class="verse">
-            <div class="verse-name">Math Operations</div>
-            <div class="verse-desc">
-                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x:auto;">ayanmọ x = Obara.fikun(10, 5);   // Add: 15
-ayanmọ y = Oturupon.din(10, 3);  // Subtract: 7
-Irosu.fo(x + y);                 // Print: 22</pre>
-            </div>
-        </div>
-        <div class="verse">
-            <div class="verse-name">Network (Ether)</div>
-            <div class="verse-desc">
-                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x:auto;">Otura.ether_de(1);    // Join channel 1
-Otura.ether_ran(42);  // Broadcast value
-ayanmọ msg = Otura.ether_gba();  // Receive
-Otura.ether_pa();     // Leave network</pre>
-            </div>
-        </div>
-
-        <h2>⚖️ Ìwà-Pẹ̀lẹ́ (Balance Rules)</h2>
-        <p style="color: var(--text-dim); margin-bottom: 1rem;">Every resource opened must be closed. The Ìwà Engine
-            enforces good character:</p>
-        <div class="odu-grid">
-            <div class="odu-card">
-                <h3>📁 Files</h3>
-                <p><code>Odi.si()</code> → <code>Odi.pa()</code></p>
-                <p class="meaning">Open → Close</p>
-            </div>
-            <div class="odu-card">
-                <h3>🌐 Network</h3>
-                <p><code>Otura.ether_de()</code> → <code>Otura.ether_pa()</code></p>
-                <p class="meaning">Join → Leave</p>
-            </div>
-            <div class="odu-card">
-                <h3>🔒 Locks</h3>
-                <p><code>Osa.khoa()</code> → <code>Osa.si()</code></p>
-                <p class="meaning">Lock → Unlock</p>
-            </div>
-            <div class="odu-card">
-                <h3>📦 Arrays</h3>
-                <p><code>Ogunda.ge()</code> → <code>Irete.tu()</code></p>
-                <p class="meaning">Create → Release</p>
-            </div>
-        </div>
-
-        <h2>💻 CLI Reference</h2>
+        <h2>CLI Reference</h2>
         <div class="odu-grid">
             <div class="odu-card">
                 <h3>run</h3>
@@ -581,17 +542,37 @@ Otura.ether_pa();     // Leave network</pre>
             <div class="odu-card">
                 <h3>build</h3>
                 <p><code>ifa build &lt;file&gt; -o &lt;out&gt;</code></p>
-                <p class="meaning">Compile to Rust binary</p>
+                <p class="meaning">Compile to native binary</p>
             </div>
             <div class="odu-card">
-                <h3>debug</h3>
-                <p><code>ifa debug &lt;file&gt; [--gpc]</code></p>
-                <p class="meaning">Run with Babalawo debugger</p>
+                <h3>bytecode</h3>
+                <p><code>ifa bytecode &lt;file&gt;</code></p>
+                <p class="meaning">Compile to .ifab</p>
+            </div>
+            <div class="odu-card">
+                <h3>runb</h3>
+                <p><code>ifa runb &lt;file.ifab&gt;</code></p>
+                <p class="meaning">Run bytecode</p>
             </div>
             <div class="odu-card">
                 <h3>check</h3>
-                <p><code>ifa check &lt;file&gt; [--ebo]</code></p>
-                <p class="meaning">Validate Ìwà balance</p>
+                <p><code>ifa check &lt;file&gt;</code></p>
+                <p class="meaning">Validate syntax</p>
+            </div>
+            <div class="odu-card">
+                <h3>fmt</h3>
+                <p><code>ifa fmt &lt;file&gt;</code></p>
+                <p class="meaning">Format source code</p>
+            </div>
+            <div class="odu-card">
+                <h3>babalawo</h3>
+                <p><code>ifa babalawo &lt;file&gt;</code></p>
+                <p class="meaning">Type checker / linter</p>
+            </div>
+            <div class="odu-card">
+                <h3>test</h3>
+                <p><code>ifa test [path]</code></p>
+                <p class="meaning">Run test files</p>
             </div>
             <div class="odu-card">
                 <h3>repl</h3>
@@ -600,103 +581,39 @@ Otura.ether_pa();     // Leave network</pre>
             </div>
             <div class="odu-card">
                 <h3>doc</h3>
-                <p><code>ifa doc &lt;src&gt; &lt;out&gt;</code></p>
+                <p><code>ifa doc &lt;src&gt; -o &lt;out&gt;</code></p>
                 <p class="meaning">Generate HTML docs</p>
             </div>
             <div class="odu-card">
                 <h3>lsp</h3>
-                <p><code>ifa lsp --stdio</code></p>
-                <p class="meaning">Language Server</p>
+                <p><code>ifa lsp</code></p>
+                <p class="meaning">Start Language Server</p>
             </div>
             <div class="odu-card">
-                <h3>lint</h3>
-                <p><code>ifa lint &lt;file&gt;</code></p>
-                <p class="meaning">Static analysis</p>
-            </div>
-        </div>
-
-        <h2>🔬 Advanced Debugging</h2>
-        <p style="color: var(--text-dim); margin-bottom: 1rem;">Advanced debugging features for complex applications:
-        </p>
-        <div class="odu-grid">
-            <div class="odu-card">
-                <h3>🔗 GPC Call Stack</h3>
-                <p><code>ifa debug --gpc program.ifa</code></p>
-                <p class="meaning">Grandparent-Parent-Child tracing shows full call hierarchy on errors</p>
+                <h3>sandbox</h3>
+                <p><code>ifa sandbox run &lt;file&gt;</code></p>
+                <p class="meaning">Sandboxed execution</p>
             </div>
             <div class="odu-card">
-                <h3>🔮 Ẹbọ Lifecycle</h3>
-                <p><code>ifa check --ebo program.ifa</code></p>
-                <p class="meaning">Validates sacrifice block pairs (ebo.begin/sacrifice, ase.begin/end)</p>
-            </div>
-        </div>
-        <div class="verse">
-            <div class="verse-name">GPC Debugging Example</div>
-            <div class="verse-desc">
-                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x:auto;">$ ifa debug --gpc server.ifa
-[GPC] Grandparent-Parent-Child tracing ENABLED
-...
-╔════ Call Stack (GPC) ════╗
-→ main (server.ifa:1)
-  → handleRequest (server.ifa:25)
-    → processData (server.ifa:42)  ← Error here</pre>
-            </div>
-        </div>
-        <div class="verse">
-            <div class="verse-name">Ẹbọ Validation Example</div>
-            <div class="verse-desc">
-                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x:auto;">$ ifa check --ebo transaction.ifa
-[Ẹbọ] Sacrifice block lifecycle validation ENABLED
-[Ẹbọ] Checking sacrifice block lifecycles...
-[Ẹbọ] ✓ All sacrifice blocks properly paired.</pre>
-            </div>
-        </div>
-
-        <h2>🔮 Babalawo Error Guide</h2>
-        <p style="color: var(--text-dim); margin-bottom: 1rem;">Errors come with proverbs and wisdom:</p>
-        <div class="verse">
-            <div class="verse-name">OTURUPON-OYEKU (Division by Zero)</div>
-            <div class="verse-desc">"One cannot carry a load that does not exist."</div>
-        </div>
-        <div class="verse">
-            <div class="verse-name">ODI-OKANRAN (File Not Found)</div>
-            <div class="verse-desc">"The calabash cannot hold what was never placed inside."</div>
-        </div>
-        <div class="verse">
-            <div class="verse-name">OTURA-OYEKU (Connection Failed)</div>
-            <div class="verse-desc">"The messenger cannot deliver to a house that does not exist."</div>
-        </div>
-
-        <h2>🎨 VS Code Extension (Ilé Ìwé)</h2>
-        <p style="color: var(--text-dim); margin-bottom: 1rem;">Full IDE support for Ifá-Lang development:</p>
-        <div class="odu-grid">
-            <div class="odu-card">
-                <h3>🌈 Syntax Highlighting</h3>
-                <p class="meaning">Colors for Odù, keywords, strings</p>
+                <h3>oja</h3>
+                <p><code>ifa oja init|add|build</code></p>
+                <p class="meaning">Package manager</p>
             </div>
             <div class="odu-card">
-                <h3>💡 Intellisense</h3>
-                <p class="meaning">Autocomplete for all 16 domains</p>
+                <h3>flash</h3>
+                <p><code>ifa flash &lt;file&gt; --target esp32</code></p>
+                <p class="meaning">Flash to embedded</p>
             </div>
             <div class="odu-card">
-                <h3>🐛 Debugging</h3>
-                <p class="meaning">Breakpoints, stepping, inspection</p>
-            </div>
-            <div class="odu-card">
-                <h3>⚡ Diagnostics</h3>
-                <p class="meaning">Real-time error checking</p>
-            </div>
-        </div>
-        <div class="verse">
-            <div class="verse-name">Installation</div>
-            <div class="verse-desc">
-                <code>cd vscode_extension && npm install && code --extensionDevelopmentPath=.</code>
+                <h3>version</h3>
+                <p><code>ifa version</code></p>
+                <p class="meaning">Show version info</p>
             </div>
         </div>
 
         <footer>
-            <p>Àṣẹ! - Generated by Ifá-Lang Documentation System</p>
-            <p style="margin-top: 0.5rem;"><a href="https://github.com/AAEO04/ifa_lang"
+            <p>Àṣẹ! - Generated by Ifá-Lang Documentation System (Rust)</p>
+            <p style="margin-top: 0.5rem;"><a href="https://github.com/AAEO04/ifa-lang"
                     style="color: var(--gold);">GitHub Repository</a></p>
         </footer>
     </div>

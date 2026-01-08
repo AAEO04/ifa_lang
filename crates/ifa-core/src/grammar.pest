@@ -1,0 +1,213 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// IFÁ-LANG GRAMMAR - PEST FORMAT
+// ═══════════════════════════════════════════════════════════════════════════
+// A program is a sequence of statements
+
+program = { SOI ~ statement* ~ EOI }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STATEMENTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+statement = {
+    import_stmt
+    | opon_stmt
+    | var_decl
+    | assignment_stmt
+    | odu_def
+    | ese_def
+    | if_stmt
+    | while_stmt
+    | for_stmt
+    | return_stmt
+    | taboo_stmt
+    | ewo_stmt
+    | instruction
+    | ase_stmt
+    | COMMENT
+}
+
+// Import: iba std.otura;
+import_stmt = { import_kw ~ module_path ~ ";" }
+module_path = { ident ~ ("." ~ ident)* }
+
+// Opon (memory) directive: #opon kekere; or opon: nla;
+opon_stmt = { opon_kw ~ ":"? ~ opon_size ~ ";"? }
+opon_kw = { "#opon" | "opon" | "#Opon" | "Opon" }
+opon_size = { 
+    "kekere" | "kẹ́kẹ́rẹ́" | "small" | "tiny" | "embedded"
+    | "arinrin" | "àrínrin" | "medium" | "standard" | "default"
+    | "nla" | "nlá" | "large" | "big"
+    | "ailopin" | "àìlópin" | "unlimited" | "dynamic" | "max"
+}
+
+// Variable: ayanmo x = 5;
+var_decl = { var_kw ~ ident ~ type_hint? ~ "=" ~ expression ~ ";" }
+type_hint = { ":" ~ type_name }
+type_name = { "Int" | "Float" | "Str" | "Bool" | "List" | "Map" | "Any" }
+
+// Assignment: x = 5;
+assignment_stmt = { ident ~ "=" ~ expression ~ ";" }
+
+// Instruction: Obara.fikun(10);
+instruction = { odu_call ~ ";" }
+odu_call = { odu_name ~ "." ~ ident ~ "(" ~ arguments? ~ ")" }
+
+// Class: odu Server { }
+odu_def = { public_mod? ~ odu_kw ~ ident ~ "{" ~ odu_body ~ "}" }
+odu_body = { (ese_def | var_decl)* }
+
+// Function: ese start() { }
+ese_def = { public_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ "{" ~ statement* ~ "}" }
+params = { param ~ ("," ~ param)* }
+param = { ident ~ (":" ~ type_name)? }
+
+// If statement
+if_stmt = { if_kw ~ expression ~ "{" ~ statement* ~ "}" ~ else_clause? }
+else_clause = { else_kw ~ "{" ~ statement* ~ "}" }
+
+// While loop
+while_stmt = { while_kw ~ expression ~ "{" ~ statement* ~ "}" }
+
+// For loop: fun i ninu items { }
+for_stmt = { for_kw ~ ident ~ in_kw ~ expression ~ "{" ~ statement* ~ "}" }
+
+// Return
+return_stmt = { return_kw ~ expression? ~ ";" }
+
+// Taboo declaration: èèwọ̀: Ose -> Odi;
+taboo_stmt = { taboo_kw ~ ":" ~ odu_name ~ "->" ~ odu_name ~ ";" }
+taboo_kw = { "èèwọ̀" | "ewọ" | "taboo" }
+
+// Assertion: ewo x > 0; or assert balance >= 0;
+ewo_stmt = { ewo_kw ~ expression ~ ("," ~ string)? ~ ";" }
+ewo_kw = { "ewo" | "ẹ̀wọ̀" | "assert" }
+
+// End: ase;
+ase_stmt = { ase_kw ~ ";"? }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPRESSIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+expression = { or_expr }
+or_expr = { and_expr ~ (or_op ~ and_expr)* }
+and_expr = { not_expr ~ (and_op ~ not_expr)* }
+not_expr = { not_op? ~ comparison }
+comparison = { arith_expr ~ (comp_op ~ arith_expr)? }
+arith_expr = { term ~ ((add_op | sub_op) ~ term)* }
+term = { factor ~ ((mul_op | div_op | mod_op) ~ factor)* }
+factor = { unary_op? ~ atom }
+
+atom = {
+    odu_call
+    | method_call
+    | list_literal
+    | map_literal  
+    | index_access
+    | number
+    | string
+    | boolean
+    | ident
+    | "(" ~ expression ~ ")"
+}
+
+// Method call: obj.method(args)
+method_call = { ident ~ "." ~ ident ~ "(" ~ arguments? ~ ")" }
+
+// List: [1, 2, 3]
+list_literal = { "[" ~ (expression ~ ("," ~ expression)*)? ~ "]" }
+
+// Map: { "key": value }
+map_literal = { "{" ~ (map_entry ~ ("," ~ map_entry)*)? ~ "}" }
+map_entry = { (string | ident) ~ ":" ~ expression }
+
+// Index: arr[0]
+index_access = { ident ~ "[" ~ expression ~ "]" }
+
+// Arguments
+arguments = { expression ~ ("," ~ expression)* }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// OPERATORS
+// ═══════════════════════════════════════════════════════════════════════════
+
+add_op = { "+" }
+sub_op = { "-" }
+mul_op = { "*" }
+div_op = { "/" }
+mod_op = { "%" }
+unary_op = { "+" | "-" }
+
+comp_op = { "==" | "!=" | "<=" | ">=" | "<" | ">" }
+and_op = { "&&" | "ati" | "and" }
+or_op = { "||" | "tabi" | "or" }
+not_op = { "!" | "kii" | "not" }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// KEYWORDS (Yoruba + English)
+// ═══════════════════════════════════════════════════════════════════════════
+
+import_kw = _{ "iba" | "ìbà" | "import" }
+var_kw = _{ "ayanmo" | "àyànmọ́" | "let" | "var" }
+odu_kw = _{ "odu" | "odù" | "class" }
+ese_kw = _{ "ese" | "ẹsẹ" | "fn" | "function" | "def" }
+if_kw = _{ "ti" | "bí" | "if" }
+else_kw = _{ "bibẹkọ" | "else" }
+while_kw = _{ "nigba" | "while" }
+for_kw = _{ "fun" | "for" }
+in_kw = _{ "ninu" | "in" }
+return_kw = _{ "pada" | "return" }
+ase_kw = _{ "ase" | "àṣẹ" | "end" }
+public_mod = { "gbangba" | "public" }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ODÙ DOMAIN NAMES (The 16 Principal)
+// ═══════════════════════════════════════════════════════════════════════════
+
+odu_name = @{
+    "Ogbe" | "Ogbè" |
+    "Oyeku" | "Ọ̀yẹ̀kú" |
+    "Iwori" | "Ìwòrì" |
+    "Odi" | "Òdí" |
+    "Irosu" | "Ìrosù" |
+    "Owonrin" | "Ọ̀wọ́nrín" |
+    "Obara" | "Ọ̀bàrà" |
+    "Okanran" | "Ọ̀kànràn" |
+    "Ogunda" | "Ògúndá" |
+    "Osa" | "Ọ̀sá" |
+    "Ika" | "Ìká" |
+    "Oturupon" | "Òtúúrúpọ̀n" |
+    "Otura" | "Òtúrá" |
+    "Irete" | "Ìrẹtẹ̀" |
+    "Ose" | "Ọ̀ṣẹ́" |
+    "Ofun" | "Òfún" |
+    // Pseudo-domains
+    "Coop" | "Àjọṣe" |
+    "Opele" | "Ọpẹlẹ" | "Oracle"
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TERMINALS
+// ═══════════════════════════════════════════════════════════════════════════
+
+ident = @{ (ASCII_ALPHA | "_" | '\u{0080}'..'\u{FFFF}') ~ (ASCII_ALPHANUMERIC | "_" | '\u{0080}'..'\u{FFFF}')* }
+number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "'" ~ (!"'" ~ ANY)* ~ "'" }
+boolean = { "true" | "false" | "otito" | "iro" }
+
+// Comments - multiple styles supported
+COMMENT = _{
+    block_comment
+    | doc_comment  
+    | line_comment_slash
+    | line_comment_hash
+}
+
+doc_comment = @{ "///" ~ (!NEWLINE ~ ANY)* }
+block_comment = @{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+line_comment_slash = @{ "//" ~ (!NEWLINE ~ ANY)* }
+line_comment_hash = @{ "#" ~ (!NEWLINE ~ ANY)* }
+
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
+

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Reference - Ifá-Lang Documentation</title>
+    <style>
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --accent: #e94560;
+            --gold: #ffd700;
+            --text: #eaeaea;
+            --text-dim: #a0a0a0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 2px solid var(--accent);
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--gold), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            color: var(--gold);
+            border-bottom: 1px solid var(--accent);
+            padding-bottom: 0.5rem;
+            margin: 2rem 0 1rem;
+        }
+
+        h3 {
+            color: var(--accent);
+            margin: 1.5rem 0 0.5rem;
+        }
+
+        code {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+        }
+
+        pre {
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 3px solid var(--accent);
+            margin: 1rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--accent);
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        th {
+            background: var(--accent);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .section {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 2rem;
+        }
+
+        .nav a {
+            background: var(--bg-card);
+            color: var(--gold);
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-decoration: none;
+            border: 1px solid var(--accent);
+        }
+
+        .nav a:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--accent);
+            margin-top: 2rem;
+            color: var(--text-dim);
+        }
+
+        footer a {
+            color: var(--gold);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Ifá-Lang API Reference</h1>
+            <p>Complete language specification for Ifá-Lang v1.2.0</p>
+        </header>
+
+        <nav class="nav">
+            <a href="#keywords">Reserved Keywords</a>
+            <a href="#domains">16 Odù Domains</a>
+            <a href="#pseudo">Pseudo-domains</a>
+            <a href="#syntax">Statement Syntax</a>
+            <a href="#operators">Operators</a>
+            <a href="index.html">← Back to Index</a>
+        </nav>
+
+        <!-- Reserved Keywords -->
+        <section id="keywords" class="section">
+            <h2>Reserved Keywords</h2>
+            <p>These words cannot be used as variable or function names.</p>
+
+            <h3>Variable Declaration</h3>
+            <table>
+                <tr>
+                    <th>Yoruba</th>
+                    <th>English</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>ayanmo</code>, <code>àyànmọ́</code></td>
+                    <td><code>let</code></td>
+                    <td>Declare a variable</td>
+                </tr>
+                <tr>
+                    <td>-</td>
+                    <td><code>const</code></td>
+                    <td>Declare a constant</td>
+                </tr>
+            </table>
+
+            <h3>Control Flow</h3>
+            <table>
+                <tr>
+                    <th>Yoruba</th>
+                    <th>English</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>ti</code>, <code>bí</code></td>
+                    <td><code>if</code></td>
+                    <td>Conditional</td>
+                </tr>
+                <tr>
+                    <td><code>bibẹkọ</code>, <code>bíbẹ́kọ́</code></td>
+                    <td><code>else</code></td>
+                    <td>Else branch</td>
+                </tr>
+                <tr>
+                    <td><code>fun</code></td>
+                    <td><code>for</code></td>
+                    <td>For loop</td>
+                </tr>
+                <tr>
+                    <td><code>nigba</code></td>
+                    <td><code>while</code></td>
+                    <td>While loop</td>
+                </tr>
+                <tr>
+                    <td><code>pada</code></td>
+                    <td><code>return</code></td>
+                    <td>Return from function</td>
+                </tr>
+                <tr>
+                    <td><code>da</code></td>
+                    <td><code>break</code></td>
+                    <td>Break loop</td>
+                </tr>
+                <tr>
+                    <td>-</td>
+                    <td><code>continue</code></td>
+                    <td>Continue loop</td>
+                </tr>
+            </table>
+
+            <h3>Definitions</h3>
+            <table>
+                <tr>
+                    <th>Yoruba</th>
+                    <th>English</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>ese</code>, <code>ẹsẹ</code></td>
+                    <td><code>fn</code>, <code>function</code>, <code>def</code></td>
+                    <td>Define function</td>
+                </tr>
+                <tr>
+                    <td><code>odu</code>, <code>ọdù</code></td>
+                    <td><code>class</code></td>
+                    <td>Define class/domain</td>
+                </tr>
+                <tr>
+                    <td><code>iba</code>, <code>ìbà</code></td>
+                    <td><code>import</code></td>
+                    <td>Import module</td>
+                </tr>
+            </table>
+
+            <h3>Literals</h3>
+            <table>
+                <tr>
+                    <th>Yoruba</th>
+                    <th>English</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>otito</code></td>
+                    <td><code>true</code></td>
+                    <td>Boolean true</td>
+                </tr>
+                <tr>
+                    <td><code>iro</code></td>
+                    <td><code>false</code></td>
+                    <td>Boolean false</td>
+                </tr>
+                <tr>
+                    <td><code>ohunkohun</code></td>
+                    <td><code>nil</code>, <code>null</code></td>
+                    <td>Null value</td>
+                </tr>
+            </table>
+
+            <h3>Special Keywords</h3>
+            <table>
+                <tr>
+                    <th>Yoruba</th>
+                    <th>English</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>ase</code>, <code>àṣẹ</code></td>
+                    <td><code>end</code></td>
+                    <td>End program (optional)</td>
+                </tr>
+                <tr>
+                    <td><code>ebo</code>, <code>ẹbọ</code></td>
+                    <td>-</td>
+                    <td>RAII cleanup guard</td>
+                </tr>
+                <tr>
+                    <td><code>ewo</code>, <code>ẹ̀wọ̀</code></td>
+                    <td><code>assert</code></td>
+                    <td>Runtime assertion</td>
+                </tr>
+                <tr>
+                    <td><code>ewọ</code>, <code>èèwọ̀</code></td>
+                    <td><code>taboo</code></td>
+                    <td>Domain taboo declaration</td>
+                </tr>
+                <tr>
+                    <td><code>ajose</code>, <code>àjọṣe</code></td>
+                    <td><code>co-op</code></td>
+                    <td>Reactive/FFI marker</td>
+                </tr>
+            </table>
+
+            <h3>Visibility Modifiers</h3>
+            <table>
+                <tr>
+                    <th>Yoruba</th>
+                    <th>English</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>gbangba</code></td>
+                    <td><code>pub</code>, <code>public</code></td>
+                    <td>Public visibility</td>
+                </tr>
+                <tr>
+                    <td><code>ikoko</code>, <code>àdáni</code></td>
+                    <td><code>private</code></td>
+                    <td>Private visibility</td>
+                </tr>
+            </table>
+        </section>
+
+        <!-- 16 Odù Domains -->
+        <section id="domains" class="section">
+            <h2>The 16 Odù Domains</h2>
+            <p>Built-in domains available without imports. Each maps to a 4-bit binary code.</p>
+
+            <table>
+                <tr>
+                    <th>Binary</th>
+                    <th>Name</th>
+                    <th>Aliases</th>
+                    <th>Purpose</th>
+                    <th>Key Methods</th>
+                </tr>
+                <tr>
+                    <td>1111</td>
+                    <td><strong>Ogbe</strong></td>
+                    <td>Init, Start</td>
+                    <td>System/Lifecycle</td>
+                    <td><code>bere()</code> start, <code>da()</code> stop, <code>version()</code></td>
+                </tr>
+                <tr>
+                    <td>0000</td>
+                    <td><strong>Oyeku</strong></td>
+                    <td>Exit, End</td>
+                    <td>Termination</td>
+                    <td><code>sun()</code> sleep, <code>jade()</code> exit</td>
+                </tr>
+                <tr>
+                    <td>0110</td>
+                    <td><strong>Iwori</strong></td>
+                    <td>Time, Clock</td>
+                    <td>Time Operations</td>
+                    <td><code>akoko()</code> now, <code>epoch()</code></td>
+                </tr>
+                <tr>
+                    <td>1001</td>
+                    <td><strong>Odi</strong></td>
+                    <td>File, Memory</td>
+                    <td>File I/O</td>
+                    <td><code>ka()</code> read, <code>ko()</code> write</td>
+                </tr>
+                <tr>
+                    <td>1100</td>
+                    <td><strong>Irosu</strong></td>
+                    <td>Log, Print</td>
+                    <td>Console Output</td>
+                    <td><code>fo()</code> print, <code>sise()</code> debug</td>
+                </tr>
+                <tr>
+                    <td>0011</td>
+                    <td><strong>Owonrin</strong></td>
+                    <td>Rand, Random</td>
+                    <td>Random Numbers</td>
+                    <td><code>afesona(min,max)</code> range, <code>yan(list)</code> pick</td>
+                </tr>
+                <tr>
+                    <td>1000</td>
+                    <td><strong>Obara</strong></td>
+                    <td>Add, Math</td>
+                    <td>Math (Add/Mul)</td>
+                    <td><code>fikun(a,b)</code> add, <code>isodipupo(a,b)</code> mul</td>
+                </tr>
+                <tr>
+                    <td>0001</td>
+                    <td><strong>Okanran</strong></td>
+                    <td>Error, Except</td>
+                    <td>Error Handling</td>
+                    <td><code>asise(msg)</code> error, <code>kilọ(msg)</code> warn</td>
+                </tr>
+                <tr>
+                    <td>1110</td>
+                    <td><strong>Ogunda</strong></td>
+                    <td>Array, List</td>
+                    <td>Collections</td>
+                    <td><code>ṣẹda()</code> create, <code>fi(list,item)</code> push, <code>gigun(list)</code> length
+                    </td>
+                </tr>
+                <tr>
+                    <td>0111</td>
+                    <td><strong>Osa</strong></td>
+                    <td>Proc, System</td>
+                    <td>Concurrency</td>
+                    <td><code>ṣe(fn)</code> spawn, <code>duro()</code> join</td>
+                </tr>
+                <tr>
+                    <td>0100</td>
+                    <td><strong>Ika</strong></td>
+                    <td>Text, String</td>
+                    <td>String Ops</td>
+                    <td><code>so(a,b)</code> concat, <code>gigun(s)</code> length, <code>ge(s,i,j)</code> slice</td>
+                </tr>
+                <tr>
+                    <td>0010</td>
+                    <td><strong>Oturupon</strong></td>
+                    <td>Sub, Subtract</td>
+                    <td>Math (Sub/Div)</td>
+                    <td><code>din(a,b)</code> sub, <code>pin(a,b)</code> div, <code>iyoku(a,b)</code> mod</td>
+                </tr>
+                <tr>
+                    <td>1011</td>
+                    <td><strong>Otura</strong></td>
+                    <td>Net, Network</td>
+                    <td>Networking</td>
+                    <td><code>so(host,port)</code> connect, <code>gba(url)</code> fetch</td>
+                </tr>
+                <tr>
+                    <td>1101</td>
+                    <td><strong>Irete</strong></td>
+                    <td>Logic, Bool</td>
+                    <td>Crypto/Logic</td>
+                    <td><code>sha256(data)</code>, <code>base64(data)</code></td>
+                </tr>
+                <tr>
+                    <td>1010</td>
+                    <td><strong>Ose</strong></td>
+                    <td>Draw, Graphics</td>
+                    <td>Graphics/UI</td>
+                    <td><code>nu()</code> clear, <code>ila()</code> line, <code>han()</code> render</td>
+                </tr>
+                <tr>
+                    <td>0101</td>
+                    <td><strong>Ofun</strong></td>
+                    <td>Meta, Reflect</td>
+                    <td>Permissions</td>
+                    <td><code>beere(cap)</code> request, <code>ṣayẹwo(cap)</code> check</td>
+                </tr>
+            </table>
+        </section>
+
+        <!-- Pseudo-domains -->
+        <section id="pseudo" class="section">
+            <h2>Pseudo-domains</h2>
+            <p>Extended domains that provide additional functionality.</p>
+
+            <h3>Opele / Oracle - Divination</h3>
+            <table>
+                <tr>
+                    <th>Method</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>Opele.cast()</code></td>
+                    <td>Cast 2-level compound Odù</td>
+                    <td><code>ayanmo odu = Opele.cast();</code></td>
+                </tr>
+                <tr>
+                    <td><code>Opele.cast_compound(n)</code></td>
+                    <td>Cast n-level compound (2-5)</td>
+                    <td><code>Opele.cast_compound(3);</code></td>
+                </tr>
+                <tr>
+                    <td><code>Opele.lineage(compound)</code></td>
+                    <td>Get genealogical description</td>
+                    <td><code>Opele.lineage(gpc);</code></td>
+                </tr>
+                <tr>
+                    <td><code>Opele.depth(compound)</code></td>
+                    <td>Get depth of compound</td>
+                    <td><code>Opele.depth(gpc);</code></td>
+                </tr>
+                <tr>
+                    <td><code>Opele.divine(question)</code></td>
+                    <td>Get divination guidance</td>
+                    <td><code>Opele.divine("What path?");</code></td>
+                </tr>
+            </table>
+
+            <h3>Coop / Àjọṣe - FFI Bridge</h3>
+            <table>
+                <tr>
+                    <th>Method</th>
+                    <th>Language</th>
+                    <th>Requirements</th>
+                </tr>
+                <tr>
+                    <td><code>Coop.py(module, func, args...)</code></td>
+                    <td>Python</td>
+                    <td>Python 3</td>
+                </tr>
+                <tr>
+                    <td><code>Coop.js(code)</code></td>
+                    <td>JavaScript</td>
+                    <td>Node.js</td>
+                </tr>
+                <tr>
+                    <td><code>Coop.c(code)</code></td>
+                    <td>C</td>
+                    <td>gcc/clang</td>
+                </tr>
+                <tr>
+                    <td><code>Coop.sh(cmd)</code></td>
+                    <td>Shell</td>
+                    <td>bash/cmd</td>
+                </tr>
+                <tr>
+                    <td><code>Coop.ffi(lib, func, args...)</code></td>
+                    <td>C/Rust FFI</td>
+                    <td>.dll/.so</td>
+                </tr>
+            </table>
+        </section>
+
+        <!-- Statement Syntax -->
+        <section id="syntax" class="section">
+            <h2>Statement Syntax</h2>
+
+            <h3>Variable Declaration</h3>
+            <pre><code>// Yoruba
+ayanmo name = value;
+ayanmo x = 42;
+ayanmo message = "Hello";
+
+// English
+let name = value;
+const PI = 3.14159;</code></pre>
+
+            <h3>Function Definition</h3>
+            <pre><code>// Yoruba
+ese function_name(param1, param2) {
+    // body
+    pada result;  // return
+}
+
+// English
+fn add(a, b) {
+    return a + b;
+}</code></pre>
+
+            <h3>Conditionals</h3>
+            <pre><code>// Yoruba
+ti condition {
+    // if true
+} bibẹkọ {
+    // if false
+}
+
+// English
+if x > 10 {
+    Irosu.fo("Large");
+} else {
+    Irosu.fo("Small");
+}</code></pre>
+
+            <h3>Loops</h3>
+            <pre><code>// While loop
+nigba condition {
+    // body
+}
+
+// For loop
+fun i ninu 1..10 {
+    Irosu.fo(i);
+}</code></pre>
+
+            <h3>Assertions</h3>
+            <pre><code>// Runtime assertions
+ewo balance > 0;
+assert amount >= 0, "Amount must be positive";</code></pre>
+
+            <h3>Domain Calls</h3>
+            <pre><code>// Domain.method(args)
+Irosu.fo("Hello!");
+Obara.fikun(5, 3);
+Opele.cast_compound(3);</code></pre>
+        </section>
+
+        <!-- Operators -->
+        <section id="operators" class="section">
+            <h2>Operators</h2>
+
+            <h3>Arithmetic</h3>
+            <table>
+                <tr>
+                    <th>Operator</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>+</code></td>
+                    <td>Addition</td>
+                    <td><code>5 + 3</code></td>
+                </tr>
+                <tr>
+                    <td><code>-</code></td>
+                    <td>Subtraction</td>
+                    <td><code>10 - 4</code></td>
+                </tr>
+                <tr>
+                    <td><code>*</code></td>
+                    <td>Multiplication</td>
+                    <td><code>6 * 7</code></td>
+                </tr>
+                <tr>
+                    <td><code>/</code></td>
+                    <td>Division</td>
+                    <td><code>15 / 3</code></td>
+                </tr>
+                <tr>
+                    <td><code>%</code></td>
+                    <td>Modulo</td>
+                    <td><code>17 % 5</code></td>
+                </tr>
+            </table>
+
+            <h3>Comparison</h3>
+            <table>
+                <tr>
+                    <th>Operator</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>==</code></td>
+                    <td>Equal</td>
+                    <td><code>x == 5</code></td>
+                </tr>
+                <tr>
+                    <td><code>!=</code></td>
+                    <td>Not equal</td>
+                    <td><code>x != 0</code></td>
+                </tr>
+                <tr>
+                    <td><code>&lt;</code></td>
+                    <td>Less than</td>
+                    <td><code>a < b</code></td>
+                </tr>
+                <tr>
+                    <td><code>&gt;</code></td>
+                    <td>Greater than</td>
+                    <td><code>a > b</code></td>
+                </tr>
+                <tr>
+                    <td><code>&lt;=</code></td>
+                    <td>Less or equal</td>
+                    <td><code>a <= b</code></td>
+                </tr>
+                <tr>
+                    <td><code>&gt;=</code></td>
+                    <td>Greater or equal</td>
+                    <td><code>a >= b</code></td>
+                </tr>
+            </table>
+
+            <h3>Logical</h3>
+            <table>
+                <tr>
+                    <th>Operator</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>&&</code></td>
+                    <td>Logical AND</td>
+                    <td><code>a && b</code></td>
+                </tr>
+                <tr>
+                    <td><code>||</code></td>
+                    <td>Logical OR</td>
+                    <td><code>a || b</code></td>
+                </tr>
+                <tr>
+                    <td><code>!</code></td>
+                    <td>Logical NOT</td>
+                    <td><code>!flag</code></td>
+                </tr>
+            </table>
+
+            <h3>Assignment</h3>
+            <table>
+                <tr>
+                    <th>Operator</th>
+                    <th>Description</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>=</code></td>
+                    <td>Assignment</td>
+                    <td><code>x = 5</code></td>
+                </tr>
+                <tr>
+                    <td><code>+=</code></td>
+                    <td>Add assign</td>
+                    <td><code>x += 1</code></td>
+                </tr>
+                <tr>
+                    <td><code>-=</code></td>
+                    <td>Subtract assign</td>
+                    <td><code>x -= 1</code></td>
+                </tr>
+            </table>
+        </section>
+
+        <footer>
+            <p><a href="index.html">← Back to Documentation Index</a></p>
+            <p>Ifá-Lang API Reference v1.2.0 &copy; 2025-2026 Ayomide Alli (Charon)</p>
+        </footer>
+    </div>
+</body>
+
+</html>

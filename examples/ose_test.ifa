@@ -1,0 +1,37 @@
+// Ose Canvas Test - Simple Demo
+// Note: Ose and Irosu are built-in domains, no import needed
+
+Irosu.fo("Testing Ose Canvas...");
+
+// Setup canvas
+Ose.tobi(50, 15);
+Ose.nu(" ");
+
+// Draw border
+Ose.ila(0, 0, 49, 0, "═");
+Ose.ila(0, 0, 0, 14, "║");
+Ose.ila(49, 0, 49, 14, "║");
+Ose.ila(0, 14, 49, 14, "═");
+
+// Corners
+Ose.ya(0, 0, "╔");
+Ose.ya(49, 0, "╗");
+Ose.ya(0, 14, "╚");
+Ose.ya(49, 14, "╝");
+
+// Title
+Ose.ko(15, 2, "OSE CANVAS DEMO");
+
+// Rectangle
+Ose.onigun(5, 5, 15, 5, "#");
+
+// Filled rectangle
+Ose.onigun_kun(25, 5, 10, 5, "*");
+
+// Circle
+Ose.iyokoto(42, 8, 3, "O");
+
+// Text
+Ose.ko(10, 11, "Shapes work!");
+
+àṣẹ;

@@ -1,0 +1,64 @@
+[package]
+name = "ifa-std"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Standard library for Ifá-Lang - The 16 Odù Domains"
+
+[lib]
+name = "ifa_std"
+path = "src/lib.rs"
+
+[dependencies]
+ifa-sandbox = { path = "../ifa-sandbox" }
+ifa-core = { path = "../ifa-core" }
+
+# Error handling
+thiserror.workspace = true
+eyre.workspace = true
+
+# Console I/O (Ìrosù)
+crossterm.workspace = true
+
+# Date/Time (Ìwòrì)
+chrono.workspace = true
+
+# Strings (Ìká)
+ropey.workspace = true
+regex.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Random (Ọ̀wọ́nrín)
+rand.workspace = true
+rand_chacha.workspace = true
+
+# Crypto (Ìrẹtẹ̀)
+ring.workspace = true
+argon2.workspace = true  # Password hashing
+zstd.workspace = true
+base64.workspace = true
+
+# Database (Òdí)
+rusqlite.workspace = true
+
+# Async (Ọ̀sá)
+tokio = { workspace = true, optional = true }
+
+# Networking (Òtúrá)
+reqwest = { workspace = true, optional = true }
+tokio-rustls = { workspace = true, optional = true }
+
+# Terminal UI (Ọ̀ṣẹ́)
+ratatui = { workspace = true, optional = true }
+
+[features]
+default = ["full"]
+full = ["tokio", "reqwest", "tokio-rustls", "ratatui"]
+minimal = []  # For embedded
+
+[dev-dependencies]
+tempfile = "3.10"

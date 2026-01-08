@@ -1,0 +1,198 @@
+name: Ifá-Lang CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # BUILD & TEST - Cross-platform matrix
+  # ═══════════════════════════════════════════════════════════════════════════════
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: ifa
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: ifa
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: ifa.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-action@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy lints
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Build (Debug)
+        run: cargo build --workspace
+
+      - name: Run tests
+        run: cargo test --workspace --verbose
+
+      - name: Build (Release)
+        run: cargo build --workspace --release
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ifa-${{ matrix.target }}
+          path: target/release/${{ matrix.artifact_name }}
+          if-no-files-found: warn
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # COVERAGE (Linux only)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          components: llvm-tools-preview
+      
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      
+      - name: Generate coverage
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+      
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+          fail_ci_if_error: false
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # SECURITY AUDIT
+  # ═══════════════════════════════════════════════════════════════════════════════
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      
+      - name: Run security audit
+        run: cargo audit
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # DOCUMENTATION
+  # ═══════════════════════════════════════════════════════════════════════════════
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+      
+      - name: Build documentation
+        run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: --cfg docsrs -Dwarnings
+
+      - name: Upload docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: target/doc
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # MINIMAL BUILD (for embedded/no_std testing)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  minimal:
+    name: Minimal Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+      
+      - name: Build ifa-core only
+        run: cargo build -p ifa-core
+      
+      - name: Build ifa-embedded
+        run: cargo build -p ifa-embedded
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # MSRV CHECK (Minimum Supported Rust Version)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  msrv:
+    name: MSRV (1.75.0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust 1.75.0
+        uses: dtolnay/rust-action@1.75.0
+      
+      - name: Check MSRV
+        run: cargo check --workspace
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # RELEASE (on tags)
+  # ═══════════════════════════════════════════════════════════════════════════════
+  release:
+    name: Release
+    needs: [build, audit, coverage]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Display artifacts
+        run: ls -R artifacts/
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/ifa-*/ifa*
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
