@@ -190,7 +190,42 @@
         <header>
             <h1>The Ifá Corpus</h1>
             <p>Documentation for Ifá-Lang - The Yoruba Programming Language</p>
+<<<<<<< HEAD
             <p style="color: var(--text-dim);">Generated 2026-01-07 21:39</p>
+=======
+
+            <!-- Download Buttons -->
+            <div style="margin: 2rem 0; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="https://github.com/AAEO04/ifa_lang/releases/download/v1.0.1/ifa-lang-1.0.0-windows-setup.exe"
+                    style="background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;">
+                     Download for Windows
+                </a>
+                <a href="https://github.com/AAEO04/ifa_lang/releases/download/v1.0.1/ifa-lang-1.0.1-linux.tar.gz"
+                    style="background: linear-gradient(135deg, #e94560, #c73855); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;">
+                     Download for Linux
+                </a>
+                <a href="https://github.com/AAEO04/ifa_lang/releases/download/v1.0.1/ifa-lang.rb"
+                    style="background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;">
+                     Download for Mac
+                </a>    
+                <a href="https://github.com/AAEO04/ifa_lang"
+                    style="background: linear-gradient(135deg, #333, #555); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 8px;">
+                    ⭐ GitHub
+                </a>
+            </div>
+
+            <!-- Quick Install -->
+            <div
+                style="background: var(--bg-card); border-radius: 12px; padding: 1.5rem; text-align: left; max-width: 600px; margin: 0 auto;">
+                <h3 style="color: var(--gold); margin-bottom: 1rem;">Quick Install</h3>
+                <p><strong>Windows:</strong> Download and run the installer (includes Python!)</p>
+                <p><strong>macOS:</strong> <code>brew tap AAEO04/ifa-lang && brew install ifa-lang</code></p>
+                <p><strong>Linux:</strong> Download, extract, run <code>./install.sh</code></p>
+                <p style="margin-top: 1rem;"><strong>VS Code:</strong> Search "Ifá-Lang" in Extensions</p>
+            </div>
+
+            <p style="color: var(--text-dim); margin-top: 1rem;">v1.0.0</p>
+>>>>>>> ed403ae20f23869db1a8171386b49f19df138ff2
         </header>
 
         <h2>The 16 Odù Domains</h2>
@@ -294,15 +329,58 @@
 
         </div>
 
+<<<<<<< HEAD
         <h2>Quick Start</h2>
         <div class="odu-grid">
             <div class="odu-card">
+=======
+        <h2> Ọjà - The Market (Package Manager)</h2>
+        <div class="verse">
+            <div class="verse-name">Install Libraries from Git</div>
+            <div class="verse-desc">
+                <p>Ọjà is the decentralized package manager for Ifá-Lang. Install libraries directly from any Git
+                    repository:</p>
+                <p><code>ifa oja add https://github.com/user/my-library.git</code></p>
+            </div>
+        </div>
+
+        <div class="odu-grid">
+            <div class="odu-card">
+                <h3> ra (Buy/Add)</h3>
+                <p><code>ifa oja add &lt;url&gt;</code></p>
+                <p class="meaning">Download & add dependency</p>
+            </div>
+            <div class="odu-card">
+                <h3>ta (Sell/Remove)</h3>
+                <p><code>ifa oja remove &lt;name&gt;</code></p>
+                <p class="meaning">Remove a dependency</p>
+            </div>
+            <div class="odu-card">
+                <h3> install</h3>
+                <p><code>ifa oja install</code></p>
+                <p class="meaning">Sync all dependencies</p>
+            </div>
+            <div class="odu-card">
+                <h3> lock</h3>
+                <p><code>ifa oja lock</code></p>
+                <p class="meaning">Generate checksums</p>
+            </div>
+        </div>
+
+        <h2> Quick Start</h2>
+        <div class="odu-grid">
+            <div class="odu-card">
+>>>>>>> ed403ae20f23869db1a8171386b49f19df138ff2
                 <h3>Run</h3>
                 <p><code>ifa run program.ifa</code></p>
                 <p class="meaning">Interpreted execution</p>
             </div>
             <div class="odu-card">
+<<<<<<< HEAD
                 <h3>Build</h3>
+=======
+                <h3> Build</h3>
+>>>>>>> ed403ae20f23869db1a8171386b49f19df138ff2
                 <p><code>ifa build program.ifa -o app</code></p>
                 <p class="meaning">Compile to native binary</p>
             </div>
@@ -313,12 +391,20 @@
             </div>
             <div class="odu-card">
                 <h3>Docs</h3>
+<<<<<<< HEAD
                 <p><code>ifa doc src/ -o docs/</code></p>
+=======
+                <p><code>ifa doc lib/ docs/</code></p>
+>>>>>>> ed403ae20f23869db1a8171386b49f19df138ff2
                 <p class="meaning">Generate documentation</p>
             </div>
         </div>
 
+<<<<<<< HEAD
         <h2>Bytecode Execution</h2>
+=======
+        <h2> Bytecode Execution</h2>
+>>>>>>> ed403ae20f23869db1a8171386b49f19df138ff2
         <p style="color: var(--text-dim); margin-bottom: 1rem;">Compile to optimized .ifab bytecode for fast startup and
             IoT/embedded systems:</p>
         <div class="odu-grid">
@@ -345,6 +431,7 @@
             </div>
         </div>
 
+<<<<<<< HEAD
         <h2>Interactive Tools</h2>
         <div class="odu-grid">
             <a href="playground.html" class="odu-card">
@@ -431,6 +518,9 @@
         </div>
 
         <h2>Language Syntax</h2>
+=======
+        <h2> Language Syntax</h2>
+>>>>>>> ed403ae20f23869db1a8171386b49f19df138ff2
         <h3>Variables</h3>
         <div class="verse">
             <div class="verse-name">Declaration</div>
@@ -484,7 +574,11 @@
             </div>
         </div>
 
+<<<<<<< HEAD
         <h2>Dual Lexicon (Yoruba ↔ English)</h2>
+=======
+        <h2> Dual Lexicon (Yoruba ↔ English)</h2>
+>>>>>>> ed403ae20f23869db1a8171386b49f19df138ff2
         <div class="odu-grid">
             <div class="odu-card">
                 <h3>ìbà</h3>
@@ -532,7 +626,64 @@
             </div>
         </div>
 
+<<<<<<< HEAD
         <h2>CLI Reference</h2>
+=======
+        <h2>💡 Code Examples</h2>
+        <div class="verse">
+            <div class="verse-name">Hello World</div>
+            <div class="verse-desc">
+                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x:auto;">ìbà Irosu;
+Irosu.fo("Ẹ kú àbọ̀ sí Ifá-Lang!");
+àṣẹ;</pre>
+            </div>
+        </div>
+        <div class="verse">
+            <div class="verse-name">Math Operations</div>
+            <div class="verse-desc">
+                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x:auto;">ayanmọ x = Obara.fikun(10, 5);   // Add: 15
+ayanmọ y = Oturupon.din(10, 3);  // Subtract: 7
+Irosu.fo(x + y);                 // Print: 22</pre>
+            </div>
+        </div>
+        <div class="verse">
+            <div class="verse-name">Network (Ether)</div>
+            <div class="verse-desc">
+                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; overflow-x:auto;">Otura.ether_de(1);    // Join channel 1
+Otura.ether_ran(42);  // Broadcast value
+ayanmọ msg = Otura.ether_gba();  // Receive
+Otura.ether_pa();     // Leave network</pre>
+            </div>
+        </div>
+
+        <h2> Ìwà-Pẹ̀lẹ́ (Balance Rules)</h2>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Every resource opened must be closed. The Ìwà Engine
+            enforces good character:</p>
+        <div class="odu-grid">
+            <div class="odu-card">
+                <h3> Files</h3>
+                <p><code>Odi.si()</code> → <code>Odi.pa()</code></p>
+                <p class="meaning">Open → Close</p>
+            </div>
+            <div class="odu-card">
+                <h3> Network</h3>
+                <p><code>Otura.ether_de()</code> → <code>Otura.ether_pa()</code></p>
+                <p class="meaning">Join → Leave</p>
+            </div>
+            <div class="odu-card">
+                <h3> Locks</h3>
+                <p><code>Osa.khoa()</code> → <code>Osa.si()</code></p>
+                <p class="meaning">Lock → Unlock</p>
+            </div>
+            <div class="odu-card">
+                <h3> Arrays</h3>
+                <p><code>Ogunda.ge()</code> → <code>Irete.tu()</code></p>
+                <p class="meaning">Create → Release</p>
+            </div>
+        </div>
+
+        <h2>💻 CLI Reference</h2>
+>>>>>>> ed403ae20f23869db1a8171386b49f19df138ff2
         <div class="odu-grid">
             <div class="odu-card">
                 <h3>run</h3>
@@ -586,6 +737,7 @@
             </div>
             <div class="odu-card">
                 <h3>lsp</h3>
+<<<<<<< HEAD
                 <p><code>ifa lsp</code></p>
                 <p class="meaning">Start Language Server</p>
             </div>
@@ -593,6 +745,38 @@
                 <h3>sandbox</h3>
                 <p><code>ifa sandbox run &lt;file&gt;</code></p>
                 <p class="meaning">Sandboxed execution</p>
+=======
+                <p><code>ifa lsp --stdio</code></p>
+                <p class="meaning">Language Server</p>
+            </div>
+        </div>
+
+        <h2> Babalawo Error Guide</h2>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Errors come with proverbs and wisdom:</p>
+        <div class="verse">
+            <div class="verse-name">OTURUPON-OYEKU (Division by Zero)</div>
+            <div class="verse-desc">"One cannot carry a load that does not exist."</div>
+        </div>
+        <div class="verse">
+            <div class="verse-name">ODI-OKANRAN (File Not Found)</div>
+            <div class="verse-desc">"The calabash cannot hold what was never placed inside."</div>
+        </div>
+        <div class="verse">
+            <div class="verse-name">OTURA-OYEKU (Connection Failed)</div>
+            <div class="verse-desc">"The messenger cannot deliver to a house that does not exist."</div>
+        </div>
+
+        <h2> VS Code Extension (Ilé Ìwé)</h2>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Full IDE support for Ifá-Lang development:</p>
+        <div class="odu-grid">
+            <div class="odu-card">
+                <h3> Syntax Highlighting</h3>
+                <p class="meaning">Colors for Odù, keywords, strings</p>
+            </div>
+            <div class="odu-card">
+                <h3> Intellisense</h3>
+                <p class="meaning">Autocomplete for all 16 domains</p>
+>>>>>>> ed403ae20f23869db1a8171386b49f19df138ff2
             </div>
             <div class="odu-card">
                 <h3>oja</h3>
@@ -600,9 +784,14 @@
                 <p class="meaning">Package manager</p>
             </div>
             <div class="odu-card">
+<<<<<<< HEAD
                 <h3>flash</h3>
                 <p><code>ifa flash &lt;file&gt; --target esp32</code></p>
                 <p class="meaning">Flash to embedded</p>
+=======
+                <h3> Diagnostics</h3>
+                <p class="meaning">Real-time error checking</p>
+>>>>>>> ed403ae20f23869db1a8171386b49f19df138ff2
             </div>
             <div class="odu-card">
                 <h3>version</h3>
