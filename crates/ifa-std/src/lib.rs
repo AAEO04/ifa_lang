@@ -1,3 +1,8 @@
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::manual_clamp)]
+#![allow(clippy::manual_div_ceil)]
+#![allow(clippy::type_complexity)]
+
 //! # Ifá-Std - The 16 Odù Domains
 //!
 //! Standard library implementing the 16 principal Odù as Rust modules.

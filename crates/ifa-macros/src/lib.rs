@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_if)]
+
 //! # Ifá-Macros
 //!
 //! Procedural macros for Ifá-Lang's cultural safety features.

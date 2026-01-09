@@ -550,7 +550,7 @@ impl Tensor {
 
     /// Clamp values to range
     pub fn clamp(&self, min: f64, max: f64) -> Self {
-        self.map(|x| x.max(min).min(max))
+        self.map(|x| x.clamp(min, max))
     }
 }
 
@@ -634,7 +634,7 @@ pub mod loss {
             .iter()
             .zip(target.data.iter())
             .map(|(p, t)| {
-                let p_clipped = p.max(EPS).min(1.0 - EPS);
+                let p_clipped = p.clamp(EPS, 1.0 - EPS);
                 t * p_clipped.ln() + (1.0 - t) * (1.0 - p_clipped).ln()
             })
             .sum::<f64>()
