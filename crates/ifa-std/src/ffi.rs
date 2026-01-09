@@ -161,7 +161,7 @@ pub fn load_library(path: &str) -> FfiResult<LibHandle> {
 
 #[cfg(unix)]
 pub fn load_library(path: &str) -> FfiResult<LibHandle> {
-    extern "C" {
+    unsafe extern "C" {
         fn dlopen(filename: *const c_char, flags: c_int) -> *mut c_void;
     }
 
@@ -183,12 +183,12 @@ pub fn load_library(path: &str) -> FfiResult<LibHandle> {
 /// The handle must be a valid library handle returned by load_library.
 #[cfg(windows)]
 pub unsafe fn get_proc(handle: LibHandle, name: &str) -> FfiResult<*mut c_void> {
-    extern "system" {
+    unsafe extern "system" {
         fn GetProcAddress(hModule: *mut c_void, lpProcName: *const c_char) -> *mut c_void;
     }
 
     let c_name = CString::new(name).map_err(|_| FfiError::FunctionNotFound(name.to_string()))?;
-    let proc = GetProcAddress(handle, c_name.as_ptr());
+    let proc = unsafe { GetProcAddress(handle, c_name.as_ptr()) };
 
     if proc.is_null() {
         Err(FfiError::FunctionNotFound(name.to_string()))
@@ -203,12 +203,12 @@ pub unsafe fn get_proc(handle: LibHandle, name: &str) -> FfiResult<*mut c_void> 
 /// The handle must be a valid library handle returned by load_library.
 #[cfg(unix)]
 pub unsafe fn get_proc(handle: LibHandle, name: &str) -> FfiResult<*mut c_void> {
-    extern "C" {
+    unsafe extern "C" {
         fn dlsym(handle: *mut c_void, symbol: *const c_char) -> *mut c_void;
     }
 
     let c_name = CString::new(name).map_err(|_| FfiError::FunctionNotFound(name.to_string()))?;
-    let proc = dlsym(handle, c_name.as_ptr());
+    let proc = unsafe { dlsym(handle, c_name.as_ptr()) };
 
     if proc.is_null() {
         Err(FfiError::FunctionNotFound(name.to_string()))

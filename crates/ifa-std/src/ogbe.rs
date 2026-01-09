@@ -63,7 +63,8 @@ impl Ogbe {
     /// Set environment variable (fí àyíká)
     pub fn fi_ayika(&self, key: &str, value: &str) {
         if self.check_env(key) {
-            env::set_var(key, value);
+            // SAFETY: Setting env vars is inherently unsafe due to thread safety
+            unsafe { env::set_var(key, value) };
         }
     }
 

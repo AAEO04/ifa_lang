@@ -1,3 +1,8 @@
+#![allow(clippy::collapsible_if)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::collapsible_str_replace)]
+#![allow(clippy::should_implement_trait)]
+
 //! # Ifá-Core
 //!
 //! Core VM and runtime for Ifá-Lang - The Yoruba Programming Language.

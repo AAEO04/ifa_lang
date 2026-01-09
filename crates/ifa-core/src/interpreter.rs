@@ -91,7 +91,7 @@ impl Environment {
         if self.values.contains_key(name) {
             self.values.insert(name.to_string(), value);
             true
-        } else if let Some(ref mut parent) = self.parent {
+        } else if let Some(parent) = &mut self.parent {
             parent.set(name, value)
         } else {
             false
