@@ -21,15 +21,12 @@ pub fn parse(source: &str) -> IfaResult<Program> {
     let mut statements = Vec::new();
 
     for pair in pairs {
-        match pair.as_rule() {
-            Rule::program => {
-                for inner in pair.into_inner() {
-                    if let Some(stmt) = parse_statement(inner)? {
-                        statements.push(stmt);
-                    }
+        if pair.as_rule() == Rule::program {
+            for inner in pair.into_inner() {
+                if let Some(stmt) = parse_statement(inner)? {
+                    statements.push(stmt);
                 }
             }
-            _ => {}
         }
     }
 

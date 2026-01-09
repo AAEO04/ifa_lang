@@ -12,7 +12,7 @@ members = [
 
 [workspace.package]
 version = "1.2.0"
-edition = "2021"
+edition = "2024"
 authors = ["Ifá-Lang Contributors"]
 license = "MIT"
 repository = "https://github.com/AAEO04/ifa-lang"

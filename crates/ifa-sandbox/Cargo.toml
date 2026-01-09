@@ -1,32 +1,25 @@
 [package]
 name = "ifa-sandbox"
-version.workspace = true
-edition.workspace = true
-description = "Igbale Sandbox - Secure WASM/Native runtime with Ofun capabilities"
-authors.workspace = true
-license.workspace = true
+version = "1.2.0"
+edition = "2024"
 
 [dependencies]
+# Core sandbox dependencies - updated to latest
+wasmtime = "40.0"
+wasmtime-wasi = "40.0"
+
 # Error handling
-thiserror.workspace = true
-eyre.workspace = true
+eyre = "0.6"
+thiserror = "2.0"
 
 # Serialization
-serde.workspace = true
-
-# Capability-based security
-cap-std = "3.4"
-cap-fs-ext = "3.4"
-
-# WASM Runtime - v17 for API compatibility
-wasmtime = "17.0"
-wasmtime-wasi = "17.0"
-
-# Filesystem
-walkdir = "2.4"
-
-# Logging
-tracing = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [dev-dependencies]
-tempfile = "3.10"
+tempfile = "3.0"
+
+[features]
+default = []
+# Enable network capabilities (requires wasmtime with network support)
+network = []

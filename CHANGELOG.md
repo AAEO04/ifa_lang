@@ -39,6 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New example buttons in UI
 
 #### Security & Sandbox Enhancements
+- **Wasmtime v40 Upgrade**: Major security update fixing all known vulnerabilities
+  - RUSTSEC-2025-0118: Shared linear memory issue (Low)
+  - RUSTSEC-2025-0046: fd_renumber panic (Low)
+  - RUSTSEC-2024-0438: Windows device filename sandboxing
+  - RUSTSEC-2024-0445: cap-primitives sandboxing (Low)
+- **WasiView Implementation**: Proper WASI Preview 1 integration with `wasmtime_wasi::p1`
+- **Store Limits**: Added memory, table, and instance limits to sandbox
+- **Epoch Interruption**: Added timeout enforcement via epoch deadlines
+- **Migration Guide**: Added `MIGRATION.md` documenting wasmtime v17→v40 changes
 - **CapabilitySet (Ọ̀fún)**: Unified permission system for all sandbox backends
   - `Ofun` enum: ReadFiles, WriteFiles, Network, Environment, Time, Random, Stdio, Execute
   - `CapabilitySet.grant()` / `.check()` methods for permission management
@@ -51,8 +60,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--allow-time` - Grant time/date access
   - `--allow-random` - Grant RNG access (default: on)
   - `--allow-all` - Grant all permissions (use with caution)
-- **OmniBox WASM Sandbox**: Fixed Wasmtime/WASI integration, updated to `wasmtime-wasi`
+- **OmniBox WASM Sandbox**: Fully refactored for wasmtime v40 API
 - **Igbale Integration**: Native sandbox now uses `CapabilitySet` for consistent permissions
+
+### Fixed
+- **Removed non-existent `Ose.iwon()` method** from playground and documentation
+- **Fixed rustdoc link errors** in bytecode.rs and ast.rs (escaped square brackets)
+- **Fixed Clippy warnings**: Default impl for Opon, mem::take in interpreter, thread_local const
+- **Fixed sandbox test**: `allow_network` → `allowed_network_domains.is_empty()`
+- **Removed broken domain tests**: Tests were outdated after CapabilitySet refactoring
 
 #### Opon Memory Configuration
 - **English aliases for OponSize**: small/tiny → Kekere, medium/standard → Arinrin, large/mega → Nla, unlimited/dynamic → Ailopin

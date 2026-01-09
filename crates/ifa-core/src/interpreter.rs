@@ -2008,7 +2008,7 @@ impl Interpreter {
     fn call_function(&mut self, func: &IfaValue, args: &[Expression]) -> IfaResult<IfaValue> {
         if let IfaValue::AstFn { params, body, .. } = func {
             // Create new scope
-            let parent_env = std::mem::replace(&mut self.env, Environment::new());
+            let parent_env = std::mem::take(&mut self.env);
             self.env = Environment::with_parent(parent_env);
 
             // Bind arguments to parameters

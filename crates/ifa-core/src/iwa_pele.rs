@@ -270,7 +270,7 @@ mod tests {
         let _: IwaPeleResult<()> = CB.call(|| Err::<(), _>("fail"));
         assert!(CB.is_open());
 
-        let result: IwaPeleResult<i32> = CB.call(|| Ok(42));
+        let result: IwaPeleResult<i32> = CB.call(|| Ok::<i32, &str>(42));
         assert!(result.is_err());
     }
 }

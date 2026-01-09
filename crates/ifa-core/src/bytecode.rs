@@ -257,7 +257,7 @@ impl Bytecode {
         }
 
         // Check magic
-        if &bytes[0..4] != &BYTECODE_MAGIC {
+        if bytes[0..4] != BYTECODE_MAGIC {
             return Err(IfaError::Custom("Invalid bytecode: bad magic".to_string()));
         }
 

@@ -149,6 +149,12 @@ pub struct Opon {
     history_capacity: usize,
 }
 
+impl Default for Opon {
+    fn default() -> Self {
+        Self::new(OponSize::Arinrin)
+    }
+}
+
 impl Opon {
     /// Create new Opon with specified size
     pub fn new(size: OponSize) -> Self {
@@ -361,7 +367,7 @@ impl Opon {
 
 // Thread-local Opon for panic handler access
 thread_local! {
-    pub static CURRENT_OPON: RefCell<Option<Rc<RefCell<Opon>>>> = RefCell::new(None);
+    pub static CURRENT_OPON: RefCell<Option<Rc<RefCell<Opon>>>> = const { RefCell::new(None) };
 }
 
 /// Create new Opon and register for panic handling
