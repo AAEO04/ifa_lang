@@ -2,11 +2,11 @@
 //!
 //! Generates HTML documentation for Ifá-Lang projects in the style of the Ifá Corpus.
 
+use chrono::Local;
+use color_eyre::eyre::Result;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use color_eyre::eyre::Result;
-use chrono::Local;
 
 /// Odù domain metadata with ASCII slug for filenames
 pub struct OduInfo {
@@ -20,22 +20,134 @@ pub struct OduInfo {
 
 /// The 16 Odù domains with their meanings
 pub const ODU_DOMAINS: &[OduInfo] = &[
-    OduInfo { name: "Ogbè", slug: "ogbe", alias: "System", binary: "1111", meaning: "The Light", description: "System initialization, beginnings, CLI arguments" },
-    OduInfo { name: "Ọ̀yẹ̀kú", slug: "oyeku", alias: "Exit", binary: "0000", meaning: "The Darkness", description: "Process termination, endings, sleep" },
-    OduInfo { name: "Ìwòrì", slug: "iwori", alias: "Time", binary: "0110", meaning: "The Mirror", description: "Reflection, time, iteration, loops" },
-    OduInfo { name: "Òdí", slug: "odi", alias: "File", binary: "1001", meaning: "The Vessel", description: "Storage, file operations, containment" },
-    OduInfo { name: "Ìrosù", slug: "irosu", alias: "Log", binary: "1100", meaning: "The Speaker", description: "Communication, console I/O, expression" },
-    OduInfo { name: "Ọ̀wọ́nrín", slug: "owonrin", alias: "Random", binary: "0011", meaning: "The Chaotic", description: "Randomness, chance, unpredictability" },
-    OduInfo { name: "Ọ̀bàrà", slug: "obara", alias: "Math", binary: "1000", meaning: "The King", description: "Expansion, addition, multiplication" },
-    OduInfo { name: "Ọ̀kànràn", slug: "okanran", alias: "Error", binary: "0001", meaning: "The Troublemaker", description: "Errors, exceptions, warnings" },
-    OduInfo { name: "Ògúndá", slug: "ogunda", alias: "Array", binary: "1110", meaning: "The Cutter", description: "Arrays, process control, separation" },
-    OduInfo { name: "Ọ̀sá", slug: "osa", alias: "Flow", binary: "0111", meaning: "The Wind", description: "Control flow, jumps, conditionals" },
-    OduInfo { name: "Ìká", slug: "ika", alias: "String", binary: "0100", meaning: "The Constrictor", description: "Strings, compression, binding" },
-    OduInfo { name: "Òtúúrúpọ̀n", slug: "oturupon", alias: "Reduce", binary: "0010", meaning: "The Bearer", description: "Reduction, subtraction, division" },
-    OduInfo { name: "Òtúrá", slug: "otura", alias: "Net", binary: "1011", meaning: "The Messenger", description: "Network, communication, sending" },
-    OduInfo { name: "Ìrẹtẹ̀", slug: "irete", alias: "Crypto", binary: "1101", meaning: "The Crusher", description: "Memory management, garbage collection" },
-    OduInfo { name: "Ọ̀ṣẹ́", slug: "ose", alias: "UI", binary: "1010", meaning: "The Beautifier", description: "Graphics, display, aesthetics" },
-    OduInfo { name: "Òfún", slug: "ofun", alias: "Root", binary: "0101", meaning: "The Creator", description: "Object creation, inheritance" },
+    OduInfo {
+        name: "Ogbè",
+        slug: "ogbe",
+        alias: "System",
+        binary: "1111",
+        meaning: "The Light",
+        description: "System initialization, beginnings, CLI arguments",
+    },
+    OduInfo {
+        name: "Ọ̀yẹ̀kú",
+        slug: "oyeku",
+        alias: "Exit",
+        binary: "0000",
+        meaning: "The Darkness",
+        description: "Process termination, endings, sleep",
+    },
+    OduInfo {
+        name: "Ìwòrì",
+        slug: "iwori",
+        alias: "Time",
+        binary: "0110",
+        meaning: "The Mirror",
+        description: "Reflection, time, iteration, loops",
+    },
+    OduInfo {
+        name: "Òdí",
+        slug: "odi",
+        alias: "File",
+        binary: "1001",
+        meaning: "The Vessel",
+        description: "Storage, file operations, containment",
+    },
+    OduInfo {
+        name: "Ìrosù",
+        slug: "irosu",
+        alias: "Log",
+        binary: "1100",
+        meaning: "The Speaker",
+        description: "Communication, console I/O, expression",
+    },
+    OduInfo {
+        name: "Ọ̀wọ́nrín",
+        slug: "owonrin",
+        alias: "Random",
+        binary: "0011",
+        meaning: "The Chaotic",
+        description: "Randomness, chance, unpredictability",
+    },
+    OduInfo {
+        name: "Ọ̀bàrà",
+        slug: "obara",
+        alias: "Math",
+        binary: "1000",
+        meaning: "The King",
+        description: "Expansion, addition, multiplication",
+    },
+    OduInfo {
+        name: "Ọ̀kànràn",
+        slug: "okanran",
+        alias: "Error",
+        binary: "0001",
+        meaning: "The Troublemaker",
+        description: "Errors, exceptions, warnings",
+    },
+    OduInfo {
+        name: "Ògúndá",
+        slug: "ogunda",
+        alias: "Array",
+        binary: "1110",
+        meaning: "The Cutter",
+        description: "Arrays, process control, separation",
+    },
+    OduInfo {
+        name: "Ọ̀sá",
+        slug: "osa",
+        alias: "Flow",
+        binary: "0111",
+        meaning: "The Wind",
+        description: "Control flow, jumps, conditionals",
+    },
+    OduInfo {
+        name: "Ìká",
+        slug: "ika",
+        alias: "String",
+        binary: "0100",
+        meaning: "The Constrictor",
+        description: "Strings, compression, binding",
+    },
+    OduInfo {
+        name: "Òtúúrúpọ̀n",
+        slug: "oturupon",
+        alias: "Reduce",
+        binary: "0010",
+        meaning: "The Bearer",
+        description: "Reduction, subtraction, division",
+    },
+    OduInfo {
+        name: "Òtúrá",
+        slug: "otura",
+        alias: "Net",
+        binary: "1011",
+        meaning: "The Messenger",
+        description: "Network, communication, sending",
+    },
+    OduInfo {
+        name: "Ìrẹtẹ̀",
+        slug: "irete",
+        alias: "Crypto",
+        binary: "1101",
+        meaning: "The Crusher",
+        description: "Memory management, garbage collection",
+    },
+    OduInfo {
+        name: "Ọ̀ṣẹ́",
+        slug: "ose",
+        alias: "UI",
+        binary: "1010",
+        meaning: "The Beautifier",
+        description: "Graphics, display, aesthetics",
+    },
+    OduInfo {
+        name: "Òfún",
+        slug: "ofun",
+        alias: "Root",
+        binary: "0101",
+        meaning: "The Creator",
+        description: "Object creation, inheritance",
+    },
 ];
 
 /// CSS for the documentation site
@@ -196,7 +308,7 @@ footer {
 /// Generate the main index.html page
 pub fn generate_index_html() -> String {
     let timestamp = Local::now().format("%Y-%m-%d %H:%M").to_string();
-    
+
     let mut odu_cards = String::new();
     for odu in ODU_DOMAINS {
         odu_cards.push_str(&format!(r#"
@@ -215,7 +327,8 @@ pub fn generate_index_html() -> String {
         ));
     }
 
-    format!(r#"<!DOCTYPE html>
+    format!(
+        r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -560,15 +673,20 @@ pub fn generate_odu_page(odu: &OduInfo, methods: &[(String, String)]) -> String 
 
     let mut methods_html = String::new();
     for (name, desc) in methods {
-        methods_html.push_str(&format!(r#"
+        methods_html.push_str(&format!(
+            r#"
             <div class="verse">
                 <div class="verse-name">{name}()</div>
                 <div class="verse-desc">{desc}</div>
             </div>
-        "#, name = name, desc = desc));
+        "#,
+            name = name,
+            desc = desc
+        ));
     }
 
-    format!(r#"<!DOCTYPE html>
+    format!(
+        r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -621,161 +739,213 @@ pub fn generate_odu_page(odu: &OduInfo, methods: &[(String, String)]) -> String 
 /// Standard library methods for each domain
 pub fn get_stdlib_methods() -> HashMap<&'static str, Vec<(&'static str, &'static str)>> {
     let mut map = HashMap::new();
-    
-    map.insert("ogbe", vec![
-        ("bi", "Initialize system/environment"),
-        ("gba", "Get input from user/environment"),
-        ("env", "Get environment variable"),
-        ("args", "Get CLI arguments"),
-        ("platform", "Get current platform (windows/linux/macos)"),
-    ]);
-    
-    map.insert("oyeku", vec![
-        ("ku", "Exit program with code"),
-        ("duro", "Stop execution gracefully"),
-        ("gbale", "Garbage collect / Clean up resources"),
-    ]);
-    
-    map.insert("iwori", vec![
-        ("ago", "Get current time as formatted string"),
-        ("duro", "Sleep for specified milliseconds"),
-        ("now", "Get current timestamp"),
-        ("millis", "Get milliseconds since epoch"),
-    ]);
-    
-    map.insert("odi", vec![
-        ("ka", "Read data from file"),
-        ("ko", "Write data to file"),
-        ("fi", "Append data to file"),
-        ("si", "Open file handle"),
-        ("pa", "Close active file"),
-        ("wa", "Check if file exists"),
-        ("pa_iwe", "Delete file"),
-    ]);
-    
-    map.insert("irosu", vec![
-        ("fo", "Print with newline"),
-        ("so", "Log with label prefix"),
-        ("kigbe", "Log error to stderr"),
-    ]);
-    
-    map.insert("owonrin", vec![
-        ("bo", "Random integer from 0 to n"),
-        ("range", "Random integer in range [min, max]"),
-        ("paaro", "Shuffle list randomly"),
-    ]);
-    
-    map.insert("obara", vec![
-        ("ro", "Add two numbers"),
-        ("fikun", "Increment value"),
-        ("isodipupo", "Multiply two numbers"),
-        ("kun", "Sum a list of numbers"),
-    ]);
-    
-    map.insert("okanran", vec![
-        ("binu", "Raise error with message"),
-        ("je", "Handle/catch error"),
-    ]);
-    
-    map.insert("ogunda", vec![
-        ("ge", "Create new array"),
-        ("fi", "Push element to array"),
-        ("mu", "Pop element from array"),
-        ("to", "Sort array"),
-        ("map", "Map function over array"),
-        ("filter", "Filter array with predicate"),
-        ("gigun", "Get array length"),
-    ]);
-    
-    map.insert("osa", vec![
-        ("sa", "Spawn thread/async task"),
-        ("duro", "Wait for task completion"),
-        ("json_si", "Parse JSON string to object"),
-        ("json_lati", "Convert object to JSON string"),
-    ]);
-    
-    map.insert("ika", vec![
-        ("so", "Concatenate strings"),
-        ("ge", "Slice string [start:end]"),
-        ("ka", "Get string length"),
-        ("split", "Split string by delimiter"),
-        ("upper", "Convert to uppercase"),
-        ("lower", "Convert to lowercase"),
-        ("trim", "Trim whitespace"),
-        ("contains", "Check if string contains substring"),
-        ("replace", "Replace substring"),
-    ]);
-    
-    map.insert("oturupon", vec![
-        ("din", "Subtract two numbers"),
-        ("pin", "Divide two numbers"),
-        ("ku", "Modulo (remainder)"),
-    ]);
-    
-    map.insert("otura", vec![
-        ("ran", "Send HTTP request"),
-        ("de", "Bind to network port"),
-        ("gba", "Receive network data"),
-        ("http_get", "HTTP GET request"),
-        ("http_post", "HTTP POST request"),
-    ]);
-    
-    map.insert("irete", vec![
-        ("di", "Hash data (SHA256)"),
-        ("fun", "Compress data"),
-        ("tu", "Decompress data"),
-        ("base64_si", "Encode to base64"),
-        ("base64_lati", "Decode from base64"),
-    ]);
-    
-    map.insert("ose", vec![
-        ("ya", "Draw pixel/shape"),
-        ("han", "Render frame"),
-        ("html", "Generate HTML element"),
-        ("css", "Generate CSS styles"),
-    ]);
-    
-    map.insert("ofun", vec![
-        ("ase", "Request elevated permissions"),
-        ("fun", "Grant permission"),
-        ("ka_iwe", "Read manifest/documentation"),
-    ]);
-    
+
+    map.insert(
+        "ogbe",
+        vec![
+            ("bi", "Initialize system/environment"),
+            ("gba", "Get input from user/environment"),
+            ("env", "Get environment variable"),
+            ("args", "Get CLI arguments"),
+            ("platform", "Get current platform (windows/linux/macos)"),
+        ],
+    );
+
+    map.insert(
+        "oyeku",
+        vec![
+            ("ku", "Exit program with code"),
+            ("duro", "Stop execution gracefully"),
+            ("gbale", "Garbage collect / Clean up resources"),
+        ],
+    );
+
+    map.insert(
+        "iwori",
+        vec![
+            ("ago", "Get current time as formatted string"),
+            ("duro", "Sleep for specified milliseconds"),
+            ("now", "Get current timestamp"),
+            ("millis", "Get milliseconds since epoch"),
+        ],
+    );
+
+    map.insert(
+        "odi",
+        vec![
+            ("ka", "Read data from file"),
+            ("ko", "Write data to file"),
+            ("fi", "Append data to file"),
+            ("si", "Open file handle"),
+            ("pa", "Close active file"),
+            ("wa", "Check if file exists"),
+            ("pa_iwe", "Delete file"),
+        ],
+    );
+
+    map.insert(
+        "irosu",
+        vec![
+            ("fo", "Print with newline"),
+            ("so", "Log with label prefix"),
+            ("kigbe", "Log error to stderr"),
+        ],
+    );
+
+    map.insert(
+        "owonrin",
+        vec![
+            ("bo", "Random integer from 0 to n"),
+            ("range", "Random integer in range [min, max]"),
+            ("paaro", "Shuffle list randomly"),
+        ],
+    );
+
+    map.insert(
+        "obara",
+        vec![
+            ("ro", "Add two numbers"),
+            ("fikun", "Increment value"),
+            ("isodipupo", "Multiply two numbers"),
+            ("kun", "Sum a list of numbers"),
+        ],
+    );
+
+    map.insert(
+        "okanran",
+        vec![
+            ("binu", "Raise error with message"),
+            ("je", "Handle/catch error"),
+        ],
+    );
+
+    map.insert(
+        "ogunda",
+        vec![
+            ("ge", "Create new array"),
+            ("fi", "Push element to array"),
+            ("mu", "Pop element from array"),
+            ("to", "Sort array"),
+            ("map", "Map function over array"),
+            ("filter", "Filter array with predicate"),
+            ("gigun", "Get array length"),
+        ],
+    );
+
+    map.insert(
+        "osa",
+        vec![
+            ("sa", "Spawn thread/async task"),
+            ("duro", "Wait for task completion"),
+            ("json_si", "Parse JSON string to object"),
+            ("json_lati", "Convert object to JSON string"),
+        ],
+    );
+
+    map.insert(
+        "ika",
+        vec![
+            ("so", "Concatenate strings"),
+            ("ge", "Slice string [start:end]"),
+            ("ka", "Get string length"),
+            ("split", "Split string by delimiter"),
+            ("upper", "Convert to uppercase"),
+            ("lower", "Convert to lowercase"),
+            ("trim", "Trim whitespace"),
+            ("contains", "Check if string contains substring"),
+            ("replace", "Replace substring"),
+        ],
+    );
+
+    map.insert(
+        "oturupon",
+        vec![
+            ("din", "Subtract two numbers"),
+            ("pin", "Divide two numbers"),
+            ("ku", "Modulo (remainder)"),
+        ],
+    );
+
+    map.insert(
+        "otura",
+        vec![
+            ("ran", "Send HTTP request"),
+            ("de", "Bind to network port"),
+            ("gba", "Receive network data"),
+            ("http_get", "HTTP GET request"),
+            ("http_post", "HTTP POST request"),
+        ],
+    );
+
+    map.insert(
+        "irete",
+        vec![
+            ("di", "Hash data (SHA256)"),
+            ("fun", "Compress data"),
+            ("tu", "Decompress data"),
+            ("base64_si", "Encode to base64"),
+            ("base64_lati", "Decode from base64"),
+        ],
+    );
+
+    map.insert(
+        "ose",
+        vec![
+            ("ya", "Draw pixel/shape"),
+            ("han", "Render frame"),
+            ("html", "Generate HTML element"),
+            ("css", "Generate CSS styles"),
+        ],
+    );
+
+    map.insert(
+        "ofun",
+        vec![
+            ("ase", "Request elevated permissions"),
+            ("fun", "Grant permission"),
+            ("ka_iwe", "Read manifest/documentation"),
+        ],
+    );
+
     map
 }
 
 /// Generate all documentation files to the output directory
 pub fn generate_docs(output_dir: &Path) -> Result<()> {
     fs::create_dir_all(output_dir)?;
-    
+
     // Always regenerate index.html
     let index_html = generate_index_html();
     fs::write(output_dir.join("index.html"), index_html)?;
     println!("  Generated: index.html");
-    
+
     // Get stdlib methods
     let stdlib = get_stdlib_methods();
-    
+
     // Generate individual Odù pages with ASCII filenames
     // Skip if file already exists (preserve legacy Python-generated docs)
     for odu in ODU_DOMAINS {
         let filename = format!("{}.html", odu.slug);
         let filepath = output_dir.join(&filename);
-        
+
         if filepath.exists() {
             println!("  Skipped:   {} (exists)", filename);
             continue;
         }
-        
+
         let methods: Vec<(String, String)> = stdlib
             .get(odu.slug)
-            .map(|m| m.iter().map(|(n, d)| (n.to_string(), d.to_string())).collect())
+            .map(|m| {
+                m.iter()
+                    .map(|(n, d)| (n.to_string(), d.to_string()))
+                    .collect()
+            })
             .unwrap_or_default();
-        
+
         let page_html = generate_odu_page(odu, &methods);
         fs::write(&filepath, page_html)?;
         println!("  Generated: {}", filename);
     }
-    
+
     Ok(())
 }

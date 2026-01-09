@@ -1,16 +1,16 @@
 //! # Ọ̀sá Domain (0111)
-//! 
+//!
 //! The Runner - Concurrency and Async
-//! 
+//!
 //! Tokio-based async tasks with channels and synchronization.
 
+use crate::impl_odu_domain;
+use std::sync::Arc;
+use std::time::Duration;
 #[cfg(feature = "full")]
 use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
 #[cfg(feature = "full")]
 use tokio::task::JoinHandle;
-use std::sync::Arc;
-use std::time::Duration;
-use crate::impl_odu_domain;
 
 /// Ọ̀sá - The Runner (Concurrency)
 pub struct Osa;
@@ -27,32 +27,32 @@ impl Osa {
     {
         tokio::spawn(future)
     }
-    
+
     /// Sleep async (sùn)
     pub async fn sun(&self, ms: u64) {
         tokio::time::sleep(Duration::from_millis(ms)).await;
     }
-    
+
     /// Create channel (ojú ọ̀nà)
     pub fn oju_ona<T>(&self, buffer: usize) -> (mpsc::Sender<T>, mpsc::Receiver<T>) {
         mpsc::channel(buffer)
     }
-    
+
     /// Create oneshot channel
     pub fn oju_ona_kan<T>(&self) -> (oneshot::Sender<T>, oneshot::Receiver<T>) {
         oneshot::channel()
     }
-    
+
     /// Create mutex (tìtìpẹ̀)
     pub fn titipe<T>(&self, value: T) -> Arc<Mutex<T>> {
         Arc::new(Mutex::new(value))
     }
-    
+
     /// Create rwlock
     pub fn kaka<T>(&self, value: T) -> Arc<RwLock<T>> {
         Arc::new(RwLock::new(value))
     }
-    
+
     /// Run future with timeout
     pub async fn pẹlu_akoko<F, T>(&self, future: F, timeout_ms: u64) -> Option<T>
     where
@@ -62,7 +62,7 @@ impl Osa {
             .await
             .ok()
     }
-    
+
     /// Yield control to scheduler
     pub async fn jeki(&self) {
         tokio::task::yield_now().await;
@@ -81,19 +81,19 @@ impl Osa {
 #[cfg(feature = "full")]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_spawn() {
         let osa = Osa;
         let handle = osa.sa(async { 42 });
         assert_eq!(handle.await.unwrap(), 42);
     }
-    
+
     #[tokio::test]
     async fn test_channel() {
         let osa = Osa;
         let (tx, mut rx) = osa.oju_ona::<i32>(10);
-        
+
         tx.send(42).await.unwrap();
         assert_eq!(rx.recv().await, Some(42));
     }

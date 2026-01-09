@@ -5,8 +5,8 @@
 //!
 //! Use `#[iwa_pele]` macro from `ifa-macros` for compile-time balance checking.
 
-use std::fmt;
 use std::error::Error;
+use std::fmt;
 
 /// Result type with Ìwà Pẹ̀lẹ́ error handling
 pub type IwaPeleResult<T> = Result<T, IwaPeleError>;
@@ -29,26 +29,33 @@ impl IwaPeleError {
             suggestion: None,
         }
     }
-    
+
     pub fn with_suggestion(mut self, suggestion: impl Into<String>) -> Self {
         self.suggestion = Some(suggestion.into());
         self
     }
-    
+
     /// Create a "missing" error with fallback
     pub fn missing(what: &str) -> Self {
         Self::new(IwaPeleErrorKind::Missing, format!("{} not found", what))
     }
-    
+
     /// Create a "timeout" error
     pub fn timeout(operation: &str) -> Self {
-        Self::new(IwaPeleErrorKind::Timeout, format!("{} timed out", operation))
+        Self::new(
+            IwaPeleErrorKind::Timeout,
+            format!("{} timed out", operation),
+        )
     }
 }
 
 impl fmt::Display for IwaPeleError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[Iwa Pele] {}: {}\n  Proverb: {}", self.kind, self.message, self.proverb)?;
+        write!(
+            f,
+            "[Iwa Pele] {}: {}\n  Proverb: {}",
+            self.kind, self.message, self.proverb
+        )?;
         if let Some(ref suggestion) = self.suggestion {
             write!(f, "\n  Hint: {}", suggestion)?;
         }
@@ -67,7 +74,7 @@ pub enum IwaPeleErrorKind {
     ValidationFailed,
     Timeout,
     PermissionDenied,
-    Imbalanced,  // For compile-time balance violations
+    Imbalanced, // For compile-time balance violations
 }
 
 impl IwaPeleErrorKind {
@@ -105,10 +112,10 @@ impl fmt::Display for IwaPeleErrorKind {
 pub trait IwaPele<T> {
     /// Get value or use fallback with logging
     fn or_gentle(self, fallback: T) -> T;
-    
+
     /// Get value or recover via function
     fn or_recover<F: FnOnce() -> T>(self, f: F) -> T;
-    
+
     /// Convert to IwaPeleResult
     fn gentle(self) -> IwaPeleResult<T>;
 }
@@ -118,12 +125,12 @@ impl<T> IwaPele<T> for Option<T> {
     fn or_gentle(self, fallback: T) -> T {
         self.unwrap_or(fallback)
     }
-    
+
     #[inline]
     fn or_recover<F: FnOnce() -> T>(self, f: F) -> T {
         self.unwrap_or_else(f)
     }
-    
+
     fn gentle(self) -> IwaPeleResult<T> {
         self.ok_or_else(|| IwaPeleError::missing("value"))
     }
@@ -134,17 +141,14 @@ impl<T, E: fmt::Debug> IwaPele<T> for Result<T, E> {
     fn or_gentle(self, fallback: T) -> T {
         self.unwrap_or(fallback)
     }
-    
+
     #[inline]
     fn or_recover<F: FnOnce() -> T>(self, f: F) -> T {
         self.unwrap_or_else(|_| f())
     }
-    
+
     fn gentle(self) -> IwaPeleResult<T> {
-        self.map_err(|e| IwaPeleError::new(
-            IwaPeleErrorKind::OperationFailed,
-            format!("{:?}", e)
-        ))
+        self.map_err(|e| IwaPeleError::new(IwaPeleErrorKind::OperationFailed, format!("{:?}", e)))
     }
 }
 
@@ -156,7 +160,7 @@ where
 {
     let mut delay_ms = 50;
     let mut attempts = 0;
-    
+
     loop {
         attempts += 1;
         match f() {
@@ -168,8 +172,9 @@ where
             Err(e) => {
                 return Err(IwaPeleError::new(
                     IwaPeleErrorKind::OperationFailed,
-                    format!("After {} attempts: {:?}", attempts, e)
-                ).with_suggestion("Consider alternative approach"));
+                    format!("After {} attempts: {:?}", attempts, e),
+                )
+                .with_suggestion("Consider alternative approach"));
             }
         }
     }
@@ -192,20 +197,17 @@ impl CircuitBreaker {
             open: std::sync::atomic::AtomicBool::new(false),
         }
     }
-    
-    pub fn call<T, E: fmt::Debug, F: FnOnce() -> Result<T, E>>(
-        &self,
-        f: F
-    ) -> IwaPeleResult<T> {
+
+    pub fn call<T, E: fmt::Debug, F: FnOnce() -> Result<T, E>>(&self, f: F) -> IwaPeleResult<T> {
         use std::sync::atomic::Ordering::SeqCst;
-        
+
         if self.open.load(SeqCst) {
             return Err(IwaPeleError::new(
                 IwaPeleErrorKind::Unavailable,
-                format!("Circuit '{}' is open", self.name)
+                format!("Circuit '{}' is open", self.name),
             ));
         }
-        
+
         match f() {
             Ok(v) => {
                 self.failures.store(0, SeqCst);
@@ -218,18 +220,18 @@ impl CircuitBreaker {
                 }
                 Err(IwaPeleError::new(
                     IwaPeleErrorKind::OperationFailed,
-                    format!("{:?}", e)
+                    format!("{:?}", e),
                 ))
             }
         }
     }
-    
+
     pub fn reset(&self) {
         use std::sync::atomic::Ordering::SeqCst;
         self.failures.store(0, SeqCst);
         self.open.store(false, SeqCst);
     }
-    
+
     pub fn is_open(&self) -> bool {
         self.open.load(std::sync::atomic::Ordering::SeqCst)
     }
@@ -238,36 +240,36 @@ impl CircuitBreaker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_option_or_gentle() {
         let x: Option<i32> = None;
         assert_eq!(x.or_gentle(42), 42);
-        
+
         let y: Option<i32> = Some(10);
         assert_eq!(y.or_gentle(42), 10);
     }
-    
+
     #[test]
     fn test_result_gentle() {
         let ok: Result<i32, &str> = Ok(42);
         assert!(ok.gentle().is_ok());
-        
+
         let err: Result<i32, &str> = Err("fail");
         assert!(err.gentle().is_err());
     }
-    
+
     #[test]
     fn test_circuit_breaker() {
         static CB: CircuitBreaker = CircuitBreaker::new("test", 2);
         CB.reset();
-        
+
         let _: IwaPeleResult<()> = CB.call(|| Err::<(), _>("fail"));
         assert!(!CB.is_open());
-        
+
         let _: IwaPeleResult<()> = CB.call(|| Err::<(), _>("fail"));
         assert!(CB.is_open());
-        
+
         let result: IwaPeleResult<i32> = CB.call(|| Ok(42));
         assert!(result.is_err());
     }

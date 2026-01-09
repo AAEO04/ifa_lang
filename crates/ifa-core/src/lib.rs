@@ -1,9 +1,9 @@
 //! # Ifá-Core
-//! 
+//!
 //! Core VM and runtime for Ifá-Lang - The Yoruba Programming Language.
-//! 
+//!
 //! ## Modules
-//! 
+//!
 //! - `lexer` - Tokenization with logos
 //! - `ast` - Abstract Syntax Tree types
 //! - `parser` - Parsing with pest
@@ -19,34 +19,33 @@
 //! - `ajose` - Àjọṣe reactive relationships
 //! - `iwa_pele` - Ìwà Pẹ̀lẹ́ graceful error handling
 
-pub mod lexer;
+pub mod ajose;
 pub mod ast;
-pub mod parser;
-pub mod interpreter;
+pub mod bytecode;
 pub mod compiler;
+pub mod ebo;
+pub mod error;
+pub mod interpreter;
+pub mod iwa_pele;
+pub mod lexer;
+pub mod opon;
+pub mod parser;
 pub mod transpiler;
 pub mod value;
-pub mod bytecode;
 pub mod vm;
-pub mod opon;
-pub mod error;
-pub mod ebo;
-pub mod ajose;
-pub mod iwa_pele;
 
 // Re-exports for convenience
-pub use lexer::{Token, OduDomain, tokenize};
-pub use ast::{Program, Statement, Expression};
-pub use parser::parse;
+pub use ajose::{effect, Ajose, Computed, RelContext, Relationship, Signal};
+pub use ast::{Expression, Program, Statement};
+pub use bytecode::{Bytecode, OpCode};
+pub use compiler::{compile, Compiler};
+pub use ebo::{Ebo, EboScope};
+pub use error::{IfaError, IfaResult};
 pub use interpreter::Interpreter;
-pub use compiler::{Compiler, compile};
+pub use iwa_pele::{IwaPele, IwaPeleError, IwaPeleErrorKind};
+pub use lexer::{tokenize, OduDomain, Token};
+pub use opon::{Opon, OponError, OponErrorKind, OponResult, OponSize};
+pub use parser::parse;
 pub use transpiler::transpile_to_rust;
 pub use value::IfaValue;
-pub use bytecode::{OpCode, Bytecode};
 pub use vm::IfaVM;
-pub use opon::{Opon, OponSize, OponError, OponErrorKind, OponResult};
-pub use error::{IfaError, IfaResult};
-pub use ebo::{Ebo, EboScope};
-pub use ajose::{Signal, Computed, effect, Ajose, Relationship, RelContext};
-pub use iwa_pele::{IwaPele, IwaPeleError, IwaPeleErrorKind};
-

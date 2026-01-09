@@ -4,9 +4,9 @@
 //! No raw callbacks - actual push-based updates.
 
 use std::cell::{Cell, RefCell};
-use std::rc::{Rc, Weak};
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::{Rc, Weak};
 
 // ============================================================================
 // TYPE ALIASES for complex types (reduces clippy::type_complexity warnings)
@@ -51,41 +51,41 @@ impl<T: Clone + 'static> Signal<T> {
             version: Rc::new(Cell::new(0)),
         }
     }
-    
+
     /// Get current value
     pub fn get(&self) -> T {
         self.value.borrow().clone()
     }
-    
+
     /// Get reference to value
     pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
         f(&self.value.borrow())
     }
-    
+
     /// Set value and notify subscribers
     pub fn set(&self, new_value: T) {
         *self.value.borrow_mut() = new_value;
         self.version.set(self.version.get() + 1);
         self.notify();
     }
-    
+
     /// Update value with function
     pub fn update(&self, f: impl FnOnce(&mut T)) {
         f(&mut self.value.borrow_mut());
         self.version.set(self.version.get() + 1);
         self.notify();
     }
-    
+
     /// Subscribe to changes
     pub fn subscribe(&self, callback: impl Fn(&T) + 'static) {
         self.subscribers.borrow_mut().push(Box::new(callback));
     }
-    
+
     /// Get version number (for dirty checking)
     pub fn version(&self) -> u64 {
         self.version.get()
     }
-    
+
     fn notify(&self) {
         let value = self.value.borrow();
         for sub in self.subscribers.borrow().iter() {
@@ -128,7 +128,7 @@ impl<T: Clone + 'static> Computed<T> {
             compute: Rc::new(compute),
         }
     }
-    
+
     pub fn get(&self) -> T {
         // Recompute (in real impl, would track dependencies)
         let new_val = (self.compute)();
@@ -153,7 +153,7 @@ impl<T: Clone + 'static> Computed<T> {
 pub fn effect<F: Fn() + 'static>(f: F) -> EffectGuard {
     // Initial run
     f();
-    
+
     // In a full implementation, we'd track which signals were accessed
     // and subscribe to them. For now, just store the callback.
     EffectGuard {
@@ -194,7 +194,7 @@ impl Relationship {
             bidirectional: false,
         }
     }
-    
+
     pub fn bidirectional(mut self) -> Self {
         self.bidirectional = true;
         self
@@ -211,12 +211,12 @@ impl RelContext {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     pub fn with(mut self, key: &str, value: impl ToString) -> Self {
         self.data.insert(key.to_string(), value.to_string());
         self
     }
-    
+
     pub fn get<T: std::str::FromStr>(&self, key: &str) -> Option<T> {
         self.data.get(key).and_then(|v| v.parse().ok())
     }
@@ -233,23 +233,24 @@ impl<S: 'static, T: 'static> Ajose<S, T> {
             relationships: Vec::new(),
         }
     }
-    
+
     /// Bind source to target with transformation
     pub fn bind(
         &mut self,
         source: &Rc<RefCell<S>>,
         target: &Rc<RefCell<T>>,
-        transform: impl Fn(&S, &mut T) + 'static, 
+        transform: impl Fn(&S, &mut T) + 'static,
     ) {
         let source_weak = Rc::downgrade(source);
         let target_weak = Rc::downgrade(target);
-        
+
         // Initial sync (must happen before we move transform into the Box)
         transform(&source.borrow(), &mut target.borrow_mut());
-        
-        self.relationships.push((source_weak, target_weak, Box::new(transform)));
+
+        self.relationships
+            .push((source_weak, target_weak, Box::new(transform)));
     }
-    
+
     /// Propagate changes from source to targets
     pub fn propagate(&self, source: &Rc<RefCell<S>>) {
         for (src_weak, tgt_weak, transform) in &self.relationships {
@@ -262,12 +263,11 @@ impl<S: 'static, T: 'static> Ajose<S, T> {
             }
         }
     }
-    
+
     /// Cleanup dead references
     pub fn gc(&mut self) {
-        self.relationships.retain(|(s, t, _)| {
-            s.upgrade().is_some() && t.upgrade().is_some()
-        });
+        self.relationships
+            .retain(|(s, t, _)| s.upgrade().is_some() && t.upgrade().is_some());
     }
 }
 
@@ -305,7 +305,7 @@ macro_rules! bind {
 // ============================================================================
 
 /// Ajose FFI Bridge - The gateway to other languages
-/// 
+///
 /// Provides high-level access to Python, C, and other languages.
 /// Uses the low-level FFI from ifa-std.
 pub struct AjoseBridge {
@@ -319,7 +319,7 @@ impl AjoseBridge {
             py_cache: std::collections::HashMap::new(),
         }
     }
-    
+
     /// Call a Python function
     /// Ifá syntax: coop.py("math", "sqrt", 16)
     pub fn py(&mut self, module: &str, func: &str, args: &[&str]) -> String {
@@ -349,7 +349,7 @@ impl AjoseBridge {
             _ => format!("[py] {}.{}({:?})", module, func, args),
         }
     }
-    
+
     /// Execute a shell command (sandboxed)
     /// Ifá syntax: coop.sh("echo hello")
     pub fn sh(&self, cmd: &str) -> Result<String, String> {
@@ -360,7 +360,7 @@ impl AjoseBridge {
                 return Err(format!("Blocked command: {}", b));
             }
         }
-        
+
         // Execute (in production, use proper sandboxing)
         #[cfg(windows)]
         {
@@ -379,14 +379,14 @@ impl AjoseBridge {
                 .map_err(|e| e.to_string())
         }
     }
-    
+
     /// Load and call a Rust function via FFI
     /// Ifá syntax: coop.rust("add", [5, 3])
     pub fn rust(&self, _func: &str, _args: &[i64]) -> i64 {
         // Placeholder - would use dlopen/dlsym in production
         0
     }
-    
+
     /// Import a Python module for caching
     pub fn import_py(&mut self, module: &str) {
         self.py_cache.insert(module.to_string(), module.to_string());
@@ -402,76 +402,76 @@ impl Default for AjoseBridge {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_signal_basic() {
         let signal = Signal::new(42);
         assert_eq!(signal.get(), 42);
-        
+
         signal.set(100);
         assert_eq!(signal.get(), 100);
     }
-    
+
     #[test]
     fn test_signal_subscribe() {
         let signal = Signal::new(0);
         let received = Rc::new(Cell::new(0));
         let received_clone = received.clone();
-        
+
         signal.subscribe(move |v| {
             received_clone.set(*v);
         });
-        
+
         signal.set(42);
         assert_eq!(received.get(), 42);
     }
-    
+
     #[test]
     fn test_signal_update() {
         let signal = Signal::new(vec![1, 2, 3]);
         signal.update(|v| v.push(4));
         assert_eq!(signal.get(), vec![1, 2, 3, 4]);
     }
-    
+
     #[test]
     fn test_computed() {
         let a = Signal::new(2);
         let b = Signal::new(3);
-        
+
         let a_clone = a.clone();
         let b_clone = b.clone();
         let sum = Computed::new(move || a_clone.get() + b_clone.get());
-        
+
         assert_eq!(sum.get(), 5);
-        
+
         a.set(10);
         assert_eq!(sum.get(), 13);
     }
-    
+
     #[test]
     fn test_ajose_bind() {
         let source: Rc<RefCell<i32>> = Rc::new(RefCell::new(10));
         let target: Rc<RefCell<String>> = Rc::new(RefCell::new(String::new()));
-        
+
         let mut engine: Ajose<i32, String> = Ajose::new();
         engine.bind(&source, &target, |s, t| {
             *t = format!("Value: {}", s);
         });
-        
+
         assert_eq!(*target.borrow(), "Value: 10");
-        
+
         *source.borrow_mut() = 42;
         engine.propagate(&source);
-        
+
         assert_eq!(*target.borrow(), "Value: 42");
     }
-    
+
     #[test]
     fn test_ajose_bridge_py() {
         let mut bridge = AjoseBridge::new();
         let result = bridge.py("math", "sqrt", &["16"]);
         assert_eq!(result, "4");
-        
+
         let result = bridge.py("math", "factorial", &["5"]);
         assert_eq!(result, "120");
     }

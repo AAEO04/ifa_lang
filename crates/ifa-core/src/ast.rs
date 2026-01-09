@@ -27,11 +27,11 @@ pub enum Visibility {
     /// Yoruba: ikoko (secret), àdáni (private)
     #[default]
     Private,
-    
+
     /// Public - accessible from anywhere
     /// Yoruba: gbangba (open/public)
     Public,
-    
+
     /// Package/crate internal - accessible within same package
     /// Yoruba: gbangba(ile) (public within home)
     Crate,
@@ -48,26 +48,20 @@ pub enum Statement {
         visibility: Visibility,
         span: Span,
     },
-    
+
     /// Assignment: x = 5;
     Assignment {
         target: AssignTarget,
         value: Expression,
         span: Span,
     },
-    
+
     /// Import: iba std.otura;
-    Import {
-        path: Vec<String>,
-        span: Span,
-    },
-    
+    Import { path: Vec<String>, span: Span },
+
     /// Odù call: Obara.fikun(10);
-    Instruction {
-        call: OduCall,
-        span: Span,
-    },
-    
+    Instruction { call: OduCall, span: Span },
+
     /// Class definition: odu Server { }
     OduDef {
         name: String,
@@ -75,7 +69,7 @@ pub enum Statement {
         body: Vec<Statement>,
         span: Span,
     },
-    
+
     /// Function definition: ese start() { }
     EseDef {
         name: String,
@@ -84,7 +78,7 @@ pub enum Statement {
         body: Vec<Statement>,
         span: Span,
     },
-    
+
     /// If statement
     If {
         condition: Expression,
@@ -92,14 +86,14 @@ pub enum Statement {
         else_body: Option<Vec<Statement>>,
         span: Span,
     },
-    
+
     /// While loop
     While {
         condition: Expression,
         body: Vec<Statement>,
         span: Span,
     },
-    
+
     /// For loop: fun i ninu items { }
     For {
         var: String,
@@ -107,50 +101,48 @@ pub enum Statement {
         body: Vec<Statement>,
         span: Span,
     },
-    
+
     /// Return statement
     Return {
         value: Option<Expression>,
         span: Span,
     },
-    
+
     /// End statement: ase;
-    Ase {
-        span: Span,
-    },
-    
+    Ase { span: Span },
+
     /// Taboo declaration: èèwọ̀: Ose -> Odi;
     Taboo {
-        source: String,  // Source domain (forbidden caller)
-        target: String,  // Target domain (forbidden callee)
+        source: String, // Source domain (forbidden caller)
+        target: String, // Target domain (forbidden callee)
         span: Span,
     },
-    
+
     /// Assertion/Constraint: ewo x > 0; or assert balance >= 0, "must be positive";
     Ewo {
         condition: Expression,
         message: Option<String>,
         span: Span,
     },
-    
+
     /// Opon (memory) directive: #opon kekere;
     Opon {
-        size: String,  // kekere, arinrin, nla, ailopin (or English aliases)
+        size: String, // kekere, arinrin, nla, ailopin (or English aliases)
         span: Span,
     },
-    
+
     /// Expression statement (for calls without semicolon handling)
-    Expr {
-        expr: Expression,
-        span: Span,
-    },
+    Expr { expr: Expression, span: Span },
 }
 
 /// Assignment target
 #[derive(Debug, Clone)]
 pub enum AssignTarget {
     Variable(String),
-    Index { name: String, index: Box<Expression> },
+    Index {
+        name: String,
+        index: Box<Expression>,
+    },
 }
 
 /// Function parameter
@@ -178,58 +170,55 @@ pub enum TypeHint {
 pub enum Expression {
     /// Integer literal
     Int(i64),
-    
+
     /// Float literal
     Float(f64),
-    
+
     /// String literal
     String(String),
-    
+
     /// Boolean literal
     Bool(bool),
-    
+
     /// Nil/null
     Nil,
-    
+
     /// Variable reference
     Identifier(String),
-    
+
     /// Binary operation
     BinaryOp {
         left: Box<Expression>,
         op: BinaryOperator,
         right: Box<Expression>,
     },
-    
+
     /// Unary operation
     UnaryOp {
         op: UnaryOperator,
         expr: Box<Expression>,
     },
-    
+
     /// Odù domain call: Obara.fikun(10)
     OduCall(OduCall),
-    
+
     /// Method call: obj.method(args)
     MethodCall {
         object: Box<Expression>,
         method: String,
         args: Vec<Expression>,
     },
-    
+
     /// Function call: func(args)
-    Call {
-        name: String,
-        args: Vec<Expression>,
-    },
-    
+    Call { name: String, args: Vec<Expression> },
+
     /// List literal: [1, 2, 3]
     List(Vec<Expression>),
-    
+
     /// Map literal: { "key": value }
     Map(Vec<(Expression, Expression)>),
-    
-    /// Index access: arr[0]
+
+    /// Index access: arr\[0\]
     Index {
         object: Box<Expression>,
         index: Box<Expression>,
@@ -254,7 +243,7 @@ pub enum BinaryOperator {
     Mul,
     Div,
     Mod,
-    
+
     // Comparison
     Eq,
     NotEq,
@@ -262,7 +251,7 @@ pub enum BinaryOperator {
     LtEq,
     Gt,
     GtEq,
-    
+
     // Logical
     And,
     Or,

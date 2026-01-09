@@ -1,7 +1,7 @@
 //! # Ifá-Embedded
-//! 
+//!
 //! Minimal no_std runtime for embedded Ifá-Lang applications.
-//! 
+//!
 //! ## Targets
 //! - ESP32 (Xtensa/RISC-V)
 //! - STM32 (ARM Cortex-M)
@@ -10,7 +10,7 @@
 #![cfg_attr(not(test), no_std)]
 
 // Re-export core types
-pub use ifa_core::{IfaValue, Bytecode, OpCode};
+pub use ifa_core::{Bytecode, IfaValue, OpCode};
 
 /// Embedded VM configuration
 pub struct EmbeddedConfig {
@@ -44,10 +44,10 @@ impl EmbeddedConfig {
 pub mod hal {
     /// GPIO placeholder
     pub struct Gpio;
-    
+
     /// LED control
     pub struct Led;
-    
+
     /// Serial/UART
     pub struct Serial;
 }
@@ -55,7 +55,7 @@ pub mod hal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_config() {
         let config = EmbeddedConfig::default();

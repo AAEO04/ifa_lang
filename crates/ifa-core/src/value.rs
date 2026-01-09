@@ -1,13 +1,13 @@
 //! # IfaValue - Dynamic Value Type
-//! 
+//!
 //! The universal container for Ifá-Lang's dynamic type system.
 //! Supports integers, floats, strings, booleans, lists, maps, objects, and functions.
 
-use std::fmt;
-use std::cmp::Ordering;
-use std::ops::{Add, Sub, Mul, Div, Rem, Not, Neg};
-use std::collections::HashMap;
 use std::cell::RefCell;
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fmt;
+use std::ops::{Add, Div, Mul, Neg, Not, Rem, Sub};
 use std::rc::Rc;
 
 use crate::error::{IfaError, IfaResult};
@@ -75,17 +75,16 @@ impl fmt::Display for IfaValue {
             IfaValue::List(v) => {
                 let elems: Vec<String> = v.iter().map(|e| e.to_string()).collect();
                 write!(f, "[{}]", elems.join(", "))
-            },
+            }
             IfaValue::Map(m) => {
-                let items: Vec<String> = m.iter()
-                    .map(|(k, v)| format!("\"{}\": {}", k, v))
-                    .collect();
+                let items: Vec<String> =
+                    m.iter().map(|(k, v)| format!("\"{}\": {}", k, v)).collect();
                 write!(f, "{{{}}}", items.join(", "))
-            },
+            }
             IfaValue::Object(obj_ref) => {
                 let obj = obj_ref.borrow();
                 write!(f, "<Object with {} fields>", obj.len())
-            },
+            }
             IfaValue::Fn(_) => write!(f, "<function>"),
             IfaValue::AstFn { name, .. } => write!(f, "<fn {}>", name),
             IfaValue::Null => write!(f, "àìsí"),
@@ -102,11 +101,10 @@ impl Add for IfaValue {
 
     fn add(self, other: IfaValue) -> IfaValue {
         match (&self, &other) {
-            (IfaValue::Int(a), IfaValue::Int(b)) => {
-                a.checked_add(*b)
-                    .map(IfaValue::Int)
-                    .unwrap_or_else(|| IfaValue::Float(*a as f64 + *b as f64))
-            },
+            (IfaValue::Int(a), IfaValue::Int(b)) => a
+                .checked_add(*b)
+                .map(IfaValue::Int)
+                .unwrap_or_else(|| IfaValue::Float(*a as f64 + *b as f64)),
             (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a + b),
             (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float(*a as f64 + b),
             (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a + *b as f64),
@@ -117,7 +115,7 @@ impl Add for IfaValue {
                 let mut result = a.clone();
                 result.extend(b.clone());
                 IfaValue::List(result)
-            },
+            }
             _ => IfaValue::Null,
         }
     }
@@ -128,11 +126,10 @@ impl Sub for IfaValue {
 
     fn sub(self, other: IfaValue) -> IfaValue {
         match (&self, &other) {
-            (IfaValue::Int(a), IfaValue::Int(b)) => {
-                a.checked_sub(*b)
-                    .map(IfaValue::Int)
-                    .unwrap_or_else(|| IfaValue::Float(*a as f64 - *b as f64))
-            },
+            (IfaValue::Int(a), IfaValue::Int(b)) => a
+                .checked_sub(*b)
+                .map(IfaValue::Int)
+                .unwrap_or_else(|| IfaValue::Float(*a as f64 - *b as f64)),
             (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a - b),
             (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float(*a as f64 - b),
             (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a - *b as f64),
@@ -146,20 +143,15 @@ impl Mul for IfaValue {
 
     fn mul(self, other: IfaValue) -> IfaValue {
         match (&self, &other) {
-            (IfaValue::Int(a), IfaValue::Int(b)) => {
-                a.checked_mul(*b)
-                    .map(IfaValue::Int)
-                    .unwrap_or_else(|| IfaValue::Float(*a as f64 * *b as f64))
-            },
+            (IfaValue::Int(a), IfaValue::Int(b)) => a
+                .checked_mul(*b)
+                .map(IfaValue::Int)
+                .unwrap_or_else(|| IfaValue::Float(*a as f64 * *b as f64)),
             (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a * b),
             (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float(*a as f64 * b),
             (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a * *b as f64),
-            (IfaValue::Str(s), IfaValue::Int(n)) if *n >= 0 => {
-                IfaValue::Str(s.repeat(*n as usize))
-            },
-            (IfaValue::Int(n), IfaValue::Str(s)) if *n >= 0 => {
-                IfaValue::Str(s.repeat(*n as usize))
-            },
+            (IfaValue::Str(s), IfaValue::Int(n)) if *n >= 0 => IfaValue::Str(s.repeat(*n as usize)),
+            (IfaValue::Int(n), IfaValue::Str(s)) if *n >= 0 => IfaValue::Str(s.repeat(*n as usize)),
             _ => IfaValue::Null,
         }
     }
@@ -171,21 +163,29 @@ impl Div for IfaValue {
     fn div(self, other: IfaValue) -> IfaValue {
         match (&self, &other) {
             (IfaValue::Int(a), IfaValue::Int(b)) => {
-                if *b == 0 { return IfaValue::Null; }
+                if *b == 0 {
+                    return IfaValue::Null;
+                }
                 IfaValue::Float(*a as f64 / *b as f64)
-            },
+            }
             (IfaValue::Float(a), IfaValue::Float(b)) => {
-                if *b == 0.0 { return IfaValue::Null; }
+                if *b == 0.0 {
+                    return IfaValue::Null;
+                }
                 IfaValue::Float(a / b)
-            },
+            }
             (IfaValue::Int(a), IfaValue::Float(b)) => {
-                if *b == 0.0 { return IfaValue::Null; }
+                if *b == 0.0 {
+                    return IfaValue::Null;
+                }
                 IfaValue::Float(*a as f64 / b)
-            },
+            }
             (IfaValue::Float(a), IfaValue::Int(b)) => {
-                if *b == 0 { return IfaValue::Null; }
+                if *b == 0 {
+                    return IfaValue::Null;
+                }
                 IfaValue::Float(a / *b as f64)
-            },
+            }
             _ => IfaValue::Null,
         }
     }
@@ -197,13 +197,17 @@ impl Rem for IfaValue {
     fn rem(self, other: IfaValue) -> IfaValue {
         match (&self, &other) {
             (IfaValue::Int(a), IfaValue::Int(b)) => {
-                if *b == 0 { return IfaValue::Null; }
+                if *b == 0 {
+                    return IfaValue::Null;
+                }
                 IfaValue::Int(a % b)
-            },
+            }
             (IfaValue::Float(a), IfaValue::Float(b)) => {
-                if *b == 0.0 { return IfaValue::Null; }
+                if *b == 0.0 {
+                    return IfaValue::Null;
+                }
                 IfaValue::Float(a % b)
-            },
+            }
             _ => IfaValue::Null,
         }
     }
@@ -211,7 +215,7 @@ impl Rem for IfaValue {
 
 impl Neg for IfaValue {
     type Output = IfaValue;
-    
+
     fn neg(self) -> IfaValue {
         match self {
             IfaValue::Int(a) => IfaValue::Int(-a),
@@ -223,7 +227,7 @@ impl Neg for IfaValue {
 
 impl Not for IfaValue {
     type Output = IfaValue;
-    
+
     fn not(self) -> IfaValue {
         IfaValue::Bool(!self.is_truthy())
     }
@@ -282,7 +286,7 @@ impl IfaValue {
             IfaValue::Null => false,
         }
     }
-    
+
     /// Get length (for strings, lists, maps)
     pub fn len(&self) -> usize {
         match self {
@@ -292,12 +296,12 @@ impl IfaValue {
             _ => 0,
         }
     }
-    
+
     /// Check if empty
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    
+
     /// Get type name as string
     pub fn type_name(&self) -> &'static str {
         match self {
@@ -313,7 +317,7 @@ impl IfaValue {
             IfaValue::Null => "Null",
         }
     }
-    
+
     /// Index access with Python-style negative indexing
     pub fn get(&self, index: &IfaValue) -> IfaResult<IfaValue> {
         match (self, index) {
@@ -321,31 +325,38 @@ impl IfaValue {
                 let len = l.len() as i64;
                 let idx = if *i < 0 { len + *i } else { *i };
                 if idx < 0 || idx >= len {
-                    Err(IfaError::IndexOutOfBounds { index: *i, length: l.len() })
+                    Err(IfaError::IndexOutOfBounds {
+                        index: *i,
+                        length: l.len(),
+                    })
                 } else {
                     Ok(l[idx as usize].clone())
                 }
-            },
+            }
             (IfaValue::Str(s), IfaValue::Int(i)) => {
                 let chars: Vec<char> = s.chars().collect();
                 let len = chars.len() as i64;
                 let idx = if *i < 0 { len + *i } else { *i };
                 if idx < 0 || idx >= len {
-                    Err(IfaError::IndexOutOfBounds { index: *i, length: chars.len() })
+                    Err(IfaError::IndexOutOfBounds {
+                        index: *i,
+                        length: chars.len(),
+                    })
                 } else {
                     Ok(IfaValue::Str(chars[idx as usize].to_string()))
                 }
-            },
-            (IfaValue::Map(m), IfaValue::Str(k)) => {
-                m.get(k).cloned().ok_or_else(|| IfaError::KeyNotFound(k.clone()))
-            },
+            }
+            (IfaValue::Map(m), IfaValue::Str(k)) => m
+                .get(k)
+                .cloned()
+                .ok_or_else(|| IfaError::KeyNotFound(k.clone())),
             _ => Err(IfaError::TypeError {
                 expected: "indexable type".to_string(),
                 got: self.type_name().to_string(),
             }),
         }
     }
-    
+
     /// Set value at index
     pub fn set(&mut self, index: &IfaValue, value: IfaValue) -> IfaResult<()> {
         match (self, index) {
@@ -355,20 +366,23 @@ impl IfaValue {
                     l[idx] = value;
                     Ok(())
                 } else {
-                    Err(IfaError::IndexOutOfBounds { index: *i, length: l.len() })
+                    Err(IfaError::IndexOutOfBounds {
+                        index: *i,
+                        length: l.len(),
+                    })
                 }
-            },
+            }
             (IfaValue::Map(ref mut m), IfaValue::Str(k)) => {
                 m.insert(k.clone(), value);
                 Ok(())
-            },
+            }
             _ => Err(IfaError::TypeError {
                 expected: "mutable indexable type".to_string(),
                 got: "unknown".to_string(),
             }),
         }
     }
-    
+
     /// Push to list
     pub fn push(&mut self, value: IfaValue) -> IfaResult<()> {
         if let IfaValue::List(ref mut l) = self {
@@ -381,11 +395,14 @@ impl IfaValue {
             })
         }
     }
-    
+
     /// Pop from list
     pub fn pop(&mut self) -> IfaResult<IfaValue> {
         if let IfaValue::List(ref mut l) = self {
-            l.pop().ok_or(IfaError::IndexOutOfBounds { index: -1, length: 0 })
+            l.pop().ok_or(IfaError::IndexOutOfBounds {
+                index: -1,
+                length: 0,
+            })
         } else {
             Err(IfaError::TypeError {
                 expected: "List".to_string(),
@@ -393,7 +410,7 @@ impl IfaValue {
             })
         }
     }
-    
+
     /// Slice (for strings and lists)
     pub fn slice(&self, start: i64, end: i64) -> IfaResult<IfaValue> {
         match self {
@@ -407,7 +424,7 @@ impl IfaValue {
                 } else {
                     Ok(IfaValue::Str(chars[start_idx..end_idx].iter().collect()))
                 }
-            },
+            }
             IfaValue::List(l) => {
                 let len = l.len() as i64;
                 let start_idx = start.max(0) as usize;
@@ -417,7 +434,7 @@ impl IfaValue {
                 } else {
                     Ok(IfaValue::List(l[start_idx..end_idx].to_vec()))
                 }
-            },
+            }
             _ => Err(IfaError::TypeError {
                 expected: "sliceable type".to_string(),
                 got: self.type_name().to_string(),
@@ -431,23 +448,33 @@ impl IfaValue {
 // =============================================================================
 
 impl From<i64> for IfaValue {
-    fn from(v: i64) -> Self { IfaValue::Int(v) }
+    fn from(v: i64) -> Self {
+        IfaValue::Int(v)
+    }
 }
 
 impl From<f64> for IfaValue {
-    fn from(v: f64) -> Self { IfaValue::Float(v) }
+    fn from(v: f64) -> Self {
+        IfaValue::Float(v)
+    }
 }
 
 impl From<String> for IfaValue {
-    fn from(v: String) -> Self { IfaValue::Str(v) }
+    fn from(v: String) -> Self {
+        IfaValue::Str(v)
+    }
 }
 
 impl From<&str> for IfaValue {
-    fn from(v: &str) -> Self { IfaValue::Str(v.to_string()) }
+    fn from(v: &str) -> Self {
+        IfaValue::Str(v.to_string())
+    }
 }
 
 impl From<bool> for IfaValue {
-    fn from(v: bool) -> Self { IfaValue::Bool(v) }
+    fn from(v: bool) -> Self {
+        IfaValue::Bool(v)
+    }
 }
 
 impl<T: Into<IfaValue>> From<Vec<T>> for IfaValue {
@@ -457,13 +484,15 @@ impl<T: Into<IfaValue>> From<Vec<T>> for IfaValue {
 }
 
 impl From<()> for IfaValue {
-    fn from(_: ()) -> Self { IfaValue::Null }
+    fn from(_: ()) -> Self {
+        IfaValue::Null
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_arithmetic() {
         let a = IfaValue::Int(10);
@@ -472,7 +501,7 @@ mod tests {
         assert_eq!(a.clone() - b.clone(), IfaValue::Int(5));
         assert_eq!(a.clone() * b.clone(), IfaValue::Int(50));
     }
-    
+
     #[test]
     fn test_checked_overflow() {
         let max = IfaValue::Int(i64::MAX);
@@ -484,18 +513,14 @@ mod tests {
             panic!("Should have promoted to Float on overflow");
         }
     }
-    
+
     #[test]
     fn test_negative_indexing() {
-        let list = IfaValue::List(vec![
-            IfaValue::Int(1),
-            IfaValue::Int(2),
-            IfaValue::Int(3),
-        ]);
+        let list = IfaValue::List(vec![IfaValue::Int(1), IfaValue::Int(2), IfaValue::Int(3)]);
         assert_eq!(list.get(&IfaValue::Int(-1)).unwrap(), IfaValue::Int(3));
         assert_eq!(list.get(&IfaValue::Int(-2)).unwrap(), IfaValue::Int(2));
     }
-    
+
     #[test]
     fn test_truthy() {
         assert!(IfaValue::Bool(true).is_truthy());

@@ -1,5 +1,5 @@
 //! # Ifá-Lang CLI
-//! 
+//!
 //! Command-line interface for Ifá-Lang - The Yoruba Programming Language.
 
 mod docgen;
@@ -30,40 +30,40 @@ enum Commands {
         /// Arguments to pass to the program
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
-        
+
         /// Allow all permissions (insecure)
         #[arg(long)]
         allow_all: bool,
-        
+
         /// Allow read access to specific paths
         #[arg(long)]
         allow_read: Vec<PathBuf>,
-        
+
         /// Allow write access to specific paths
         #[arg(long)]
         allow_write: Vec<PathBuf>,
-        
+
         /// Allow network access to specific domains
         #[arg(long)]
         allow_net: Vec<String>,
-        
+
         /// Allow environment variable access
         #[arg(long)]
         allow_env: Vec<String>,
-        
+
         /// Allow execution of time functions
         #[arg(long)]
         allow_time: bool,
-        
+
         /// Allow random number generation (on by default)
         #[arg(long, default_value = "true")]
         allow_random: bool,
-        
+
         /// Sandbox mode: wasm (OmniBox WASM sandbox), native (Igbale OS sandbox), none (no sandbox)
         #[arg(long, default_value = "none")]
         sandbox: String,
     },
-    
+
     /// Compile to bytecode (.ifab)
     Bytecode {
         /// Path to .ifa source file
@@ -72,13 +72,13 @@ enum Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
-    
+
     /// Run compiled bytecode
     Runb {
         /// Path to .ifab bytecode file
         file: PathBuf,
     },
-    
+
     /// Build native executable
     Build {
         /// Path to .ifa source file
@@ -90,7 +90,7 @@ enum Commands {
         #[arg(long)]
         target: Option<String>,
     },
-    
+
     /// Flash to embedded device
     Flash {
         /// Path to .ifa source file
@@ -102,25 +102,25 @@ enum Commands {
         #[arg(long)]
         port: Option<String>,
     },
-    
+
     /// Run in sandbox
     Sandbox {
         #[command(subcommand)]
         command: SandboxCommands,
     },
-    
+
     /// Package management (Ọjà)
     Oja {
         #[command(subcommand)]
         command: OjaCommands,
     },
-    
+
     /// Check syntax without running
     Check {
         /// Path to .ifa source file
         file: PathBuf,
     },
-    
+
     /// Format source code
     Fmt {
         /// Path to .ifa source file
@@ -129,16 +129,16 @@ enum Commands {
         #[arg(long)]
         check: bool,
     },
-    
+
     /// Start Language Server (LSP)
     Lsp,
-    
+
     /// Interactive REPL
     Repl,
-    
+
     /// Show version info
     Version,
-    
+
     /// Run the Babalawo linter/type checker
     Babalawo {
         /// Path to .ifa file or directory
@@ -150,7 +150,7 @@ enum Commands {
         #[arg(long, default_value = "minimal")]
         format: String,
     },
-    
+
     /// Generate documentation
     Doc {
         /// Input directory containing .ifa files
@@ -159,7 +159,7 @@ enum Commands {
         #[arg(short, long, default_value = "docs")]
         output: PathBuf,
     },
-    
+
     /// Run tests (Idanwo)
     Test {
         /// Path to test file or directory
@@ -229,42 +229,54 @@ enum OjaCommands {
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    
+
     let cli = Cli::parse();
-    
+
     match cli.command {
-        Commands::Run { 
-            file, 
-            args: _, 
-            allow_all, 
-            allow_read, 
-            allow_write, 
-            allow_net, 
-            allow_env, 
-            allow_time, 
+        Commands::Run {
+            file,
+            args: _,
+            allow_all,
+            allow_read,
+            allow_write,
+            allow_net,
+            allow_env,
+            allow_time,
             allow_random,
             sandbox,
         } => {
             use ifa_core::{parse, Interpreter};
             use ifa_sandbox::{CapabilitySet, Ofun};
-            
+
             println!("Ifa-Lang Interpreter v1.2.0");
             println!();
             println!("Running: {}", file.display());
-            
+
             // Configure Capabilities
             let mut caps = CapabilitySet::new();
-            
+
             if allow_all {
-                // In a real implementation this would check a wildcard, 
+                // In a real implementation this would check a wildcard,
                 // but for now we'll just add common roots/domains
                 println!("Warning: Running with all permissions allowed!");
-                caps.grant(Ofun::ReadFiles { root: PathBuf::from("/") });
-                caps.grant(Ofun::ReadFiles { root: PathBuf::from("C:\\") });
-                caps.grant(Ofun::WriteFiles { root: PathBuf::from("/") });
-                caps.grant(Ofun::WriteFiles { root: PathBuf::from("C:\\") });
-                caps.grant(Ofun::Network { domains: vec!["*".to_string()] });
-                caps.grant(Ofun::Environment { keys: vec!["*".to_string()] });
+                caps.grant(Ofun::ReadFiles {
+                    root: PathBuf::from("/"),
+                });
+                caps.grant(Ofun::ReadFiles {
+                    root: PathBuf::from("C:\\"),
+                });
+                caps.grant(Ofun::WriteFiles {
+                    root: PathBuf::from("/"),
+                });
+                caps.grant(Ofun::WriteFiles {
+                    root: PathBuf::from("C:\\"),
+                });
+                caps.grant(Ofun::Network {
+                    domains: vec!["*".to_string()],
+                });
+                caps.grant(Ofun::Environment {
+                    keys: vec!["*".to_string()],
+                });
                 caps.grant(Ofun::Time);
                 caps.grant(Ofun::Random);
                 caps.grant(Ofun::Stdio);
@@ -289,7 +301,7 @@ fn main() -> Result<()> {
                 if allow_random {
                     caps.grant(Ofun::Random);
                 }
-                
+
                 // Always allow reading the script itself and its directory (for imports)
                 if let Ok(abs_path) = file.canonicalize() {
                     caps.grant(Ofun::ReadFiles { root: abs_path });
@@ -300,40 +312,42 @@ fn main() -> Result<()> {
                     }
                 }
             }
-            
+
             println!();
-            
+
             // Read source file
             let source = std::fs::read_to_string(&file)
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to read file: {}", e))?;
-            
+
             // Parse
-            let program = parse(&source)
-                .map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
-            
+            let program =
+                parse(&source).map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
+
             println!("Parsed {} statements", program.statements.len());
             println!("---");
             println!();
-            
+
             // Interpret (with_file enables imports relative to script location)
             let mut interpreter = Interpreter::with_file(&file);
             interpreter.set_capabilities(caps.clone());
-            
+
             // Handle sandbox modes
             match sandbox.as_str() {
                 "wasm" => {
                     use ifa_sandbox::{SandboxConfig, SecurityProfile};
-                    
+
                     println!("Running in OmniBox (WASM) sandbox...");
-                    
+
                     // Create sandbox config from capabilities
                     let mut config = SandboxConfig::new(SecurityProfile::Standard);
                     config.capabilities = caps;
                     config.force_wasm = true;
-                    
+
                     // Note: Full WASM execution would compile .ifa to .wasm first
                     // For now, we run interpreted but with the capability restrictions
-                    println!("   (WASM compilation not yet implemented - using capability enforcement)");
+                    println!(
+                        "   (WASM compilation not yet implemented - using capability enforcement)"
+                    );
                 }
                 "native" => {
                     println!("Running in Igbale (native OS) sandbox...");
@@ -347,7 +361,7 @@ fn main() -> Result<()> {
                     println!("Warning: Unknown sandbox mode '{}', using 'none'", sandbox);
                 }
             }
-            
+
             match interpreter.execute(&program) {
                 Ok(_) => {
                     println!();
@@ -360,42 +374,50 @@ fn main() -> Result<()> {
                     println!("Runtime error: {}", e);
                 }
             }
-            
+
             Ok(())
         }
-        
+
         Commands::Bytecode { file, output } => {
             let out = output.unwrap_or_else(|| file.with_extension("ifab"));
-            println!("📦 Compiling to bytecode: {} -> {}", file.display(), out.display());
-            
+            println!(
+                "📦 Compiling to bytecode: {} -> {}",
+                file.display(),
+                out.display()
+            );
+
             // Read source
             let source = std::fs::read_to_string(&file)
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to read file: {}", e))?;
-            
+
             // Compile to bytecode
             let bytecode = ifa_core::compile(&source)
                 .map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
-            
+
             // Write .ifab file
             let bytes = bytecode.to_bytes();
             std::fs::write(&out, bytes)
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to write bytecode: {}", e))?;
-            
-            println!("Compiled {} bytes to {}", bytecode.code.len(), out.display());
+
+            println!(
+                "Compiled {} bytes to {}",
+                bytecode.code.len(),
+                out.display()
+            );
             Ok(())
         }
-        
+
         Commands::Runb { file } => {
             println!("⚡ Running bytecode: {}", file.display());
-            
+
             // Read bytecode
             let bytes = std::fs::read(&file)
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to read bytecode: {}", e))?;
-            
+
             // Deserialize
             let bytecode = ifa_core::Bytecode::from_bytes(&bytes)
                 .map_err(|e| color_eyre::eyre::eyre!("Invalid bytecode: {}", e))?;
-            
+
             // Execute in VM
             let mut vm = ifa_core::IfaVM::new();
             match vm.execute(&bytecode) {
@@ -406,52 +428,59 @@ fn main() -> Result<()> {
                     println!("Runtime error: {}", e);
                 }
             }
-            
+
             Ok(())
         }
-        
-        Commands::Build { file, output, target } => {
+
+        Commands::Build {
+            file,
+            output,
+            target,
+        } => {
             use std::process::Command;
-            
+
             let out = output.unwrap_or_else(|| {
                 let stem = file.file_stem().unwrap_or_default();
                 PathBuf::from(stem)
             });
             println!("🔨 Building: {} -> {}", file.display(), out.display());
-            
+
             // Check if rustc is available
             let rustc_check = Command::new("rustc").arg("--version").output();
             if rustc_check.is_err() {
                 println!("Error: Rust toolchain not installed.");
                 println!("   Native compilation requires Rust. Install via:");
                 println!("   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh");
-                return Err(color_eyre::eyre::eyre!("Rust toolchain required for native builds"));
+                return Err(color_eyre::eyre::eyre!(
+                    "Rust toolchain required for native builds"
+                ));
             }
-            
+
             // Read source file
             let source = std::fs::read_to_string(&file)
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to read source: {}", e))?;
-            
+
             // Parse and transpile to Rust
             println!("   📝 Parsing Ifá source...");
             let program = ifa_core::parse(&source)
                 .map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
-            
+
             println!("   🔄 Transpiling to Rust...");
             let rust_code = ifa_core::transpile_to_rust(&program);
-            
+
             // Create temp Cargo project
             let temp_dir = std::env::temp_dir().join(format!("ifa_build_{}", std::process::id()));
             std::fs::create_dir_all(&temp_dir)?;
-            
+
             let src_dir = temp_dir.join("src");
             std::fs::create_dir_all(&src_dir)?;
-            
+
             // Write main.rs
             std::fs::write(src_dir.join("main.rs"), &rust_code)?;
-            
+
             // Write Cargo.toml
-            let cargo_toml = format!(r#"[package]
+            let cargo_toml = format!(
+                r#"[package]
 name = "{}"
 version = "0.1.0"
 edition = "2021"
@@ -462,63 +491,83 @@ ifa-core = {{ path = "{}" }}
 [profile.release]
 opt-level = 3
 lto = true
-"#, 
+"#,
                 out.file_stem().unwrap_or_default().to_string_lossy(),
-                std::env::current_dir()?.join("crates/ifa-core").display().to_string().replace("\\", "/")
+                std::env::current_dir()?
+                    .join("crates/ifa-core")
+                    .display()
+                    .to_string()
+                    .replace("\\", "/")
             );
             std::fs::write(temp_dir.join("Cargo.toml"), cargo_toml)?;
-            
+
             // Build with cargo
             println!("   Compiling (this may take a moment)...");
-            
+
             let mut cmd = Command::new("cargo");
             cmd.arg("build").arg("--release").current_dir(&temp_dir);
-            
+
             if let Some(ref t) = target {
                 cmd.arg("--target").arg(t);
                 println!("   🎯 Target: {}", t);
             }
-            
+
             let build_output = cmd.output()?;
-            
+
             if !build_output.status.success() {
                 let stderr = String::from_utf8_lossy(&build_output.stderr);
                 println!("Build failed:\n{}", stderr);
                 return Err(color_eyre::eyre::eyre!("Cargo build failed"));
             }
-            
+
             // Copy binary to output location
             let binary_name = if cfg!(windows) {
-                format!("{}.exe", out.file_stem().unwrap_or_default().to_string_lossy())
+                format!(
+                    "{}.exe",
+                    out.file_stem().unwrap_or_default().to_string_lossy()
+                )
             } else {
-                out.file_stem().unwrap_or_default().to_string_lossy().to_string()
+                out.file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string()
             };
-            
+
             let built_binary = if let Some(ref t) = target {
-                temp_dir.join("target").join(t).join("release").join(&binary_name)
+                temp_dir
+                    .join("target")
+                    .join(t)
+                    .join("release")
+                    .join(&binary_name)
             } else {
                 temp_dir.join("target/release").join(&binary_name)
             };
-            
+
             // Ensure output path has .exe on Windows
             let final_output = if cfg!(windows) && !out.to_string_lossy().ends_with(".exe") {
                 PathBuf::from(format!("{}.exe", out.display()))
             } else {
                 out.clone()
             };
-            
+
             std::fs::copy(&built_binary, &final_output)?;
-            
+
             // Cleanup temp directory
             let _ = std::fs::remove_dir_all(&temp_dir);
-            
+
             let file_size = std::fs::metadata(&final_output)?.len();
             println!("Built: {} ({} bytes)", final_output.display(), file_size);
-            println!("   Run with: .\\{}", final_output.file_name().unwrap_or_default().to_string_lossy());
-            
+            println!(
+                "   Run with: .\\{}",
+                final_output
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+            );
+
             Ok(())
         }
-        
+
         Commands::Flash { file, target, port } => {
             println!("🔌 Flashing to: {}", target);
             println!("   Source: {}", file.display());
@@ -529,7 +578,7 @@ lto = true
                 .map_err(|e| color_eyre::eyre::eyre!(e))?;
             Ok(())
         }
-        
+
         Commands::Sandbox { command } => {
             match command {
                 SandboxCommands::Run { file, timeout } => {
@@ -540,12 +589,12 @@ lto = true
                     };
                     let sb = sandbox::Igbale::new(config);
                     let result = sb.run(&file)?;
-                    
+
                     println!("{}", result.stdout);
                     if !result.stderr.is_empty() {
                         eprintln!("{}", result.stderr);
                     }
-                    
+
                     if result.timed_out {
                         println!("Execution timed out");
                     }
@@ -559,11 +608,11 @@ lto = true
             }
             Ok(())
         }
-        
+
         Commands::Oja { command } => {
             let project_root = std::env::current_dir()?;
             let oja_manager = oja::Oja::new(&project_root);
-            
+
             match command {
                 OjaCommands::Init { name } => {
                     oja_manager.init(&name)?;
@@ -595,14 +644,14 @@ lto = true
             }
             Ok(())
         }
-        
+
         Commands::Check { file } => {
             println!("🔍 Checking: {}", file.display());
             // TODO: Implement syntax checker
             println!("No syntax errors");
             Ok(())
         }
-        
+
         Commands::Fmt { file, check } => {
             if check {
                 println!("🔍 Checking format: {}", file.display());
@@ -612,16 +661,16 @@ lto = true
             // TODO: Implement formatter
             Ok(())
         }
-        
+
         Commands::Lsp => {
             println!("🚀 Starting LSP server...");
             // TODO: Implement LSP
             Ok(())
         }
-        
+
         Commands::Repl => {
-            use std::io::{self, Write, BufRead};
-            
+            use std::io::{self, BufRead, Write};
+
             println!("╔═══════════════════════════════════════════════════════════════╗");
             println!("║  🔮 Ifá-Lang REPL v1.0.0                                       ║");
             println!("║  The Yoruba Programming Language                              ║");
@@ -631,12 +680,12 @@ lto = true
             println!("║  .quit    - Exit REPL        .vars  - Show variables          ║");
             println!("╚═══════════════════════════════════════════════════════════════╝");
             println!();
-            
+
             let mut interpreter = ifa_core::Interpreter::new();
             let stdin = io::stdin();
             let mut multiline_buffer = String::new();
             let mut in_multiline = false;
-            
+
             loop {
                 // Show prompt
                 if in_multiline {
@@ -645,14 +694,14 @@ lto = true
                     print!("ifá> ");
                 }
                 io::stdout().flush().ok();
-                
+
                 // Read input
                 let mut line = String::new();
                 if stdin.lock().read_line(&mut line).is_err() || line.is_empty() {
                     break;
                 }
                 let line = line.trim();
-                
+
                 // Handle REPL commands
                 match line {
                     ".quit" | ".exit" | ".q" => {
@@ -702,23 +751,23 @@ lto = true
                     "" => continue,
                     _ => {}
                 }
-                
+
                 // Handle multiline input (braces)
                 multiline_buffer.push_str(line);
                 multiline_buffer.push('\n');
-                
+
                 // Check for balanced braces
                 let open_braces = multiline_buffer.matches('{').count();
                 let close_braces = multiline_buffer.matches('}').count();
-                
+
                 if open_braces > close_braces {
                     in_multiline = true;
                     continue;
                 }
-                
+
                 in_multiline = false;
                 let code = std::mem::take(&mut multiline_buffer);
-                
+
                 // Parse and execute
                 match ifa_core::parse(&code) {
                     Ok(program) => {
@@ -739,16 +788,17 @@ lto = true
                     }
                 }
             }
-            
+
             Ok(())
         }
-        
+
         Commands::Version => {
             println!("╔═══════════════════════════════════════════╗");
             println!("║  Ifá-Lang v1.2.0                          ║");
             println!("║  The Yoruba Programming Language          ║");
             println!("╠═══════════════════════════════════════════╣");
-            println!("║  Platform: {} / {}",
+            println!(
+                "║  Platform: {} / {}",
                 std::env::consts::OS,
                 std::env::consts::ARCH
             );
@@ -756,14 +806,18 @@ lto = true
             println!("╚═══════════════════════════════════════════╝");
             Ok(())
         }
-        
-        Commands::Babalawo { path, strict, format } => {
-            use ifa_core::parse;
+
+        Commands::Babalawo {
+            path,
+            strict,
+            format,
+        } => {
             use ifa_babalawo::check_program;
-            
+            use ifa_core::parse;
+
             println!("babalawo: {}", path.display());
             println!();
-            
+
             // Collect files to check
             let files: Vec<PathBuf> = if path.is_dir() {
                 std::fs::read_dir(&path)?
@@ -774,20 +828,20 @@ lto = true
             } else {
                 vec![path.clone()]
             };
-            
+
             let mut total_errors = 0;
             let mut total_warnings = 0;
-            
+
             for file in &files {
                 let source = std::fs::read_to_string(file)?;
                 let filename = file.display().to_string();
-                
+
                 match parse(&source) {
                     Ok(program) => {
                         let baba = check_program(&program, &filename);
                         total_errors += baba.error_count();
                         total_warnings += baba.warning_count();
-                        
+
                         // Output based on format
                         match format.as_str() {
                             "json" => print!("{}", baba.format_json()),
@@ -807,71 +861,85 @@ lto = true
                     }
                 }
             }
-            
+
             if strict && total_warnings > 0 {
                 total_errors += total_warnings;
             }
-            
+
             println!();
-            println!("{} error{}, {} warning{}. Àṣẹ!",
-                total_errors, if total_errors == 1 { "" } else { "s" },
-                total_warnings, if total_warnings == 1 { "" } else { "s" }
+            println!(
+                "{} error{}, {} warning{}. Àṣẹ!",
+                total_errors,
+                if total_errors == 1 { "" } else { "s" },
+                total_warnings,
+                if total_warnings == 1 { "" } else { "s" }
             );
-            
+
             if total_errors > 0 {
                 std::process::exit(1);
             }
-            
+
             Ok(())
         }
-        
+
         Commands::Doc { input, output } => {
             println!("📚 Generating documentation...");
             println!("   Input:  {}", input.display());
             println!("   Output: {}", output.display());
             println!();
-            
+
             docgen::generate_docs(&output)?;
-            
+
             println!();
             println!("Documentation generated successfully!");
-            println!("   Open {}/index.html in a browser to view.", output.display());
-            
+            println!(
+                "   Open {}/index.html in a browser to view.",
+                output.display()
+            );
+
             Ok(())
         }
-        
+
         Commands::Test { path, verbose } => {
             use ifa_core::parse;
-            
+
             println!("idanwo: Running tests...");
             println!();
-            
+
             // Find test files
             let start_dir = path.unwrap_or_else(|| PathBuf::from("."));
             let test_files: Vec<PathBuf> = walkdir(&start_dir)
                 .into_iter()
                 .filter(|p| {
-                    let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-                    (name.ends_with("_test.ifa") || name.starts_with("test_")) && name.ends_with(".ifa")
+                    let name = p
+                        .file_name()
+                        .map(|n| n.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    (name.ends_with("_test.ifa") || name.starts_with("test_"))
+                        && name.ends_with(".ifa")
                 })
                 .collect();
-            
+
             if test_files.is_empty() {
                 println!("No test files found.");
                 return Ok(());
             }
-            
-            println!("Found {} test file{}", test_files.len(), if test_files.len() == 1 { "" } else { "s" });
+
+            println!(
+                "Found {} test file{}",
+                test_files.len(),
+                if test_files.len() == 1 { "" } else { "s" }
+            );
             println!();
-            
+
             let mut passed = 0;
             let mut failed = 0;
             let start = std::time::Instant::now();
-            
+
             for file in &test_files {
                 let name = file.display().to_string();
                 print!("  {} ... ", name);
-                
+
                 let source = match std::fs::read_to_string(file) {
                     Ok(s) => s,
                     Err(e) => {
@@ -880,7 +948,7 @@ lto = true
                         continue;
                     }
                 };
-                
+
                 match parse(&source) {
                     Ok(program) => {
                         // Simple execution test
@@ -908,7 +976,7 @@ lto = true
                     }
                 }
             }
-            
+
             let duration = start.elapsed();
             println!();
             println!("---");
@@ -917,11 +985,11 @@ lto = true
             } else {
                 println!("✗ {} passed, {} failed in {:.2?}", passed, failed, duration);
             }
-            
+
             if failed > 0 {
                 std::process::exit(1);
             }
-            
+
             Ok(())
         }
     }

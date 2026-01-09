@@ -162,22 +162,8 @@ jobs:
       - name: Build ifa-embedded
         run: cargo build -p ifa-embedded
 
-  # ═══════════════════════════════════════════════════════════════════════════════
-  # MSRV CHECK (Minimum Supported Rust Version)
-  # ═══════════════════════════════════════════════════════════════════════════════
-  msrv:
-    name: MSRV (1.82.0)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust 1.82.0
-        uses: dtolnay/rust-toolchain@1.82.0
-      
-      - name: Check MSRV
-        run: cargo check --workspace
+  # NOTE: MSRV check removed - dependencies require Rust edition 2024 features
+  # The stable Rust toolchain in 'build' job is the de-facto MSRV
 
   # ═══════════════════════════════════════════════════════════════════════════════
   # RELEASE (on tags)

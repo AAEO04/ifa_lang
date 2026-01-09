@@ -1,23 +1,23 @@
 //! # Ọ̀ṣẹ́ Domain (1010)
-//! 
+//!
 //! The Painter - Graphics and UI
-//! 
+//!
 //! Terminal UI using ratatui.
 
+use crate::impl_odu_domain;
+#[cfg(feature = "full")]
+use crossterm::{
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
 #[cfg(feature = "full")]
 use ratatui::{
     backend::CrosstermBackend,
-    Terminal,
-    widgets::{Block, Borders, Paragraph},
     style::Color,
-};
-#[cfg(feature = "full")]
-use crossterm::{
-    terminal::{enable_raw_mode, disable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    execute,
+    widgets::{Block, Borders, Paragraph},
+    Terminal,
 };
 use std::io;
-use crate::impl_odu_domain;
 
 /// Ọ̀ṣẹ́ - The Painter (Graphics/UI)
 pub struct Ose;
@@ -34,37 +34,37 @@ impl Ose {
         let backend = CrosstermBackend::new(stdout);
         Terminal::new(backend)
     }
-    
+
     /// Cleanup terminal (parí)
     pub fn pari(&self, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
         disable_raw_mode()?;
         execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
         terminal.show_cursor()
     }
-    
+
     /// Create bordered box widget (àpótí)
     pub fn apoti(&self, title: &str) -> Block<'static> {
         Block::default()
             .title(title.to_string())
             .borders(Borders::ALL)
     }
-    
+
     /// Create paragraph widget (ìpínrọ̀)
     pub fn ipinro<'a>(&self, text: &'a str) -> Paragraph<'a> {
         Paragraph::new(text)
     }
-    
+
     /// Get Odù-themed color
     pub fn awo_odu(&self, binary: &str) -> Color {
         match binary {
-            "1111" => Color::White,    // Ọ̀gbè - Full light
-            "0000" => Color::Black,    // Ọ̀yẹ̀kú - Full dark
-            "1100" => Color::Yellow,   // Ìrosù - Voice (bright)
-            "0011" => Color::Magenta,  // Ọ̀wọ́nrín - Random (chaotic)
-            "1010" => Color::Green,    // Ọ̀ṣẹ́ - Growth
-            "0101" => Color::Blue,     // Òfún - Reflection
-            "1001" => Color::Cyan,     // Òdí - Container
-            "0110" => Color::Gray,     // Ìwòrì - Time
+            "1111" => Color::White,   // Ọ̀gbè - Full light
+            "0000" => Color::Black,   // Ọ̀yẹ̀kú - Full dark
+            "1100" => Color::Yellow,  // Ìrosù - Voice (bright)
+            "0011" => Color::Magenta, // Ọ̀wọ́nrín - Random (chaotic)
+            "1010" => Color::Green,   // Ọ̀ṣẹ́ - Growth
+            "0101" => Color::Blue,    // Òfún - Reflection
+            "1001" => Color::Cyan,    // Òdí - Container
+            "0110" => Color::Gray,    // Ìwòrì - Time
             _ => Color::Reset,
         }
     }
@@ -81,7 +81,7 @@ impl Ose {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_odu_colors() {
         let ose = Ose;

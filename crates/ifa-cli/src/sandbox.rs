@@ -1,18 +1,18 @@
 //! # Ìgbálẹ̀ Sandbox
-//! 
+//!
 //! Sandboxed execution environment for untrusted Ifá code.
-//! 
+//!
 //! Uses:
 //! - OS-level isolation (cgroups/namespaces on Linux, Job Objects on Windows)
 //! - Unified Ọ̀fún capability system for permission enforcement
 
 #![allow(dead_code)]
 
+use eyre::{Result, WrapErr};
+use ifa_sandbox::{CapabilitySet, Ofun};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use std::collections::HashSet;
-use ifa_sandbox::{CapabilitySet, Ofun};
-use eyre::{Result, WrapErr};
 
 /// Sandbox configuration
 #[derive(Debug, Clone)]
@@ -68,7 +68,7 @@ impl SandboxConfig {
             ..Default::default()
         }
     }
-    
+
     /// Standard sandbox (moderate restrictions)
     pub fn standard() -> Self {
         SandboxConfig {
@@ -80,75 +80,81 @@ impl SandboxConfig {
             ..Default::default()
         }
     }
-    
+
     /// Allow reading from path
     pub fn allow_read(mut self, path: impl AsRef<Path>) -> Self {
         self.allowed_read_paths.insert(path.as_ref().to_path_buf());
         self
     }
-    
+
     /// Allow writing to path
     pub fn allow_write(mut self, path: impl AsRef<Path>) -> Self {
         self.allowed_write_paths.insert(path.as_ref().to_path_buf());
         self
     }
-    
+
     /// Allow network access to domain
     pub fn allow_network(mut self, domain: &str) -> Self {
         self.allowed_network_domains.push(domain.to_string());
         self
     }
-    
+
     /// Allow environment variable access
     pub fn allow_env(mut self, key: &str) -> Self {
         self.allowed_env_keys.push(key.to_string());
         self
     }
-    
+
     /// Convert to unified Ọ̀fún CapabilitySet
     pub fn to_capability_set(&self) -> CapabilitySet {
         let mut caps = CapabilitySet::new();
-        
+
         // File read permissions
         for path in &self.allowed_read_paths {
             caps.grant(Ofun::ReadFiles { root: path.clone() });
         }
-        
+
         // File write permissions
         for path in &self.allowed_write_paths {
             caps.grant(Ofun::WriteFiles { root: path.clone() });
         }
-        
+
         // Network permissions
         if !self.allowed_network_domains.is_empty() {
-            caps.grant(Ofun::Network { domains: self.allowed_network_domains.clone() });
+            caps.grant(Ofun::Network {
+                domains: self.allowed_network_domains.clone(),
+            });
         }
-        
+
         // Environment permissions
         if !self.allowed_env_keys.is_empty() {
-            caps.grant(Ofun::Environment { keys: self.allowed_env_keys.clone() });
+            caps.grant(Ofun::Environment {
+                keys: self.allowed_env_keys.clone(),
+            });
         }
-        
+
         // Process execution
         if self.allow_spawn {
-            caps.grant(Ofun::Execute { programs: vec!["*".to_string()] });
+            caps.grant(Ofun::Execute {
+                programs: vec!["*".to_string()],
+            });
         }
-        
+
         // Time access
         if self.allow_time {
             caps.grant(Ofun::Time);
         }
-        
+
         // Random generation
         if self.allow_random {
             caps.grant(Ofun::Random);
         }
-        
+
         // Stdio access
         if self.allow_stdio {
             caps.grant(Ofun::Stdio);
         }
-        
+
         caps
     }
 }
@@ -174,20 +180,20 @@ impl Igbale {
     pub fn new(config: SandboxConfig) -> Self {
         Igbale { config }
     }
-    
+
     /// Create with default config
     pub fn default_sandbox() -> Self {
         Self::new(SandboxConfig::default())
     }
-    
+
     /// Run code in sandbox
     #[cfg(target_os = "linux")]
     pub fn run(&self, code_path: &Path) -> Result<SandboxResult> {
         use std::process::{Command, Stdio};
         use std::time::Instant;
-        
+
         let start = Instant::now();
-        
+
         // Use unshare for namespace isolation on Linux
         let output = Command::new("unshare")
             .args([
@@ -206,10 +212,10 @@ impl Igbale {
             .stderr(Stdio::piped())
             .output()
             .wrap_err("Failed to execute sandbox")?;
-        
+
         let execution_time = start.elapsed();
         let timed_out = output.status.code() == Some(124); // timeout exit code
-        
+
         Ok(SandboxResult {
             success: output.status.success(),
             stdout: String::from_utf8_lossy(&output.stdout).to_string(),
@@ -219,15 +225,15 @@ impl Igbale {
             timed_out,
         })
     }
-    
+
     /// Run code in sandbox (Windows)
     #[cfg(target_os = "windows")]
     pub fn run(&self, code_path: &Path) -> Result<SandboxResult> {
         use std::process::{Command, Stdio};
         use std::time::Instant;
-        
+
         let start = Instant::now();
-        
+
         // Use Job Objects for process isolation on Windows
         // For now, just use basic process with timeout
         let output = Command::new("cmd")
@@ -245,27 +251,27 @@ impl Igbale {
             .stderr(Stdio::piped())
             .output()
             .wrap_err("Failed to execute sandbox")?;
-        
+
         let execution_time = start.elapsed();
-        
+
         Ok(SandboxResult {
             success: output.status.success(),
             stdout: String::from_utf8_lossy(&output.stdout).to_string(),
             stderr: String::from_utf8_lossy(&output.stderr).to_string(),
             execution_time,
-            memory_used: 0, // TODO: Track with Job Objects
+            memory_used: 0,   // TODO: Track with Job Objects
             timed_out: false, // TODO: Detect timeout
         })
     }
-    
+
     /// Run code in sandbox (macOS)
     #[cfg(target_os = "macos")]
     pub fn run(&self, code_path: &Path) -> Result<SandboxResult> {
         use std::process::{Command, Stdio};
         use std::time::Instant;
-        
+
         let start = Instant::now();
-        
+
         // Use sandbox-exec for sandboxing on macOS
         let output = Command::new("sandbox-exec")
             .args([
@@ -281,10 +287,10 @@ impl Igbale {
             .stderr(Stdio::piped())
             .output()
             .wrap_err("Failed to execute sandbox")?;
-        
+
         let execution_time = start.elapsed();
         let timed_out = output.status.code() == Some(124);
-        
+
         Ok(SandboxResult {
             success: output.status.success(),
             stdout: String::from_utf8_lossy(&output.stdout).to_string(),
@@ -294,19 +300,21 @@ impl Igbale {
             timed_out,
         })
     }
-    
+
     /// Validate that a path is allowed for reading
     pub fn can_read(&self, path: &Path) -> bool {
-        self.config.allowed_read_paths.iter().any(|allowed| {
-            path.starts_with(allowed)
-        })
+        self.config
+            .allowed_read_paths
+            .iter()
+            .any(|allowed| path.starts_with(allowed))
     }
-    
+
     /// Validate that a path is allowed for writing
     pub fn can_write(&self, path: &Path) -> bool {
-        self.config.allowed_write_paths.iter().any(|allowed| {
-            path.starts_with(allowed)
-        })
+        self.config
+            .allowed_write_paths
+            .iter()
+            .any(|allowed| path.starts_with(allowed))
     }
 }
 
@@ -333,31 +341,32 @@ pub fn demo() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_config_default() {
         let config = SandboxConfig::default();
         assert_eq!(config.timeout, Duration::from_secs(30));
-        assert!(!config.allow_network);
+        assert!(config.allowed_network_domains.is_empty());
         assert!(!config.allow_spawn);
     }
-    
+
     #[test]
     fn test_config_builder() {
         let config = SandboxConfig::minimal()
             .allow_read("/tmp")
             .allow_write("/tmp/output");
-        
+
         assert!(config.allowed_read_paths.contains(&PathBuf::from("/tmp")));
-        assert!(config.allowed_write_paths.contains(&PathBuf::from("/tmp/output")));
+        assert!(config
+            .allowed_write_paths
+            .contains(&PathBuf::from("/tmp/output")));
     }
-    
+
     #[test]
     fn test_path_validation() {
-        let config = SandboxConfig::default()
-            .allow_read("/allowed");
+        let config = SandboxConfig::default().allow_read("/allowed");
         let sandbox = Igbale::new(config);
-        
+
         assert!(sandbox.can_read(Path::new("/allowed/file.txt")));
         assert!(!sandbox.can_read(Path::new("/forbidden/file.txt")));
     }

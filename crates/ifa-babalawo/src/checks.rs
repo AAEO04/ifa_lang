@@ -6,8 +6,8 @@
 use crate::diagnose::Babalawo;
 use crate::iwa::IwaEngine;
 use crate::taboo::TabooEnforcer;
-use ifa_core::ast::{Program, Statement, Expression};
-use std::collections::{HashSet, HashMap};
+use ifa_core::ast::{Expression, Program, Statement};
+use std::collections::{HashMap, HashSet};
 
 /// Context for linting - tracks state as we walk the AST
 #[derive(Debug)]
@@ -49,20 +49,20 @@ impl LintContext {
             taboo_enforcer: TabooEnforcer::new(),
         }
     }
-    
+
     pub fn define_var(&mut self, name: &str) {
         self.defined_vars.insert(name.to_string());
     }
-    
+
     pub fn use_var(&mut self, name: &str) {
         self.used_vars.insert(name.to_string());
     }
-    
+
     pub fn enter_function(&mut self, name: &str) {
         self.current_function = Some(name.to_string());
         self.has_return = false;
     }
-    
+
     pub fn exit_function(&mut self) {
         self.current_function = None;
         self.has_return = false;
@@ -73,81 +73,86 @@ impl LintContext {
 pub fn check_program(program: &Program, filename: &str) -> Babalawo {
     let mut babalawo = Babalawo::new();
     let mut ctx = LintContext::new();
-    
+
     // First pass: collect definitions
     for stmt in &program.statements {
         collect_definitions(stmt, &mut ctx);
     }
-    
+
     // Second pass: check for issues (including Ìwà and Èèwọ̀)
     for stmt in &program.statements {
         check_statement(stmt, &mut ctx, &mut babalawo, filename);
     }
-    
+
     // Final checks
     check_unused_vars(&ctx, &mut babalawo, filename);
     check_unclosed_resources(&ctx, &mut babalawo, filename);
-    
+
     // Ìwà Engine: check resource balance
     if !ctx.iwa_engine.check_balance() {
         for debt in ctx.iwa_engine.unclosed_resources() {
             babalawo.error(
                 "UNCLOSED_RESOURCE",
-                &format!("Resource '{}' opened at line {} was never closed (needs '{}')",
-                    debt.opener, debt.line, debt.required),
+                &format!(
+                    "Resource '{}' opened at line {} was never closed (needs '{}')",
+                    debt.opener, debt.line, debt.required
+                ),
                 filename,
                 debt.line,
                 debt.column,
             );
         }
     }
-    
+
     // Èèwọ̀ Enforcer: check taboo violations
     if !ctx.taboo_enforcer.is_clean() {
         for v in ctx.taboo_enforcer.get_violations() {
             babalawo.error(
                 "TABOO_VIOLATION",
-                &format!("Forbidden dependency: '{}' cannot call '{}'", v.caller, v.callee),
+                &format!(
+                    "Forbidden dependency: '{}' cannot call '{}'",
+                    v.caller, v.callee
+                ),
                 filename,
                 v.line,
                 v.column,
             );
         }
     }
-    
+
     babalawo
 }
 
 /// Check a program with custom taboos
 #[allow(dead_code)]
 pub fn check_program_with_taboos(
-    program: &Program, 
+    program: &Program,
     filename: &str,
     taboos: Vec<(&str, &str)>, // (source, target) forbidden pairs
 ) -> Babalawo {
     let mut babalawo = Babalawo::new();
     let mut ctx = LintContext::new();
-    
+
     // Register taboos
     for (source, target) in taboos {
         ctx.taboo_enforcer.add_taboo(source, "", target, "", false);
     }
-    
+
     // First pass: collect definitions
     for stmt in &program.statements {
         collect_definitions(stmt, &mut ctx);
     }
-    
+
     // Second pass: check for issues
     for stmt in &program.statements {
         check_statement(stmt, &mut ctx, &mut babalawo, filename);
     }
-    
+
     // Final checks
     check_unused_vars(&ctx, &mut babalawo, filename);
     check_iwa_balance(&mut ctx, &mut babalawo, filename);
     check_taboo_violations(&ctx, &mut babalawo, filename);
-    
+
     babalawo
 }
 
@@ -158,7 +163,10 @@ fn check_iwa_balance(ctx: &mut LintContext, baba: &mut Babalawo, file: &str) {
         for debt in ctx.iwa_engine.unclosed_resources() {
             baba.error(
                 "UNCLOSED_RESOURCE",
-                &format!("Resource '{}' was never closed (needs '{}')", debt.opener, debt.required),
+                &format!(
+                    "Resource '{}' was never closed (needs '{}')",
+                    debt.opener, debt.required
+                ),
                 file,
                 debt.line,
                 debt.column,
@@ -187,7 +195,9 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
         Statement::VarDecl { name, .. } => {
             ctx.define_var(name);
         }
-        Statement::EseDef { name, params, body, .. } => {
+        Statement::EseDef {
+            name, params, body, ..
+        } => {
             ctx.define_var(name);
             // Parameters are also definitions within the function
             for param in params {
@@ -209,7 +219,11 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
                 collect_definitions(s, ctx);
             }
         }
-        Statement::If { then_body, else_body, .. } => {
+        Statement::If {
+            then_body,
+            else_body,
+            ..
+        } => {
             for s in then_body {
                 collect_definitions(s, ctx);
             }
@@ -237,13 +251,14 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
     }
 }
 
-
 /// Check a statement for issues
 fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo, file: &str) {
     match stmt {
-        Statement::VarDecl { name, value, span, .. } => {
+        Statement::VarDecl {
+            name, value, span, ..
+        } => {
             check_expression(value, ctx, baba, file);
-            
+
             // Check for self-referencing initialization
             if expression_uses_var(value, name) {
                 baba.error(
@@ -255,10 +270,14 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                 );
             }
         }
-        
-        Statement::Assignment { target, value, span } => {
+
+        Statement::Assignment {
+            target,
+            value,
+            span,
+        } => {
             check_expression(value, ctx, baba, file);
-            
+
             // Check if target variable is defined
             if let ifa_core::ast::AssignTarget::Variable(name) = target {
                 if !ctx.defined_vars.contains(name) {
@@ -272,7 +291,7 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                 }
             }
         }
-        
+
         Statement::Instruction { call, span } => {
             // Check for division by zero
             if call.method == "pin" || call.method == "div" {
@@ -286,34 +305,48 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                     );
                 }
             }
-            
+
             // Track resource lifecycle
             let domain = format!("{:?}", call.domain).to_lowercase();
             if call.method == "si" || call.method == "open" {
-                ctx.open_resources.insert(format!("{}:{}", domain, span.line), (span.line, span.column));
+                ctx.open_resources.insert(
+                    format!("{}:{}", domain, span.line),
+                    (span.line, span.column),
+                );
             }
             if call.method == "pa" || call.method == "close" {
-                ctx.open_resources.remove(&format!("{}:{}", domain, span.line));
+                ctx.open_resources
+                    .remove(&format!("{}:{}", domain, span.line));
             }
-            
+
             // Check taboo violations - get current context (caller) from function or "global"
-            let caller = ctx.current_function.clone().unwrap_or_else(|| "global".to_string());
+            let caller = ctx
+                .current_function
+                .clone()
+                .unwrap_or_else(|| "global".to_string());
             let callee = format!("{:?}", call.domain).to_lowercase();
-            ctx.taboo_enforcer.check_call(&caller, &callee, span.line, span.column);
-            
+            ctx.taboo_enforcer
+                .check_call(&caller, &callee, span.line, span.column);
+
             // Check arguments
             for arg in &call.args {
                 check_expression(arg, ctx, baba, file);
             }
         }
-        
-        Statement::EseDef { name, body, span, visibility: _, .. } => {
+
+        Statement::EseDef {
+            name,
+            body,
+            span,
+            visibility: _,
+            ..
+        } => {
             ctx.enter_function(name);
-            
+
             for s in body {
                 check_statement(s, ctx, baba, file);
             }
-            
+
             // Check for missing return (only warn, not error)
             if !ctx.has_return && !body.is_empty() {
                 // Only warn if function seems to return something
@@ -327,54 +360,66 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                     );
                 }
             }
-            
+
             ctx.exit_function();
         }
-        
+
         Statement::OduDef { body, .. } => {
             for s in body {
                 check_statement(s, ctx, baba, file);
             }
         }
-        
-        Statement::If { condition, then_body, else_body, .. } => {
+
+        Statement::If {
+            condition,
+            then_body,
+            else_body,
+            ..
+        } => {
             check_expression(condition, ctx, baba, file);
-            
+
             for s in then_body {
                 check_statement(s, ctx, baba, file);
             }
-            
+
             if let Some(else_stmts) = else_body {
                 for s in else_stmts {
                     check_statement(s, ctx, baba, file);
                 }
             }
         }
-        
-        Statement::While { condition, body, .. } => {
+
+        Statement::While {
+            condition, body, ..
+        } => {
             check_expression(condition, ctx, baba, file);
-            
+
             for s in body {
                 check_statement(s, ctx, baba, file);
             }
         }
-        
-        Statement::For { var, iterable, body, span: _ } => {
+
+        Statement::For {
+            var,
+            iterable,
+            body,
+            span: _,
+        } => {
             check_expression(iterable, ctx, baba, file);
             ctx.use_var(var);
-            
+
             for s in body {
                 check_statement(s, ctx, baba, file);
             }
         }
-        
+
         Statement::Return { value, .. } => {
             ctx.has_return = true;
             if let Some(v) = value {
                 check_expression(v, ctx, baba, file);
             }
         }
-        
+
         _ => {}
     }
 }
@@ -384,7 +429,7 @@ fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalaw
     match expr {
         Expression::Identifier(name) => {
             ctx.use_var(name);
-            
+
             // Check if variable is defined
             if !ctx.defined_vars.contains(name) && !is_builtin(name) {
                 baba.error(
@@ -396,13 +441,18 @@ fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalaw
                 );
             }
         }
-        
-        Expression::BinaryOp { left, right, op, .. } => {
+
+        Expression::BinaryOp {
+            left, right, op, ..
+        } => {
             check_expression(left, ctx, baba, file);
             check_expression(right, ctx, baba, file);
-            
+
             // Check for division by zero in binary op
-            if matches!(op, ifa_core::ast::BinaryOperator::Div | ifa_core::ast::BinaryOperator::Mod) {
+            if matches!(
+                op,
+                ifa_core::ast::BinaryOperator::Div | ifa_core::ast::BinaryOperator::Mod
+            ) {
                 if let Expression::Int(0) = **right {
                     baba.error(
                         "DIVISION_BY_ZERO",
@@ -414,38 +464,38 @@ fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalaw
                 }
             }
         }
-        
+
         Expression::List(items) => {
             for item in items {
                 check_expression(item, ctx, baba, file);
             }
         }
-        
+
         Expression::Map(entries) => {
             for (k, v) in entries {
                 check_expression(k, ctx, baba, file);
                 check_expression(v, ctx, baba, file);
             }
         }
-        
+
         Expression::Index { object, index } => {
             check_expression(object, ctx, baba, file);
             check_expression(index, ctx, baba, file);
         }
-        
+
         Expression::MethodCall { object, args, .. } => {
             check_expression(object, ctx, baba, file);
             for arg in args {
                 check_expression(arg, ctx, baba, file);
             }
         }
-        
+
         Expression::OduCall(call) => {
             for arg in &call.args {
                 check_expression(arg, ctx, baba, file);
             }
         }
-        
+
         _ => {}
     }
 }
@@ -506,14 +556,17 @@ fn function_should_return(body: &[Statement]) -> bool {
 
 /// Check if a name is a builtin
 fn is_builtin(name: &str) -> bool {
-    matches!(name, "true" | "false" | "nil" | "otito" | "iro" | "ohunkohun")
+    matches!(
+        name,
+        "true" | "false" | "nil" | "otito" | "iro" | "ohunkohun"
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use ifa_core::parser::parse;
-    
+
     #[test]
     fn test_undefined_variable() {
         let src = "Irosu.fo(x);";
@@ -522,7 +575,7 @@ mod tests {
             assert!(baba.has_errors());
         }
     }
-    
+
     #[test]
     fn test_unused_variable() {
         let src = "ayanmo x = 42;";

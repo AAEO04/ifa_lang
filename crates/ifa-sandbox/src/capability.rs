@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// Ọ̀fún Capability Definition
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
@@ -47,36 +47,38 @@ impl CapabilitySet {
 
     /// Check if an operation is allowed
     pub fn check(&self, required: &Ofun) -> bool {
-        self.capabilities.iter().any(|granted| match (granted, required) {
-            (Ofun::ReadFiles { root: g }, Ofun::ReadFiles { root: r }) => r.starts_with(g),
-            (Ofun::WriteFiles { root: g }, Ofun::WriteFiles { root: r }) => r.starts_with(g),
-            (Ofun::Network { domains: g }, Ofun::Network { domains: r }) => {
-                // Simple exact match for now, could add globbing
-                r.iter().all(|d| g.contains(d))
-            },
-            (Ofun::Environment { keys: g }, Ofun::Environment { keys: r }) => {
-                r.iter().all(|k| g.contains(k))
-            },
-            (Ofun::Execute { programs: g }, Ofun::Execute { programs: r }) => {
-                r.iter().all(|p| g.contains(p))
-            },
-            (Ofun::Time, Ofun::Time) => true,
-            (Ofun::Random, Ofun::Random) => true,
-            (Ofun::Stdio, Ofun::Stdio) => true,
-            _ => false,
-        })
+        self.capabilities
+            .iter()
+            .any(|granted| match (granted, required) {
+                (Ofun::ReadFiles { root: g }, Ofun::ReadFiles { root: r }) => r.starts_with(g),
+                (Ofun::WriteFiles { root: g }, Ofun::WriteFiles { root: r }) => r.starts_with(g),
+                (Ofun::Network { domains: g }, Ofun::Network { domains: r }) => {
+                    // Simple exact match for now, could add globbing
+                    r.iter().all(|d| g.contains(d))
+                }
+                (Ofun::Environment { keys: g }, Ofun::Environment { keys: r }) => {
+                    r.iter().all(|k| g.contains(k))
+                }
+                (Ofun::Execute { programs: g }, Ofun::Execute { programs: r }) => {
+                    r.iter().all(|p| g.contains(p))
+                }
+                (Ofun::Time, Ofun::Time) => true,
+                (Ofun::Random, Ofun::Random) => true,
+                (Ofun::Stdio, Ofun::Stdio) => true,
+                _ => false,
+            })
     }
-    
+
     /// Get all granted capabilities
     pub fn all(&self) -> &[Ofun] {
         &self.capabilities
     }
-    
+
     /// Get recorded violations (for audit/debugging)
     pub fn violations(&self) -> &[CapabilityViolation] {
         &self.violations
     }
-    
+
     /// Record a capability violation
     pub fn record_violation(&mut self, cap: Ofun, call_site: &str) {
         self.violations.push(CapabilityViolation {

@@ -1,11 +1,11 @@
 //! # Òfún Domain (0101)
-//! 
+//!
 //! The Reflector - Permissions and Reflection
-//! 
+//!
 //! Capability-based permissions and introspection macros.
 
-use ifa_core::IfaValue;
 use crate::impl_odu_domain;
+use ifa_core::IfaValue;
 
 /// Capability flags for sandboxing
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,7 +39,7 @@ impl Capabilities {
     pub fn full() -> Self {
         Self::default()
     }
-    
+
     /// No capabilities (fully sandboxed)
     pub fn none() -> Self {
         Capabilities {
@@ -50,7 +50,7 @@ impl Capabilities {
             env: false,
         }
     }
-    
+
     /// Read-only mode
     pub fn read_only() -> Self {
         Capabilities {
@@ -76,7 +76,7 @@ impl Ofun {
     pub fn with_capabilities(caps: Capabilities) -> Self {
         Ofun { capabilities: caps }
     }
-    
+
     /// Check if capability is allowed
     pub fn le(&self, cap: &str) -> bool {
         match cap {
@@ -88,7 +88,7 @@ impl Ofun {
             _ => false,
         }
     }
-    
+
     /// Drop capability (can only remove, never add)
     pub fn ju(&mut self, cap: &str) {
         match cap {
@@ -100,26 +100,26 @@ impl Ofun {
             _ => {}
         }
     }
-    
+
     /// Get current capabilities
     pub fn awon_agbara(&self) -> &Capabilities {
         &self.capabilities
     }
-    
+
     // =========================================================================
     // REFLECTION (Type introspection)
     // =========================================================================
-    
+
     /// Get type name of value (irú)
     pub fn iru(&self, value: &IfaValue) -> &'static str {
         value.type_name()
     }
-    
+
     /// Check if value is of type
     pub fn je(&self, value: &IfaValue, type_name: &str) -> bool {
         value.type_name().eq_ignore_ascii_case(type_name)
     }
-    
+
     /// Get value as debug string
     pub fn afiwe(&self, value: &IfaValue) -> String {
         format!("{:?}", value)
@@ -132,7 +132,7 @@ macro_rules! require_cap {
     ($ofun:expr, $cap:expr) => {
         if !$ofun.le($cap) {
             return Err($crate::ifa_core::error::IfaError::PermissionDenied(
-                format!("Capability '{}' not allowed", $cap)
+                format!("Capability '{}' not allowed", $cap),
             ));
         }
     };
@@ -141,14 +141,14 @@ macro_rules! require_cap {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_capabilities() {
         let ofun = Ofun::default();
         assert!(ofun.le("read"));
         assert!(ofun.le("write"));
     }
-    
+
     #[test]
     fn test_drop_capability() {
         let mut ofun = Ofun::default();
@@ -156,14 +156,14 @@ mod tests {
         ofun.ju("write");
         assert!(!ofun.le("write"));
     }
-    
+
     #[test]
     fn test_sandboxed() {
         let ofun = Ofun::with_capabilities(Capabilities::none());
         assert!(!ofun.le("read"));
         assert!(!ofun.le("network"));
     }
-    
+
     #[test]
     fn test_reflection() {
         let ofun = Ofun::default();

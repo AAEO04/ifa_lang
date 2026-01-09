@@ -3,20 +3,28 @@
 //! Tokenizer for Ifá-Lang source code using logos.
 //! Handles Yoruba diacritics and ASCII aliases.
 
-use logos::{Logos, Lexer};
+use logos::{Lexer, Logos};
 use std::fmt;
 
 /// Normalize Yoruba text to ASCII for matching
 fn normalize_yoruba(text: &str) -> String {
     text.to_lowercase()
-        .replace('ẹ', "e").replace('ọ', "o")
-        .replace('ṣ', "s").replace('à', "a")
-        .replace('á', "a").replace('è', "e")
-        .replace('é', "e").replace('ì', "i")
-        .replace('í', "i").replace('ò', "o")
-        .replace('ó', "o").replace('ù', "u")
-        .replace('ú', "u").replace('̀', "")
-        .replace('́', "").replace('̣', "")
+        .replace('ẹ', "e")
+        .replace('ọ', "o")
+        .replace('ṣ', "s")
+        .replace('à', "a")
+        .replace('á', "a")
+        .replace('è', "e")
+        .replace('é', "e")
+        .replace('ì', "i")
+        .replace('í', "i")
+        .replace('ò', "o")
+        .replace('ó', "o")
+        .replace('ù', "u")
+        .replace('ú', "u")
+        .replace('̀', "")
+        .replace('́', "")
+        .replace('̣', "")
 }
 
 /// Check if identifier is an Odù domain (supports both Yoruba and English)
@@ -24,7 +32,7 @@ fn check_domain(lex: &mut Lexer<Token>) -> Option<OduDomain> {
     let slice = lex.slice();
     let normalized = normalize_yoruba(slice);
     let lower = slice.to_lowercase();
-    
+
     match normalized.as_str() {
         // Yoruba names
         "ogbe" => Some(OduDomain::Ogbe),
@@ -49,55 +57,55 @@ fn check_domain(lex: &mut Lexer<Token>) -> Option<OduDomain> {
             match lower.as_str() {
                 // Ogbe (1111) - System/Lifecycle
                 "sys" | "os" => Some(OduDomain::Ogbe),
-                
+
                 // Oyeku (0000) - Exit/Cleanup
                 "exit" => Some(OduDomain::Oyeku),
-                
+
                 // Iwori (0110) - Time/DateTime
                 "time" | "datetime" => Some(OduDomain::Iwori),
-                
+
                 // Odi (1001) - File I/O
                 "fs" | "io" => Some(OduDomain::Odi),
-                
+
                 // Irosu (1100) - Console/Logging
                 "fmt" | "log" => Some(OduDomain::Irosu),
-                
+
                 // Owonrin (0011) - Random
                 "rand" => Some(OduDomain::Owonrin),
-                
+
                 // Obara (1000) - Math+
                 "math" => Some(OduDomain::Obara),
-                
+
                 // Okanran (0001) - Errors
                 "err" | "panic" => Some(OduDomain::Okanran),
-                
+
                 // Ogunda (1110) - Collections
                 "vec" | "list" => Some(OduDomain::Ogunda),
-                
+
                 // Osa (0111) - Concurrency
                 "async" | "thread" => Some(OduDomain::Osa),
-                
+
                 // Ika (0100) - Strings
                 "str" | "string" => Some(OduDomain::Ika),
-                
+
                 // Oturupon (0010) - Division
                 "div" => Some(OduDomain::Oturupon),
-                
+
                 // Otura (1011) - Networking
                 "net" | "http" => Some(OduDomain::Otura),
-                
+
                 // Irete (1101) - Crypto
                 "crypto" | "hash" => Some(OduDomain::Irete),
-                
+
                 // Ose (1010) - Terminal UI
                 "tui" | "term" => Some(OduDomain::Ose),
-                
+
                 // Ofun (0101) - Permissions
                 "perm" | "auth" => Some(OduDomain::Ofun),
-                
+
                 // Opele - Divination/Compound Odù
                 "opele" | "oracle" => Some(OduDomain::Opele),
-                
+
                 _ => None,
             }
         }
@@ -134,46 +142,46 @@ pub enum Token {
     // ═══════════════════════════════════════════════════════════════════════
     // KEYWORDS (Reserved)
     // ═══════════════════════════════════════════════════════════════════════
-    
+
     // Variable declaration
     #[token("ayanmo")]
     #[token("àyànmọ́")]
     #[token("let")]
     Let,
-    
+
     #[token("const")]
     Const,
-    
+
     // Control flow
     #[token("ti")]
     #[token("bí")]
     #[token("if")]
     If,
-    
+
     #[token("bibẹkọ")]
     #[token("bíbẹ́kọ́")]
     #[token("else")]
     Else,
-    
+
     #[token("fun")]
     #[token("for")]
     For,
-    
+
     #[token("nigba")]
     #[token("while")]
     While,
-    
+
     #[token("pada")]
     #[token("return")]
     Return,
-    
+
     #[token("da")]
     #[token("break")]
     Break,
-    
+
     #[token("continue")]
     Continue,
-    
+
     // Function/class
     #[token("ese")]
     #[token("ẹsẹ")]
@@ -181,73 +189,72 @@ pub enum Token {
     #[token("function")]
     #[token("def")]
     Function,
-    
+
     #[token("odu")]
     #[token("ọdù")]
     #[token("class")]
     Class,
-    
+
     #[token("iba")]
     #[token("ìbà")]
     #[token("import")]
     Import,
-    
+
     // Boolean
     #[token("otito")]
     #[token("true")]
     True,
-    
+
     #[token("iro")]
     #[token("false")]
     False,
-    
+
     #[token("ohunkohun")]
     #[token("nil")]
     #[token("null")]
     Nil,
-    
+
     // CEN Model
     #[token("ebo")]
     #[token("ẹbọ")]
     Ebo,
-    
+
     #[token("ewo")]
     #[token("ẹ̀wọ̀")]
     #[token("assert")]
     Ewo,
-    
+
     #[token("ajose")]
     #[token("àjọṣe")]
     #[token("co-op")]
     Ajose,
-    
+
     #[token("ase")]
     #[token("àṣẹ")]
     Ase,
-    
+
     #[token("ewọ")]
     #[token("èèwọ̀")]
     #[token("taboo")]
     Taboo,
-    
+
     // Visibility modifiers
-    #[token("gbangba")]      // Public (Yoruba: "open/public")
-    #[token("pub")]          // Public (English)
-    #[token("public")]       // Public (English)
+    #[token("gbangba")] // Public (Yoruba: "open/public")
+    #[token("pub")] // Public (English)
+    #[token("public")] // Public (English)
     Pub,
-    
-    #[token("ikoko")]        // Private (Yoruba: "secret")
-    #[token("àdáni")]        // Private (Yoruba: "private")
-    #[token("private")]      // Private (English)
+
+    #[token("ikoko")] // Private (Yoruba: "secret")
+    #[token("àdáni")] // Private (Yoruba: "private")
+    #[token("private")] // Private (English)
     Private,
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // LITERALS
     // ═══════════════════════════════════════════════════════════════════════
-    
     #[regex(r"[0-9]+(\.[0-9]+)?", |lex| lex.slice().to_string())]
     Number(String),
-    
+
     #[regex(r#""[^"]*""#, |lex| {
         let s = lex.slice();
         s[1..s.len()-1].to_string()
@@ -257,25 +264,24 @@ pub enum Token {
         s[1..s.len()-1].to_string()
     })]
     String(String),
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // IDENTIFIERS & DOMAINS
     // ═══════════════════════════════════════════════════════════════════════
-    
+
     // Odù domain names (checked via callback)
     #[regex(r"[A-Z][a-zA-Z_\u0080-\uFFFF]*", |lex| {
         check_domain(lex)
     })]
     Domain(OduDomain),
-    
+
     // Regular identifiers
     #[regex(r"[a-z_\u0080-\uFFFF][a-zA-Z0-9_\u0080-\uFFFF]*", |lex| lex.slice().to_string())]
     Identifier(String),
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // OPERATORS
     // ═══════════════════════════════════════════════════════════════════════
-    
     #[token("+")]
     Plus,
     #[token("-")]
@@ -286,7 +292,7 @@ pub enum Token {
     Slash,
     #[token("%")]
     Percent,
-    
+
     #[token("==")]
     EqEq,
     #[token("!=")]
@@ -299,18 +305,17 @@ pub enum Token {
     Gt,
     #[token(">=")]
     GtEq,
-    
+
     #[token("&&")]
     And,
     #[token("||")]
     Or,
     #[token("!")]
     Not,
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // PUNCTUATION
     // ═══════════════════════════════════════════════════════════════════════
-    
     #[token("=")]
     Assign,
     #[token(".")]
@@ -321,7 +326,7 @@ pub enum Token {
     Semicolon,
     #[token(":")]
     Colon,
-    
+
     #[token("(")]
     LParen,
     #[token(")")]
@@ -334,14 +339,13 @@ pub enum Token {
     LBracket,
     #[token("]")]
     RBracket,
-    
+
     // ═══════════════════════════════════════════════════════════════════════
     // SPECIAL
     // ═══════════════════════════════════════════════════════════════════════
-    
     #[regex(r"#[^\n]*", |lex| lex.slice().to_string())]
     Comment(String),
-    
+
     #[token("\n")]
     Newline,
 }
@@ -370,7 +374,7 @@ pub struct Spanned<T> {
 pub fn tokenize(source: &str) -> Vec<Spanned<Token>> {
     let mut lexer = Token::lexer(source);
     let mut tokens = Vec::new();
-    
+
     while let Some(result) = lexer.next() {
         match result {
             Ok(token) => {
@@ -385,14 +389,14 @@ pub fn tokenize(source: &str) -> Vec<Spanned<Token>> {
             }
         }
     }
-    
+
     tokens
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_basic_tokens() {
         let tokens = tokenize("ayanmo x = 42");
@@ -401,20 +405,20 @@ mod tests {
         assert!(matches!(tokens[2].value, Token::Assign));
         assert!(matches!(&tokens[3].value, Token::Number(n) if n == "42"));
     }
-    
+
     #[test]
     fn test_domain() {
         let tokens = tokenize("Obara.fikun(10)");
         assert!(matches!(tokens[0].value, Token::Domain(OduDomain::Obara)));
         assert!(matches!(tokens[1].value, Token::Dot));
     }
-    
+
     #[test]
     fn test_string() {
         let tokens = tokenize(r#""Hello Ifá!""#);
         assert!(matches!(&tokens[0].value, Token::String(s) if s == "Hello Ifá!"));
     }
-    
+
     #[test]
     fn test_yoruba_keywords() {
         let tokens = tokenize("àyànmọ́ x = otito");

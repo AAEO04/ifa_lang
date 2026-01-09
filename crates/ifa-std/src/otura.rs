@@ -1,14 +1,14 @@
 //! # Òtúrá Domain (1011)
-//! 
+//!
 //! The Messenger - Networking
-//! 
+//!
 //! Tokio async networking with rustls for TLS and SSRF protection.
 
+use crate::impl_odu_domain;
+use ifa_core::error::{IfaError, IfaResult};
+use std::net::IpAddr;
 #[cfg(feature = "full")]
 use tokio::net::{TcpListener, TcpStream};
-use ifa_core::error::{IfaError, IfaResult};
-use crate::impl_odu_domain;
-use std::net::IpAddr;
 
 /// Blocked hosts for SSRF protection
 const BLOCKED_HOSTS: &[&str] = &[
@@ -38,19 +38,21 @@ impl Otura {
     /// Check if host is allowed (SSRF protection + Capability)
     pub fn ṣàyẹ̀wò(&self, host: &str) -> bool {
         // First check capability
-        if !self.capabilities.check(&Ofun::Network { domains: vec![host.to_string()] }) {
+        if !self.capabilities.check(&Ofun::Network {
+            domains: vec![host.to_string()],
+        }) {
             return false;
         }
-        
+
         let host_lower = host.to_lowercase();
-        
+
         // Block known dangerous hosts
         for blocked in BLOCKED_HOSTS {
             if host_lower == *blocked || host_lower.ends_with(blocked) {
                 return false;
             }
         }
-        
+
         // Block private IP ranges
         if let Ok(ip) = host.parse::<IpAddr>() {
             match ip {
@@ -66,7 +68,7 @@ impl Otura {
                 }
             }
         }
-        
+
         true
     }
 }
@@ -84,7 +86,7 @@ impl Otura {
         } else {
             return Err(IfaError::Runtime("Invalid URL".into()));
         }
-        
+
         reqwest::get(url)
             .await
             .map_err(|e| IfaError::ConnectionFailed(e.to_string()))?
@@ -92,19 +94,20 @@ impl Otura {
             .await
             .map_err(|e| IfaError::Custom(format!("Response error: {}", e)))
     }
-    
+
     /// HTTP POST request (rán)
     pub async fn ran(&self, url: &str, body: &str) -> IfaResult<String> {
         // SSFR Check
         if let Some(host) = url.split("://").nth(1).and_then(|s| s.split('/').next()) {
-             let host = host.split(':').next().unwrap_or(host);
-             if !self.ṣàyẹ̀wò(host) {
-                 return Err(IfaError::SsrfBlocked(host.to_string()));
-             }
+            let host = host.split(':').next().unwrap_or(host);
+            if !self.ṣàyẹ̀wò(host) {
+                return Err(IfaError::SsrfBlocked(host.to_string()));
+            }
         }
 
         let client = reqwest::Client::new();
-        client.post(url)
+        client
+            .post(url)
             .body(body.to_string())
             .send()
             .await
@@ -113,10 +116,12 @@ impl Otura {
             .await
             .map_err(|e| IfaError::Custom(format!("Response error: {}", e)))
     }
-    
+
     /// TCP listen (dè)
     pub async fn de(&self, addr: &str) -> IfaResult<TcpListener> {
-        if !self.capabilities.check(&Ofun::Network { domains: vec!["*".to_string()] }) {
+        if !self.capabilities.check(&Ofun::Network {
+            domains: vec!["*".to_string()],
+        }) {
             return Err(IfaError::PermissionDenied("Network bind denied".into()));
         }
 
@@ -124,7 +129,7 @@ impl Otura {
             .await
             .map_err(|e| IfaError::Custom(format!("Bind error: {}", e)))
     }
-    
+
     /// TCP connect (sọ̀rọ̀)
     pub async fn soro(&self, addr: &str) -> IfaResult<TcpStream> {
         // Extract host
@@ -150,19 +155,21 @@ impl Otura {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_ssrf_protection() {
         // Create Otura with network capabilities granted for test domains
         let mut caps = CapabilitySet::default();
-        caps.grant(Ofun::Network { domains: vec!["example.com".to_string(), "8.8.8.8".to_string()] });
+        caps.grant(Ofun::Network {
+            domains: vec!["example.com".to_string(), "8.8.8.8".to_string()],
+        });
         let otura = Otura::new(caps);
-        
+
         // Should block (localhost blocked even with capability due to SSRF protection)
         assert!(!otura.ṣàyẹ̀wò("localhost"));
         assert!(!otura.ṣàyẹ̀wò("127.0.0.1"));
         assert!(!otura.ṣàyẹ̀wò("169.254.169.254"));
-        
+
         // Should allow (granted in capability)
         assert!(otura.ṣàyẹ̀wò("example.com"));
         assert!(otura.ṣàyẹ̀wò("8.8.8.8"));

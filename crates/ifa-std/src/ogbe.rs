@@ -1,11 +1,11 @@
 //! # Ọ̀gbè Domain (1111)
-//! 
+//!
 //! The Initiator - System and Lifecycle
-//! 
+//!
 //! CLI arguments, environment, and program initialization.
 
-use std::env;
 use crate::impl_odu_domain;
+use std::env;
 
 use ifa_sandbox::{CapabilitySet, Ofun};
 
@@ -21,56 +21,60 @@ impl Ogbe {
     pub fn new(capabilities: CapabilitySet) -> Self {
         Ogbe { capabilities }
     }
-    
+
     /// Check env capability
     fn check_env(&self, key: &str) -> bool {
-        self.capabilities.check(&Ofun::Environment { keys: vec![key.to_string()] })
+        self.capabilities.check(&Ofun::Environment {
+            keys: vec![key.to_string()],
+        })
     }
 
     /// Get CLI arguments (àwọn ohun)
     pub fn awon_ohun(&self) -> Vec<String> {
         env::args().collect()
     }
-    
+
     /// Get argument at index
     pub fn ohun(&self, index: usize) -> Option<String> {
         env::args().nth(index)
     }
-    
+
     /// Get argument count
     pub fn iye_ohun(&self) -> usize {
         env::args().count()
     }
-    
+
     /// Get environment variable (àyíká)
     pub fn ayika(&self, key: &str) -> Option<String> {
-        if !self.check_env(key) { return None; }
+        if !self.check_env(key) {
+            return None;
+        }
         env::var(key).ok()
     }
-    
+
     /// Get env with default
     pub fn ayika_tabi(&self, key: &str, default: &str) -> String {
-        if !self.check_env(key) { return default.to_string(); }
+        if !self.check_env(key) {
+            return default.to_string();
+        }
         env::var(key).unwrap_or_else(|_| default.to_string())
     }
-    
+
     /// Set environment variable (fí àyíká)
     pub fn fi_ayika(&self, key: &str, value: &str) {
         if self.check_env(key) {
             env::set_var(key, value);
         }
     }
-    
+
     /// Get home directory (ilé)
     pub fn ile(&self) -> Option<String> {
         if !self.check_env("HOME") && !self.check_env("USERPROFILE") {
             return None;
         }
-        env::var("HOME")
-            .or_else(|_| env::var("USERPROFILE"))
-            .ok()
+        env::var("HOME").or_else(|_| env::var("USERPROFILE")).ok()
     }
-    
+
     /// Get current working directory (ojú ọ̀nà)
     pub fn oju_ona(&self) -> Option<String> {
         // CWD isn't strictly an ENV var check but good to limit
@@ -78,12 +82,12 @@ impl Ogbe {
             .ok()
             .and_then(|p| p.to_str().map(String::from))
     }
-    
+
     /// Get OS name
     pub fn eto(&self) -> &'static str {
         env::consts::OS
     }
-    
+
     /// Get architecture
     pub fn apẹrẹ(&self) -> &'static str {
         env::consts::ARCH
@@ -94,7 +98,7 @@ impl Ogbe {
 pub trait InitHook {
     /// Called when program starts
     fn on_init(&self) {}
-    
+
     /// Called when program exits (if possible)
     fn on_exit(&self) {}
 }
@@ -102,7 +106,7 @@ pub trait InitHook {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_ogbe() {
         let ogbe = Ogbe::default();

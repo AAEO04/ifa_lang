@@ -1,9 +1,9 @@
 //! # Bytecode Module
-//! 
+//!
 //! OpCode definitions and .ifab bytecode format for Ifá-Lang VM.
 
-use serde::{Serialize, Deserialize};
 use crate::error::{IfaError, IfaResult};
+use serde::{Deserialize, Serialize};
 
 /// Magic bytes for .ifab files: "IFAB" in ASCII
 pub const BYTECODE_MAGIC: [u8; 4] = [0x49, 0x46, 0x41, 0x42];
@@ -18,7 +18,6 @@ pub enum OpCode {
     // =========================================================================
     // STACK OPERATIONS
     // =========================================================================
-    
     /// Push null onto stack
     PushNull = 0x00,
     /// Push integer constant (followed by 8 bytes)
@@ -35,18 +34,17 @@ pub enum OpCode {
     PushList = 0x06,
     /// Push empty map
     PushMap = 0x07,
-    
+
     /// Pop and discard top of stack
     Pop = 0x10,
     /// Duplicate top of stack
     Dup = 0x11,
     /// Swap top two stack elements
     Swap = 0x12,
-    
+
     // =========================================================================
     // ARITHMETIC (Ọ̀bàrà & Òtúúrúpọ̀n)
     // =========================================================================
-    
     /// Add top two values
     Add = 0x20,
     /// Subtract
@@ -61,11 +59,10 @@ pub enum OpCode {
     Neg = 0x25,
     /// Power
     Pow = 0x26,
-    
+
     // =========================================================================
     // COMPARISON
     // =========================================================================
-    
     /// Equal
     Eq = 0x30,
     /// Not equal
@@ -78,22 +75,20 @@ pub enum OpCode {
     Gt = 0x34,
     /// Greater than or equal
     Ge = 0x35,
-    
+
     // =========================================================================
     // LOGIC
     // =========================================================================
-    
     /// Logical AND
     And = 0x40,
     /// Logical OR
     Or = 0x41,
     /// Logical NOT
     Not = 0x42,
-    
+
     // =========================================================================
     // VARIABLES
     // =========================================================================
-    
     /// Load local variable (followed by index)
     LoadLocal = 0x50,
     /// Store to local variable
@@ -102,22 +97,20 @@ pub enum OpCode {
     LoadGlobal = 0x52,
     /// Store to global variable
     StoreGlobal = 0x53,
-    
+
     // =========================================================================
     // CONTROL FLOW
     // =========================================================================
-    
     /// Unconditional jump (followed by offset)
     Jump = 0x60,
     /// Jump if top of stack is falsy
     JumpIfFalse = 0x61,
     /// Jump if top of stack is truthy
     JumpIfTrue = 0x62,
-    
+
     // =========================================================================
     // FUNCTIONS
     // =========================================================================
-    
     /// Call function (followed by arg count)
     Call = 0x70,
     /// Return from function
@@ -126,12 +119,11 @@ pub enum OpCode {
     CallOdu = 0x72,
     /// Call method on object
     CallMethod = 0x73,
-    
+
     // =========================================================================
     // COLLECTIONS
     // =========================================================================
-    
-    /// Get index (list[i] or map[k])
+    /// Get index (list\[i\] or map\[k\])
     GetIndex = 0x80,
     /// Set index
     SetIndex = 0x81,
@@ -143,22 +135,20 @@ pub enum OpCode {
     BuildList = 0x84,
     /// Build map from N key-value pairs on stack
     BuildMap = 0x85,
-    
+
     // =========================================================================
     // I/O (Ìrosù)
     // =========================================================================
-    
     /// Print (with newline)
     Print = 0x90,
     /// Print (no newline)
     PrintRaw = 0x91,
     /// Read input
     Input = 0x92,
-    
+
     // =========================================================================
     // SYSTEM
     // =========================================================================
-    
     /// Halt execution
     Halt = 0xFF,
 }
@@ -243,47 +233,47 @@ impl Bytecode {
             lines: Vec::new(),
         }
     }
-    
+
     /// Serialize to .ifab format
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut result = Vec::new();
-        
+
         // Magic header
         result.extend_from_slice(&BYTECODE_MAGIC);
         result.push(BYTECODE_VERSION);
-        
+
         // Use bincode for the rest
         if let Ok(encoded) = bincode::serialize(self) {
             result.extend(encoded);
         }
-        
+
         result
     }
-    
+
     /// Deserialize from .ifab format
     pub fn from_bytes(bytes: &[u8]) -> IfaResult<Self> {
         if bytes.len() < 5 {
             return Err(IfaError::Custom("Invalid bytecode: too short".to_string()));
         }
-        
+
         // Check magic
         if &bytes[0..4] != &BYTECODE_MAGIC {
             return Err(IfaError::Custom("Invalid bytecode: bad magic".to_string()));
         }
-        
+
         // Check version
         if bytes[4] != BYTECODE_VERSION {
             return Err(IfaError::Custom(format!(
-                "Bytecode version mismatch: expected {}, got {}", 
+                "Bytecode version mismatch: expected {}, got {}",
                 BYTECODE_VERSION, bytes[4]
             )));
         }
-        
+
         // Deserialize rest
         bincode::deserialize(&bytes[5..])
             .map_err(|e| IfaError::Custom(format!("Bytecode decode error: {}", e)))
     }
-    
+
     /// Get line number for instruction at offset
     pub fn get_line(&self, offset: usize) -> Option<u32> {
         for (off, line) in self.lines.iter().rev() {
@@ -298,7 +288,7 @@ impl Bytecode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_opcode_roundtrip() {
         let opcodes = [OpCode::Add, OpCode::Sub, OpCode::Mul, OpCode::Halt];
@@ -307,16 +297,16 @@ mod tests {
             assert_eq!(OpCode::from_byte(byte).unwrap(), op);
         }
     }
-    
+
     #[test]
     fn test_bytecode_serialize() {
         let mut bc = Bytecode::new("test.ifa");
         bc.code = vec![0x01, 0x20, 0xFF]; // PushInt, Add, Halt
         bc.strings = vec!["hello".to_string()];
-        
+
         let bytes = bc.to_bytes();
         let decoded = Bytecode::from_bytes(&bytes).unwrap();
-        
+
         assert_eq!(decoded.code, bc.code);
         assert_eq!(decoded.strings, bc.strings);
     }

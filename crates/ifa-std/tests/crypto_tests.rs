@@ -2,7 +2,7 @@
 //!
 //! Tests the ring-based SHA-256/512/HMAC and argon2 password hashing.
 
-use ifa_std::stacks::crypto::{hash, password, constant_time_compare};
+use ifa_std::stacks::crypto::{constant_time_compare, hash, password};
 
 #[test]
 fn test_sha256_produces_32_bytes() {
@@ -58,7 +58,7 @@ fn test_hmac_verify_correct_tag() {
     let key = b"my_secret";
     let data = b"important data";
     let tag = hash::hmac_sha256(key, data);
-    
+
     assert!(hash::hmac_verify(key, data, &tag));
 }
 
@@ -67,7 +67,7 @@ fn test_hmac_verify_wrong_tag() {
     let key = b"my_secret";
     let data = b"important data";
     let wrong_tag = [0u8; 32];
-    
+
     assert!(!hash::hmac_verify(key, data, &wrong_tag));
 }
 
@@ -77,7 +77,7 @@ fn test_hmac_verify_wrong_key() {
     let key2 = b"key2";
     let data = b"data";
     let tag = hash::hmac_sha256(key1, data);
-    
+
     assert!(!hash::hmac_verify(key2, data, &tag));
 }
 
@@ -99,14 +99,14 @@ fn test_constant_time_compare_different_lengths() {
 #[test]
 fn test_password_hash_and_verify() {
     let password_str = "my_secure_password_123!";
-    
+
     // Hash the password
     let hash = password::hash(password_str).expect("Failed to hash password");
-    
+
     // Verify correct password
     let valid = password::verify(password_str, &hash).expect("Failed to verify password");
     assert!(valid);
-    
+
     // Verify wrong password
     let invalid = password::verify("wrong_password", &hash).expect("Failed to verify password");
     assert!(!invalid);
@@ -115,13 +115,13 @@ fn test_password_hash_and_verify() {
 #[test]
 fn test_password_hash_different_each_time() {
     let password_str = "same_password";
-    
+
     let hash1 = password::hash(password_str).expect("Failed to hash");
     let hash2 = password::hash(password_str).expect("Failed to hash");
-    
+
     // Hashes should be different due to random salt
     assert_ne!(hash1, hash2);
-    
+
     // But both should verify correctly
     assert!(password::verify(password_str, &hash1).unwrap());
     assert!(password::verify(password_str, &hash2).unwrap());

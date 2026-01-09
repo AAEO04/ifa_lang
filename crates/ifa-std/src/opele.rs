@@ -33,7 +33,7 @@ pub struct ChainEntry {
 }
 
 /// Ọpẹlẹ Chain - Append-only verifiable sequence
-/// 
+///
 /// Like the divination chain, each link depends on the previous,
 /// creating an unbroken sequence of truth.
 #[derive(Debug)]
@@ -89,12 +89,8 @@ impl OpeleChain {
             }
 
             // Recompute hash and verify
-            let computed = self.compute_hash(
-                &entry.data,
-                &entry.prev_hash,
-                entry.index,
-                entry.timestamp,
-            );
+            let computed =
+                self.compute_hash(&entry.data, &entry.prev_hash, entry.index, entry.timestamp);
 
             if computed != entry.hash {
                 return false;
@@ -136,19 +132,19 @@ impl OpeleChain {
     /// In production, use ring or sha2 crate
     fn compute_hash(&self, data: &str, prev: &[u8; 32], index: u64, ts: u64) -> [u8; 32] {
         let mut hash = [0u8; 32];
-        
+
         // Mix data bytes
         for (i, b) in data.bytes().enumerate() {
             hash[i % 32] ^= b;
             hash[(i + 1) % 32] = hash[(i + 1) % 32].wrapping_add(b);
         }
-        
+
         // Mix previous hash
         for i in 0..32 {
             hash[i] ^= prev[i];
             hash[(i + 7) % 32] = hash[(i + 7) % 32].wrapping_add(prev[i]);
         }
-        
+
         // Mix index and timestamp
         let idx_bytes = index.to_le_bytes();
         let ts_bytes = ts.to_le_bytes();
@@ -156,7 +152,7 @@ impl OpeleChain {
             hash[i] ^= idx_bytes[i];
             hash[i + 8] ^= ts_bytes[i];
         }
-        
+
         // Final mixing rounds
         for round in 0..4 {
             for i in 0..32 {
@@ -164,7 +160,7 @@ impl OpeleChain {
                 hash[j] = hash[j].wrapping_add(hash[i].rotate_left(3));
             }
         }
-        
+
         hash
     }
 }
@@ -183,22 +179,22 @@ impl Default for OpeleChain {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum PrincipalOdu {
-    Ogbe = 0,       // 1111
-    Oyeku = 1,      // 0000
-    Iwori = 2,      // 0110
-    Odi = 3,        // 1001
-    Irosu = 4,      // 1100
-    Owonrin = 5,    // 0011
-    Obara = 6,      // 1000
-    Okanran = 7,    // 0001
-    Ogunda = 8,     // 1110
-    Osa = 9,        // 0111
-    Ika = 10,       // 0100
-    Oturupon = 11,  // 0010
-    Otura = 12,     // 1011
-    Irete = 13,     // 1101
-    Ose = 14,       // 1010
-    Ofun = 15,      // 0101
+    Ogbe = 0,      // 1111
+    Oyeku = 1,     // 0000
+    Iwori = 2,     // 0110
+    Odi = 3,       // 1001
+    Irosu = 4,     // 1100
+    Owonrin = 5,   // 0011
+    Obara = 6,     // 1000
+    Okanran = 7,   // 0001
+    Ogunda = 8,    // 1110
+    Osa = 9,       // 0111
+    Ika = 10,      // 0100
+    Oturupon = 11, // 0010
+    Otura = 12,    // 1011
+    Irete = 13,    // 1101
+    Ose = 14,      // 1010
+    Ofun = 15,     // 0101
 }
 
 impl PrincipalOdu {
@@ -315,7 +311,7 @@ impl Odu {
 // =============================================================================
 
 /// Variable-depth compound Odù for advanced patterns
-/// 
+///
 /// Supports arbitrary ancestral depth:
 /// - 2 levels: 256 patterns (Parent-Child)
 /// - 3 levels: 4,096 patterns (Grandparent-Parent-Child / GPC)
@@ -326,7 +322,7 @@ impl Odu {
 /// ```rust
 /// // 2-level compound
 /// let compound = CompoundOdu::from_pair(
-///     PrincipalOdu::Otura, 
+///     PrincipalOdu::Otura,
 ///     PrincipalOdu::Ika
 /// );
 /// assert_eq!(compound.name(), "Otura_Ika");
@@ -359,43 +355,46 @@ pub struct CompoundOdu {
 impl CompoundOdu {
     /// Create compound from ancestors (oldest to newest)
     pub fn new(ancestors: Vec<PrincipalOdu>) -> Self {
-        assert!(!ancestors.is_empty(), "Compound Odu must have at least one ancestor");
+        assert!(
+            !ancestors.is_empty(),
+            "Compound Odu must have at least one ancestor"
+        );
         CompoundOdu { ancestors }
     }
-    
+
     /// Create 2-level compound (traditional)
     pub fn from_pair(parent: PrincipalOdu, child: PrincipalOdu) -> Self {
-        CompoundOdu { 
-            ancestors: vec![parent, child] 
+        CompoundOdu {
+            ancestors: vec![parent, child],
         }
     }
-    
+
     /// Create 3-level compound (GPC: Grandparent-Parent-Child)
     pub fn from_triple(
         grandparent: PrincipalOdu,
         parent: PrincipalOdu,
         child: PrincipalOdu,
     ) -> Self {
-        CompoundOdu { 
-            ancestors: vec![grandparent, parent, child] 
+        CompoundOdu {
+            ancestors: vec![grandparent, parent, child],
         }
     }
-    
+
     /// Get depth (number of levels in hierarchy)
     pub fn depth(&self) -> usize {
         self.ancestors.len()
     }
-    
+
     /// Get root (oldest ancestor)
     pub fn root(&self) -> PrincipalOdu {
         self.ancestors[0]
     }
-    
+
     /// Get current (newest/leaf node)
     pub fn current(&self) -> PrincipalOdu {
         *self.ancestors.last().unwrap()
     }
-    
+
     /// Get parent (one level up from current)
     pub fn parent(&self) -> Option<PrincipalOdu> {
         if self.depth() >= 2 {
@@ -404,17 +403,17 @@ impl CompoundOdu {
             None
         }
     }
-    
+
     /// Get specific ancestor by index (0 = oldest/root)
     pub fn ancestor(&self, index: usize) -> Option<PrincipalOdu> {
         self.ancestors.get(index).copied()
     }
-    
+
     /// Get all ancestors
     pub fn ancestors(&self) -> &[PrincipalOdu] {
         &self.ancestors
     }
-    
+
     /// Get compound name (underscores separate levels)
     pub fn name(&self) -> String {
         match self.depth() {
@@ -436,7 +435,7 @@ impl CompoundOdu {
             }
         }
     }
-    
+
     /// Get short name (abbreviated with hyphens)
     pub fn short_name(&self) -> String {
         self.ancestors
@@ -445,11 +444,11 @@ impl CompoundOdu {
             .collect::<Vec<_>>()
             .join("-")
     }
-    
+
     /// Get genealogical lineage description
     pub fn lineage(&self) -> String {
         let roles = self.lineage_roles();
-        
+
         self.ancestors
             .iter()
             .zip(roles.iter())
@@ -457,13 +456,17 @@ impl CompoundOdu {
             .collect::<Vec<_>>()
             .join("\n")
     }
-    
+
     /// Get role names for each level
     fn lineage_roles(&self) -> Vec<String> {
         match self.depth() {
             1 => vec!["Self".to_string()],
             2 => vec!["Parent".to_string(), "Child".to_string()],
-            3 => vec!["Grandparent".to_string(), "Parent".to_string(), "Child".to_string()],
+            3 => vec![
+                "Grandparent".to_string(),
+                "Parent".to_string(),
+                "Child".to_string(),
+            ],
             4 => vec![
                 "Great-Grandparent".to_string(),
                 "Grandparent".to_string(),
@@ -487,18 +490,18 @@ impl CompoundOdu {
             }
         }
     }
-    
+
     /// Pack to bytes (efficient variable-length encoding)
     pub fn to_bytes(&self) -> Vec<u8> {
         let bits_needed = self.depth() * 4;
         let bytes_needed = (bits_needed + 7) / 8;
         let mut bytes = vec![0u8; bytes_needed];
-        
+
         for (i, odu) in self.ancestors.iter().enumerate() {
             let bit_offset = i * 4;
             let byte_idx = bit_offset / 8;
             let bit_in_byte = bit_offset % 8;
-            
+
             if bit_in_byte <= 4 {
                 bytes[byte_idx] |= (*odu as u8) << bit_in_byte;
             } else {
@@ -509,19 +512,19 @@ impl CompoundOdu {
                 }
             }
         }
-        
+
         bytes
     }
-    
+
     /// Unpack from bytes
     pub fn from_bytes(bytes: &[u8], depth: usize) -> Self {
         let mut ancestors = Vec::with_capacity(depth);
-        
+
         for i in 0..depth {
             let bit_offset = i * 4;
             let byte_idx = bit_offset / 8;
             let bit_in_byte = bit_offset % 8;
-            
+
             let nibble = if bit_in_byte <= 4 {
                 (bytes[byte_idx] >> bit_in_byte) & 0x0F
             } else {
@@ -533,10 +536,10 @@ impl CompoundOdu {
                 };
                 (low | high) & 0x0F
             };
-            
+
             ancestors.push(PrincipalOdu::from_index(nibble));
         }
-        
+
         CompoundOdu { ancestors }
     }
 }
@@ -565,12 +568,12 @@ pub fn cast() -> Odu {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos() as u64)
         .unwrap_or(0);
-    
+
     // LCG random number generator
     let random = seed
         .wrapping_mul(6364136223846793005)
         .wrapping_add(1442695040888963407);
-    
+
     Odu::from_byte((random >> 32) as u8)
 }
 
@@ -587,7 +590,7 @@ pub fn divine(question: &str) -> DivineResult {
     let odu = cast();
     let proverb = proverb_for(&odu);
     let guidance = guidance_for(&odu);
-    
+
     DivineResult {
         question: question.to_string(),
         odu,
@@ -597,45 +600,45 @@ pub fn divine(question: &str) -> DivineResult {
 }
 
 /// Cast a compound Odu with specified depth
-/// 
+///
 /// # Example
 /// ```rust
 /// // 2-level compound
 /// let compound = cast_compound(2);
-/// 
+///
 /// // 3-level GPC
 /// let gpc = cast_compound(3);
-/// 
+///
 /// // 5-level deep
 /// let deep = cast_compound(5);
 /// ```
 pub fn cast_compound(depth: usize) -> CompoundOdu {
     assert!(depth > 0, "Depth must be at least 1");
-    
+
     let seed = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_nanos() as u64)
         .unwrap_or(0);
-    
+
     let mut ancestors = Vec::with_capacity(depth);
     let mut current_seed = seed;
-    
+
     for _ in 0..depth {
         let random = current_seed
             .wrapping_mul(6364136223846793005)
             .wrapping_add(1442695040888963407);
-        
+
         let odu_index = ((random >> 32) as u8) % 16;
         ancestors.push(PrincipalOdu::from_index(odu_index));
-        
+
         current_seed = random;
     }
-    
+
     CompoundOdu::new(ancestors)
 }
 
 /// Create a compound Odu from specific ancestors
-/// 
+///
 /// # Example
 /// ```rust
 /// let compound = create_compound(vec![
@@ -674,19 +677,27 @@ impl std::fmt::Display for DivineResult {
 fn proverb_for(odu: &Odu) -> String {
     // Proverbs based on right (primary) Odu
     match odu.right {
-        PrincipalOdu::Ogbe => "Ogbe says: The path is clear, move forward with confidence.".to_string(),
+        PrincipalOdu::Ogbe => {
+            "Ogbe says: The path is clear, move forward with confidence.".to_string()
+        }
         PrincipalOdu::Oyeku => "Oyeku says: In darkness, wisdom prepares for dawn.".to_string(),
         PrincipalOdu::Iwori => "Iwori says: Look within before seeking without.".to_string(),
         PrincipalOdu::Odi => "Odi says: Close one door, and another opens.".to_string(),
-        PrincipalOdu::Irosu => "Irosu says: Speak truth, for lies have no legs to stand.".to_string(),
-        PrincipalOdu::Owonrin => "Owonrin says: Change is the only constant; embrace it.".to_string(),
+        PrincipalOdu::Irosu => {
+            "Irosu says: Speak truth, for lies have no legs to stand.".to_string()
+        }
+        PrincipalOdu::Owonrin => {
+            "Owonrin says: Change is the only constant; embrace it.".to_string()
+        }
         PrincipalOdu::Obara => "Obara says: What you give, returns to you multiplied.".to_string(),
         PrincipalOdu::Okanran => "Okanran says: The tongue is sharper than the sword.".to_string(),
         PrincipalOdu::Ogunda => "Ogunda says: Clear the path with patience, not force.".to_string(),
         PrincipalOdu::Osa => "Osa says: Let go of what no longer serves you.".to_string(),
         PrincipalOdu::Ika => "Ika says: Words bind; choose them carefully.".to_string(),
         PrincipalOdu::Oturupon => "Oturupon says: Balance is the key to health.".to_string(),
-        PrincipalOdu::Otura => "Otura says: The journey teaches more than the destination.".to_string(),
+        PrincipalOdu::Otura => {
+            "Otura says: The journey teaches more than the destination.".to_string()
+        }
         PrincipalOdu::Irete => "Irete says: Secrets revealed bring freedom.".to_string(),
         PrincipalOdu::Ose => "Ose says: Beauty flows from inner peace.".to_string(),
         PrincipalOdu::Ofun => "Ofun says: The ancestors watch; honor their wisdom.".to_string(),
@@ -696,7 +707,10 @@ fn proverb_for(odu: &Odu) -> String {
 /// Get guidance for an Odu
 fn guidance_for(odu: &Odu) -> String {
     if odu.is_principal() {
-        format!("{} Meji brings double power. Your path is strongly affirmed.", odu.right.name())
+        format!(
+            "{} Meji brings double power. Your path is strongly affirmed.",
+            odu.right.name()
+        )
     } else {
         format!(
             "The combination of {} and {} suggests balance between {} and transformation.",
@@ -719,7 +733,7 @@ mod tests {
     fn test_chain_creation() {
         let mut chain = OpeleChain::new();
         assert!(chain.is_empty());
-        
+
         chain.cast("First entry");
         assert_eq!(chain.len(), 1);
         assert!(chain.verify());
@@ -728,10 +742,8 @@ mod tests {
     #[test]
     fn test_chain_integrity() {
         let mut chain = OpeleChain::new();
-        chain.cast("Entry 1")
-             .cast("Entry 2")
-             .cast("Entry 3");
-        
+        chain.cast("Entry 1").cast("Entry 2").cast("Entry 3");
+
         assert_eq!(chain.len(), 3);
         assert!(chain.verify());
     }
@@ -742,7 +754,7 @@ mod tests {
         assert_eq!(odu.right, PrincipalOdu::Ogbe);
         assert_eq!(odu.left, PrincipalOdu::Ogbe);
         assert!(odu.is_principal());
-        
+
         let odu = Odu::from_byte(0x10);
         assert_eq!(odu.right, PrincipalOdu::Ogbe);
         assert_eq!(odu.left, PrincipalOdu::Oyeku);
@@ -779,11 +791,11 @@ mod tests {
             assert!(!name.is_empty());
         }
     }
-    
+
     // =========================================================================
     // COMPOUND ODU TESTS
     // =========================================================================
-    
+
     #[test]
     fn test_compound_2_level() {
         let compound = CompoundOdu::from_pair(PrincipalOdu::Otura, PrincipalOdu::Ika);
@@ -792,19 +804,16 @@ mod tests {
         assert_eq!(compound.root(), PrincipalOdu::Otura);
         assert_eq!(compound.current(), PrincipalOdu::Ika);
     }
-    
+
     #[test]
     fn test_compound_3_level_gpc() {
-        let gpc = CompoundOdu::from_triple(
-            PrincipalOdu::Ogbe,
-            PrincipalOdu::Otura,
-            PrincipalOdu::Ika,
-        );
+        let gpc =
+            CompoundOdu::from_triple(PrincipalOdu::Ogbe, PrincipalOdu::Otura, PrincipalOdu::Ika);
         assert_eq!(gpc.depth(), 3);
         assert_eq!(gpc.name(), "Ogbe_Otura_Ika");
         assert_eq!(gpc.short_name(), "Og-Ot-Ik");
     }
-    
+
     #[test]
     fn test_compound_arbitrary_depth() {
         let deep = CompoundOdu::new(vec![
@@ -820,20 +829,17 @@ mod tests {
         assert_eq!(deep.parent(), Some(PrincipalOdu::Otura));
         assert_eq!(deep.ancestor(2), Some(PrincipalOdu::Iwori));
     }
-    
+
     #[test]
     fn test_compound_lineage() {
-        let compound = CompoundOdu::from_triple(
-            PrincipalOdu::Ogbe,
-            PrincipalOdu::Otura,
-            PrincipalOdu::Ika,
-        );
+        let compound =
+            CompoundOdu::from_triple(PrincipalOdu::Ogbe, PrincipalOdu::Otura, PrincipalOdu::Ika);
         let lineage = compound.lineage();
         assert!(lineage.contains("Grandparent: Ogbe"));
         assert!(lineage.contains("Parent: Otura"));
         assert!(lineage.contains("Child: Ika"));
     }
-    
+
     #[test]
     fn test_compound_bytes_roundtrip() {
         // Test 2-level
@@ -841,17 +847,14 @@ mod tests {
         let bytes2 = c2.to_bytes();
         let decoded2 = CompoundOdu::from_bytes(&bytes2, 2);
         assert_eq!(c2, decoded2);
-        
+
         // Test 3-level
-        let c3 = CompoundOdu::from_triple(
-            PrincipalOdu::Ogbe,
-            PrincipalOdu::Otura,
-            PrincipalOdu::Ika,
-        );
+        let c3 =
+            CompoundOdu::from_triple(PrincipalOdu::Ogbe, PrincipalOdu::Otura, PrincipalOdu::Ika);
         let bytes3 = c3.to_bytes();
         let decoded3 = CompoundOdu::from_bytes(&bytes3, 3);
         assert_eq!(c3, decoded3);
-        
+
         // Test 5-level
         let c5 = CompoundOdu::new(vec![
             PrincipalOdu::Ogbe,
@@ -864,7 +867,7 @@ mod tests {
         let decoded5 = CompoundOdu::from_bytes(&bytes5, 5);
         assert_eq!(c5, decoded5);
     }
-    
+
     #[test]
     fn test_odu_to_compound_conversion() {
         let odu = Odu::new(PrincipalOdu::Otura, PrincipalOdu::Ika);

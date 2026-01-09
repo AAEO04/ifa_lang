@@ -1,6 +1,6 @@
-use crate::{Ofun, CapabilitySet};
+use crate::{CapabilitySet, Ofun};
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecurityProfile {
@@ -73,7 +73,7 @@ impl SandboxConfig {
         self.capabilities.grant(cap);
         self
     }
-    
+
     pub fn force_wasm(mut self) -> Self {
         self.force_wasm = true;
         self

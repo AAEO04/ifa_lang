@@ -9,8 +9,8 @@
 //! - `ajose!` - Reactive binding declarations
 
 use proc_macro::TokenStream;
-use quote::{quote, format_ident};
-use syn::{parse_macro_input, DeriveInput, ItemFn, Expr, Token, parse::Parse, parse::ParseStream};
+use quote::{format_ident, quote};
+use syn::{parse::Parse, parse::ParseStream, parse_macro_input, DeriveInput, Expr, ItemFn, Token};
 
 /// # Ẹbọ Derive Macro
 ///
@@ -29,7 +29,7 @@ use syn::{parse_macro_input, DeriveInput, ItemFn, Expr, Token, parse::Parse, par
 pub fn derive_ebo(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    
+
     // Parse ebo attribute for custom cleanup method
     let mut cleanup_method = None;
     for attr in &input.attrs {
@@ -40,14 +40,14 @@ pub fn derive_ebo(input: TokenStream) -> TokenStream {
                     // Extract method name from cleanup = "method"
                     if let Some(start) = tokens.find('"') {
                         if let Some(end) = tokens.rfind('"') {
-                            cleanup_method = Some(tokens[start+1..end].to_string());
+                            cleanup_method = Some(tokens[start + 1..end].to_string());
                         }
                     }
                 }
             }
         }
     }
-    
+
     let drop_impl = if let Some(method) = cleanup_method {
         let method_ident = format_ident!("{}", method);
         quote! {
@@ -67,7 +67,7 @@ pub fn derive_ebo(input: TokenStream) -> TokenStream {
             }
         }
     };
-    
+
     TokenStream::from(drop_impl)
 }
 
@@ -97,27 +97,27 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let fn_vis = &input.vis;
     let fn_sig = &input.sig;
     let fn_block = &input.block;
-    
+
     // Convert block to string for analysis
     let block_str = quote!(#fn_block).to_string();
-    
+
     // Define pairs to check (open_method, close_method)
     let pairs = [
-        ("so", "pa"),     // socket open/close
-        ("si", "ti"),     // file open/close
-        ("mu", "fi"),     // acquire/release
-        ("bere", "da"),   // start/stop
+        ("so", "pa"),   // socket open/close
+        ("si", "ti"),   // file open/close
+        ("mu", "fi"),   // acquire/release
+        ("bere", "da"), // start/stop
     ];
-    
+
     let mut errors = Vec::new();
-    
+
     for (open, close) in &pairs {
         let open_pattern = format!(".{}(", open);
         let close_pattern = format!(".{}(", close);
-        
+
         let open_count = block_str.matches(&open_pattern).count();
         let close_count = block_str.matches(&close_pattern).count();
-        
+
         if open_count > close_count {
             errors.push(format!(
                 "Ìwà Pẹ̀lẹ́ violation: {} '{}' calls but only {} '{}' calls. \
@@ -126,14 +126,14 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
             ));
         }
     }
-    
+
     if !errors.is_empty() {
         let error_msg = errors.join("\n");
         return TokenStream::from(quote! {
             compile_error!(#error_msg);
         });
     }
-    
+
     // Function passes balance check - emit with wrapper
     TokenStream::from(quote! {
         #fn_vis #fn_sig {
@@ -157,7 +157,7 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn ebo_block(input: TokenStream) -> TokenStream {
     let block: proc_macro2::TokenStream = input.into();
-    
+
     TokenStream::from(quote! {
         {
             struct _EboGuard;
@@ -202,7 +202,7 @@ pub fn ajose(input: TokenStream) -> TokenStream {
     let binding = parse_macro_input!(input as AjoseBinding);
     let source = &binding.source;
     let target = &binding.target;
-    
+
     TokenStream::from(quote! {
         {
             println!("[Àjọṣe] Binding: {} => {}", stringify!(#source), stringify!(#target));
@@ -236,21 +236,23 @@ pub fn ajose(input: TokenStream) -> TokenStream {
 pub fn derive_observable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    
+
     let fields = match &input.data {
         syn::Data::Struct(data) => &data.fields,
-        _ => return TokenStream::from(quote! {
-            compile_error!("Observable can only be derived for structs");
-        }),
+        _ => {
+            return TokenStream::from(quote! {
+                compile_error!("Observable can only be derived for structs");
+            })
+        }
     };
-    
+
     let mut watchers = Vec::new();
-    
+
     for field in fields.iter() {
         if let Some(ident) = &field.ident {
             let watcher_name = format_ident!("watch_{}", ident);
             let field_ty = &field.ty;
-            
+
             watchers.push(quote! {
                 pub fn #watcher_name<F: Fn(&#field_ty) + 'static>(&self, callback: F) {
                     // Store callback for field changes
@@ -260,7 +262,7 @@ pub fn derive_observable(input: TokenStream) -> TokenStream {
             });
         }
     }
-    
+
     TokenStream::from(quote! {
         impl #name {
             #(#watchers)*

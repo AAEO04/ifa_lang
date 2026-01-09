@@ -10,7 +10,11 @@ pub struct CapabilityError {
 
 impl fmt::Display for CapabilityError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Capability denied: {:?} at {}", self.required, self.call_site)
+        write!(
+            f,
+            "Capability denied: {:?} at {}",
+            self.required, self.call_site
+        )
     }
 }
 

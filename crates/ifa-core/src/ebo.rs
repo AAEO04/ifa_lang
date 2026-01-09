@@ -33,7 +33,7 @@ impl<F: FnOnce()> Ebo<F> {
             cleanup: ManuallyDrop::new(Some(cleanup)),
         }
     }
-    
+
     /// Dismiss the guard - cleanup will NOT run
     #[inline]
     pub fn dismiss(mut self) {
@@ -42,7 +42,7 @@ impl<F: FnOnce()> Ebo<F> {
         }
         std::mem::forget(self);
     }
-    
+
     /// Run cleanup early and dismiss
     #[inline]
     pub fn sacrifice(mut self) {
@@ -91,7 +91,7 @@ impl<T, F: FnOnce(&mut T)> EboScope<T, F> {
             cleanup: Some(cleanup),
         }
     }
-    
+
     /// Get inner value, consuming the scope
     #[inline]
     pub fn into_inner(mut self) -> T {
@@ -103,7 +103,7 @@ impl<T, F: FnOnce(&mut T)> EboScope<T, F> {
         std::mem::forget(self);
         value
     }
-    
+
     /// Release without running cleanup
     #[inline]
     pub fn leak(mut self) -> T {
@@ -116,7 +116,7 @@ impl<T, F: FnOnce(&mut T)> EboScope<T, F> {
 
 impl<T, F: FnOnce(&mut T)> Deref for EboScope<T, F> {
     type Target = T;
-    
+
     #[inline]
     fn deref(&self) -> &T {
         &self.value
@@ -185,7 +185,7 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
-    
+
     #[test]
     fn test_ebo_runs_on_drop() {
         let ran = Rc::new(Cell::new(false));
@@ -195,7 +195,7 @@ mod tests {
         }
         assert!(ran.get());
     }
-    
+
     #[test]
     fn test_ebo_dismiss() {
         let ran = Rc::new(Cell::new(false));
@@ -206,7 +206,7 @@ mod tests {
         }
         assert!(!ran.get());
     }
-    
+
     #[test]
     fn test_ebo_scope() {
         let cleaned = Rc::new(Cell::new(false));
@@ -217,7 +217,7 @@ mod tests {
         }
         assert!(cleaned.get());
     }
-    
+
     #[test]
     fn test_ebo_scope_into_inner() {
         let cleaned = Rc::new(Cell::new(false));

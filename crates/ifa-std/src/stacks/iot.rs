@@ -64,7 +64,11 @@ pub enum PinState {
 
 impl From<bool> for PinState {
     fn from(v: bool) -> Self {
-        if v { PinState::High } else { PinState::Low }
+        if v {
+            PinState::High
+        } else {
+            PinState::Low
+        }
     }
 }
 
@@ -91,14 +95,14 @@ impl GpioPin {
             state: PinState::Low,
         }
     }
-    
+
     /// Configure pin mode
     pub fn set_mode(&mut self, mode: PinMode) -> EmbeddedResult<()> {
         println!("[GPIO] Pin {} configured as {:?}", self.pin, mode);
         self.mode = Some(mode);
         Ok(())
     }
-    
+
     /// Set output state
     pub fn set_state(&mut self, state: PinState) -> EmbeddedResult<()> {
         match self.mode {
@@ -107,30 +111,32 @@ impl GpioPin {
                 self.state = state;
                 Ok(())
             }
-            _ => Err(EmbeddedError::PinError("Pin not configured as output".into())),
+            _ => Err(EmbeddedError::PinError(
+                "Pin not configured as output".into(),
+            )),
         }
     }
-    
+
     /// Set high
     pub fn set_high(&mut self) -> EmbeddedResult<()> {
         self.set_state(PinState::High)
     }
-    
+
     /// Set low
     pub fn set_low(&mut self) -> EmbeddedResult<()> {
         self.set_state(PinState::Low)
     }
-    
+
     /// Toggle output
     pub fn toggle(&mut self) -> EmbeddedResult<()> {
-        let new_state = if self.state == PinState::High { 
-            PinState::Low 
-        } else { 
-            PinState::High 
+        let new_state = if self.state == PinState::High {
+            PinState::Low
+        } else {
+            PinState::High
         };
         self.set_state(new_state)
     }
-    
+
     /// Read input state
     pub fn read(&self) -> EmbeddedResult<PinState> {
         match self.mode {
@@ -138,52 +144,56 @@ impl GpioPin {
                 // Placeholder - would read actual hardware
                 Ok(self.state)
             }
-            _ => Err(EmbeddedError::PinError("Pin not configured as input".into())),
+            _ => Err(EmbeddedError::PinError(
+                "Pin not configured as input".into(),
+            )),
         }
     }
-    
+
     /// Check if pin is high
     pub fn is_high(&self) -> EmbeddedResult<bool> {
         Ok(self.read()? == PinState::High)
     }
-    
+
     /// Check if pin is low
     pub fn is_low(&self) -> EmbeddedResult<bool> {
         Ok(self.read()? == PinState::Low)
     }
 }
 
-
 /// Embedded GPIO abstraction (legacy API)
 pub struct EmbeddedGpio;
-
 
 impl EmbeddedGpio {
     /// Set pin mode (input/output)
     pub fn mode(&self, pin: u8, output: bool) -> EmbeddedResult<()> {
-        let mode = if output { PinMode::Output } else { PinMode::Input };
+        let mode = if output {
+            PinMode::Output
+        } else {
+            PinMode::Input
+        };
         println!("[GPIO] Pin {} set to {:?}", pin, mode);
         Ok(())
     }
-    
+
     /// Write digital value
     pub fn write(&self, pin: u8, high: bool) -> EmbeddedResult<()> {
         println!("[GPIO] Pin {} = {}", pin, if high { "HIGH" } else { "LOW" });
         Ok(())
     }
-    
+
     /// Read digital value
     pub fn read(&self, _pin: u8) -> EmbeddedResult<bool> {
         // Placeholder
         Ok(false)
     }
-    
+
     /// PWM output (duty cycle 0-255)
     pub fn pwm(&self, pin: u8, duty: u8) -> EmbeddedResult<()> {
         println!("[GPIO] Pin {} PWM duty = {}", pin, duty);
         Ok(())
     }
-    
+
     /// Analog read (ADC)
     pub fn analog_read(&self, _pin: u8) -> EmbeddedResult<u16> {
         // Placeholder
@@ -201,27 +211,27 @@ impl EmbeddedTimer {
     pub fn new() -> Self {
         EmbeddedTimer { deadline: None }
     }
-    
+
     /// Blocking delay in microseconds
     pub fn delay_us(&self, us: u32) {
         std::thread::sleep(Duration::from_micros(us as u64));
     }
-    
+
     /// Blocking delay in milliseconds
     pub fn delay_ms(&self, ms: u32) {
         std::thread::sleep(Duration::from_millis(ms as u64));
     }
-    
+
     /// Non-blocking: start a timer
     pub fn start(&mut self, duration: Duration) {
         self.deadline = Some(Instant::now() + duration);
     }
-    
+
     /// Non-blocking: check if timer expired
     pub fn is_expired(&self) -> bool {
         self.deadline.map(|d| Instant::now() >= d).unwrap_or(false)
     }
-    
+
     /// Non-blocking: wait for timer (polling)
     pub fn wait(&mut self) -> EmbeddedResult<()> {
         match self.deadline {
@@ -235,7 +245,7 @@ impl EmbeddedTimer {
             None => Err(EmbeddedError::NotInitialized),
         }
     }
-    
+
     /// Measure execution time
     pub fn measure<F: FnOnce() -> T, T>(f: F) -> (T, Duration) {
         let start = Instant::now();
@@ -266,20 +276,21 @@ impl EmbeddedSerial {
             buffer: Vec::new(),
         }
     }
-    
+
     /// Initialize UART at baud rate
     pub fn init(&mut self, baud: u32) -> EmbeddedResult<()> {
         if ![9600, 19200, 38400, 57600, 115200].contains(&baud) {
-            return Err(EmbeddedError::InvalidParameter(
-                format!("Unsupported baud rate: {}", baud)
-            ));
+            return Err(EmbeddedError::InvalidParameter(format!(
+                "Unsupported baud rate: {}",
+                baud
+            )));
         }
         println!("[UART] Initialized at {} baud", baud);
         self.baud = baud;
         self.initialized = true;
         Ok(())
     }
-    
+
     /// Write bytes
     pub fn write(&mut self, data: &[u8]) -> EmbeddedResult<usize> {
         if !self.initialized {
@@ -288,12 +299,12 @@ impl EmbeddedSerial {
         println!("[UART] TX: {:?}", data);
         Ok(data.len())
     }
-    
+
     /// Write string
     pub fn print(&mut self, s: &str) -> EmbeddedResult<usize> {
         self.write(s.as_bytes())
     }
-    
+
     /// Read available bytes
     pub fn read(&mut self, buffer: &mut [u8]) -> EmbeddedResult<usize> {
         if !self.initialized {
@@ -304,7 +315,7 @@ impl EmbeddedSerial {
         self.buffer.drain(..count);
         Ok(count)
     }
-    
+
     /// Check if data available
     pub fn available(&self) -> usize {
         self.buffer.len()
@@ -333,7 +344,7 @@ impl EmbeddedI2C {
             initialized: false,
         }
     }
-    
+
     /// Initialize I2C
     pub fn init(&mut self, sda: u8, scl: u8) -> EmbeddedResult<()> {
         println!("[I2C] SDA={}, SCL={}", sda, scl);
@@ -342,7 +353,7 @@ impl EmbeddedI2C {
         self.initialized = true;
         Ok(())
     }
-    
+
     /// Write to device
     pub fn write(&self, addr: u8, data: &[u8]) -> EmbeddedResult<()> {
         if !self.initialized {
@@ -351,7 +362,7 @@ impl EmbeddedI2C {
         println!("[I2C] Write to 0x{:02X}: {:?}", addr, data);
         Ok(())
     }
-    
+
     /// Read from device
     pub fn read(&self, addr: u8, buffer: &mut [u8]) -> EmbeddedResult<usize> {
         if !self.initialized {
@@ -362,7 +373,7 @@ impl EmbeddedI2C {
         buffer.fill(0);
         Ok(buffer.len())
     }
-    
+
     /// Write then read (common pattern)
     pub fn write_read(&self, addr: u8, write: &[u8], read: &mut [u8]) -> EmbeddedResult<usize> {
         self.write(addr, write)?;
@@ -394,7 +405,7 @@ impl EmbeddedSPI {
             initialized: false,
         }
     }
-    
+
     /// Initialize SPI
     pub fn init(&mut self, mosi: u8, miso: u8, sck: u8) -> EmbeddedResult<()> {
         println!("[SPI] MOSI={}, MISO={}, SCK={}", mosi, miso, sck);
@@ -404,7 +415,7 @@ impl EmbeddedSPI {
         self.initialized = true;
         Ok(())
     }
-    
+
     /// Transfer data (full duplex)
     pub fn transfer(&self, data: &mut [u8]) -> EmbeddedResult<()> {
         if !self.initialized {
@@ -413,7 +424,7 @@ impl EmbeddedSPI {
         println!("[SPI] Transfer: {:?}", data);
         Ok(())
     }
-    
+
     /// Write only
     pub fn write(&self, data: &[u8]) -> EmbeddedResult<()> {
         if !self.initialized {
@@ -431,18 +442,18 @@ impl Default for EmbeddedSPI {
 }
 
 /// Flash to embedded device via probe-rs
-pub fn flash(
-    target: &str,
-    binary_path: &str,
-    port: Option<&str>,
-) -> EmbeddedResult<()> {
-    println!("Flashing to {} via {}", target, port.unwrap_or("auto-detect"));
+pub fn flash(target: &str, binary_path: &str, port: Option<&str>) -> EmbeddedResult<()> {
+    println!(
+        "Flashing to {} via {}",
+        target,
+        port.unwrap_or("auto-detect")
+    );
     println!("   Binary: {}", binary_path);
-    
+
     // Will use probe-rs for actual flashing
     // For now, just simulate
     println!("Flash complete!");
-    
+
     Ok(())
 }
 
@@ -461,7 +472,7 @@ impl SensorReading {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_millis() as u64;
-        
+
         SensorReading {
             value,
             unit: unit.to_string(),
@@ -473,7 +484,7 @@ impl SensorReading {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_gpio_pin() {
         let mut pin = GpioPin::new(13);
@@ -481,14 +492,14 @@ mod tests {
         assert!(pin.set_high().is_ok());
         assert!(pin.toggle().is_ok());
     }
-    
+
     #[test]
     fn test_gpio_error() {
         let pin = GpioPin::new(13);
         // Not configured, should error
         assert!(pin.read().is_err());
     }
-    
+
     #[test]
     fn test_timer() {
         let timer = EmbeddedTimer::new();
@@ -497,13 +508,13 @@ mod tests {
         });
         assert!(duration.as_millis() >= 10);
     }
-    
+
     #[test]
     fn test_serial_not_initialized() {
         let mut serial = EmbeddedSerial::new();
         assert!(serial.write(b"test").is_err());
     }
-    
+
     #[test]
     fn test_serial_init() {
         let mut serial = EmbeddedSerial::new();

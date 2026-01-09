@@ -1,7 +1,7 @@
 //! # Ìrosù Domain (1100)
-//! 
+//!
 //! The Voice - Console Input/Output
-//! 
+//!
 //! ## Methods
 //! - `fo` - Print with newline
 //! - `so` - Print without newline  
@@ -9,14 +9,14 @@
 //! - `awo` - Colored output
 //! - `mo` - Clear screen
 
-use crossterm::{
-    cursor, terminal,
-    style::{Color, Print, SetForegroundColor, ResetColor},
-    execute,
-};
-use std::io::{self, Write, BufRead};
-use ifa_core::IfaValue;
 use crate::impl_odu_domain;
+use crossterm::{
+    cursor, execute,
+    style::{Color, Print, ResetColor, SetForegroundColor},
+    terminal,
+};
+use ifa_core::IfaValue;
+use std::io::{self, BufRead, Write};
 
 use ifa_sandbox::{CapabilitySet, Ofun};
 
@@ -32,7 +32,7 @@ impl Irosu {
     pub fn new(capabilities: CapabilitySet) -> Self {
         Irosu { capabilities }
     }
-    
+
     fn check(&self) -> bool {
         self.capabilities.check(&Ofun::Stdio)
     }
@@ -43,7 +43,7 @@ impl Irosu {
             println!("{}", value);
         }
     }
-    
+
     /// Print without newline (sọ)
     pub fn so(&self, value: &IfaValue) {
         if self.check() {
@@ -51,11 +51,13 @@ impl Irosu {
             io::stdout().flush().ok();
         }
     }
-    
+
     /// Read input from user (gbọ́)
     pub fn gbo(&self, prompt: &str) -> String {
-        if !self.check() { return String::new(); }
-        
+        if !self.check() {
+            return String::new();
+        }
+
         if !prompt.is_empty() {
             print!("{}", prompt);
             io::stdout().flush().ok();
@@ -64,21 +66,23 @@ impl Irosu {
         io::stdin().lock().read_line(&mut input).ok();
         input.trim().to_string()
     }
-    
+
     /// Read integer input
     pub fn gbo_nomba(&self, prompt: &str) -> i64 {
         self.gbo(prompt).parse().unwrap_or(0)
     }
-    
+
     /// Read float input
     pub fn gbo_odidi(&self, prompt: &str) -> f64 {
         self.gbo(prompt).parse().unwrap_or(0.0)
     }
-    
+
     /// Print with color (àwọ̀)
     pub fn awo(&self, text: &str, color: &str) {
-        if !self.check() { return; }
-        
+        if !self.check() {
+            return;
+        }
+
         let color_code = match color.to_lowercase().as_str() {
             "red" | "pupa" => Color::Red,
             "green" | "ewe" => Color::Green,
@@ -89,7 +93,7 @@ impl Irosu {
             "white" | "funfun" => Color::White,
             _ => Color::Reset,
         };
-        
+
         let mut stdout = io::stdout();
         execute!(
             stdout,
@@ -97,21 +101,25 @@ impl Irosu {
             Print(text),
             Print("\n"),
             ResetColor
-        ).ok();
+        )
+        .ok();
     }
-    
+
     /// Clear screen (mọ́)
     pub fn mo(&self) {
-        if !self.check() { return; }
-        
+        if !self.check() {
+            return;
+        }
+
         let mut stdout = io::stdout();
         execute!(
             stdout,
             terminal::Clear(terminal::ClearType::All),
             cursor::MoveTo(0, 0)
-        ).ok();
+        )
+        .ok();
     }
-    
+
     /// Flush stdout (sàn)
     pub fn san(&self) {
         if self.check() {
@@ -119,18 +127,20 @@ impl Irosu {
             io::stderr().flush().ok();
         }
     }
-    
+
     /// Print to stderr (kígbe)
     pub fn kigbe(&self, text: &str) {
         if self.check() {
             eprintln!("[ERROR] {}", text);
         }
     }
-    
+
     /// Print progress bar
     pub fn ilosiwaju(&self, current: usize, total: usize, width: usize) {
-        if !self.check() { return; }
-        
+        if !self.check() {
+            return;
+        }
+
         let percent = if total > 0 { current * 100 / total } else { 0 };
         let filled = width * current / total.max(1);
         let bar: String = "█".repeat(filled) + &"░".repeat(width - filled);
@@ -146,7 +156,7 @@ impl Irosu {
 mod tests {
     use super::*;
     use crate::traits::OduDomain;
-    
+
     #[test]
     fn test_irosu_creation() {
         let irosu = Irosu::default();
