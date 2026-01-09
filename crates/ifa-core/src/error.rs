@@ -114,12 +114,22 @@ impl IfaError {
     /// Get a Yoruba proverb related to this error (for educational context)
     pub fn proverb(&self) -> &'static str {
         match self {
-            IfaError::DivisionByZero(_) => "Bí a bá pín ohun tí kò sí, a ò lè rí nǹkan. (If we divide nothing, we find nothing.)",
+            IfaError::DivisionByZero(_) => {
+                "Bí a bá pín ohun tí kò sí, a ò lè rí nǹkan. (If we divide nothing, we find nothing.)"
+            }
             IfaError::TypeError { .. } => "Kì í ṣe gbogbo ẹyẹ ló ń fò. (Not all birds can fly.)",
-            IfaError::IndexOutOfBounds { .. } => "Ẹni tó gbéra lé òpin, yóò ṣubú. (One who goes beyond the edge will fall.)",
-            IfaError::KeyNotFound(_) => "A kì í wá ohun tí kò sí. (One cannot find what does not exist.)",
-            IfaError::StackUnderflow => "A kì í gbé ohun tí kò sí nínú àpótí. (One cannot lift what is not in the basket.)",
-            IfaError::OponExhausted { .. } => "Ìgbà méjì kì í wọ inú àwo kan. (Two times cannot fit in one calabash.)",
+            IfaError::IndexOutOfBounds { .. } => {
+                "Ẹni tó gbéra lé òpin, yóò ṣubú. (One who goes beyond the edge will fall.)"
+            }
+            IfaError::KeyNotFound(_) => {
+                "A kì í wá ohun tí kò sí. (One cannot find what does not exist.)"
+            }
+            IfaError::StackUnderflow => {
+                "A kì í gbé ohun tí kò sí nínú àpótí. (One cannot lift what is not in the basket.)"
+            }
+            IfaError::OponExhausted { .. } => {
+                "Ìgbà méjì kì í wọ inú àwo kan. (Two times cannot fit in one calabash.)"
+            }
             _ => "Gbogbo ìṣòro ní ojúùtù. (Every problem has a solution.)",
         }
     }

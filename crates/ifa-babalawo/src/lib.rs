@@ -10,9 +10,9 @@ mod iwa;
 mod taboo;
 mod wisdom;
 
-pub use checks::{check_program, LintContext};
+pub use checks::{LintContext, check_program};
 pub use diagnose::{Babalawo, Diagnostic, IfaError, Severity};
 pub use history::{StateHistoryBuffer, StateSnapshot};
-pub use iwa::{IwaEngine, ResourceDebt, LIFECYCLE_RULES};
+pub use iwa::{IwaEngine, LIFECYCLE_RULES, ResourceDebt};
 pub use taboo::{Taboo, TabooEnforcer, TabooViolation};
-pub use wisdom::{OduWisdom, ERROR_TO_ODU, ODU_WISDOM};
+pub use wisdom::{ERROR_TO_ODU, ODU_WISDOM, OduWisdom};

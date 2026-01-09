@@ -5,7 +5,7 @@
 //! Uses ring for audited crypto primitives and zstd for compression.
 
 use crate::impl_odu_domain;
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use ifa_core::error::{IfaError, IfaResult};
 use ring::rand::SecureRandom;
 use ring::{digest, hmac, rand as ring_rand};

@@ -17,56 +17,55 @@ pub struct OduWisdom {
 }
 
 /// All 16 Odù domains with their wisdom
-pub static ODU_WISDOM: Lazy<HashMap<&'static str, OduWisdom>> =
-    Lazy::new(|| {
-        let mut m = HashMap::new();
+pub static ODU_WISDOM: Lazy<HashMap<&'static str, OduWisdom>> = Lazy::new(|| {
+    let mut m = HashMap::new();
 
-        m.insert(
-            "OGBE",
-            OduWisdom {
-                name: "Ogbè",
-                title: "The Light",
-                meaning: "Beginnings, initialization, birth",
-                proverbs: &[
-                    "A journey of a thousand miles begins with a single step.",
-                    "The dawn breaks for those who are prepared.",
-                    "Light enters where there is an opening.",
-                ],
-                advice: "Check your initialization. All things must have a proper beginning.",
-            },
-        );
+    m.insert(
+        "OGBE",
+        OduWisdom {
+            name: "Ogbè",
+            title: "The Light",
+            meaning: "Beginnings, initialization, birth",
+            proverbs: &[
+                "A journey of a thousand miles begins with a single step.",
+                "The dawn breaks for those who are prepared.",
+                "Light enters where there is an opening.",
+            ],
+            advice: "Check your initialization. All things must have a proper beginning.",
+        },
+    );
 
-        m.insert(
-            "OYEKU",
-            OduWisdom {
-                name: "Ọ̀yẹ̀kú",
-                title: "The Darkness",
-                meaning: "Endings, termination, completion",
-                proverbs: &[
-                    "All rivers flow to the sea.",
-                    "Even the longest night ends with dawn.",
-                    "The path that begins must also end.",
-                ],
-                advice: "Ensure proper termination. Endings must be honored.",
-            },
-        );
+    m.insert(
+        "OYEKU",
+        OduWisdom {
+            name: "Ọ̀yẹ̀kú",
+            title: "The Darkness",
+            meaning: "Endings, termination, completion",
+            proverbs: &[
+                "All rivers flow to the sea.",
+                "Even the longest night ends with dawn.",
+                "The path that begins must also end.",
+            ],
+            advice: "Ensure proper termination. Endings must be honored.",
+        },
+    );
 
-        m.insert(
-            "IWORI",
-            OduWisdom {
-                name: "Ìwòrì",
-                title: "The Mirror",
-                meaning: "Reflection, iteration, loops",
-                proverbs: &[
-                    "The river does not flow backwards.",
-                    "What you seek is seeking you.",
-                    "The mirror shows truth to those who look.",
-                ],
-                advice: "Check your loop conditions. Cycles must have purpose.",
-            },
-        );
+    m.insert(
+        "IWORI",
+        OduWisdom {
+            name: "Ìwòrì",
+            title: "The Mirror",
+            meaning: "Reflection, iteration, loops",
+            proverbs: &[
+                "The river does not flow backwards.",
+                "What you seek is seeking you.",
+                "The mirror shows truth to those who look.",
+            ],
+            advice: "Check your loop conditions. Cycles must have purpose.",
+        },
+    );
 
-        m.insert("ODI", OduWisdom {
+    m.insert("ODI", OduWisdom {
         name: "Òdí",
         title: "The Vessel",
         meaning: "Storage, files, containment",
@@ -78,188 +77,188 @@ pub static ODU_WISDOM: Lazy<HashMap<&'static str, OduWisdom>> =
         advice: "Verify your file operations. Vessels must be opened before use and closed after.",
     });
 
-        m.insert(
-            "IROSU",
-            OduWisdom {
-                name: "Ìrosù",
-                title: "The Speaker",
-                meaning: "Communication, output, expression",
-                proverbs: &[
-                    "Words once spoken cannot be recalled.",
-                    "The wise speak with purpose.",
-                    "Let your speech be seasoned with wisdom.",
-                ],
-                advice: "Check your output format. Communication must be clear.",
-            },
-        );
+    m.insert(
+        "IROSU",
+        OduWisdom {
+            name: "Ìrosù",
+            title: "The Speaker",
+            meaning: "Communication, output, expression",
+            proverbs: &[
+                "Words once spoken cannot be recalled.",
+                "The wise speak with purpose.",
+                "Let your speech be seasoned with wisdom.",
+            ],
+            advice: "Check your output format. Communication must be clear.",
+        },
+    );
 
-        m.insert(
-            "OWONRIN",
-            OduWisdom {
-                name: "Ọ̀wọ́nrín",
-                title: "The Chaotic",
-                meaning: "Randomness, chance, unpredictability",
-                proverbs: &[
-                    "The wind blows where it wills.",
-                    "Chaos contains the seed of order.",
-                    "Expect the unexpected.",
-                ],
-                advice: "Account for randomness. Chaos must be embraced, not feared.",
-            },
-        );
+    m.insert(
+        "OWONRIN",
+        OduWisdom {
+            name: "Ọ̀wọ́nrín",
+            title: "The Chaotic",
+            meaning: "Randomness, chance, unpredictability",
+            proverbs: &[
+                "The wind blows where it wills.",
+                "Chaos contains the seed of order.",
+                "Expect the unexpected.",
+            ],
+            advice: "Account for randomness. Chaos must be embraced, not feared.",
+        },
+    );
 
-        m.insert(
-            "OBARA",
-            OduWisdom {
-                name: "Ọ̀bàrà",
-                title: "The King",
-                meaning: "Expansion, addition, growth",
-                proverbs: &[
-                    "The tree grows from within.",
-                    "Small drops fill the ocean.",
-                    "Growth requires patience and consistency.",
-                ],
-                advice: "Check your arithmetic. Expansion must respect boundaries.",
-            },
-        );
+    m.insert(
+        "OBARA",
+        OduWisdom {
+            name: "Ọ̀bàrà",
+            title: "The King",
+            meaning: "Expansion, addition, growth",
+            proverbs: &[
+                "The tree grows from within.",
+                "Small drops fill the ocean.",
+                "Growth requires patience and consistency.",
+            ],
+            advice: "Check your arithmetic. Expansion must respect boundaries.",
+        },
+    );
 
-        m.insert(
-            "OKANRAN",
-            OduWisdom {
-                name: "Ọ̀kànràn",
-                title: "The Troublemaker",
-                meaning: "Errors, exceptions, warnings",
-                proverbs: &[
-                    "The squeaking wheel gets the oil.",
-                    "Problems are opportunities in disguise.",
-                    "Face your troubles head-on.",
-                ],
-                advice: "Handle your exceptions. Errors are teachers.",
-            },
-        );
+    m.insert(
+        "OKANRAN",
+        OduWisdom {
+            name: "Ọ̀kànràn",
+            title: "The Troublemaker",
+            meaning: "Errors, exceptions, warnings",
+            proverbs: &[
+                "The squeaking wheel gets the oil.",
+                "Problems are opportunities in disguise.",
+                "Face your troubles head-on.",
+            ],
+            advice: "Handle your exceptions. Errors are teachers.",
+        },
+    );
 
-        m.insert(
-            "OGUNDA",
-            OduWisdom {
-                name: "Ògúndá",
-                title: "The Cutter",
-                meaning: "Arrays, process control, separation",
-                proverbs: &[
-                    "The machete cuts the path.",
-                    "Not all that is separated is lost.",
-                    "To divide is also to organize.",
-                ],
-                advice: "Check your array bounds. Cutting must be precise.",
-            },
-        );
+    m.insert(
+        "OGUNDA",
+        OduWisdom {
+            name: "Ògúndá",
+            title: "The Cutter",
+            meaning: "Arrays, process control, separation",
+            proverbs: &[
+                "The machete cuts the path.",
+                "Not all that is separated is lost.",
+                "To divide is also to organize.",
+            ],
+            advice: "Check your array bounds. Cutting must be precise.",
+        },
+    );
 
-        m.insert(
-            "OSA",
-            OduWisdom {
-                name: "Ọ̀sá",
-                title: "The Wind",
-                meaning: "Control flow, jumps, conditionals",
-                proverbs: &[
-                    "The wind changes direction without announcement.",
-                    "Flexibility is strength.",
-                    "Many paths lead to the same destination.",
-                ],
-                advice: "Verify your conditionals. Flow must have logic.",
-            },
-        );
+    m.insert(
+        "OSA",
+        OduWisdom {
+            name: "Ọ̀sá",
+            title: "The Wind",
+            meaning: "Control flow, jumps, conditionals",
+            proverbs: &[
+                "The wind changes direction without announcement.",
+                "Flexibility is strength.",
+                "Many paths lead to the same destination.",
+            ],
+            advice: "Verify your conditionals. Flow must have logic.",
+        },
+    );
 
-        m.insert(
-            "IKA",
-            OduWisdom {
-                name: "Ìká",
-                title: "The Constrictor",
-                meaning: "Strings, compression, binding",
-                proverbs: &[
-                    "The rope that binds can also free.",
-                    "Words are the threads that bind meaning.",
-                    "What is bound together must also be released.",
-                ],
-                advice: "Check your string operations. Binding must be intentional.",
-            },
-        );
+    m.insert(
+        "IKA",
+        OduWisdom {
+            name: "Ìká",
+            title: "The Constrictor",
+            meaning: "Strings, compression, binding",
+            proverbs: &[
+                "The rope that binds can also free.",
+                "Words are the threads that bind meaning.",
+                "What is bound together must also be released.",
+            ],
+            advice: "Check your string operations. Binding must be intentional.",
+        },
+    );
 
-        m.insert(
-            "OTURUPON",
-            OduWisdom {
-                name: "Òtúúrúpọ̀n",
-                title: "The Bearer",
-                meaning: "Reduction, subtraction, division",
-                proverbs: &[
-                    "Sharing lightens the load.",
-                    "Less can be more.",
-                    "Division creates new wholes.",
-                ],
-                advice: "Watch for division by zero. Subtraction requires substance.",
-            },
-        );
+    m.insert(
+        "OTURUPON",
+        OduWisdom {
+            name: "Òtúúrúpọ̀n",
+            title: "The Bearer",
+            meaning: "Reduction, subtraction, division",
+            proverbs: &[
+                "Sharing lightens the load.",
+                "Less can be more.",
+                "Division creates new wholes.",
+            ],
+            advice: "Watch for division by zero. Subtraction requires substance.",
+        },
+    );
 
-        m.insert(
-            "OTURA",
-            OduWisdom {
-                name: "Òtúrá",
-                title: "The Messenger",
-                meaning: "Network, communication, sending",
-                proverbs: &[
-                    "The messenger is not the message.",
-                    "Bridges connect distant shores.",
-                    "News travels faster than the wind.",
-                ],
-                advice: "Check your network connections. Messages need receivers.",
-            },
-        );
+    m.insert(
+        "OTURA",
+        OduWisdom {
+            name: "Òtúrá",
+            title: "The Messenger",
+            meaning: "Network, communication, sending",
+            proverbs: &[
+                "The messenger is not the message.",
+                "Bridges connect distant shores.",
+                "News travels faster than the wind.",
+            ],
+            advice: "Check your network connections. Messages need receivers.",
+        },
+    );
 
-        m.insert(
-            "IRETE",
-            OduWisdom {
-                name: "Ìrẹtẹ̀",
-                title: "The Crusher",
-                meaning: "Memory management, garbage collection",
-                proverbs: &[
-                    "Make space for the new by releasing the old.",
-                    "The granary must be emptied before the harvest.",
-                    "What is no longer needed becomes burden.",
-                ],
-                advice: "Free your memory. Release creates space for growth.",
-            },
-        );
+    m.insert(
+        "IRETE",
+        OduWisdom {
+            name: "Ìrẹtẹ̀",
+            title: "The Crusher",
+            meaning: "Memory management, garbage collection",
+            proverbs: &[
+                "Make space for the new by releasing the old.",
+                "The granary must be emptied before the harvest.",
+                "What is no longer needed becomes burden.",
+            ],
+            advice: "Free your memory. Release creates space for growth.",
+        },
+    );
 
-        m.insert(
-            "OSE",
-            OduWisdom {
-                name: "Ọ̀ṣẹ́",
-                title: "The Beautifier",
-                meaning: "Graphics, display, aesthetics",
-                proverbs: &[
-                    "Beauty speaks without words.",
-                    "The canvas awaits the artist.",
-                    "Form follows function.",
-                ],
-                advice: "Check your display coordinates. Beauty requires precision.",
-            },
-        );
+    m.insert(
+        "OSE",
+        OduWisdom {
+            name: "Ọ̀ṣẹ́",
+            title: "The Beautifier",
+            meaning: "Graphics, display, aesthetics",
+            proverbs: &[
+                "Beauty speaks without words.",
+                "The canvas awaits the artist.",
+                "Form follows function.",
+            ],
+            advice: "Check your display coordinates. Beauty requires precision.",
+        },
+    );
 
-        m.insert(
-            "OFUN",
-            OduWisdom {
-                name: "Òfún",
-                title: "The Creator",
-                meaning: "Object creation, inheritance",
-                proverbs: &[
-                    "From nothing, something emerges.",
-                    "The child inherits from the parent.",
-                    "Creation is the highest art.",
-                ],
-                advice: "Verify your object creation. Creation requires intention.",
-            },
-        );
+    m.insert(
+        "OFUN",
+        OduWisdom {
+            name: "Òfún",
+            title: "The Creator",
+            meaning: "Object creation, inheritance",
+            proverbs: &[
+                "From nothing, something emerges.",
+                "The child inherits from the parent.",
+                "Creation is the highest art.",
+            ],
+            advice: "Verify your object creation. Creation requires intention.",
+        },
+    );
 
-        m
-    });
+    m
+});
 
 /// Error code to Odù domain mapping
 pub static ERROR_TO_ODU: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {

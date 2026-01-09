@@ -357,9 +357,11 @@ mod tests {
             .allow_write("/tmp/output");
 
         assert!(config.allowed_read_paths.contains(&PathBuf::from("/tmp")));
-        assert!(config
-            .allowed_write_paths
-            .contains(&PathBuf::from("/tmp/output")));
+        assert!(
+            config
+                .allowed_write_paths
+                .contains(&PathBuf::from("/tmp/output"))
+        );
     }
 
     #[test]

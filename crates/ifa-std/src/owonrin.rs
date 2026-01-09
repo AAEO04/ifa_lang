@@ -5,7 +5,7 @@
 //! Uses cryptographic RNG via ChaCha20 for security-sensitive applications.
 
 use crate::impl_odu_domain;
-use rand::{seq::SliceRandom, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, seq::SliceRandom};
 use rand_chacha::ChaCha20Rng;
 
 use ifa_sandbox::{CapabilitySet, Ofun};
@@ -58,7 +58,7 @@ impl Owonrin {
         if !self.check() {
             return 0.0;
         }
-        self.rng.gen()
+        self.rng.r#gen()
     }
 
     /// Random float in range
@@ -98,7 +98,7 @@ impl Owonrin {
         if !self.check() {
             return vec![0; count];
         }
-        (0..count).map(|_| self.rng.gen()).collect()
+        (0..count).map(|_| self.rng.r#gen()).collect()
     }
 
     /// Generate random hex string
@@ -114,11 +114,22 @@ impl Owonrin {
         let bytes = self.awon_bytes(16);
         format!(
             "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5],
-            (bytes[6] & 0x0f) | 0x40, bytes[7], // Version 4
-            (bytes[8] & 0x3f) | 0x80, bytes[9], // Variant 1
-            bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+            bytes[0],
+            bytes[1],
+            bytes[2],
+            bytes[3],
+            bytes[4],
+            bytes[5],
+            (bytes[6] & 0x0f) | 0x40,
+            bytes[7], // Version 4
+            (bytes[8] & 0x3f) | 0x80,
+            bytes[9], // Variant 1
+            bytes[10],
+            bytes[11],
+            bytes[12],
+            bytes[13],
+            bytes[14],
+            bytes[15]
         )
     }
 

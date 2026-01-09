@@ -1158,7 +1158,7 @@ impl Interpreter {
                                     return Err(IfaError::Runtime(format!(
                                         "Cannot write file: {}",
                                         e
-                                    )))
+                                    )));
                                 }
                             }
                         }
@@ -1182,7 +1182,7 @@ impl Interpreter {
                         match std::fs::create_dir_all(path) {
                             Ok(_) => return Ok(IfaValue::Bool(true)),
                             Err(e) => {
-                                return Err(IfaError::Runtime(format!("Cannot mkdir: {}", e)))
+                                return Err(IfaError::Runtime(format!("Cannot mkdir: {}", e)));
                             }
                         }
                     }
@@ -1733,7 +1733,7 @@ impl Interpreter {
                                         return Err(IfaError::Runtime(format!(
                                             "Failed to run C program: {}",
                                             e
-                                        )))
+                                        )));
                                     }
                                 }
                             }

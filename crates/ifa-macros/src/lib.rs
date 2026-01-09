@@ -10,7 +10,7 @@
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse::Parse, parse::ParseStream, parse_macro_input, DeriveInput, Expr, ItemFn, Token};
+use syn::{DeriveInput, Expr, ItemFn, Token, parse::Parse, parse::ParseStream, parse_macro_input};
 
 /// # Ẹbọ Derive Macro
 ///
@@ -242,7 +242,7 @@ pub fn derive_observable(input: TokenStream) -> TokenStream {
         _ => {
             return TokenStream::from(quote! {
                 compile_error!("Observable can only be derived for structs");
-            })
+            });
         }
     };
 

@@ -1,6 +1,6 @@
-use crate::config::SandboxConfig;
 use crate::Ofun;
-use eyre::{eyre, Result};
+use crate::config::SandboxConfig;
+use eyre::{Result, eyre};
 use std::path::Path;
 use wasmtime::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder};
 use wasmtime_wasi::p1::{self, WasiP1Ctx};

@@ -35,15 +35,15 @@ pub mod value;
 pub mod vm;
 
 // Re-exports for convenience
-pub use ajose::{effect, Ajose, Computed, RelContext, Relationship, Signal};
+pub use ajose::{Ajose, Computed, RelContext, Relationship, Signal, effect};
 pub use ast::{Expression, Program, Statement};
 pub use bytecode::{Bytecode, OpCode};
-pub use compiler::{compile, Compiler};
+pub use compiler::{Compiler, compile};
 pub use ebo::{Ebo, EboScope};
 pub use error::{IfaError, IfaResult};
 pub use interpreter::Interpreter;
 pub use iwa_pele::{IwaPele, IwaPeleError, IwaPeleErrorKind};
-pub use lexer::{tokenize, OduDomain, Token};
+pub use lexer::{OduDomain, Token, tokenize};
 pub use opon::{Opon, OponError, OponErrorKind, OponResult, OponSize};
 pub use parser::parse;
 pub use transpiler::transpile_to_rust;

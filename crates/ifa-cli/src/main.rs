@@ -245,7 +245,7 @@ fn main() -> Result<()> {
             allow_random,
             sandbox,
         } => {
-            use ifa_core::{parse, Interpreter};
+            use ifa_core::{Interpreter, parse};
             use ifa_sandbox::{CapabilitySet, Ofun};
 
             println!("Ifa-Lang Interpreter v1.2.0");

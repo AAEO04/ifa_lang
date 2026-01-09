@@ -25,18 +25,18 @@ pub use iot::{EmbeddedGpio, EmbeddedI2C, EmbeddedSPI, EmbeddedSerial, EmbeddedTi
 pub use backend::{HttpServer, Middleware, OrmClient, Request, Response};
 
 // ML re-exports
-pub use ml::{loss, Linear, Optimizer, Tensor, TensorError, TensorResult, SGD};
+pub use ml::{Linear, Optimizer, SGD, Tensor, TensorError, TensorResult, loss};
 
 // Gamedev re-exports
+pub use gamedev::{AABB, Entity, SpatialGrid, Transform, Vec2, Velocity, World};
 pub use gamedev::{Animation, Audio, Collider, GameTimer, Input, SpriteComponent};
-pub use gamedev::{Entity, SpatialGrid, Transform, Vec2, Velocity, World, AABB};
 
 // Crypto re-exports
 pub use crypto::{
-    base64, constant_time_compare, hash, hex, uuid_v4, CryptoError, SecretStore, SecureRng,
+    CryptoError, SecretStore, SecureRng, base64, constant_time_compare, hash, hex, uuid_v4,
 };
 
 // Frontend re-exports
 pub use frontend::{
-    escape_html, Element, Fetch, LocalStorage, Node, Router, SafeHtml, Store, Style,
+    Element, Fetch, LocalStorage, Node, Router, SafeHtml, Store, Style, escape_html,
 };

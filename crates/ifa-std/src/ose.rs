@@ -8,14 +8,14 @@ use crate::impl_odu_domain;
 #[cfg(feature = "full")]
 use crossterm::{
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 #[cfg(feature = "full")]
 use ratatui::{
+    Terminal,
     backend::CrosstermBackend,
     style::Color,
     widgets::{Block, Borders, Paragraph},
-    Terminal,
 };
 use std::io;
 

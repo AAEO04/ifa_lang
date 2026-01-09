@@ -64,11 +64,7 @@ pub enum PinState {
 
 impl From<bool> for PinState {
     fn from(v: bool) -> Self {
-        if v {
-            PinState::High
-        } else {
-            PinState::Low
-        }
+        if v { PinState::High } else { PinState::Low }
     }
 }
 

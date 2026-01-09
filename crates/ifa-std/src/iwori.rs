@@ -113,11 +113,7 @@ pub fn range(start: i64, end: i64) -> impl Iterator<Item = i64> {
 pub fn range_step(start: i64, end: i64, step: i64) -> impl Iterator<Item = i64> {
     (0..).map(move |i| start + i * step).take_while(
         move |&x| {
-            if step > 0 {
-                x <= end
-            } else {
-                x >= end
-            }
+            if step > 0 { x <= end } else { x >= end }
         },
     )
 }

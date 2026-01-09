@@ -223,7 +223,7 @@ impl Compiler {
 
                 // Check if index < len
                 self.emit(OpCode::Dup); // Dup index
-                                        // Get length - this is simplified, real impl needs GetLen opcode
+                // Get length - this is simplified, real impl needs GetLen opcode
 
                 // For now, emit a placeholder
                 self.emit(OpCode::Pop); // Simplified

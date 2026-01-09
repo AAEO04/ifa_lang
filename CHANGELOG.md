@@ -69,6 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed Clippy warnings**: Default impl for Opon, mem::take in interpreter, thread_local const
 - **Fixed sandbox test**: `allow_network` → `allowed_network_domains.is_empty()`
 - **Removed broken domain tests**: Tests were outdated after CapabilitySet refactoring
+- **Rust edition 2024**: Upgraded from 2021 to 2024
+- **Fixed reserved keyword `gen`**: Escaped as `r#gen()` in owonrin.rs for edition 2024 compatibility
 
 #### Opon Memory Configuration
 - **English aliases for OponSize**: small/tiny → Kekere, medium/standard → Arinrin, large/mega → Nla, unlimited/dynamic → Ailopin

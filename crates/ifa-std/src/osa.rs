@@ -8,7 +8,7 @@ use crate::impl_odu_domain;
 use std::sync::Arc;
 use std::time::Duration;
 #[cfg(feature = "full")]
-use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, mpsc, oneshot};
 #[cfg(feature = "full")]
 use tokio::task::JoinHandle;
 
