@@ -18,6 +18,7 @@ fn any_ifa_value() -> impl Strategy<Value = IfaValue> {
     ]
 }
 
+#[allow(dead_code)]
 fn any_number() -> impl Strategy<Value = IfaValue> {
     prop_oneof![
         any::<i64>().prop_map(IfaValue::Int),

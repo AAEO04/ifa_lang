@@ -2,6 +2,14 @@
 #![allow(clippy::manual_clamp)]
 #![allow(clippy::manual_div_ceil)]
 #![allow(clippy::type_complexity)]
+#![allow(clippy::manual_is_multiple_of)]
+#![allow(clippy::manual_repeat_n)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::should_implement_trait)]
+#![allow(clippy::manual_contains)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::unnecessary_lazy_evaluations)]
+#![allow(clippy::get_first)]
 
 //! # Ifá-Std - The 16 Odù Domains
 //!
