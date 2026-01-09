@@ -1,3 +1,5 @@
+#![allow(clippy::approx_constant)]
+
 //! Integration tests for ifa-core
 //!
 //! Tests the VM, bytecode execution, and IfaValue operations.

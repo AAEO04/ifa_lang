@@ -2070,6 +2070,8 @@ mod tests {
     fn test_print() {
         let program = parse(r#"Irosu.fo("Hello");"#).unwrap();
         let mut interp = Interpreter::new();
+        // Grant Stdio capability for print tests
+        interp.capabilities.grant(ifa_sandbox::Ofun::Stdio);
         interp.execute(&program).unwrap();
 
         assert_eq!(interp.get_output(), &["Hello"]);

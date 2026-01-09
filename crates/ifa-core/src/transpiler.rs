@@ -449,8 +449,8 @@ mod tests {
     #[test]
     fn test_simple_transpile() {
         let source = r#"
-        ayanmo x = 10
-        Irosu.fo(x)
+        ayanmo x = 10;
+        Irosu.fo(x);
         "#;
 
         let program = parse(source).unwrap();
