@@ -18,9 +18,9 @@ serde.workspace = true
 cap-std = "3.4"
 cap-fs-ext = "3.4"
 
-# WASM Runtime
-wasmtime = "29.0"
-wasmtime-wasi = "29.0"
+# WASM Runtime - v17 for API compatibility
+wasmtime = "17.0"
+wasmtime-wasi = "17.0"
 
 # Filesystem
 walkdir = "2.4"
