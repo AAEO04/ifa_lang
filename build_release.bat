@@ -7,7 +7,7 @@
 
 setlocal enabledelayedexpansion
 
-set VERSION=1.2.0
+set VERSION=1.2.1
 set RELEASE_NAME=ifa-lang-v%VERSION%-windows-x86_64
 set SOURCE_DIR=%~dp0
 set BUILD_DIR=%SOURCE_DIR%dist\%RELEASE_NAME%

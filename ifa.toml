@@ -3,7 +3,7 @@
 
 [package]
 name = "ifa-project"
-version = "1.0.0"
+version = "1.2.1"
 authors = ["Charon"]
 edition = "2025"
 description = "The Yoruba Programming Language"

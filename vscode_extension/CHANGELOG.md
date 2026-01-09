@@ -2,6 +2,11 @@
 
 All notable changes to the Ifá-Lang VS Code extension.
 
+## [1.2.1] - 2026-01-09
+
+### Changed
+- Bumped version to align with core project.
+
 ## [1.2.0] - 2026-01-08
 
 ### Added

@@ -2,7 +2,7 @@
   "name": "ifa-lang",
   "displayName": "Ifá Language",
   "description": "The Yoruba Programming Language - Official Extension with syntax highlighting, intellisense, and debugging",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "license": "MIT",
   "publisher": "IfaLang",
   "author": {
