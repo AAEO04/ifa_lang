@@ -1,7 +1,6 @@
 # Release & Update Process
 
-## 🌍 Cross-Platform Builds
-You do **not** need to build for Linux/macOS on your local Windows machine. The GitHub Actions workflow (`.github/workflows/release.yml`) handles this automatically.
+
 
 When you push a version tag (e.g., `v1.2.1`), GitHub servers will:
 1.  Spin up **Ubuntu**, **Windows**, and **macOS** runners.
