@@ -449,7 +449,8 @@ class IfaInterpreter:
                 import socket
                 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                server.bind(('0.0.0.0', port))
+                # Bind to localhost only for security (use '0.0.0.0' for external access)
+                server.bind(('127.0.0.1', port))
                 server.listen(1)
                 server.settimeout(30)
                 if self.verbose:

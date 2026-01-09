@@ -15,12 +15,12 @@ eyre.workspace = true
 serde.workspace = true
 
 # Capability-based security
-cap-std = "2.0"
-cap-fs-ext = "2.0"
+cap-std = "3.4"
+cap-fs-ext = "3.4"
 
 # WASM Runtime
-wasmtime = "17.0"
-wasmtime-wasi = "17.0"
+wasmtime = "29.0"
+wasmtime-wasi = "29.0"
 
 # Filesystem
 walkdir = "2.4"
