@@ -147,7 +147,7 @@ pub fn load_library(path: &str) -> FfiResult<LibHandle> {
     let wide: Vec<u16> = path.encode_utf16().chain(std::iter::once(0)).collect();
 
     // LoadLibraryW
-    extern "system" {
+    unsafe extern "system" {
         fn LoadLibraryW(lpFileName: *const u16) -> *mut c_void;
     }
 

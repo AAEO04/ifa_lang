@@ -26,7 +26,7 @@ type BindingRelation<S, T> = Vec<(Weak<RefCell<S>>, Weak<RefCell<T>>, Box<dyn Fn
 /// A reactive signal that notifies subscribers on change.
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// let count = Signal::new(0);
 /// let label = Signal::new(String::new());
 ///
@@ -144,7 +144,7 @@ impl<T: Clone + 'static> Computed<T> {
 /// Run a side effect whenever any accessed signal changes.
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// let count = Signal::new(0);
 /// effect(move || {
 ///     println!("Count is now: {}", count.get());

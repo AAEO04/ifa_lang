@@ -195,19 +195,36 @@
 
         <h2>Download & Install</h2>
         <div style="margin: 2rem 0; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <a href="https://github.com/AAEO04/ifa_lang/releases/latest"
-                style="background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-                Download Latest Release
+            <a href="https://github.com/AAEO04/ifa_lang/releases/latest/download/ifa-x86_64-pc-windows-msvc.zip"
+                style="background: linear-gradient(135deg, #0078d4, #005a9e); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                ⊞ Windows
+            </a>
+            <a href="https://github.com/AAEO04/ifa_lang/releases/latest/download/ifa-aarch64-apple-darwin.tar.gz"
+                style="background: linear-gradient(135deg, #555, #333); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                macOS
+            </a>
+            <a href="https://github.com/AAEO04/ifa_lang/releases/latest/download/ifa-x86_64-unknown-linux-gnu.tar.gz"
+                style="background: linear-gradient(135deg, #e95420, #c34113); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                🐧 Linux
             </a>
             <a href="https://github.com/AAEO04/ifa_lang"
-                style="background: linear-gradient(135deg, #333, #555); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-                GitHub Repository
+                style="background: linear-gradient(135deg, #6e5494, #4a3766); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                📂 Source Code
             </a>
         </div>
 
         <div
+            style="background: rgba(76, 175, 80, 0.15); border: 1px solid #4caf50; border-radius: 8px; padding: 1rem; max-width: 700px; margin: 1rem auto;">
+            <p style="margin: 0; color: #a5d6a7;">
+                <strong>💡 Note:</strong> The prebuilt binaries run standalone — no dependencies required!
+                Rust is only needed if you want to <a href="#development" style="color: #81c784;">develop or build from
+                    source</a>.
+            </p>
+        </div>
+
+        <div
             style="background: var(--bg-card); border-radius: 12px; padding: 1.5rem; max-width: 700px; margin: 1rem auto;">
-            <h3 style="color: var(--gold); margin-bottom: 1rem;">Quick Install</h3>
+            <h3 style="color: var(--gold); margin-bottom: 1rem;">Quick Install (Script)</h3>
             <p><strong>Unix (Linux/macOS):</strong></p>
             <pre
                 style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; overflow-x: auto;">curl -sSL https://raw.githubusercontent.com/AAEO04/ifa-lang/main/install.sh | bash</pre>

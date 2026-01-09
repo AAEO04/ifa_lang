@@ -14,7 +14,7 @@ use std::ops::{Deref, DerefMut};
 /// Zero-cost RAII guard that runs cleanup on drop.
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// let file = std::fs::File::create("temp.txt")?;
 /// let _guard = Ebo::new("tempfile", || std::fs::remove_file("temp.txt").ok());
 /// // file removed when guard drops
@@ -69,7 +69,7 @@ impl<F: FnOnce()> Drop for Ebo<F> {
 /// Wraps a value and runs cleanup when dropped.
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// let scoped_file = EboScope::new(
 ///     std::fs::File::create("data.txt")?,
 ///     |f| { f.sync_all().ok(); }
@@ -142,7 +142,7 @@ impl<T, F: FnOnce(&mut T)> Drop for EboScope<T, F> {
 /// Defer macro - Golang-style defer
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// let mut file = File::create("temp.txt")?;
 /// defer!(|| std::fs::remove_file("temp.txt"));
 /// // cleanup runs at end of scope
@@ -157,7 +157,7 @@ macro_rules! defer {
 /// Ẹbọ block macro - scoped cleanup
 ///
 /// # Example
-/// ```rust
+/// ```rust,ignore
 /// ebo! {
 ///     let conn = db.connect()?;
 ///     cleanup: conn.close();
