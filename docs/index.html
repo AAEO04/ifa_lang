@@ -446,6 +446,72 @@
             </div>
         </div>
 
+        <h2 id="architecture">Architecture Overview</h2>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Ifá-Lang is built as a modular Rust workspace with 8
+            specialized crates:</p>
+        <div class="odu-grid">
+            <div class="odu-card">
+                <h3>ifa-core</h3>
+                <p>Core VM, bytecode, parser, interpreter</p>
+                <p class="meaning">IfaValue type system, Opon memory</p>
+            </div>
+            <div class="odu-card">
+                <h3>ifa-std</h3>
+                <p>Standard library (16 Odù domains)</p>
+                <p class="meaning">File, Network, Crypto, Graphics</p>
+            </div>
+            <div class="odu-card">
+                <h3>ifa-cli</h3>
+                <p>Command-line interface</p>
+                <p class="meaning">REPL, compiler, formatter, LSP</p>
+            </div>
+            <div class="odu-card">
+                <h3>ifa-sandbox</h3>
+                <p>Secure WASM sandbox (Wasmtime v40)</p>
+                <p class="meaning">Ọ̀fún capability system</p>
+            </div>
+            <div class="odu-card">
+                <h3>ifa-macros</h3>
+                <p>Procedural macros</p>
+                <p class="meaning">Ẹbọ, ìwà pẹ̀lẹ́, àjọṣe</p>
+            </div>
+            <div class="odu-card">
+                <h3>ifa-babalawo</h3>
+                <p>LSP server & dev tools</p>
+                <p class="meaning">IDE integration, diagnostics</p>
+            </div>
+            <div class="odu-card">
+                <h3>ifa-embedded</h3>
+                <p>no_std runtime for embedded</p>
+                <p class="meaning">IoT, microcontrollers</p>
+            </div>
+            <div class="odu-card">
+                <h3>ifa-wasm</h3>
+                <p>WASM bindings for web</p>
+                <p class="meaning">Playground, browser runtime</p>
+            </div>
+        </div>
+
+        <h2 id="development">Development Guide</h2>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Build from source (requires
+            <a href="https://rustup.rs/" style="color: var(--gold);">Rust toolchain</a>):
+        </p>
+        <div
+            style="background: var(--bg-card); border-radius: 12px; padding: 1.5rem; max-width: 700px; margin: 1rem auto;">
+            <h3 style="color: var(--gold); margin-bottom: 1rem;">Build Commands</h3>
+            <pre
+                style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 4px; overflow-x: auto; margin-bottom: 0.5rem;"># Clone and build
+git clone https://github.com/AAEO04/ifa_lang.git
+cd ifa_lang
+cargo build --workspace --release
+
+# Run tests
+cargo test --workspace
+
+# Run CLI
+cargo run -p ifa-cli -- --help</pre>
+        </div>
+
         <h2>Opele Chain & Divination</h2>
         <p style="color: var(--text-dim); margin-bottom: 1rem;">Unique Ifá-Lang features inspired by Ifá divination. <a
                 href="opele.html" style="color: var(--gold);">Full documentation →</a></p>

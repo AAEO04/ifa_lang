@@ -171,6 +171,9 @@
         <a href="#ewo">Èèwọ̀ (Taboo)</a>
         <a href="#iwa-pele">Ìwà Pẹ̀lẹ́ (Errors)</a>
         <a href="#opon">Opon (Memory)</a>
+        <a href="#ffi">FFI (Native Libs)</a>
+        <a href="#macros">Macros</a>
+        <a href="#embedded">Embedded</a>
         <hr style="border-color: var(--accent); margin: 1rem 0;">
         <a href="sandbox.html">Sandbox</a>
         <a href="ofun.html">Capabilities</a>
@@ -543,6 +546,120 @@ Ose.save("output.svg");
 Ose.mode("canvas");
 Ose.fillStyle("#e94560");
 Ose.fillRect(10, 10, 100, 50);</code></pre>
+            </section>
+
+            <section id="ffi">
+                <h2>Foreign Function Interface (FFI)</h2>
+                <p>Call native libraries from Ifá-Lang (requires <code>--allow-ffi</code> flag).</p>
+
+                <h3>Loading Libraries</h3>
+                <pre><code>// Load a native library
+ayanmo lib = Ffi.load("libm.so");  // Linux
+ayanmo lib = Ffi.load("msvcrt.dll");  // Windows
+
+// Bind a function
+ayanmo sqrt = lib.bind("sqrt", ["f64"], "f64");
+ayanmo result = sqrt(16.0);  // 4.0
+
+// Cleanup
+lib.close();</code></pre>
+
+                <h3>Supported Types</h3>
+                <table>
+                    <tr>
+                        <th>Ifá Type</th>
+                        <th>C Type</th>
+                    </tr>
+                    <tr>
+                        <td><code>i32</code></td>
+                        <td>int32_t</td>
+                    </tr>
+                    <tr>
+                        <td><code>i64</code></td>
+                        <td>int64_t</td>
+                    </tr>
+                    <tr>
+                        <td><code>f64</code></td>
+                        <td>double</td>
+                    </tr>
+                    <tr>
+                        <td><code>str</code></td>
+                        <td>const char*</td>
+                    </tr>
+                    <tr>
+                        <td><code>ptr</code></td>
+                        <td>void*</td>
+                    </tr>
+                </table>
+            </section>
+
+            <section id="macros">
+                <h2>Procedural Macros (ifa-macros)</h2>
+                <p>Rust procedural macros for compile-time safety.</p>
+
+                <h3>Ẹbọ Derive Macro</h3>
+                <p>Auto-implement RAII (Resource Acquisition Is Initialization):</p>
+                <pre><code>// In Rust code using ifa-core
+#[derive(Ebo)]
+#[ebo(cleanup = "close")]
+struct FileHandle {
+    path: String,
+    handle: *mut File,
+}
+// close() is automatically called when FileHandle is dropped</code></pre>
+
+                <h3>Ìwà Pẹ̀lẹ́ Attribute</h3>
+                <p>Compile-time balance checking for paired operations:</p>
+                <pre><code>#[iwa_pele]
+fn database_transaction() {
+    db.begin();     // Tracked: open operation
+    // ... operations ...
+    db.commit();    // Tracked: close operation
+}
+// Compiler error if begin() and commit() don't match!</code></pre>
+
+                <h3>Àjọṣe Binding Macro</h3>
+                <p>Create reactive bindings between values:</p>
+                <pre><code>ajose!(counter.value => display.text);
+ajose!(slider.position => volume.level);
+// When source changes, target updates automatically</code></pre>
+            </section>
+
+            <section id="embedded">
+                <h2>Embedded Runtime (ifa-embedded)</h2>
+                <p>Run Ifá-Lang on microcontrollers with <code>no_std</code> support.</p>
+
+                <h3>Constraints</h3>
+                <ul>
+                    <li>No heap allocation (stack-only)</li>
+                    <li>Fixed-size value stack</li>
+                    <li>Subset of standard library</li>
+                    <li>No file I/O or networking</li>
+                </ul>
+
+                <h3>Supported Platforms</h3>
+                <table>
+                    <tr>
+                        <th>Platform</th>
+                        <th>RAM</th>
+                        <th>Status</th>
+                    </tr>
+                    <tr>
+                        <td>ARM Cortex-M</td>
+                        <td>≥64KB</td>
+                        <td>✅ Supported</td>
+                    </tr>
+                    <tr>
+                        <td>ESP32</td>
+                        <td>≥128KB</td>
+                        <td>✅ Supported</td>
+                    </tr>
+                    <tr>
+                        <td>RISC-V</td>
+                        <td>≥32KB</td>
+                        <td>🔄 Experimental</td>
+                    </tr>
+                </table>
             </section>
 
             <footer>

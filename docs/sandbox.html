@@ -138,6 +138,46 @@
         with the Ọ̀fún capability system. This provides multiple levels of protection:
     </p>
 
+    <div class="success">
+        <strong>🔒 Security Update (v1.2.0):</strong> Upgraded to Wasmtime v40 with critical security fixes:
+        <ul style="margin-top: 10px;">
+            <li>RUSTSEC-2025-0118 - Control flow integrity hardening</li>
+            <li>RUSTSEC-2025-0046 - Memory isolation improvements</li>
+            <li>RUSTSEC-2024-0438 - Stack overflow protection</li>
+            <li>RUSTSEC-2024-0445 - Resource limit enforcement</li>
+        </ul>
+    </div>
+
+    <h3>Resource Limits</h3>
+    <table>
+        <tr>
+            <th>Resource</th>
+            <th>Default Limit</th>
+            <th>Description</th>
+        </tr>
+        <tr>
+            <td>Memory</td>
+            <td>256 MB</td>
+            <td>Maximum WASM heap size</td>
+        </tr>
+        <tr>
+            <td>Execution Time</td>
+            <td>30 seconds</td>
+            <td>CPU timeout per execution</td>
+        </tr>
+        <tr>
+            <td>Stack Depth</td>
+            <td>1000 frames</td>
+            <td>Maximum call stack depth</td>
+        </tr>
+        <tr>
+            <td>Table Elements</td>
+            <td>10,000</td>
+            <td>Maximum function table size</td>
+        </tr>
+    </table>
+
+
     <div class="architecture-diagram">
         ┌─────────────────────────────────────────────────┐
         │ ifa run script.ifa │

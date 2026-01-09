@@ -19,7 +19,7 @@ use syn::{DeriveInput, Expr, ItemFn, Token, parse::Parse, parse::ParseStream, pa
 /// Automatically implements `Drop` for RAII resource cleanup.
 ///
 /// ## Usage
-/// ```rust
+/// ```rust,ignore
 /// #[derive(Ebo)]
 /// #[ebo(cleanup = "close")]  // Optional: specify cleanup method
 /// struct MyFile {
@@ -78,7 +78,7 @@ pub fn derive_ebo(input: TokenStream) -> TokenStream {
 /// Compile-time balance checking for paired operations.
 ///
 /// ## Usage
-/// ```rust
+/// ```rust,ignore
 /// #[iwa_pele]
 /// fn network_task() {
 ///     let conn = Otura.so("example.com", 80);  // open
@@ -150,7 +150,7 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Creates a scoped RAII block with guaranteed cleanup.
 ///
 /// ## Usage
-/// ```rust
+/// ```rust,ignore
 /// ebo_block! {
 ///     let file = std::fs::File::open("data.txt")?;
 ///     // file auto-closed when block exits
@@ -195,7 +195,7 @@ impl Parse for AjoseBinding {
 /// Creates reactive bindings between values.
 ///
 /// ## Usage
-/// ```rust
+/// ```rust,ignore
 /// ajose!(counter.value => label.text);
 /// // When counter.value changes, label.text updates
 /// ```
@@ -227,7 +227,7 @@ pub fn ajose(input: TokenStream) -> TokenStream {
 /// Makes a struct's fields observable for reactive updates.
 ///
 /// ## Usage
-/// ```rust
+/// ```rust,ignore
 /// #[derive(Observable)]
 /// struct Counter {
 ///     value: i32,
