@@ -603,6 +603,8 @@ pub fn divine(question: &str) -> DivineResult {
 ///
 /// # Example
 /// ```rust
+/// use ifa_std::opele::cast_compound;
+///
 /// // 2-level compound
 /// let compound = cast_compound(2);
 ///
@@ -641,6 +643,8 @@ pub fn cast_compound(depth: usize) -> CompoundOdu {
 ///
 /// # Example
 /// ```rust
+/// use ifa_std::opele::{create_compound, PrincipalOdu};
+///
 /// let compound = create_compound(vec![
 ///     PrincipalOdu::Ogbe,
 ///     PrincipalOdu::Otura,

@@ -104,6 +104,7 @@ pub mod password {
     ///
     /// # Example
     /// ```
+    /// use ifa_std::stacks::crypto::password;
     /// let hash = password::hash("my_password").unwrap();
     /// // Store hash in database...
     /// ```
@@ -123,7 +124,10 @@ pub mod password {
     ///
     /// # Example
     /// ```
-    /// let matches = password::verify("my_password", &stored_hash).unwrap();
+    /// use ifa_std::stacks::crypto::password;
+    /// let hash = password::hash("my_password").unwrap();
+    /// let matches = password::verify("my_password", &hash).unwrap();
+    /// assert!(matches);
     /// ```
     pub fn verify(password: &str, hash: &str) -> Result<bool, CryptoError> {
         let parsed_hash = PasswordHash::new(hash)
