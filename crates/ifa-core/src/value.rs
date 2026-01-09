@@ -360,7 +360,7 @@ impl IfaValue {
     /// Set value at index
     pub fn set(&mut self, index: &IfaValue, value: IfaValue) -> IfaResult<()> {
         match (self, index) {
-            (IfaValue::List(ref mut l), IfaValue::Int(i)) => {
+            (IfaValue::List(l), IfaValue::Int(i)) => {
                 let idx = *i as usize;
                 if idx < l.len() {
                     l[idx] = value;
@@ -372,7 +372,7 @@ impl IfaValue {
                     })
                 }
             }
-            (IfaValue::Map(ref mut m), IfaValue::Str(k)) => {
+            (IfaValue::Map(m), IfaValue::Str(k)) => {
                 m.insert(k.clone(), value);
                 Ok(())
             }
@@ -385,7 +385,7 @@ impl IfaValue {
 
     /// Push to list
     pub fn push(&mut self, value: IfaValue) -> IfaResult<()> {
-        if let IfaValue::List(ref mut l) = self {
+        if let IfaValue::List(l) = self {
             l.push(value);
             Ok(())
         } else {
@@ -398,7 +398,7 @@ impl IfaValue {
 
     /// Pop from list
     pub fn pop(&mut self) -> IfaResult<IfaValue> {
-        if let IfaValue::List(ref mut l) = self {
+        if let IfaValue::List(l) = self {
             l.pop().ok_or(IfaError::IndexOutOfBounds {
                 index: -1,
                 length: 0,
