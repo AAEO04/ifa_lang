@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opele Chain & Divination - Ifá-Lang Documentation</title>
+    <style>
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --accent: #e94560;
+            --gold: #ffd700;
+            --text: #eaeaea;
+            --text-dim: #a0a0a0;
+            --success: #4ade80;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 2px solid var(--accent);
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--gold), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            color: var(--gold);
+            border-bottom: 1px solid var(--accent);
+            padding-bottom: 0.5rem;
+            margin: 2rem 0 1rem;
+        }
+
+        h3 {
+            color: var(--accent);
+            margin: 1.5rem 0 0.5rem;
+        }
+
+        .concept-box {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--gold);
+        }
+
+        .odu-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            margin: 1rem 0;
+            max-width: 400px;
+        }
+
+        .odu-cell {
+            background: var(--bg-card);
+            padding: 0.5rem;
+            text-align: center;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        pre {
+            background: var(--bg-card);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 3px solid var(--accent);
+            margin: 1rem 0;
+        }
+
+        code {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(233, 69, 96, 0.3);
+        }
+
+        .chain-visual {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+            font-family: monospace;
+        }
+
+        .block {
+            background: var(--accent);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .arrow {
+            color: var(--gold);
+            font-size: 1.2rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--accent);
+            margin-top: 2rem;
+            color: var(--text-dim);
+        }
+
+        footer a {
+            color: var(--gold);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Opele Chain & Divination</h1>
+            <p>Unique Ifá-Lang features inspired by Yoruba divination</p>
+            <p style="color: var(--text-dim);">v1.2.0</p>
+        </header>
+
+        <h2>The Concept</h2>
+        <div class="concept-box">
+            <p>In traditional Ifá divination, the <strong>Opele</strong> is a divination chain used by Babalawos
+                (priests) to cast readings. The chain produces binary patterns (open/closed) that form the
+                <strong>Odù</strong> - sacred verses containing wisdom and guidance.
+            </p>
+            <p style="margin-top: 1rem;">Ifá-Lang brings this concept to computing: random generation with meaning,
+                tamper-evident logging, and pattern-based decision making.</p>
+        </div>
+
+        <h2>The 16 Odù Patterns</h2>
+        <p>Each Odù is a 4-bit binary pattern, giving us 16 principal Odù:</p>
+
+        <div class="odu-grid">
+            <div class="odu-cell">1111<br>Ogbe</div>
+            <div class="odu-cell">0000<br>Oyeku</div>
+            <div class="odu-cell">0110<br>Iwori</div>
+            <div class="odu-cell">1001<br>Odi</div>
+            <div class="odu-cell">1100<br>Irosu</div>
+            <div class="odu-cell">0011<br>Owonrin</div>
+            <div class="odu-cell">1000<br>Obara</div>
+            <div class="odu-cell">0001<br>Okanran</div>
+            <div class="odu-cell">1110<br>Ogunda</div>
+            <div class="odu-cell">0111<br>Osa</div>
+            <div class="odu-cell">0100<br>Ika</div>
+            <div class="odu-cell">0010<br>Oturupon</div>
+            <div class="odu-cell">1011<br>Otura</div>
+            <div class="odu-cell">1101<br>Irete</div>
+            <div class="odu-cell">1010<br>Ose</div>
+            <div class="odu-cell">0101<br>Ofun</div>
+        </div>
+
+        <h2>Features</h2>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>Opele.cast()</h3>
+                <p>Cast a random Odù using cryptographically secure RNG.</p>
+                <pre>ayanmo odu = Opele.cast();
+Irosu.fo(odu);
+// Output: "Ogunda-Ose"</pre>
+                <p class="meaning" style="color: var(--success);">Implemented in v1.0</p>
+            </div>
+
+            <div class="feature-card">
+                <h3>Opele.cast_compound(n)</h3>
+                <p>Cast multi-level compound Odù (2-5 levels).</p>
+                <pre>ayanmo gpc = Opele.cast_compound(3);
+// 3-level genealogical pattern
+Irosu.fo(gpc.lineage());</pre>
+                <p class="meaning" style="color: var(--success);">Implemented in v1.2</p>
+            </div>
+
+            <div class="feature-card">
+                <h3>Opele.divine(question)</h3>
+                <p>Get guidance based on cast Odù patterns.</p>
+                <pre>ayanmo advice = Opele.divine(
+  "Should I proceed?"
+);
+Irosu.fo(advice);</pre>
+                <p class="meaning" style="color: var(--success);">Implemented in v1.1</p>
+            </div>
+
+            <div class="feature-card">
+                <h3>Opele.lineage(compound)</h3>
+                <p>Get genealogical description of compound Odù.</p>
+                <pre>ayanmo desc = Opele.lineage(gpc);
+// "Ogunda born of Ose, 
+//  grandchild of Iwori"</pre>
+                <p class="meaning" style="color: var(--success);">Implemented in v1.2</p>
+            </div>
+        </div>
+
+        <h2>OpeleChain: Tamper-Evident Logging</h2>
+
+        <div class="concept-box">
+            <p>Inspired by blockchain technology, <strong>OpeleChain</strong> provides an append-only,
+                tamper-evident log. Each entry is linked to the previous via cryptographic hashing,
+                making any modification detectable.</p>
+        </div>
+
+        <h3>How It Works</h3>
+        <div class="chain-visual">
+            <div class="block">Genesis<br>hash: 0x0000</div>
+            <span class="arrow">→</span>
+            <div class="block">Entry 1<br>prev: 0x0000</div>
+            <span class="arrow">→</span>
+            <div class="block">Entry 2<br>prev: 0xa1b2</div>
+            <span class="arrow">→</span>
+            <div class="block">Entry 3<br>prev: 0xc3d4</div>
+        </div>
+
+        <h3>Usage</h3>
+        <pre>// Create a new chain
+ayanmo chain = OpeleChain.new();
+
+// Append entries (returns hash)
+ayanmo h1 = chain.append("User logged in");
+ayanmo h2 = chain.append("Transaction: 100 NGN");
+
+// Verify chain integrity
+ti chain.verify() {
+    Irosu.fo("Chain is valid");
+} bibeko {
+    Irosu.fo("TAMPERING DETECTED!");
+}
+
+// Get entry by hash
+ayanmo entry = chain.get(h1);
+Irosu.fo(entry.data);  // "User logged in"
+
+ase;</pre>
+
+        <h3>OpeleChain API</h3>
+        <table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
+            <tr style="background: var(--accent); color: white;">
+                <th style="padding: 8px; text-align: left;">Method</th>
+                <th style="padding: 8px; text-align: left;">Description</th>
+                <th style="padding: 8px; text-align: left;">Status</th>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;"><code>OpeleChain.new()</code></td>
+                <td style="padding: 8px;">Create new chain with genesis block</td>
+                <td style="padding: 8px; color: var(--success);">Implemented</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;"><code>chain.append(data)</code></td>
+                <td style="padding: 8px;">Add entry, returns hash</td>
+                <td style="padding: 8px; color: var(--success);">Implemented</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;"><code>chain.verify()</code></td>
+                <td style="padding: 8px;">Verify chain integrity</td>
+                <td style="padding: 8px; color: var(--success);">Implemented</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;"><code>chain.get(hash)</code></td>
+                <td style="padding: 8px;">Retrieve entry by hash</td>
+                <td style="padding: 8px; color: var(--success);">Implemented</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;"><code>chain.history()</code></td>
+                <td style="padding: 8px;">Get all entries in order</td>
+                <td style="padding: 8px; color: var(--success);">Implemented</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px;"><code>chain.export(path)</code></td>
+                <td style="padding: 8px;">Export chain to file</td>
+                <td style="padding: 8px; color: var(--text-dim);">Planned v1.3</td>
+            </tr>
+        </table>
+
+        <h2>Iwa Balance: Resource Lifecycle</h2>
+        <div class="concept-box">
+            <p>The <strong>Iwa</strong> (character/ethics) engine enforces balanced resource handling.
+                Every "open" must have a "close" - this is the principle of <em>Iwa-Pele</em> (good character).</p>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
+            <tr style="background: var(--accent); color: white;">
+                <th style="padding: 8px;">Open</th>
+                <th style="padding: 8px;">Close</th>
+                <th style="padding: 8px;">Domain</th>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;"><code>Odi.si()</code></td>
+                <td style="padding: 8px;"><code>Odi.pa()</code></td>
+                <td style="padding: 8px;">File I/O</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;"><code>Otura.so()</code></td>
+                <td style="padding: 8px;"><code>Otura.pa()</code></td>
+                <td style="padding: 8px;">Network</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;"><code>Osa.khoa()</code></td>
+                <td style="padding: 8px;"><code>Osa.si()</code></td>
+                <td style="padding: 8px;">Locks</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px;"><code>Irete.ya()</code></td>
+                <td style="padding: 8px;"><code>Irete.tu()</code></td>
+                <td style="padding: 8px;">Memory</td>
+            </tr>
+        </table>
+
+        <p>Use <code>ebo</code> (sacrifice/cleanup guard) for automatic cleanup:</p>
+        <pre>ebo file = Odi.si("data.txt", "r") {
+    // File automatically closed when scope ends
+    ayanmo content = Odi.ka(file);
+    Irosu.fo(content);
+}
+// file.pa() called automatically here</pre>
+
+        <footer>
+            <p><a href="index.html">← Back to Documentation Index</a></p>
+            <p>Ifá-Lang Opele & Divination v1.2.0</p>
+        </footer>
+    </div>
+</body>
+
+</html>

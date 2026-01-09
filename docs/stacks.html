@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Stacks - Ifá-Lang Documentation</title>
+    <style>
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --accent: #e94560;
+            --gold: #ffd700;
+            --text: #eaeaea;
+            --text-dim: #a0a0a0;
+            --success: #4ade80;
+            --warning: #fbbf24;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 2px solid var(--accent);
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, var(--gold), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            color: var(--gold);
+            border-bottom: 1px solid var(--accent);
+            padding-bottom: 0.5rem;
+            margin: 2rem 0 1rem;
+        }
+
+        h3 {
+            color: var(--accent);
+            margin: 1.5rem 0 0.5rem;
+        }
+
+        .stack-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .stack-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(233, 69, 96, 0.3);
+        }
+
+        .stack-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0;
+        }
+
+        .status {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .status-implemented {
+            background: var(--success);
+            color: #000;
+        }
+
+        .status-partial {
+            background: var(--warning);
+            color: #000;
+        }
+
+        .status-planned {
+            background: var(--text-dim);
+            color: #000;
+        }
+
+        .method-list {
+            list-style: none;
+            margin: 1rem 0;
+        }
+
+        .method-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .method-list code {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .implemented {
+            color: var(--success);
+        }
+
+        .planned {
+            color: var(--text-dim);
+            font-style: italic;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid var(--accent);
+            margin-top: 2rem;
+            color: var(--text-dim);
+        }
+
+        footer a {
+            color: var(--gold);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Domain Stacks</h1>
+            <p>Pre-built libraries for common application domains</p>
+            <p style="color: var(--text-dim);">v1.2.0</p>
+        </header>
+
+        <p>Domain Stacks are pre-built libraries that extend Ifá-Lang with specialized functionality.
+            They combine multiple Odù domains to provide complete solutions for specific application types.</p>
+
+        <h2>Stack Status Legend</h2>
+        <p>
+            <span class="status status-implemented">Implemented</span>
+            <span class="status status-partial">Partial</span>
+            <span class="status status-planned">Planned</span>
+        </p>
+
+        <h2>Available Stacks</h2>
+
+        <div class="stack-grid">
+            <div class="stack-card">
+                <h3>Crypto <span class="status status-implemented">Implemented</span></h3>
+                <p>Cryptographic operations for secure applications.</p>
+                <p style="color: var(--text-dim); font-size: 0.9rem;">ifa-std/stacks/crypto</p>
+                <ul class="method-list">
+                    <li class="implemented"><code>Crypto.sha256(data)</code> - SHA-256 hash</li>
+                    <li class="implemented"><code>Crypto.hmac(key, data)</code> - HMAC signature</li>
+                    <li class="implemented"><code>Crypto.random_bytes(n)</code> - Secure random bytes</li>
+                    <li class="implemented"><code>Crypto.base64_encode(data)</code> - Base64 encoding</li>
+                    <li class="implemented"><code>Crypto.base64_decode(str)</code> - Base64 decoding</li>
+                    <li class="planned"><code>Crypto.aes_encrypt()</code> - Coming in v1.3</li>
+                </ul>
+            </div>
+
+            <div class="stack-card">
+                <h3>Backend <span class="status status-partial">Partial</span></h3>
+                <p>HTTP servers, routing, and middleware.</p>
+                <p style="color: var(--text-dim); font-size: 0.9rem;">ifa-std/stacks/backend</p>
+                <ul class="method-list">
+                    <li class="implemented"><code>Otura.so(host, port)</code> - TCP connect</li>
+                    <li class="implemented"><code>Otura.gba(url)</code> - HTTP GET</li>
+                    <li class="implemented"><code>Otura.ran(url, data)</code> - HTTP POST</li>
+                    <li class="planned"><code>Backend.route()</code> - Coming in v1.4</li>
+                    <li class="planned"><code>Backend.middleware()</code> - Coming in v1.4</li>
+                    <li class="planned"><code>Backend.websocket()</code> - Coming in v1.4</li>
+                </ul>
+            </div>
+
+            <div class="stack-card">
+                <h3>Frontend <span class="status status-planned">Planned</span></h3>
+                <p>HTML/CSS generation and components.</p>
+                <p style="color: var(--text-dim); font-size: 0.9rem;">ifa-std/stacks/frontend</p>
+                <ul class="method-list">
+                    <li class="planned"><code>Frontend.element(tag)</code> - DOM element creation</li>
+                    <li class="planned"><code>Frontend.style(css)</code> - CSS styling</li>
+                    <li class="planned"><code>Frontend.render(component)</code> - Render to HTML</li>
+                    <li class="planned"><code>Frontend.event(el, type, fn)</code> - Event handling</li>
+                </ul>
+                <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--warning);">
+                    Target: v2.0 (Post-1.0 stable)
+                </p>
+            </div>
+
+            <div class="stack-card">
+                <h3>GameDev <span class="status status-planned">Planned</span></h3>
+                <p>Game development: sprites, physics, game loop.</p>
+                <p style="color: var(--text-dim); font-size: 0.9rem;">ifa-std/stacks/gamedev</p>
+                <ul class="method-list">
+                    <li class="implemented"><code>Ose.nu()</code> - Clear canvas</li>
+                    <li class="implemented"><code>Ose.ya(x, y, char)</code> - Draw point</li>
+                    <li class="implemented"><code>Ose.ila(x1,y1,x2,y2,c)</code> - Draw line</li>
+                    <li class="implemented"><code>Ose.han()</code> - Render frame</li>
+                    <li class="planned"><code>GameDev.sprite()</code> - Sprite loading</li>
+                    <li class="planned"><code>GameDev.collision()</code> - Collision detection</li>
+                    <li class="planned"><code>GameDev.physics()</code> - 2D physics</li>
+                </ul>
+                <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--warning);">
+                    ASCII canvas available now; full game engine in v2.0
+                </p>
+            </div>
+
+            <div class="stack-card">
+                <h3>IoT <span class="status status-partial">Partial</span></h3>
+                <p>Embedded systems, sensors, GPIO.</p>
+                <p style="color: var(--text-dim); font-size: 0.9rem;">ifa-std/stacks/iot</p>
+                <ul class="method-list">
+                    <li class="implemented"><code>ifa flash --target &lt;board&gt;</code> - Flash firmware</li>
+                    <li class="implemented"><code>Opon.size()</code> - Memory sizing for embedded</li>
+                    <li class="implemented"><code>ifa-embedded</code> - no_std crate</li>
+                    <li class="planned"><code>IoT.gpio(pin)</code> - GPIO control</li>
+                    <li class="planned"><code>IoT.sensor(type)</code> - Sensor reading</li>
+                    <li class="planned"><code>IoT.mqtt()</code> - MQTT protocol</li>
+                </ul>
+                <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--warning);">
+                    Basic embedded support available; full IoT stack in v1.5
+                </p>
+            </div>
+
+            <div class="stack-card">
+                <h3>ML <span class="status status-planned">Planned</span></h3>
+                <p>Machine learning and neural networks.</p>
+                <p style="color: var(--text-dim); font-size: 0.9rem;">ifa-std/stacks/ml</p>
+                <ul class="method-list">
+                    <li class="planned"><code>ML.tensor(shape)</code> - Tensor creation</li>
+                    <li class="planned"><code>ML.layer(type, nodes)</code> - Network layers</li>
+                    <li class="planned"><code>ML.train(model, data)</code> - Model training</li>
+                    <li class="planned"><code>ML.predict(model, input)</code> - Inference</li>
+                </ul>
+                <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--warning);">
+                    Target: v3.0 (Long-term roadmap)
+                </p>
+            </div>
+        </div>
+
+        <h2>Using Stacks</h2>
+        <p>Import a stack using the <code>iba</code> (import) keyword:</p>
+        <pre style="background: var(--bg-card); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+// Import the crypto stack
+iba Crypto;
+
+// Use cryptographic functions
+ayanmo hash = Crypto.sha256("Hello, World!");
+Irosu.fo(hash);
+
+ase;
+        </pre>
+
+        <h2>Roadmap</h2>
+        <table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
+            <tr style="background: var(--accent); color: white;">
+                <th style="padding: 8px; text-align: left;">Version</th>
+                <th style="padding: 8px; text-align: left;">Stack Updates</th>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;"><strong>v1.2.0</strong> (Current)</td>
+                <td style="padding: 8px;">Crypto stack complete, basic Backend/IoT</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;">v1.3.0</td>
+                <td style="padding: 8px;">AES encryption, expanded crypto</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;">v1.4.0</td>
+                <td style="padding: 8px;">Full Backend stack with routing</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;">v1.5.0</td>
+                <td style="padding: 8px;">Full IoT stack with GPIO/MQTT</td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;">v2.0.0</td>
+                <td style="padding: 8px;">Frontend + GameDev stacks</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px;">v3.0.0</td>
+                <td style="padding: 8px;">ML stack (long-term)</td>
+            </tr>
+        </table>
+
+        <footer>
+            <p><a href="index.html">← Back to Documentation Index</a></p>
+            <p>Ifá-Lang Domain Stacks v1.2.0</p>
+        </footer>
+    </div>
+</body>
+
+</html>

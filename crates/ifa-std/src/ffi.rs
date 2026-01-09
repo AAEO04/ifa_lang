@@ -9,7 +9,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::CString;
-use std::os::raw::{c_char, c_void};
+use std::os::raw::{c_char, c_int, c_void};
 
 /// FFI Error type
 #[derive(Debug)]
@@ -163,8 +163,6 @@ pub fn load_library(path: &str) -> FfiResult<LibHandle> {
 
 #[cfg(unix)]
 pub fn load_library(path: &str) -> FfiResult<LibHandle> {
-    use std::ptr;
-    
     extern "C" {
         fn dlopen(filename: *const c_char, flags: c_int) -> *mut c_void;
     }
@@ -726,7 +724,7 @@ impl IfaRpcServer {
     }
     
     /// Start HTTP server (blocking)
-    #[cfg(all(feature = "rpc-server", not(any())))]
+    #[cfg(feature = "full")]
     #[allow(dead_code)]
     pub fn start(&self) -> std::io::Result<()> {
         use std::io::{Read, Write};
