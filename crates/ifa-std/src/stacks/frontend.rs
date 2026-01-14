@@ -140,8 +140,14 @@ impl Element {
         self
     }
 
-    /// Render to HTML string
+    /// Render to HTML string (Standard)
     pub fn render(&self) -> String {
+        self.render_to_string()
+    }
+
+    /// Server-Side Rendering (SSR) - Optimized for string output
+    /// Can be used on Backend to pre-render HTML.
+    pub fn render_to_string(&self) -> String {
         let mut html = format!("<{}", self.tag);
 
         if let Some(ref id) = self.id {
@@ -166,6 +172,7 @@ impl Element {
             html.push_str(&format!(" style=\"{}\"", style_str));
         }
 
+        // Events are skipped in SSR usually, but we keep them for hydration matching
         for (event, handler) in &self.events {
             html.push_str(&format!(" on{}=\"{}\"", event, handler));
         }
@@ -174,7 +181,7 @@ impl Element {
 
         for child in &self.children {
             match child {
-                Node::Element(el) => html.push_str(&el.render()),
+                Node::Element(el) => html.push_str(&el.render_to_string()),
                 Node::Text(t) => html.push_str(t), // Already escaped
                 Node::RawHtml(h) => html.push_str(h.as_str()),
             }

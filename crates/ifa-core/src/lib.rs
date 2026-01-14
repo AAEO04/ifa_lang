@@ -33,11 +33,15 @@ pub mod error;
 pub mod interpreter;
 pub mod iwa_pele;
 pub mod lexer;
+pub mod native;
 pub mod opon;
 pub mod parser;
 pub mod transpiler;
 pub mod value;
 pub mod vm;
+
+#[cfg(test)]
+pub mod oracle;
 
 // Re-exports for convenience
 pub use ajose::{Ajose, Computed, RelContext, Relationship, Signal, effect};

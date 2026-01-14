@@ -11,8 +11,33 @@
 //! Targets: ESP32, STM32, RP2040
 //!
 //! Uses: embassy-executor, probe-rs (when targeting actual hardware)
+#![cfg_attr(not(feature = "backend"), no_std)]
 
-use std::time::{Duration, Instant};
+#[cfg(feature = "backend")]
+extern crate std;
+
+#[cfg(not(feature = "backend"))]
+extern crate alloc;
+#[cfg(not(feature = "backend"))]
+use alloc::string::{String, ToString};
+#[cfg(not(feature = "backend"))]
+use alloc::format;
+#[cfg(not(feature = "backend"))]
+use alloc::vec::Vec;
+#[cfg(not(feature = "backend"))]
+use alloc::vec;
+
+#[cfg(feature = "backend")]
+macro_rules! log {
+    ($($arg:tt)*) => { println!($($arg)*) }
+}
+
+#[cfg(not(feature = "backend"))]
+macro_rules! log {
+    ($($arg:tt)*) => { {} }
+}
+
+// std::time moved to gated block below
 
 /// Errors for embedded operations
 #[derive(Debug, Clone)]
@@ -29,8 +54,8 @@ pub enum EmbeddedError {
     InvalidParameter(String),
 }
 
-impl std::fmt::Display for EmbeddedError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for EmbeddedError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::PinError(msg) => write!(f, "Pin error: {}", msg),
             Self::IoError(msg) => write!(f, "I/O error: {}", msg),
@@ -41,6 +66,7 @@ impl std::fmt::Display for EmbeddedError {
     }
 }
 
+#[cfg(feature = "backend")]
 impl std::error::Error for EmbeddedError {}
 
 pub type EmbeddedResult<T> = Result<T, EmbeddedError>;
@@ -94,7 +120,7 @@ impl GpioPin {
 
     /// Configure pin mode
     pub fn set_mode(&mut self, mode: PinMode) -> EmbeddedResult<()> {
-        println!("[GPIO] Pin {} configured as {:?}", self.pin, mode);
+        log!("[GPIO] Pin {} configured as {:?}", self.pin, mode);
         self.mode = Some(mode);
         Ok(())
     }
@@ -103,7 +129,7 @@ impl GpioPin {
     pub fn set_state(&mut self, state: PinState) -> EmbeddedResult<()> {
         match self.mode {
             Some(PinMode::Output) | Some(PinMode::OpenDrain) => {
-                println!("[GPIO] Pin {} = {:?}", self.pin, state);
+                log!("[GPIO] Pin {} = {:?}", self.pin, state);
                 self.state = state;
                 Ok(())
             }
@@ -168,13 +194,13 @@ impl EmbeddedGpio {
         } else {
             PinMode::Input
         };
-        println!("[GPIO] Pin {} set to {:?}", pin, mode);
+        log!("[GPIO] Pin {} set to {:?}", pin, mode);
         Ok(())
     }
 
     /// Write digital value
     pub fn write(&self, pin: u8, high: bool) -> EmbeddedResult<()> {
-        println!("[GPIO] Pin {} = {}", pin, if high { "HIGH" } else { "LOW" });
+        log!("[GPIO] Pin {} = {}", pin, if high { "HIGH" } else { "LOW" });
         Ok(())
     }
 
@@ -186,7 +212,7 @@ impl EmbeddedGpio {
 
     /// PWM output (duty cycle 0-255)
     pub fn pwm(&self, pin: u8, duty: u8) -> EmbeddedResult<()> {
-        println!("[GPIO] Pin {} PWM duty = {}", pin, duty);
+        log!("[GPIO] Pin {} PWM duty = {}", pin, duty);
         Ok(())
     }
 
@@ -197,39 +223,73 @@ impl EmbeddedGpio {
     }
 }
 
+#[cfg(feature = "backend")]
+use std::time::{Duration, Instant};
+#[cfg(not(feature = "backend"))]
+use core::time::Duration;
+
+// ... (Error types remain, but impl std::error::Error needs gating)
+
+
+
+// ...
+
 /// Hardware Timer/Delay with non-blocking support
 #[derive(Debug)]
 pub struct EmbeddedTimer {
+    #[cfg(feature = "backend")]
     deadline: Option<Instant>,
+    #[cfg(not(feature = "backend"))]
+    _dummy: (),
 }
 
 impl EmbeddedTimer {
     pub fn new() -> Self {
-        EmbeddedTimer { deadline: None }
+        EmbeddedTimer { 
+            #[cfg(feature = "backend")]
+            deadline: None,
+            #[cfg(not(feature = "backend"))]
+            _dummy: (),
+        }
     }
 
     /// Blocking delay in microseconds
     pub fn delay_us(&self, us: u32) {
+        #[cfg(feature = "backend")]
         std::thread::sleep(Duration::from_micros(us as u64));
+        #[cfg(not(feature = "backend"))]
+        { /* No-op in no_std simulation */ }
     }
 
     /// Blocking delay in milliseconds
     pub fn delay_ms(&self, ms: u32) {
+        #[cfg(feature = "backend")]
         std::thread::sleep(Duration::from_millis(ms as u64));
+        #[cfg(not(feature = "backend"))]
+        { /* No-op */ }
     }
 
     /// Non-blocking: start a timer
-    pub fn start(&mut self, duration: Duration) {
-        self.deadline = Some(Instant::now() + duration);
+    pub fn start(&mut self, _duration: Duration) {
+        #[cfg(feature = "backend")]
+        { self.deadline = Some(Instant::now() + _duration); }
     }
 
     /// Non-blocking: check if timer expired
     pub fn is_expired(&self) -> bool {
-        self.deadline.map(|d| Instant::now() >= d).unwrap_or(false)
+        #[cfg(feature = "backend")]
+        {
+            self.deadline.map(|d| Instant::now() >= d).unwrap_or(false)
+        }
+        #[cfg(not(feature = "backend"))]
+        {
+            true
+        }
     }
 
     /// Non-blocking: wait for timer (polling)
     pub fn wait(&mut self) -> EmbeddedResult<()> {
+        #[cfg(feature = "backend")]
         match self.deadline {
             Some(deadline) => {
                 while Instant::now() < deadline {
@@ -240,13 +300,21 @@ impl EmbeddedTimer {
             }
             None => Err(EmbeddedError::NotInitialized),
         }
+        #[cfg(not(feature = "backend"))]
+        Ok(())
     }
 
     /// Measure execution time
+    #[cfg(feature = "backend")]
     pub fn measure<F: FnOnce() -> T, T>(f: F) -> (T, Duration) {
         let start = Instant::now();
         let result = f();
         (result, start.elapsed())
+    }
+    
+    #[cfg(not(feature = "backend"))]
+    pub fn measure<F: FnOnce() -> T, T>(f: F) -> (T, Duration) {
+        (f(), Duration::from_secs(0))
     }
 }
 
@@ -257,10 +325,14 @@ impl Default for EmbeddedTimer {
 }
 
 /// Serial/UART communication with error handling
+/// Uses bounded buffer to prevent memory exhaustion in embedded contexts.
 #[derive(Debug)]
 pub struct EmbeddedSerial {
     baud: u32,
     initialized: bool,
+    #[cfg(feature = "iot")]
+    buffer: heapless::Vec<u8, 256>, // Bounded to 256 bytes
+    #[cfg(not(feature = "iot"))]
     buffer: Vec<u8>,
 }
 
@@ -269,6 +341,9 @@ impl EmbeddedSerial {
         EmbeddedSerial {
             baud: 0,
             initialized: false,
+            #[cfg(feature = "iot")]
+            buffer: heapless::Vec::new(),
+            #[cfg(not(feature = "iot"))]
             buffer: Vec::new(),
         }
     }
@@ -281,7 +356,7 @@ impl EmbeddedSerial {
                 baud
             )));
         }
-        println!("[UART] Initialized at {} baud", baud);
+        log!("[UART] Initialized at {} baud", baud);
         self.baud = baud;
         self.initialized = true;
         Ok(())
@@ -292,7 +367,7 @@ impl EmbeddedSerial {
         if !self.initialized {
             return Err(EmbeddedError::NotInitialized);
         }
-        println!("[UART] TX: {:?}", data);
+        log!("[UART] TX: {:?}", data);
         Ok(data.len())
     }
 
@@ -308,13 +383,27 @@ impl EmbeddedSerial {
         }
         let count = self.buffer.len().min(buffer.len());
         buffer[..count].copy_from_slice(&self.buffer[..count]);
-        self.buffer.drain(..count);
+        // Drain from the front
+        for _ in 0..count {
+            self.buffer.remove(0);
+        }
         Ok(count)
     }
 
     /// Check if data available
     pub fn available(&self) -> usize {
         self.buffer.len()
+    }
+
+    /// Buffer capacity (bounded)
+    #[cfg(feature = "iot")]
+    pub fn capacity(&self) -> usize {
+        256
+    }
+
+    #[cfg(not(feature = "iot"))]
+    pub fn capacity(&self) -> usize {
+        usize::MAX // Unbounded when not in IoT mode
     }
 }
 
@@ -343,7 +432,7 @@ impl EmbeddedI2C {
 
     /// Initialize I2C
     pub fn init(&mut self, sda: u8, scl: u8) -> EmbeddedResult<()> {
-        println!("[I2C] SDA={}, SCL={}", sda, scl);
+        log!("[I2C] SDA={}, SCL={}", sda, scl);
         self.sda = sda;
         self.scl = scl;
         self.initialized = true;
@@ -355,7 +444,7 @@ impl EmbeddedI2C {
         if !self.initialized {
             return Err(EmbeddedError::NotInitialized);
         }
-        println!("[I2C] Write to 0x{:02X}: {:?}", addr, data);
+        log!("[I2C] Write to 0x{:02X}: {:?}", addr, data);
         Ok(())
     }
 
@@ -364,7 +453,7 @@ impl EmbeddedI2C {
         if !self.initialized {
             return Err(EmbeddedError::NotInitialized);
         }
-        println!("[I2C] Read from 0x{:02X}, {} bytes", addr, buffer.len());
+        log!("[I2C] Read from 0x{:02X}, {} bytes", addr, buffer.len());
         // Placeholder - fill with zeros
         buffer.fill(0);
         Ok(buffer.len())
@@ -404,7 +493,7 @@ impl EmbeddedSPI {
 
     /// Initialize SPI
     pub fn init(&mut self, mosi: u8, miso: u8, sck: u8) -> EmbeddedResult<()> {
-        println!("[SPI] MOSI={}, MISO={}, SCK={}", mosi, miso, sck);
+        log!("[SPI] MOSI={}, MISO={}, SCK={}", mosi, miso, sck);
         self.mosi = mosi;
         self.miso = miso;
         self.sck = sck;
@@ -417,7 +506,7 @@ impl EmbeddedSPI {
         if !self.initialized {
             return Err(EmbeddedError::NotInitialized);
         }
-        println!("[SPI] Transfer: {:?}", data);
+        log!("[SPI] Transfer: {:?}", data);
         Ok(())
     }
 
@@ -426,7 +515,7 @@ impl EmbeddedSPI {
         if !self.initialized {
             return Err(EmbeddedError::NotInitialized);
         }
-        println!("[SPI] Write: {:?}", data);
+        log!("[SPI] Write: {:?}", data);
         Ok(())
     }
 }
@@ -439,16 +528,16 @@ impl Default for EmbeddedSPI {
 
 /// Flash to embedded device via probe-rs
 pub fn flash(target: &str, binary_path: &str, port: Option<&str>) -> EmbeddedResult<()> {
-    println!(
+    log!(
         "Flashing to {} via {}",
         target,
         port.unwrap_or("auto-detect")
     );
-    println!("   Binary: {}", binary_path);
+    log!("   Binary: {}", binary_path);
 
     // Will use probe-rs for actual flashing
     // For now, just simulate
-    println!("Flash complete!");
+    log!("Flash complete!");
 
     Ok(())
 }
@@ -463,11 +552,16 @@ pub struct SensorReading {
 
 impl SensorReading {
     pub fn new(value: f64, unit: &str) -> Self {
-        use std::time::{SystemTime, UNIX_EPOCH};
-        let timestamp_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64;
+        #[cfg(feature = "backend")]
+        let timestamp_ms = {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64
+        };
+        #[cfg(not(feature = "backend"))]
+        let timestamp_ms = 0; // No system time in no_std
 
         SensorReading {
             value,

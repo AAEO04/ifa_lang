@@ -34,6 +34,8 @@ pub enum OpCode {
     PushList = 0x06,
     /// Push empty map
     PushMap = 0x07,
+    /// Push function (followed by name_idx, start_ip, arity)
+    PushFn = 0x08,
 
     /// Pop and discard top of stack
     Pop = 0x10,
@@ -115,7 +117,7 @@ pub enum OpCode {
     Call = 0x70,
     /// Return from function
     Return = 0x71,
-    /// Call Odù domain method (followed by domain + method IDs)
+    /// Call Odù domain method (followed by domain + method + arity)
     CallOdu = 0x72,
     /// Call method on object
     CallMethod = 0x73,
@@ -145,6 +147,10 @@ pub enum OpCode {
     PrintRaw = 0x91,
     /// Read input
     Input = 0x92,
+    /// Import module
+    Import = 0x93,
+    /// Define class (followed by name_idx, field_count, method_count)
+    DefineClass = 0x94,
 
     // =========================================================================
     // SYSTEM
@@ -165,6 +171,7 @@ impl OpCode {
             0x05 => Ok(OpCode::PushFalse),
             0x06 => Ok(OpCode::PushList),
             0x07 => Ok(OpCode::PushMap),
+            0x08 => Ok(OpCode::PushFn),
             0x10 => Ok(OpCode::Pop),
             0x11 => Ok(OpCode::Dup),
             0x12 => Ok(OpCode::Swap),
@@ -204,6 +211,8 @@ impl OpCode {
             0x90 => Ok(OpCode::Print),
             0x91 => Ok(OpCode::PrintRaw),
             0x92 => Ok(OpCode::Input),
+            0x93 => Ok(OpCode::Import),
+            0x94 => Ok(OpCode::DefineClass),
             0xFF => Ok(OpCode::Halt),
             _ => Err(IfaError::UnknownOpcode(byte)),
         }

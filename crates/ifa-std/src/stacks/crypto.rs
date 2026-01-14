@@ -257,53 +257,20 @@ pub mod hex {
 
 /// Cryptographically secure random number generator
 ///
-/// WARNING: This uses system entropy sources. On platforms without good entropy,
-/// this may block or fail.
-pub struct SecureRng {
-    state: std::sync::Mutex<u64>,
-}
+/// wrapper around `rand::rngs::OsRng`
+pub struct SecureRng;
 
 impl SecureRng {
-    /// Create new RNG seeded from system entropy
+    /// Create new RNG interface
     pub fn new() -> Result<Self, CryptoError> {
-        use std::process;
-        use std::time::{SystemTime, UNIX_EPOCH};
-
-        // Mix multiple entropy sources
-        let time_entropy = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_nanos() as u64)
-            .unwrap_or(0);
-
-        let pid_entropy = process::id() as u64;
-        let addr_entropy = &time_entropy as *const _ as u64;
-
-        let seed = time_entropy
-            .wrapping_mul(0x9e3779b97f4a7c15)
-            .wrapping_add(pid_entropy)
-            .wrapping_mul(0xbf58476d1ce4e5b9)
-            .wrapping_add(addr_entropy);
-
-        Ok(SecureRng {
-            state: std::sync::Mutex::new(seed),
-        })
+        Ok(SecureRng)
     }
 
-    /// Fill buffer with random bytes
+    /// Fill buffer with random bytes using OS entropy
     pub fn fill_bytes(&self, dest: &mut [u8]) -> Result<(), CryptoError> {
-        let mut state = self.state.lock().unwrap();
-
-        // SplitMix64 - better than LCG
-        for byte in dest.iter_mut() {
-            *state = state.wrapping_add(0x9e3779b97f4a7c15);
-            let mut z = *state;
-            z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
-            z = (z ^ (z >> 27)).wrapping_mul(0x94d049bb133111eb);
-            z = z ^ (z >> 31);
-            *byte = z as u8;
-        }
-
-        Ok(())
+        use rand::RngCore;
+        use rand::rngs::OsRng;
+        OsRng.try_fill_bytes(dest).map_err(|_| CryptoError::RngError)
     }
 
     /// Generate random bytes
@@ -315,27 +282,19 @@ impl SecureRng {
 
     /// Generate random u64
     pub fn gen_u64(&self) -> Result<u64, CryptoError> {
-        let mut bytes = [0u8; 8];
-        self.fill_bytes(&mut bytes)?;
-        Ok(u64::from_le_bytes(bytes))
+        use rand::RngCore;
+        use rand::rngs::OsRng;
+        Ok(OsRng.next_u64())
     }
 
     /// Generate random value in range [0, max)
     pub fn gen_range(&self, max: u64) -> Result<u64, CryptoError> {
         if max == 0 {
-            return Err(CryptoError::InvalidInput(
-                "Range max cannot be 0".to_string(),
-            ));
+            return Err(CryptoError::InvalidInput("Range max cannot be 0".to_string()));
         }
-
-        // Rejection sampling for uniform distribution
-        let threshold = u64::MAX - (u64::MAX % max);
-        loop {
-            let n = self.gen_u64()?;
-            if n < threshold {
-                return Ok(n % max);
-            }
-        }
+        use rand::Rng;
+        use rand::rngs::OsRng;
+        Ok(OsRng.gen_range(0..max))
     }
 }
 

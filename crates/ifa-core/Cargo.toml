@@ -23,7 +23,7 @@ thiserror.workspace = true
 eyre.workspace = true
 
 # Serialization (for bytecode)
-serde.workspace = true
+serde = { workspace = true, features = ["derive"] }
 bincode.workspace = true
 
 # Data structures

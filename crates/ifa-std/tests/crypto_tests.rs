@@ -2,6 +2,8 @@
 //!
 //! Tests the ring-based SHA-256/512/HMAC and argon2 password hashing.
 
+#![cfg(feature = "crypto")]
+
 use ifa_std::stacks::crypto::{constant_time_compare, hash, password};
 
 #[test]

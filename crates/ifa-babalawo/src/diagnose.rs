@@ -68,6 +68,7 @@ pub struct Diagnostic {
 pub struct Babalawo {
     pub diagnostics: Vec<Diagnostic>,
     pub verbose: bool,
+    pub include_wisdom: bool,
 }
 
 impl Default for Babalawo {
@@ -81,11 +82,18 @@ impl Babalawo {
         Self {
             diagnostics: Vec::new(),
             verbose: false,
+            include_wisdom: true,
         }
     }
 
     pub fn verbose(mut self) -> Self {
         self.verbose = true;
+        self
+    }
+
+    /// fast mode disables wisdom generation
+    pub fn fast(mut self) -> Self {
+        self.include_wisdom = false;
         self
     }
 
@@ -114,13 +122,18 @@ impl Babalawo {
         col: usize,
     ) {
         let odu_key = ERROR_TO_ODU.get(code).copied().unwrap_or("OKANRAN");
-        let wisdom = ODU_WISDOM.get(odu_key);
+        
+        let wisdom = if self.include_wisdom {
+            ODU_WISDOM.get(odu_key).map(|w| w.advice.to_string())
+        } else {
+            None
+        };
 
         let diagnostic = Diagnostic {
             severity,
             error: IfaError::new(code, msg, file, line, col),
             odu: odu_key.to_string(),
-            wisdom: wisdom.map(|w| w.advice.to_string()),
+            wisdom,
         };
 
         self.diagnostics.push(diagnostic);

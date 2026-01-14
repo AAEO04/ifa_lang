@@ -424,19 +424,22 @@ Ifá-Lang includes a full Language Server Protocol (LSP) implementation for IDE 
 
 ### VS Code Setup
 
+### VS Code Setup
+
 1. Install the Ifá-Lang extension (if available) or configure manually:
 
 ```json
 // .vscode/settings.json
 {
-    "ifa.lsp.path": "python",
-    "ifa.lsp.args": ["-m", "src.lsp"]
+    "ifa.lsp.command": "ifa",
+    "ifa.lsp.args": ["lsp"]
 }
 ```
 
-2. Or run the LSP server manually:
+2. Or start the server manually to verify:
 ```bash
-python -m src.lsp
+ifa lsp
+# Output: Starting LSP Server...
 ```
 
 ### Features

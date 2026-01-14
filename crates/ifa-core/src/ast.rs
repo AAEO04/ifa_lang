@@ -131,8 +131,36 @@ pub enum Statement {
         span: Span,
     },
 
+    /// Match statement: yàn (condition) { arm1, arm2, ... }
+    Match {
+        condition: Expression,
+        arms: Vec<MatchArm>,
+        span: Span,
+    },
+
     /// Expression statement (for calls without semicolon handling)
     Expr { expr: Expression, span: Span },
+}
+
+/// Match arm: pattern => body
+#[derive(Debug, Clone)]
+pub struct MatchArm {
+    pub pattern: MatchPattern,
+    pub body: Vec<Statement>,
+}
+
+/// Match pattern
+#[derive(Debug, Clone)]
+pub enum MatchPattern {
+    /// Literal pattern: 200, "hello"
+    Literal(Expression),
+    /// Range pattern: 90..99
+    Range {
+        start: Box<Expression>,
+        end: Box<Expression>,
+    },
+    /// Wildcard pattern: _
+    Wildcard,
 }
 
 /// Assignment target

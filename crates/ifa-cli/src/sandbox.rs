@@ -8,7 +8,7 @@
 
 #![allow(dead_code)]
 
-use eyre::{Result, WrapErr};
+use eyre::{Result};
 use ifa_sandbox::{CapabilitySet, Ofun};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -229,39 +229,68 @@ impl Igbale {
     /// Run code in sandbox (Windows)
     #[cfg(target_os = "windows")]
     pub fn run(&self, code_path: &Path) -> Result<SandboxResult> {
-        use std::process::{Command, Stdio};
+        use tokio::process::Command;
+        use std::process::Stdio;
         use std::time::Instant;
+        use tokio::time::timeout;
+
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()?;
 
         let start = Instant::now();
 
-        // Use Job Objects for process isolation on Windows
-        // For now, just use basic process with timeout
-        let output = Command::new("cmd")
-            .args([
-                "/C",
-                "timeout",
-                "/T",
-                &format!("{}", self.config.timeout.as_secs()),
-                "&",
-                "ifa",
-                "run",
-            ])
-            .arg(code_path)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .wrap_err("Failed to execute sandbox")?;
+        let result = rt.block_on(async {
+            let child = Command::new("ifa")
+                .args(["run"])
+                .arg(code_path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()?;
+            
+            let child_id = child.id();
 
-        let execution_time = start.elapsed();
+            match timeout(self.config.timeout, child.wait_with_output()).await {
+                Ok(Ok(output)) => {
+                    let execution_time = start.elapsed();
+                    Ok(SandboxResult {
+                        success: output.status.success(),
+                        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+                        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+                        execution_time,
+                        memory_used: 0, // TODO: Peak memory tracking requires WinAPI
+                        timed_out: false,
+                    })
+                }
+                Ok(Err(e)) => Err(eyre::eyre!("Execution failed: {}", e)),
+                Err(_) => {
+                    #[cfg(windows)]
+                    {
+                        if let Some(pid) = child_id {
+                            let _ = std::process::Command::new("taskkill")
+                                .args(["/F", "/PID", &pid.to_string()])
+                                .spawn();
+                        }
+                    }
+                    #[cfg(not(windows))]
+                    {
+                        if let Some(pid) = child_id {
+                             let _ = std::process::Command::new("kill").arg("-9").arg(pid.to_string()).spawn();
+                        }
+                    }
+                    Ok(SandboxResult {
+                        success: false,
+                        stdout: String::new(),
+                        stderr: "Execution timed out".to_string(),
+                        execution_time: start.elapsed(),
+                        memory_used: 0,
+                        timed_out: true,
+                    })
+                }
+            }
+        })?;
 
-        Ok(SandboxResult {
-            success: output.status.success(),
-            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-            execution_time,
-            memory_used: 0,   // TODO: Track with Job Objects
-            timed_out: false, // TODO: Detect timeout
-        })
+        Ok(result)
     }
 
     /// Run code in sandbox (macOS)

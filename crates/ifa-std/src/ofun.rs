@@ -8,7 +8,7 @@ use crate::impl_odu_domain;
 use ifa_core::IfaValue;
 
 /// Capability flags for sandboxing
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Capabilities {
     /// Can read files
     pub read_files: bool,
@@ -20,6 +20,8 @@ pub struct Capabilities {
     pub spawn: bool,
     /// Can access environment
     pub env: bool,
+    /// Can use polyglot bridges
+    pub bridges: Vec<String>,
 }
 
 impl Default for Capabilities {
@@ -30,6 +32,7 @@ impl Default for Capabilities {
             network: true,
             spawn: true,
             env: true,
+            bridges: vec![],
         }
     }
 }
@@ -37,7 +40,14 @@ impl Default for Capabilities {
 impl Capabilities {
     /// Full capabilities (no sandbox)
     pub fn full() -> Self {
-        Self::default()
+        Capabilities {
+            read_files: true,
+            write_files: true,
+            network: true,
+            spawn: true,
+            env: true,
+            bridges: vec!["*".to_string()],
+        }
     }
 
     /// No capabilities (fully sandboxed)
@@ -48,6 +58,7 @@ impl Capabilities {
             network: false,
             spawn: false,
             env: false,
+            bridges: vec![],
         }
     }
 
@@ -59,6 +70,7 @@ impl Capabilities {
             network: false,
             spawn: false,
             env: true,
+            bridges: vec![],
         }
     }
 }
@@ -85,6 +97,10 @@ impl Ofun {
             "network" | "nẹtiwọki" => self.capabilities.network,
             "spawn" | "bere" => self.capabilities.spawn,
             "env" | "ayika" => self.capabilities.env,
+            s if s.starts_with("bridge:") => {
+                let lang = &s[7..];
+                self.capabilities.bridges.contains(&lang.to_string()) || self.capabilities.bridges.contains(&"*".to_string())
+            }
             _ => false,
         }
     }
@@ -97,6 +113,10 @@ impl Ofun {
             "network" | "nẹtiwọki" => self.capabilities.network = false,
             "spawn" | "bere" => self.capabilities.spawn = false,
             "env" | "ayika" => self.capabilities.env = false,
+            s if s.starts_with("bridge:") => {
+                let lang = &s[7..];
+                self.capabilities.bridges.retain(|x| x != lang);
+            }
             _ => {}
         }
     }

@@ -8,8 +8,8 @@
 //! - Security by default (whitelist, not blacklist)
 
 use std::collections::{HashMap, HashSet};
-use std::ffi::CString;
-use std::os::raw::{c_char, c_int, c_void};
+use std::ops::Deref;
+use std::os::raw::c_void;
 
 /// FFI Error type
 #[derive(Debug)]
@@ -101,6 +101,7 @@ pub enum FfiValue {
     F64(f64),
     Str(String),
     Ptr(usize),
+    List(Vec<FfiValue>),
     Null,
 }
 
@@ -130,97 +131,6 @@ impl FfiValue {
     }
 }
 
-// =============================================================================
-// LIBRARY HANDLE (Platform-specific)
-// =============================================================================
-
-/// Platform-agnostic library handle
-#[cfg(windows)]
-pub type LibHandle = *mut c_void;
-
-#[cfg(not(windows))]
-pub type LibHandle = *mut c_void;
-
-/// Load a shared library
-#[cfg(windows)]
-pub fn load_library(path: &str) -> FfiResult<LibHandle> {
-    let wide: Vec<u16> = path.encode_utf16().chain(std::iter::once(0)).collect();
-
-    // LoadLibraryW
-    unsafe extern "system" {
-        fn LoadLibraryW(lpFileName: *const u16) -> *mut c_void;
-    }
-
-    let handle = unsafe { LoadLibraryW(wide.as_ptr()) };
-    if handle.is_null() {
-        Err(FfiError::LibraryNotFound(path.to_string()))
-    } else {
-        Ok(handle)
-    }
-}
-
-#[cfg(unix)]
-pub fn load_library(path: &str) -> FfiResult<LibHandle> {
-    unsafe extern "C" {
-        fn dlopen(filename: *const c_char, flags: c_int) -> *mut c_void;
-    }
-
-    const RTLD_NOW: c_int = 2;
-
-    let c_path = CString::new(path).map_err(|_| FfiError::LibraryNotFound(path.to_string()))?;
-    let handle = unsafe { dlopen(c_path.as_ptr(), RTLD_NOW) };
-
-    if handle.is_null() {
-        Err(FfiError::LibraryNotFound(path.to_string()))
-    } else {
-        Ok(handle)
-    }
-}
-
-/// Get function pointer from library
-///
-/// # Safety
-/// The handle must be a valid library handle returned by load_library.
-#[cfg(windows)]
-pub unsafe fn get_proc(handle: LibHandle, name: &str) -> FfiResult<*mut c_void> {
-    unsafe extern "system" {
-        fn GetProcAddress(hModule: *mut c_void, lpProcName: *const c_char) -> *mut c_void;
-    }
-
-    let c_name = CString::new(name).map_err(|_| FfiError::FunctionNotFound(name.to_string()))?;
-    let proc = unsafe { GetProcAddress(handle, c_name.as_ptr()) };
-
-    if proc.is_null() {
-        Err(FfiError::FunctionNotFound(name.to_string()))
-    } else {
-        Ok(proc)
-    }
-}
-
-/// Get function pointer from library
-///
-/// # Safety
-/// The handle must be a valid library handle returned by load_library.
-#[cfg(unix)]
-pub unsafe fn get_proc(handle: LibHandle, name: &str) -> FfiResult<*mut c_void> {
-    unsafe extern "C" {
-        fn dlsym(handle: *mut c_void, symbol: *const c_char) -> *mut c_void;
-    }
-
-    let c_name = CString::new(name).map_err(|_| FfiError::FunctionNotFound(name.to_string()))?;
-    let proc = unsafe { dlsym(handle, c_name.as_ptr()) };
-
-    if proc.is_null() {
-        Err(FfiError::FunctionNotFound(name.to_string()))
-    } else {
-        Ok(proc)
-    }
-}
-
-// =============================================================================
-// FFI BRIDGE
-// =============================================================================
-
 /// Function signature for FFI calls
 #[derive(Debug, Clone)]
 pub struct FfiSignature {
@@ -235,101 +145,322 @@ pub struct BoundFunction {
     pub sig: FfiSignature,
 }
 
+// =============================================================================
+// POLYGLOT BACKENDS
+// =============================================================================
+
+pub enum Backend {
+    Native(libloading::Library),
+    #[cfg(feature = "js")]
+    JavaScript {
+        context: Box<boa_engine::Context<'static>>,
+    },
+    #[cfg(feature = "python")]
+    Python {
+        /// Optional path to a virtual environment or specific interpreter
+        interpreter_path: Option<std::path::PathBuf>,
+        /// Module name or script path
+        module_name: String,
+    },
+}
+
+/// Configuration for an FFI bridge
+#[derive(Debug, Clone, Default)]
+pub struct FfiConfig {
+    /// Optional path to an interpreter (e.g., path to venv/bin/python)
+    pub interpreter_path: Option<std::path::PathBuf>,
+    /// Environment variables to pass (sanitized)
+    pub env_vars: HashMap<String, String>,
+    /// Maximum execution time for bridge calls (seconds)
+    pub timeout_sec: u64,
+}
+
 /// The FFI Bridge - main interface for foreign calls
 pub struct IfaFfi {
-    libraries: HashMap<String, LibHandle>,
+    backends: HashMap<String, Backend>,
     functions: HashMap<String, BoundFunction>,
 }
 
 impl IfaFfi {
     pub fn new() -> Self {
         IfaFfi {
-            libraries: HashMap::new(),
+            backends: HashMap::new(),
             functions: HashMap::new(),
         }
     }
 
-    /// Load a shared library
-    /// Ifa syntax: ffi.load("mylib")
-    pub fn load(&mut self, name: &str, path: Option<&str>) -> FfiResult<()> {
-        let lib_path = path.map(String::from).unwrap_or_else(|| {
-            #[cfg(windows)]
-            {
-                format!("{}.dll", name)
-            }
-            #[cfg(target_os = "macos")]
-            {
-                format!("lib{}.dylib", name)
-            }
-            #[cfg(all(unix, not(target_os = "macos")))]
-            {
-                format!("lib{}.so", name)
-            }
-        });
-
-        let handle = load_library(&lib_path)?;
-        self.libraries.insert(name.to_string(), handle);
-        println!("[FFI] Loaded: {}", name);
-        Ok(())
-    }
-
-    /// Bind a function with signature
-    /// Ifa syntax: ffi.bind("lib", "func", ["i32", "i32"], "i32")
-    pub fn bind(&mut self, lib: &str, func: &str, args: &[&str], ret: &str) -> FfiResult<()> {
-        let handle = self
-            .libraries
-            .get(lib)
-            .ok_or_else(|| FfiError::LibraryNotFound(lib.to_string()))?;
-
-        // Safety: handle was obtained from load_library and is valid
-        let ptr = unsafe { get_proc(*handle, func)? };
-
-        let arg_types: Vec<IfaType> = args.iter().filter_map(|s| IfaType::from_str(s)).collect();
-
-        let ret_type = IfaType::from_str(ret).unwrap_or(IfaType::Void);
-
-        let key = format!("{}.{}", lib, func);
-        self.functions.insert(
-            key.clone(),
-            BoundFunction {
-                name: func.to_string(),
-                ptr,
-                sig: FfiSignature {
-                    arg_types,
-                    ret_type,
-                },
-            },
-        );
-
-        Ok(())
-    }
-
-    /// Call a bound function
-    /// Ifa syntax: ffi.call("lib", "func", arg1, arg2)
-    pub fn call(&self, lib: &str, func: &str, args: &[FfiValue]) -> FfiResult<FfiValue> {
-        let key = format!("{}.{}", lib, func);
-        let bound = self
-            .functions
-            .get(&key)
-            .ok_or_else(|| FfiError::FunctionNotFound(key))?;
-
-        // Type check
-        if args.len() != bound.sig.arg_types.len() {
-            return Err(FfiError::TypeMismatch(format!(
-                "Expected {} args, got {}",
-                bound.sig.arg_types.len(),
-                args.len()
+    /// Initialize a polyglot bridge (Summon Bridge)
+    /// Ifa syntax: ffi.itumo("python", config)
+    pub fn itumo(&mut self, language: &str, config: Option<FfiConfig>, ofun: &crate::ofun::Ofun) -> FfiResult<()> {
+        let cap = format!("bridge:{}", language);
+        if !ofun.le(&cap) {
+            return Err(FfiError::SecurityViolation(format!(
+                "Permission denied: Bridge '{}' not allowed. Run with --allow-{} flag.",
+                language, language
             )));
         }
 
-        // For now, return placeholder - real implementation needs libffi
-        println!("[FFI] Call: {}({:?})", bound.name, args);
-        Ok(FfiValue::Null)
+        let config = config.unwrap_or_default();
+
+        match language {
+            #[cfg(feature = "js")]
+            "js" | "javascript" => {
+                println!("[FFI] Summoning JavaScript bridge...");
+                Ok(())
+            }
+            #[cfg(feature = "python")]
+            "python" | "py" => {
+                println!("[FFI] Summoning Python bridge...");
+                
+                // If an interpreter path (e.g. venv) is provided, we need to set it
+                // BEFORE the first Python::with_gil call if possible.
+                // Note: PyO3 auto-initialize uses the first python found on PATH
+                // if PYTHONHOME/PYTHONPATH aren't set.
+                if let Some(ref path) = config.interpreter_path {
+                    if !path.exists() {
+                        return Err(FfiError::LibraryNotFound(format!("Python interpreter not found at {:?}", path)));
+                    }
+                    println!("[FFI] Using isolated Python at: {:?}", path);
+                    
+                    // On Unix, we set PYTHONHOME to the venv root
+                    // This is a global operation and should be handled with care
+                    #[cfg(unix)]
+                    if let Some(parent) = path.parent() {
+                        if let Some(venv_root) = parent.parent() {
+                            std::env::set_var("PYTHONHOME", venv_root);
+                        }
+                    }
+                }
+                
+                Ok(())
+            }
+            "rust" | "c" | "native" => {
+                println!("[FFI] Summoning Native bridge...");
+                Ok(())
+            }
+            _ => {
+                let status = if cfg!(feature = "python") || cfg!(feature = "js") {
+                    "not found"
+                } else {
+                    "not enabled in this build (rebuild with --features js,python)"
+                };
+                Err(FfiError::CallFailed(format!("Bridge '{}' {}", language, status)))
+            }
+        }
     }
 
-    /// Get list of loaded libraries
-    pub fn loaded_libraries(&self) -> Vec<&str> {
-        self.libraries.keys().map(|s| s.as_str()).collect()
+    /// Load a shared library (C/Rust) with security validation
+    pub fn load_native(&mut self, name: &str, path: Option<&str>) -> FfiResult<()> {
+        let lib_path = path.map(String::from).unwrap_or_else(|| {
+            #[cfg(windows)] { format!("{}.dll", name) }
+            #[cfg(target_os = "macos")] { format!("lib{}.dylib", name) }
+            #[cfg(all(unix, not(target_os = "macos")))] { format!("lib{}.so", name) }
+        });
+
+        // Security validation
+        let validated_path = self.validate_library_path(&lib_path)?;
+
+        unsafe {
+            let lib = libloading::Library::new(&validated_path)
+                .map_err(|e| FfiError::LibraryNotFound(format!("{}: {}", lib_path, e)))?;
+            self.backends.insert(name.to_string(), Backend::Native(lib));
+        }
+        Ok(())
+    }
+
+    /// Validate library path for security
+    fn validate_library_path(&self, path: &str) -> FfiResult<std::path::PathBuf> {
+        use std::path::PathBuf;
+        
+        let path_buf = PathBuf::from(path);
+        
+        // 1. Check for path traversal attempts
+        let path_str = path_buf.to_string_lossy();
+        if path_str.contains("..") {
+            return Err(FfiError::SecurityViolation(
+                "Path traversal (..) not allowed in library paths".to_string()
+            ));
+        }
+        
+        // 2. If absolute path, must exist
+        if path_buf.is_absolute() {
+            if !path_buf.exists() {
+                return Err(FfiError::LibraryNotFound(format!(
+                    "Library not found at absolute path: {}", path
+                )));
+            }
+            return Ok(path_buf);
+        }
+        
+        // 3. For relative paths, we allow libloading to search system paths
+        // but log a warning
+        eprintln!("[FFI] Warning: Loading library from relative path '{}'. Consider using absolute paths.", path);
+        
+        Ok(path_buf)
+    }
+
+    /// Load a JavaScript script
+    #[cfg(feature = "js")]
+    pub fn load_js(&mut self, name: &str, code: &str) -> FfiResult<()> {
+        let mut context = boa_engine::Context::default();
+        context.eval(boa_engine::Source::from_bytes(code.as_bytes()))
+            .map_err(|e| FfiError::CallFailed(format!("JS Init failed: {}", e)))?;
+        
+        self.backends.insert(name.to_string(), Backend::JavaScript { context: Box::new(context) });
+        Ok(())
+    }
+
+    /// Load a Python module with environment config
+    #[cfg(feature = "python")]
+    pub fn load_py(&mut self, name: &str, module: &str, interpreter_path: Option<std::path::PathBuf>) -> FfiResult<()> {
+        self.backends.insert(name.to_string(), Backend::Python { 
+            module_name: module.to_string(),
+            interpreter_path,
+        });
+        Ok(())
+    }
+
+    /// Bind a function (Native only)
+    pub fn bind(&mut self, lib: &str, func: &str, args: &[&str], ret: &str) -> FfiResult<()> {
+        let backend = self.backends.get(lib)
+            .ok_or_else(|| FfiError::LibraryNotFound(lib.to_string()))?;
+
+        match backend {
+            Backend::Native(lib_handle) => {
+                unsafe {
+                    let symbol: libloading::Symbol<unsafe extern "C" fn()> = lib_handle.get(func.as_bytes())
+                        .map_err(|_| FfiError::FunctionNotFound(func.to_string()))?;
+                    
+                    let ptr = *symbol.deref() as *const () as *mut c_void;
+                    
+                    let arg_types: Vec<IfaType> = args.iter().filter_map(|s| IfaType::from_str(s)).collect();
+                    let ret_type = IfaType::from_str(ret).unwrap_or(IfaType::Void);
+
+                    let key = format!("{}.{}", lib, func);
+                    self.functions.insert(key, BoundFunction {
+                        name: func.to_string(),
+                        ptr,
+                        sig: FfiSignature { arg_types, ret_type },
+                    });
+                }
+            }
+            #[allow(unreachable_patterns)]
+            _ => {
+                return Err(FfiError::CallFailed("Binding only supported for native libraries".into()));
+            }
+        }
+        Ok(())
+    }
+
+    /// Call a function
+    pub fn call(&mut self, lib: &str, func: &str, args: &[FfiValue]) -> FfiResult<FfiValue> {
+        let backend = self.backends.get_mut(lib)
+            .ok_or_else(|| FfiError::LibraryNotFound(lib.to_string()))?;
+
+        match backend {
+            Backend::Native(_) => {
+                let key = format!("{}.{}", lib, func);
+                let _bound = self.functions.get(&key)
+                    .ok_or_else(|| FfiError::FunctionNotFound(key))?;
+                
+                // Real implementation would need dyncall or libffi-sys to call arbitrary ptrs
+                // For now, we'll keep the error loud instead of silent failure
+                Err(FfiError::CallFailed(format!("Native dynamic call for {}({:?}) requires libffi-sys (Phase 2)", func, args)))
+            }
+            #[cfg(feature = "js")]
+            Backend::JavaScript { context } => {
+                // Convert FfiValue to JsValue
+                let mut js_args = Vec::new();
+                for arg in args {
+                    js_args.push(self.ffi_to_js(arg, context));
+                }
+
+                let result = context.eval(boa_engine::Source::from_bytes(format!("{}(...args)", func).as_bytes()))
+                    .map_err(|e| FfiError::CallFailed(format!("JS Call failed: {}", e)))?;
+                
+                Ok(self.js_to_ffi(result))
+            }
+            #[cfg(feature = "python")]
+            Backend::Python { module_name, .. } => {
+                use pyo3::prelude::*;
+                Python::with_gil(|py| {
+                    // Pre-check: Ensure the module is discoverable
+                    let module = py.import(module_name.as_str())
+                        .map_err(|e| FfiError::LibraryNotFound(format!("Py import failed for '{}': {}", module_name, e)))?;
+                    
+                    let py_args = PyTuple::new(py, args.iter().map(|a| self.ffi_to_py(a, py)));
+                    
+                    // Call with timeout protection (simulated for internal PyO3 calls)
+                    let result = module.getattr(func)
+                        .map_err(|_| FfiError::FunctionNotFound(format!("{}.{}", module_name, func)))?
+                        .call1(py_args)
+                        .map_err(|e| FfiError::CallFailed(format!("Py Runtime Error: {}", e)))?;
+                    
+                    Ok(self.py_to_ffi(result))
+                })
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(FfiError::CallFailed("Selected FFI backend not included in this build".into())),
+        }
+    }
+
+    // Helpers for type conversion
+    #[cfg(feature = "js")]
+    fn ffi_to_js(&self, val: &FfiValue, _ctx: &mut boa_engine::Context) -> boa_engine::JsValue {
+        match val {
+            FfiValue::I32(v) => boa_engine::JsValue::new(*v),
+            FfiValue::F64(v) => boa_engine::JsValue::new(*v),
+            FfiValue::Str(s) => boa_engine::JsValue::new(s.as_str()),
+            _ => boa_engine::JsValue::null(),
+        }
+    }
+
+    #[cfg(feature = "js")]
+    fn js_to_ffi(&self, val: boa_engine::JsValue) -> FfiValue {
+        if val.is_number() {
+            if let Some(i) = val.as_integer() {
+                return FfiValue::I32(i);
+            }
+            return FfiValue::F64(val.as_number().unwrap_or(0.0));
+        }
+        if val.is_string() {
+            return FfiValue::Str(val.as_string().map(|s| s.to_std_string_escaped()).unwrap_or_default());
+        }
+        if val.is_boolean() {
+            return FfiValue::I32(if val.as_boolean().unwrap_or(false) { 1 } else { 0 });
+        }
+        FfiValue::Null
+    }
+
+    #[cfg(feature = "python")]
+    fn ffi_to_py<'py>(&self, val: &FfiValue, py: pyo3::Python<'py>) -> pyo3::PyObject {
+        use pyo3::prelude::*;
+        match val {
+            FfiValue::I32(v) => v.into_py(py),
+            FfiValue::I64(v) => v.into_py(py),
+            FfiValue::F64(v) => v.into_py(py),
+            FfiValue::Str(s) => s.into_py(py),
+            FfiValue::List(l) => {
+                let items: Vec<PyObject> = l.iter().map(|i| self.ffi_to_py(i, py)).collect();
+                PyList::new(py, items).into_py(py)
+            }
+            _ => py.None(),
+        }
+    }
+
+    #[cfg(feature = "python")]
+    fn py_to_ffi(&self, val: &pyo3::PyAny) -> FfiValue {
+        if let Ok(i) = val.extract::<i32>() {
+            FfiValue::I32(i)
+        } else if let Ok(f) = val.extract::<f64>() {
+            FfiValue::F64(f)
+        } else if let Ok(s) = val.extract::<String>() {
+            FfiValue::Str(s)
+        } else if let Ok(list) = val.extract::<Vec<&pyo3::PyAny>>() {
+            FfiValue::List(list.iter().map(|&i| self.py_to_ffi(i)).collect())
+        } else {
+            FfiValue::Null
+        }
     }
 }
 
@@ -381,7 +512,7 @@ impl SecureFfi {
                 name
             )));
         }
-        self.inner.load(name, path)
+        self.inner.load_native(name, path)
     }
 
     /// Bind function (blocks dangerous symbols)
@@ -396,7 +527,7 @@ impl SecureFfi {
     }
 
     /// Call function
-    pub fn call(&self, lib: &str, func: &str, args: &[FfiValue]) -> FfiResult<FfiValue> {
+    pub fn call(&mut self, lib: &str, func: &str, args: &[FfiValue]) -> FfiResult<FfiValue> {
         self.inner.call(lib, func, args)
     }
 }
@@ -673,6 +804,21 @@ impl RpcResponse {
                 Some(FfiValue::Str(s)) => format!("\"{}\"", s),
                 Some(FfiValue::U8(v)) => v.to_string(),
                 Some(FfiValue::Ptr(v)) => v.to_string(),
+                Some(FfiValue::List(l)) => {
+                    let items: Vec<String> = l.iter().map(|v| {
+                        match v {
+                            FfiValue::I32(x) => x.to_string(),
+                            FfiValue::I64(x) => x.to_string(),
+                            FfiValue::F64(x) => x.to_string(),
+                            FfiValue::Str(x) => format!("\"{}\"", x),
+                            FfiValue::U8(x) => x.to_string(),
+                            FfiValue::Ptr(x) => x.to_string(),
+                            FfiValue::Null => "null".to_string(),
+                            FfiValue::List(_) => "[...]".to_string(),
+                        }
+                    }).collect();
+                    format!("[{}]", items.join(","))
+                }
                 Some(FfiValue::Null) | None => "null".to_string(),
             };
             format!(

@@ -144,11 +144,15 @@ $ ifa oja add https://github.com/user/my-library.git
 
 ### 💻 VS Code Extension (Ilé Ìwé)
 
-Full IDE support with:
+Full IDE support with **Ilé Ìwé** (The School House), powered by the **Ìwòrì LSP**:
+
 - **Syntax Highlighting** — Distinct colors for Odù, keywords, strings
 - **Intellisense (LSP)** — Autocomplete for all 16 Odù domains
 - **Debugging (DAP)** — Breakpoints, stepping, variable inspection
-- **Error Squiggles** — Real-time linting
+- **Error Squiggles** — Real-time diagnostics from `ifa check`
+- **Snippets** — Quick Odù templates
+
+To start the LSP manually: `ifa lsp`
 
 ### 🦀 Dual Runtime (Python + Rust)
 
@@ -666,6 +670,10 @@ The Standard Library is organized into 16 Domains (Odù). Each function has a **
 | `ka(s)` | `len` | Get string length |
 | `fun(t)` | `format` | Format string |
 | `tu(s)` | `split` | Split/Parse string |
+| `to_json(v)` | `json_stringify` | Serialize to JSON |
+| `from_json(s)` | `json_parse` | Parse JSON string |
+| `to_csv(l)` | `csv_stringify` | Serialize list to CSV |
+| `url_encode(s)`| `url_enc` | URL Encode string |
 
 #### **Ìrẹtẹ̀** (The Crusher - Crypto/Compression)
 | Yoruba | English | Description |
@@ -709,6 +717,8 @@ The Standard Library is organized into 16 Domains (Odù). Each function has a **
 | `binu(e)` | `raise` | Raise error |
 | `je(e)` | `catch` | Handle error |
 | `gbe(fn)` | `rescue` | Wrap function safe |
+| `dogba(a, b)` | `assert_eq` | Assert equality |
+| `yato(a, b)` | `assert_ne` | Assert inequality |
 
 #### **Ọ̀ṣẹ́** (The Beautifier - Graphics)
 | Yoruba | English | Description |
@@ -768,14 +778,15 @@ python src/cli.py matrix
 python src/cli.py --version
 ```
 
-## Ọjà: The Market (Package Manager)
+## Ọjà: The Market (Dependency & Isolation Manager)
 
-**Ọjà** (The Market) is the decentralized package manager for Ifá-Lang. It treats code exchange as commerce between spirits.
+**Ọjà** (The Market) is the decentralized package and isolation manager for Ifá-Lang. It handles both the *commerce* of code (dependencies) and the *boundaries* of the workspace (isolation).
 
 ### 1. Philosophy
 - **Decentralized**: No central registry (runs on Git).
 - **Verifiable**: Cryptographic `ifa.lock` ensures code integrity.
-- **Manifest**: `ifa.toml` tracks what you "buy" (install).
+- **Isolated (Aàbò)**: Every project is a self-contained world. Dependencies are installed locally (`libs/`), preventing global conflicts and ensuring reproducible builds.
+- **Manifest**: `ifa.toml` tracks your inventory and environment configuration.
 
 ### 2. Commands
 
@@ -785,6 +796,10 @@ python src/cli.py --version
 | `add <url>` | `ra` (Buy) | Download & add a dependency from Git |
 | `install` | `ra` (Buy) | Install/Sync all dependencies from `ifa.toml` |
 | `remove <name>`| `ta` (Sell) | Remove/Uninstall a dependency |
+| `run` | `ise` (Work) | Run project (entry point) |
+| `test` | `idanwo` (Exam) | Run project tests |
+| `publish` | `polowo` (Advertise) | Publish package to registry |
+| `upgrade` | - | Upgrade CLI to latest version |
 | `update` | - | Pull latest changes for packages |
 | `lock` | - | detailed checksums to `ifa.lock` |
 | `verify` | - | Verify package integrity (CRC/SHA256) |
@@ -820,6 +835,12 @@ ifa oja lock
 # Verify packages haven't been tampered with
 ifa oja verify
 ```
+
+**Project Isolation (Aàbò):**
+Ọjà ensures your project is hermetically sealed:
+- **Local Dependencies**: All libraries live in `your-project/libs/`, never globally.
+- **Version pinning**: `ifa.lock` freezes the exact state of the universe for your project.
+- **Workspace boundaries**: `ifa oja run` executes within the project context, respecting local paths and environment variables.
 
 ### 4. Manifest (`ifa.toml`)
 
@@ -1175,6 +1196,33 @@ Every new module MUST follow the `Parent_Child` pattern:
 | `Òdí_X` | Storage + X | Archive, Backup, Cache |
 | `Ìrosù_X` | Output + X | Logger, Formatter |
 | `Ọ̀ṣẹ́_X` | Graphics + X | 3D, Animation, UI |
+
+---
+
+
+## 🔮 Future Roadmap
+
+### Ọ̀ṣẹ́: The Native UI (Project Ìlà)
+We are evolving the **Ọ̀ṣẹ́** (Beautifier) domain to support native, cross-platform GUIs. This initiative is codenamed **Ìlà** (The Line).
+
+Instead of a separate framework, you will use **Ọ̀ṣẹ́** to build UIs declaratively:
+
+```rust
+// Ọ̀ṣẹ́ controls the graphical interface
+ese main() {
+    Ọ̀ṣẹ́.ferese("My App", 800, 600) {
+        Ọ̀ṣẹ́.ila_toro() { // Vertical Stack
+            Ọ̀ṣẹ́.kọ("Kaabo!"); // Text
+            Ọ̀ṣẹ́.bọtini("Click Me", ese() {
+                Irosu.fo("Clicked!");
+            });
+        }
+    }
+}
+```
+
+### Mobile Support
+Targeting Android and iOS by mapping **Ọ̀ṣẹ́** calls to native views (Kotlin/Swift) via a unified rendering engine.
 
 ---
 

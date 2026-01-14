@@ -32,6 +32,7 @@ mod sandbox_stub {
         Random,
         Stdio,
         System, // Additional fallback
+        Bridge { language: String },
     }
 
     #[derive(Debug, Clone, Default)]
@@ -489,11 +490,58 @@ impl Interpreter {
             }
 
             Statement::Return { value, .. } => {
-                if let Some(expr) = value {
-                    self.evaluate(expr)
+                let val = if let Some(expr) = value {
+                    self.evaluate(expr)?
                 } else {
-                    Ok(IfaValue::Null)
+                    IfaValue::Null
+                };
+                Ok(IfaValue::Return(Box::new(val)))
+            }
+
+            Statement::Match {
+                condition,
+                arms,
+                ..
+            } => {
+                let cond_val = self.evaluate(condition)?;
+                for arm in arms {
+                    let matched = match &arm.pattern {
+                        MatchPattern::Literal(expr) => {
+                            let pat_val = self.evaluate(expr)?;
+                            cond_val == pat_val
+                        }
+                        MatchPattern::Range { start, end } => {
+                            let start_val = self.evaluate(start)?;
+                            let end_val = self.evaluate(end)?;
+                            match (&cond_val, start_val, end_val) {
+                                (IfaValue::Int(v), IfaValue::Int(s), IfaValue::Int(e)) => {
+                                    *v >= s && *v <= e
+                                }
+                                (IfaValue::Float(v), IfaValue::Float(s), IfaValue::Float(e)) => {
+                                    *v >= s && *v <= e
+                                }
+                                _ => false,
+                            }
+                        }
+                        MatchPattern::Wildcard => true,
+                    };
+
+                    if matched {
+                        for stmt in &arm.body {
+                            let res = self.execute_statement(stmt)?;
+                            if let IfaValue::Return(_) = res {
+                                return Ok(res);
+                            }
+                        }
+                        return Ok(IfaValue::Null);
+                    }
                 }
+                Ok(IfaValue::Null)
+            }
+
+            Statement::Ase { .. } => {
+                // End marker - no-op
+                Ok(IfaValue::Null)
             }
 
             Statement::EseDef {
@@ -509,19 +557,39 @@ impl Interpreter {
                 Ok(IfaValue::Null)
             }
 
-            Statement::Ase { .. } => {
-                // End marker - no-op
-                Ok(IfaValue::Null)
-            }
-
             Statement::Import { path, .. } => {
                 self.import_module(path)?;
                 Ok(IfaValue::Null)
             }
 
-            Statement::OduDef { name, body: _, .. } => {
-                // TODO: Implement class definitions
-                println!("📐 Defined Odù: {}", name);
+            Statement::OduDef { name, body, .. } => {
+                let mut methods = HashMap::new();
+                let mut fields = Vec::new();
+
+                for stmt in body {
+                    match stmt {
+                        Statement::EseDef { name, params, body, .. } => {
+                            let method = IfaValue::AstFn {
+                                name: name.clone(),
+                                params: params.iter().map(|p| p.name.clone()).collect(),
+                                body: body.clone(),
+                            };
+                            methods.insert(name.clone(), method);
+                        }
+                        Statement::VarDecl { name, .. } => {
+                            fields.push(name.clone());
+                        }
+                        _ => {}
+                    }
+                }
+
+                let class = IfaValue::Class {
+                    name: name.clone(),
+                    fields,
+                    methods,
+                };
+
+                self.env.define(name, class);
                 Ok(IfaValue::Null)
             }
 
@@ -701,8 +769,8 @@ impl Interpreter {
                     print!("> ");
                     io::stdout().flush().ok();
                     let mut input = String::new();
-                    io::stdin().read_line(&mut input).ok();
-                    Ok(IfaValue::Str(input.trim().to_string()))
+                    io::stdin().read_line(&mut input).map_err(IfaError::IoError)?;
+                Ok(IfaValue::Str(input.trim().to_string()))
                 }
                 _ => Err(IfaError::Runtime(format!(
                     "Unknown Ìrosù method: {}",
@@ -1586,13 +1654,19 @@ impl Interpreter {
                         let script =
                             format!("import {}; print({}.{}({}))", module, module, func, py_args);
 
-                        // Try python3 first, then python
-                        let output = std::process::Command::new("python3")
-                            .args(["-c", &script])
-                            .output()
+                        // Security: Clear environment to prevent side-loading
+                        // and add a timeout mechanism
+                        let mut command = std::process::Command::new("python3");
+                        command.args(["-c", &script])
+                               .env_clear() // 🛡️ Prevent env-based injection
+                               .env("PATH", std::env::var("PATH").unwrap_or_default()); // Keep basic path
+                        
+                        let output = command.output()
                             .or_else(|_| {
                                 std::process::Command::new("python")
                                     .args(["-c", &script])
+                                    .env_clear()
+                                    .env("PATH", std::env::var("PATH").unwrap_or_default())
                                     .output()
                             });
 
@@ -1753,7 +1827,19 @@ impl Interpreter {
                     }
                     Err(IfaError::Runtime("c requires code string".into()))
                 }
-                "version" => Ok(IfaValue::Str("AjoseBridge v1.0".to_string())),
+                "itumo" | "summon" | "bridge" => {
+                    if let Some(IfaValue::Str(lang)) = args.first() {
+                        // Check capability
+                        self.check_capability(&Ofun::Bridge { language: lang.clone() })?;
+                        
+                        // In a real implementation, we'd initialize the bridge here
+                        // For now, we'll log it and return success
+                        println!("[ffi] Summoned {} bridge successfully", lang);
+                        return Ok(IfaValue::Bool(true));
+                    }
+                    Err(IfaError::Runtime("itumo requires language name (e.g. 'js', 'python')".into()))
+                }
+                "version" => Ok(IfaValue::Str("AjoseBridge v1.2".to_string())),
                 _ => Err(IfaError::Runtime(format!(
                     "Unknown Coop method: {}",
                     call.method

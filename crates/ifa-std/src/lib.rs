@@ -40,10 +40,11 @@ pub mod traits;
 
 // Core domains (always available)
 pub mod ika; // 0100 - Strings
-pub mod irete; // 1101 - Crypto
+
 pub mod irosu; // 1100 - Console I/O
 pub mod iwori; // 0110 - Time/Iteration
 pub mod obara; // 1000 - Math Add/Mul
+#[cfg(feature = "backend")]
 pub mod odi; // 1001 - Files/DB
 pub mod ofun;
 pub mod ogbe; // 1111 - System/Lifecycle
@@ -54,15 +55,28 @@ pub mod owonrin; // 0011 - Random
 pub mod oyeku; // 0000 - Exit/Sleep // 0101 - Permissions
 
 // Optional domains (feature-gated)
-#[cfg(feature = "full")]
+// Optional domains (feature-gated)
+#[cfg(feature = "backend")]
 pub mod osa; // 0111 - Concurrency
-#[cfg(feature = "full")]
-pub mod ose;
-#[cfg(feature = "full")]
-pub mod otura; // 1011 - Networking // 1010 - Graphics
+
+#[cfg(feature = "game")]
+pub mod ose; // 1010 - Graphics/UI
+
+#[cfg(feature = "backend")]
+pub mod otura; // 1011 - Networking
+
+#[cfg(feature = "crypto")]
+pub mod irete; // 1101 - Crypto
+
+
+
+// Priority Stacks (Phase 4)
 
 // Priority Stacks (Phase 4)
 pub mod stacks;
+
+// Infrastructure Layer (Hardware/OS)
+pub mod infra;
 
 // FFI - Foreign Function Interface
 pub mod ffi;

@@ -24,6 +24,7 @@ statement = {
     | ewo_stmt
     | instruction
     | ase_stmt
+    | match_stmt
     | COMMENT
 }
 
@@ -85,6 +86,18 @@ ewo_kw = { "ewo" | "ẹ̀wọ̀" | "assert" }
 
 // End: ase;
 ase_stmt = { ase_kw ~ ";"? }
+
+// Match statement
+match_stmt = { match_kw ~ "(" ~ expression ~ ")" ~ "{" ~ match_arm* ~ "}" }
+match_arm = { match_pattern ~ "=>" ~ (statement | ("{" ~ statement* ~ "}")) }
+match_pattern = {
+    range_pattern
+    | literal_pattern
+    | wildcard_pattern
+}
+range_pattern = { expression ~ ".." ~ expression }
+literal_pattern = { expression }
+wildcard_pattern = { "_" }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPRESSIONS
@@ -159,6 +172,7 @@ for_kw = _{ "fun" | "for" }
 in_kw = _{ "ninu" | "in" }
 return_kw = _{ "pada" | "return" }
 ase_kw = _{ "ase" | "àṣẹ" | "end" }
+match_kw = _{ "yàn" | "yán" | "match" }
 public_mod = { "gbangba" | "public" }
 
 // ═══════════════════════════════════════════════════════════════════════════

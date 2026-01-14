@@ -69,9 +69,36 @@ impl LintContext {
     }
 }
 
-/// Check a program and return diagnostics
+/// Configuration for the Babalawo linter
+#[derive(Debug, Clone, Copy)]
+pub struct BabalawoConfig {
+    /// Include wisdom/proverbs in diagnostics (slower)
+    pub include_wisdom: bool,
+}
+
+impl Default for BabalawoConfig {
+    fn default() -> Self {
+        Self {
+            include_wisdom: true,
+        }
+    }
+}
+
+/// Check a program with default configuration
 pub fn check_program(program: &Program, filename: &str) -> Babalawo {
+    check_program_with_config(program, filename, BabalawoConfig::default())
+}
+
+/// Check a program with custom configuration
+pub fn check_program_with_config(
+    program: &Program,
+    filename: &str,
+    config: BabalawoConfig,
+) -> Babalawo {
     let mut babalawo = Babalawo::new();
+    if !config.include_wisdom {
+        babalawo = babalawo.fast();
+    }
     let mut ctx = LintContext::new();
 
     // First pass: collect definitions
@@ -257,7 +284,7 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
         Statement::VarDecl {
             name, value, span, ..
         } => {
-            check_expression(value, ctx, baba, file);
+            check_expression(value, ctx, baba, file, span);
 
             // Check for self-referencing initialization
             if expression_uses_var(value, name) {
@@ -276,7 +303,7 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             value,
             span,
         } => {
-            check_expression(value, ctx, baba, file);
+            check_expression(value, ctx, baba, file, span);
 
             // Check if target variable is defined
             if let ifa_core::ast::AssignTarget::Variable(name) = target {
@@ -330,7 +357,7 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
 
             // Check arguments
             for arg in &call.args {
-                check_expression(arg, ctx, baba, file);
+                check_expression(arg, ctx, baba, file, span);
             }
         }
 
@@ -374,9 +401,9 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             condition,
             then_body,
             else_body,
-            ..
+            span,
         } => {
-            check_expression(condition, ctx, baba, file);
+            check_expression(condition, ctx, baba, file, span);
 
             for s in then_body {
                 check_statement(s, ctx, baba, file);
@@ -390,9 +417,9 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
         }
 
         Statement::While {
-            condition, body, ..
+            condition, body, span
         } => {
-            check_expression(condition, ctx, baba, file);
+            check_expression(condition, ctx, baba, file, span);
 
             for s in body {
                 check_statement(s, ctx, baba, file);
@@ -403,9 +430,9 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             var,
             iterable,
             body,
-            span: _,
+            span,
         } => {
-            check_expression(iterable, ctx, baba, file);
+            check_expression(iterable, ctx, baba, file, span);
             ctx.use_var(var);
 
             for s in body {
@@ -413,10 +440,10 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             }
         }
 
-        Statement::Return { value, .. } => {
+        Statement::Return { value, span } => {
             ctx.has_return = true;
             if let Some(v) = value {
-                check_expression(v, ctx, baba, file);
+                check_expression(v, ctx, baba, file, span);
             }
         }
 
@@ -424,8 +451,10 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
     }
 }
 
+use ifa_core::ast::Span;
+
 /// Check an expression for issues
-fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalawo, file: &str) {
+fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalawo, file: &str, span: &Span) {
     match expr {
         Expression::Identifier(name) => {
             ctx.use_var(name);
@@ -436,8 +465,8 @@ fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalaw
                     "UNDEFINED_VARIABLE",
                     &format!("Variable '{}' used before declaration", name),
                     file,
-                    1, // TODO: get proper line from expression
-                    1,
+                    span.line,
+                    span.column,
                 );
             }
         }
@@ -445,8 +474,8 @@ fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalaw
         Expression::BinaryOp {
             left, right, op, ..
         } => {
-            check_expression(left, ctx, baba, file);
-            check_expression(right, ctx, baba, file);
+            check_expression(left, ctx, baba, file, span);
+            check_expression(right, ctx, baba, file, span);
 
             // Check for division by zero in binary op
             if matches!(
@@ -458,8 +487,8 @@ fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalaw
                         "DIVISION_BY_ZERO",
                         "Division by zero in expression",
                         file,
-                        1,
-                        1,
+                        span.line,
+                        span.column,
                     );
                 }
             }
@@ -467,32 +496,32 @@ fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalaw
 
         Expression::List(items) => {
             for item in items {
-                check_expression(item, ctx, baba, file);
+                check_expression(item, ctx, baba, file, span);
             }
         }
 
         Expression::Map(entries) => {
             for (k, v) in entries {
-                check_expression(k, ctx, baba, file);
-                check_expression(v, ctx, baba, file);
+                check_expression(k, ctx, baba, file, span);
+                check_expression(v, ctx, baba, file, span);
             }
         }
 
         Expression::Index { object, index } => {
-            check_expression(object, ctx, baba, file);
-            check_expression(index, ctx, baba, file);
+            check_expression(object, ctx, baba, file, span);
+            check_expression(index, ctx, baba, file, span);
         }
 
         Expression::MethodCall { object, args, .. } => {
-            check_expression(object, ctx, baba, file);
+            check_expression(object, ctx, baba, file, span);
             for arg in args {
-                check_expression(arg, ctx, baba, file);
+                check_expression(arg, ctx, baba, file, span);
             }
         }
 
         Expression::OduCall(call) => {
             for arg in &call.args {
-                check_expression(arg, ctx, baba, file);
+                check_expression(arg, ctx, baba, file, span);
             }
         }
 

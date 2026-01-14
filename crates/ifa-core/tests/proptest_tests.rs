@@ -3,6 +3,7 @@
 //! These tests verify that invariants hold across randomly generated inputs.
 
 use ifa_core::IfaValue;
+use ifa_core::oracle::oracle::verify_equivalence;
 use proptest::prelude::*;
 
 // Strategy for generating IfaValue
@@ -188,5 +189,38 @@ proptest! {
     fn prop_less_than_irreflexive(a in any::<i64>()) {
         let va = IfaValue::Int(a);
         prop_assert!(!(va.clone() < va));
+    }
+
+    // =========================================================================
+    // SEMANTIC EQUIVALENCE PROPERTIES
+    // =========================================================================
+
+    #[test]
+    fn prop_semantic_arithmetic(a in -100i64..100i64, b in -100i64..100i64) {
+        let ops = ["+", "-", "*", "/"];
+        for op in ops {
+            if op == "/" && b == 0 { continue; }
+            let source = format!("Irosu.fo({} {} {});", a, op, b);
+            verify_equivalence(&source);
+        }
+    }
+
+    #[test]
+    fn prop_semantic_comparison(a in -100i64..100i64, b in -100i64..100i64) {
+        let ops = ["==", "!=", "<", ">", "<=", ">="];
+        for op in ops {
+            let source = format!("Irosu.fo({} {} {});", a, op, b);
+            verify_equivalence(&source);
+        }
+    }
+
+    #[test]
+    fn prop_semantic_logical(a in proptest::bool::ANY, b in proptest::bool::ANY) {
+        let as_ifa = |v: bool| if v { "òtítọ́" } else { "èké" };
+        let ops = ["&&", "||"];
+        for op in ops {
+            let source = format!("Irosu.fo({} {} {});", as_ifa(a), op, as_ifa(b));
+            verify_equivalence(&source);
+        }
     }
 }

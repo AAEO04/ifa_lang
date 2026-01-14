@@ -106,6 +106,9 @@ fn check_domain(lex: &mut Lexer<Token>) -> Option<OduDomain> {
                 // Opele - Divination/Compound Odù
                 "opele" | "oracle" => Some(OduDomain::Opele),
 
+                // Coop - FFI Bridge
+                "ffi" | "bridge" => Some(OduDomain::Coop),
+
                 _ => None,
             }
         }
@@ -181,6 +184,11 @@ pub enum Token {
 
     #[token("continue")]
     Continue,
+
+    #[token("yàn")]
+    #[token("yán")]
+    #[token("match")]
+    Match,
 
     // Function/class
     #[token("ese")]
@@ -312,6 +320,12 @@ pub enum Token {
     Or,
     #[token("!")]
     Not,
+
+    #[token("=>")]
+    FatArrow,
+
+    #[token("..")]
+    DoubleDot,
 
     // ═══════════════════════════════════════════════════════════════════════
     // PUNCTUATION

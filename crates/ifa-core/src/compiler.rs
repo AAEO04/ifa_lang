@@ -207,38 +207,77 @@ impl Compiler {
             }
 
             Statement::For {
-                var: _var,
+                var,
                 iterable,
                 body,
                 ..
             } => {
-                // Compile iterable
+                // 1. Compile Iterable
                 self.compile_expression(iterable)?;
+                // Store in hidden local ".iter_col"
+                let col_slot = self.declare_local(".iter_col");
+                self.emit(OpCode::StoreLocal);
+                self.emit_byte(col_slot as u8);
 
-                // Create iterator - push index 0
+                // 2. Init Index = 0
                 self.emit(OpCode::PushInt);
                 self.emit_i64(0);
+                let idx_slot = self.declare_local(".iter_idx");
+                self.emit(OpCode::StoreLocal);
+                self.emit_byte(idx_slot as u8);
 
+                // 3. Loop Start
                 let loop_start = self.current_offset();
 
-                // Check if index < len
-                self.emit(OpCode::Dup); // Dup index
-                // Get length - this is simplified, real impl needs GetLen opcode
+                // 4. Condition: idx < len(col)
+                self.emit(OpCode::LoadLocal);
+                self.emit_byte(idx_slot as u8);
+                
+                self.emit(OpCode::LoadLocal);
+                self.emit_byte(col_slot as u8);
+                self.emit(OpCode::Len);
+                
+                self.emit(OpCode::Lt);
+                
+                let exit_jump = self.emit_jump(OpCode::JumpIfFalse);
+                self.emit(OpCode::Pop); // Pop condition
 
-                // For now, emit a placeholder
-                self.emit(OpCode::Pop); // Simplified
+                // 5. Body Setup: var = col[idx]
+                self.begin_scope();
+                
+                self.emit(OpCode::LoadLocal);
+                self.emit_byte(col_slot as u8);
+                self.emit(OpCode::LoadLocal);
+                self.emit_byte(idx_slot as u8);
+                self.emit(OpCode::GetIndex);
+                
+                let var_slot = self.declare_local(var);
+                self.emit(OpCode::StoreLocal);
+                self.emit_byte(var_slot as u8);
 
+                // Compile Body
                 for s in body {
                     self.compile_statement(s)?;
                 }
+                self.end_scope();
 
-                // Increment index and loop
+                // 6. Increment Index
+                self.emit(OpCode::LoadLocal);
+                self.emit_byte(idx_slot as u8);
                 self.emit(OpCode::PushInt);
                 self.emit_i64(1);
                 self.emit(OpCode::Add);
+                self.emit(OpCode::StoreLocal);
+                self.emit_byte(idx_slot as u8);
 
-                // Jump back
-                let _ = loop_start; // TODO: proper for loop compilation
+                // 7. Jump Back
+                self.emit(OpCode::Jump);
+                let back_offset = (self.current_offset() - loop_start + 2) as i16;
+                self.emit_byte((-back_offset as u16 & 0xff) as u8);
+                self.emit_byte(((-back_offset as u16 >> 8) & 0xff) as u8);
+
+                self.patch_jump(exit_jump);
+                self.emit(OpCode::Pop); // Pop condition
             }
 
             Statement::Return { value, .. } => {
@@ -259,25 +298,92 @@ impl Compiler {
                 self.emit(OpCode::Pop);
             }
 
+
             Statement::EseDef {
                 name, params, body, ..
             } => {
-                // Functions are compiled as separate bytecode chunks
-                // For now, store as a constant and skip
-                let _ = (name, params, body);
-                // TODO: Implement function compilation
+                self.compile_function(name, params, body)?;
+
+                // 8. Store in variable
+                // If name is found in local scope...
+                if let Some(slot) = self.resolve_local(name) {
+                    self.emit(OpCode::StoreLocal);
+                    self.emit_byte(slot as u8);
+                } else {
+                    // Otherwise Global
+                   self.bytecode.strings.push(name.clone());
+                   let name_idx = (self.bytecode.strings.len() - 1) as u16;
+                   self.emit(OpCode::StoreGlobal);
+                   self.emit_byte((name_idx >> 8) as u8);
+                   self.emit_byte((name_idx & 0xff) as u8);
+                }
             }
 
-            Statement::OduDef { name, .. } => {
-                // Class definitions
-                let _ = name;
-                // TODO: Implement class compilation
+            Statement::OduDef {
+                name,
+                body,
+                visibility: _,
+                ..
+            } => {
+                let mut method_count = 0;
+                let mut field_names = Vec::new();
+
+                for stmt in body {
+                    match stmt {
+                        Statement::EseDef {
+                            name, params, body, ..
+                        } => {
+                            // Compile function but don't store yet
+                            self.compile_function(name, params, body)?;
+                            method_count += 1;
+                        }
+                        Statement::VarDecl { name, .. } => {
+                            field_names.push(name.clone());
+                        }
+                        _ => {}
+                    }
+                }
+
+                // Emit DefineClass
+                self.emit(OpCode::DefineClass);
+                
+                // Name
+                self.bytecode.strings.push(name.clone());
+                let name_idx = (self.bytecode.strings.len() - 1) as u16;
+                self.emit_byte((name_idx >> 8) as u8);
+                self.emit_byte((name_idx & 0xff) as u8);
+
+                // Fields
+                self.emit_byte(field_names.len() as u8);
+                for f_name in field_names {
+                    self.bytecode.strings.push(f_name);
+                    let idx = (self.bytecode.strings.len() - 1) as u16;
+                    self.emit_byte((idx >> 8) as u8);
+                    self.emit_byte((idx & 0xff) as u8);
+                }
+
+                // Methods
+                self.emit_byte(method_count as u8);
+                
+                // Store class globally
+                self.bytecode.strings.push(name.clone());
+                let name_idx = (self.bytecode.strings.len() - 1) as u16;
+                self.emit(OpCode::StoreGlobal);
+                self.emit_byte((name_idx >> 8) as u8);
+                self.emit_byte((name_idx & 0xff) as u8);
             }
 
             Statement::Import { path, .. } => {
-                // Import handling
-                let _ = path;
-                // TODO: Implement import compilation
+                // path is Vec<String> e.g. ["std", "io"]
+                let import_path = path.join("/");
+                
+                // Add to strings pool
+                self.bytecode.strings.push(import_path);
+                let path_idx = (self.bytecode.strings.len() - 1) as u16;
+                
+                self.emit(OpCode::Import);
+                self.emit_byte((path_idx >> 8) as u8);
+                self.emit_byte((path_idx & 0xff) as u8);
             }
 
             Statement::Taboo { source, target, .. } => {
@@ -301,7 +407,58 @@ impl Compiler {
                 // Memory size is configured at VM initialization
                 let _ = size;
             }
+
+            Statement::Match { .. } => {
+                return Err(crate::error::IfaError::Runtime("Bytecode compilation for 'match' not yet implemented".to_string()));
+            }
         }
+        Ok(())
+    }
+
+    fn compile_function(&mut self, name: &str, params: &[Param], body: &[Statement]) -> IfaResult<()> {
+        // 1. Emit Jump over the body
+        let jump = self.emit_jump(OpCode::Jump);
+        
+        // 2. Record Start IP
+        let start_ip = self.current_offset();
+        
+        // 3. Begin Scope & Bind Params
+        self.begin_scope();
+        for param in params {
+            self.declare_local(&param.name);
+        }
+        
+        // 4. Compile Body
+        for stmt in body {
+            self.compile_statement(stmt)?;
+        }
+        
+        // 5. Implicit Return (Null)
+        self.emit(OpCode::PushNull);
+        self.emit(OpCode::Return);
+        
+        self.end_scope();
+        
+        // 6. Patch Jump
+        self.patch_jump(jump);
+        
+        // 7. Emit PushFn instruction
+        self.emit(OpCode::PushFn);
+        // name index
+        self.bytecode.strings.push(name.to_string());
+        let name_idx = (self.bytecode.strings.len() - 1) as u16;
+        self.emit_byte((name_idx >> 8) as u8);
+        self.emit_byte((name_idx & 0xff) as u8);
+        
+        // start_ip (u32)
+        self.emit_byte((start_ip >> 24) as u8);
+        self.emit_byte((start_ip >> 16) as u8);
+        self.emit_byte(((start_ip >> 8) & 0xff) as u8);
+        self.emit_byte((start_ip & 0xff) as u8);
+        
+        // arity (u8)
+        self.emit_byte(params.len() as u8);
+        
         Ok(())
     }
 

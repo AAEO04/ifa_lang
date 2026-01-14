@@ -20,6 +20,8 @@ pub enum Ofun {
     Random,
     /// Standard I/O (stdin/stdout/stderr)
     Stdio,
+    /// Polyglot bridge access (js, python, etc.)
+    Bridge { language: String },
 }
 
 /// A set of granted capabilities
@@ -65,6 +67,7 @@ impl CapabilitySet {
                 (Ofun::Time, Ofun::Time) => true,
                 (Ofun::Random, Ofun::Random) => true,
                 (Ofun::Stdio, Ofun::Stdio) => true,
+                (Ofun::Bridge { language: g }, Ofun::Bridge { language: r }) => g == r || g == "*",
                 _ => false,
             })
     }

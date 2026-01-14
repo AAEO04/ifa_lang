@@ -6,12 +6,14 @@
 mod checks;
 mod diagnose;
 mod history;
+mod infer;
 mod iwa;
 mod taboo;
 mod wisdom;
 
-pub use checks::{LintContext, check_program};
+pub use checks::{BabalawoConfig, LintContext, check_program, check_program_with_config};
 pub use diagnose::{Babalawo, Diagnostic, IfaError, Severity};
+pub use infer::infer_capabilities;
 pub use history::{StateHistoryBuffer, StateSnapshot};
 pub use iwa::{IwaEngine, LIFECYCLE_RULES, ResourceDebt};
 pub use taboo::{Taboo, TabooEnforcer, TabooViolation};

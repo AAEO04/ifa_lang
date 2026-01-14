@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-01-11
+
+### Added
+
+#### Ìwòrì LSP Integration (Language Server)
+- **Full LSP Implementation**: Provides real-time feedback for IDEs.
+  - **Diagnostics (Vision)**: Live syntax checking and error reporting.
+  - **Completion (Advice)**: Autocomplete for Keywords (`fun`, `ninu`), Odù modules, and snippets.
+- **VS Code Support**: `vscode_extension` supports `ifa lsp` out of the box.
+- **New Command**: `ifa lsp` starts the language server.
+
+#### Ìká Serialization (Native JSON/CSV)
+- **JSON Support**: `Ika.to_json(val)` and `Ika.from_json(str)`.
+- **CSV Support**: `Ika.to_csv(list)` and `Ika.from_csv(str)`.
+- **URL Encoding**: `Ika.url_encode(str)` and `Ika.url_decode(str)`.
+- **Base64**: Native types for high-performance encoding/decoding.
+
+#### Ọ̀kànràn Testing Framework (Unit Tests)
+- **New Assertions**: `Okanran.dogba(a, b)` (equals), `Okanran.yato(a, b)` (not equals).
+- **Test Runner**: Enhanced `ifa test` with discovery and reporting.
+- **Mocking**: Basic support for mocking function calls.
+
+#### Ọjà Package Manager Improvements
+- **Missing Commands**: Implemented `ifa oja run`, `test`, `install`, `list`, `add`, `remove`.
+- **Project Structure**: Improved `init` templates for different domains.
+
+### Fixed
+- **IoT Stack Conflicts**: Resolved `impl std::error::Error` conflicts in `ifa-std/stacks/iot.rs`.
+- **CLI Compilation**: Fixed missing symbols and type inference issues in `ifa-cli`.
+
+---
+
 ## [1.2.1] - 2026-01-09
 
 ### Added

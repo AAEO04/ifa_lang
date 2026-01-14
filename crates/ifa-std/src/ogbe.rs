@@ -61,10 +61,18 @@ impl Ogbe {
     }
 
     /// Set environment variable (fí àyíká)
+    /// 
+    /// WARNING: This operation is deprecated and does nothing.
+    /// Setting environment variables at runtime is thread-unsafe and can cause
+    /// data races. Use shell environment or config files instead.
+    #[deprecated(since = "1.2.1", note = "Environment variable mutation is thread-unsafe. Use shell environment instead.")]
     pub fn fi_ayika(&self, key: &str, value: &str) {
         if self.check_env(key) {
-            // SAFETY: Setting env vars is inherently unsafe due to thread safety
-            unsafe { env::set_var(key, value) };
+            eprintln!(
+                "[WARN] fi_ayika('{}', '{}') ignored: Setting env vars at runtime is unsafe. \
+                 Use shell exports or config files instead.",
+                key, value
+            );
         }
     }
 

@@ -5,7 +5,7 @@
 //! Tokio async networking with rustls for TLS and SSRF protection.
 
 use crate::impl_odu_domain;
-use ifa_core::error::{IfaError, IfaResult};
+// Unused imports removed
 use std::net::IpAddr;
 #[cfg(feature = "full")]
 use tokio::net::{TcpListener, TcpStream};

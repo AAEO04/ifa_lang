@@ -94,23 +94,29 @@ impl<T, F: FnOnce(&mut T)> EboScope<T, F> {
 
     /// Get inner value, consuming the scope
     #[inline]
-    pub fn into_inner(mut self) -> T {
+    pub fn into_inner(self) -> T
+    where
+        T: Default,
+    {
+        // Use ManuallyDrop to safely take ownership
+        let mut this = ManuallyDrop::new(self);
         // Run cleanup before returning
-        if let Some(cleanup) = self.cleanup.take() {
-            cleanup(&mut self.value);
+        if let Some(cleanup) = this.cleanup.take() {
+            cleanup(&mut this.value);
         }
-        let value = unsafe { std::ptr::read(&self.value) };
-        std::mem::forget(self);
-        value
+        // Safely take the value using std::mem::take
+        std::mem::take(&mut this.value)
     }
 
     /// Release without running cleanup
     #[inline]
-    pub fn leak(mut self) -> T {
-        self.cleanup = None;
-        let value = unsafe { std::ptr::read(&self.value) };
-        std::mem::forget(self);
-        value
+    pub fn leak(self) -> T
+    where
+        T: Default,
+    {
+        let mut this = ManuallyDrop::new(self);
+        this.cleanup = None;
+        std::mem::take(&mut this.value)
     }
 }
 

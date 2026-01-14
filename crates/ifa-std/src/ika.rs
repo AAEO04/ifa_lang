@@ -5,14 +5,17 @@
 //! Efficient string manipulation using ropey and regex.
 
 use crate::impl_odu_domain;
-use ifa_core::error::{IfaError, IfaResult};
+use ifa_core::{
+    error::{IfaError, IfaResult},
+    value::IfaValue,
+};
 use regex::Regex;
 use ropey::Rope;
 
-/// Ìká - The Controller (Strings)
+/// Ìká - The Controller (Strings & Serialization)
 pub struct Ika;
 
-impl_odu_domain!(Ika, "Ìká", "0100", "The Controller - Strings");
+impl_odu_domain!(Ika, "Ìká", "0100", "The Controller - Strings & Serialization");
 
 impl Ika {
     /// Concatenate strings (sọ̀pọ̀)
@@ -91,6 +94,73 @@ impl Ika {
     }
 
     // =========================================================================
+    // SERIALIZATION (Native Speed)
+    // =========================================================================
+
+    /// Serialize to JSON (yi_si_json)
+    pub fn yi_si_json(&self, val: &IfaValue) -> IfaResult<String> {
+        serde_json::to_string(val).map_err(|e| IfaError::Custom(format!("JSON error: {}", e)))
+    }
+
+    /// Deserialize from JSON (yi_padà_json)
+    pub fn yi_pada_json(&self, json: &str) -> IfaResult<IfaValue> {
+        serde_json::from_str(json).map_err(|e| IfaError::Custom(format!("JSON error: {}", e)))
+    }
+
+    /// URL Encode (bo_asiri_url)
+    pub fn bo_asiri_url(&self, text: &str) -> String {
+        urlencoding::encode(text).to_string()
+    }
+
+    /// URL Decode (titu_asiri_url)
+    pub fn titu_asiri_url(&self, text: &str) -> IfaResult<String> {
+        urlencoding::decode(text)
+            .map(|s| s.to_string())
+            .map_err(|e| IfaError::Custom(format!("URL decode error: {}", e)))
+    }
+
+    /// Serialize Matrix to CSV (yi_si_csv)
+    /// Expects List<List<String>> or List<List<Int/Float>>
+    pub fn yi_si_csv(&self, rows: &IfaValue) -> IfaResult<String> {
+        let mut wtr = csv::Writer::from_writer(vec![]);
+
+        if let IfaValue::List(list) = rows {
+            for row in list {
+                if let IfaValue::List(cells) = row {
+                    let record: Vec<String> = cells.iter().map(|c| c.to_string()).collect();
+                    wtr.write_record(&record)
+                        .map_err(|e| IfaError::Custom(format!("CSV error: {}", e)))?;
+                }
+            }
+        }
+
+        let data = wtr
+            .into_inner()
+            .map_err(|e| IfaError::Custom(format!("CSV flush error: {}", e)))?;
+        String::from_utf8(data).map_err(|e| IfaError::Custom(format!("UTF-8 error: {}", e)))
+    }
+
+    /// Deserialize CSV to Matrix (yi_pada_csv)
+    pub fn yi_pada_csv(&self, data: &str, has_headers: bool) -> IfaResult<IfaValue> {
+        let mut rdr = csv::ReaderBuilder::new()
+            .has_headers(has_headers)
+            .from_reader(data.as_bytes());
+
+        let mut rows = Vec::new();
+
+        for result in rdr.records() {
+            let record = result.map_err(|e| IfaError::Custom(format!("CSV parse error: {}", e)))?;
+            let row: Vec<IfaValue> = record
+                .iter()
+                .map(|s| IfaValue::Str(s.to_string()))
+                .collect();
+            rows.push(IfaValue::List(row));
+        }
+
+        Ok(IfaValue::List(rows))
+    }
+
+    // =========================================================================
     // REGEX OPERATIONS
     // =========================================================================
 
@@ -159,6 +229,7 @@ impl Ika {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_string_ops() {
@@ -177,5 +248,61 @@ mod tests {
             ika.wa_akoko(r"\d+", "abc123xyz").unwrap(),
             Some("123".to_string())
         );
+    }
+
+    #[test]
+    fn test_json_serialization() {
+        let ika = Ika;
+        let mut map = HashMap::new();
+        map.insert("key".to_string(), IfaValue::Str("value".to_string()));
+        map.insert("number".to_string(), IfaValue::Int(42));
+        let val = IfaValue::Map(map);
+
+        let json = ika.yi_si_json(&val).unwrap();
+        // Skip brittle string containment checks (order/spacing varies)
+        // Rely on round-trip deserialization below
+
+        let deserialized = ika.yi_pada_json(&json).unwrap();
+        if let IfaValue::Map(m) = deserialized {
+            assert_eq!(m.get("key"), Some(&IfaValue::Str("value".to_string())));
+            assert_eq!(m.get("number"), Some(&IfaValue::Int(42)));
+        } else {
+            panic!("Expected Map");
+        }
+    }
+
+    #[test]
+    fn test_csv_serialization() {
+        let ika = Ika;
+        let rows = IfaValue::List(vec![
+            IfaValue::List(vec![IfaValue::Str("Name".to_string()), IfaValue::Str("Age".to_string())]),
+            IfaValue::List(vec![IfaValue::Str("Alice".to_string()), IfaValue::Int(30)]),
+            IfaValue::List(vec![IfaValue::Str("Bob".to_string()), IfaValue::Int(25)]),
+        ]);
+
+        let csv = ika.yi_si_csv(&rows).unwrap();
+        assert!(csv.contains("Name,Age"));
+        assert!(csv.contains("Alice,30"));
+        assert!(csv.contains("Bob,25"));
+
+        // Test round trip
+        let parsed = ika.yi_pada_csv(&csv, false).unwrap(); // false = treat headers as data
+        if let IfaValue::List(l) = parsed {
+            assert_eq!(l.len(), 3);
+            if let IfaValue::List(r0) = &l[0] {
+                 assert_eq!(r0[0], IfaValue::Str("Name".to_string()));
+            }
+        }
+    }
+
+    #[test]
+    fn test_url_encoding() {
+        let ika = Ika;
+        let text = "Hello World & Ifá";
+        let encoded = ika.bo_asiri_url(text);
+        assert_eq!(encoded, "Hello%20World%20%26%20If%C3%A1");
+
+        let decoded = ika.titu_asiri_url(&encoded).unwrap();
+        assert_eq!(decoded, text);
     }
 }

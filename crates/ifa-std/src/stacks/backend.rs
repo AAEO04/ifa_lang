@@ -129,6 +129,17 @@ impl Response {
         self.headers.insert("Location".to_string(), url.to_string());
         self
     }
+
+    /// Server-Sent Events (SSE) Stream
+    pub fn sse(mut self, _stream_data: impl Iterator<Item = String>) -> Self {
+        self.headers.insert("Content-Type".to_string(), "text/event-stream".to_string());
+        self.headers.insert("Cache-Control".to_string(), "no-cache".to_string());
+        self.headers.insert("Connection".to_string(), "keep-alive".to_string());
+        
+        // In a real implementation, this would wrap the iterator in a Stream
+        // For now, we just simulate the header setup.
+        self
+    }
 }
 
 impl Default for Response {

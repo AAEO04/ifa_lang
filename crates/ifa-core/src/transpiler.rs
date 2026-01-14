@@ -17,8 +17,25 @@ struct RustTranspiler {
 }
 
 impl RustTranspiler {
-    fn new() -> Self {
-        RustTranspiler { indent: 1 }
+    pub fn new() -> Self {
+        Self { indent: 0 }
+    }
+
+    fn mangle_identifier(&self, name: &str) -> String {
+        let rust_keywords = [
+            "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn",
+            "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref",
+            "return", "self", "Self", "static", "struct", "super", "trait", "true", "type",
+            "unsafe", "use", "where", "while", "async", "await", "dyn", "abstract", "become",
+            "box", "do", "final", "macro", "override", "priv", "typeof", "unsized", "virtual",
+            "yield", "try",
+        ];
+
+        if rust_keywords.contains(&name) {
+            format!("{}_ifa", name)
+        } else {
+            name.to_string()
+        }
     }
 
     fn indent_str(&self) -> String {
@@ -40,7 +57,7 @@ impl RustTranspiler {
 use std::collections::HashMap;
 
 /// Ifá Value type for dynamic typing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum IfaValue {{
     Int(i64),
     Float(f64),
@@ -57,10 +74,24 @@ impl std::fmt::Display for IfaValue {{
             IfaValue::Int(n) => write!(f, "{{}}", n),
             IfaValue::Float(n) => write!(f, "{{}}", n),
             IfaValue::Str(s) => write!(f, "{{}}", s),
-            IfaValue::Bool(b) => write!(f, "{{}}", b),
-            IfaValue::Nil => write!(f, "nil"),
+            IfaValue::Bool(b) => write!(f, "{{}}", if *b {{ "òtítọ́" }} else {{ "èké" }}),
+            IfaValue::Nil => write!(f, "àìsí"),
             IfaValue::List(l) => write!(f, "{{:?}}", l),
             IfaValue::Map(m) => write!(f, "{{:?}}", m),
+        }}
+    }}
+}}
+
+impl IfaValue {{
+    pub fn is_truthy(&self) -> bool {{
+        match self {{
+            IfaValue::Bool(b) => *b,
+            IfaValue::Int(n) => *n != 0,
+            IfaValue::Float(f) => *f != 0.0,
+            IfaValue::Str(s) => !s.is_empty(),
+            IfaValue::List(l) => !l.is_empty(),
+            IfaValue::Map(m) => !m.is_empty(),
+            IfaValue::Nil => false,
         }}
     }}
 }}
@@ -69,11 +100,78 @@ impl std::ops::Add for IfaValue {{
     type Output = Self;
     fn add(self, other: Self) -> Self {{
         match (self, other) {{
-            (IfaValue::Int(a), IfaValue::Int(b)) => IfaValue::Int(a + b),
+            (IfaValue::Int(a), IfaValue::Int(b)) => a.checked_add(b).map(IfaValue::Int).unwrap_or(IfaValue::Float(a as f64 + b as f64)),
             (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a + b),
+            (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float(a as f64 + b),
+            (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a + b as f64),
             (IfaValue::Str(a), IfaValue::Str(b)) => IfaValue::Str(format!("{{}}{{}}", a, b)),
             _ => IfaValue::Nil,
         }}
+    }}
+}}
+
+impl std::ops::Sub for IfaValue {{
+    type Output = Self;
+    fn sub(self, other: Self) -> Self {{
+        match (self, other) {{
+            (IfaValue::Int(a), IfaValue::Int(b)) => a.checked_sub(b).map(IfaValue::Int).unwrap_or(IfaValue::Float(a as f64 - b as f64)),
+            (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a - b),
+            (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float(a as f64 - b),
+            (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a - b as f64),
+            _ => IfaValue::Nil,
+        }}
+    }}
+}}
+
+impl std::ops::Mul for IfaValue {{
+    type Output = Self;
+    fn mul(self, other: Self) -> Self {{
+        match (self, other) {{
+            (IfaValue::Int(a), IfaValue::Int(b)) => a.checked_mul(b).map(IfaValue::Int).unwrap_or(IfaValue::Float(a as f64 * b as f64)),
+            (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a * b),
+            (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float(a as f64 * b),
+            (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a * b as f64),
+            _ => IfaValue::Nil,
+        }}
+    }}
+}}
+
+impl std::ops::Div for IfaValue {{
+    type Output = Self;
+    fn div(self, other: Self) -> Self {{
+        match (self, other) {{
+            (IfaValue::Int(a), IfaValue::Int(b)) => if b != 0 {{ IfaValue::Float(a as f64 / b as f64) }} else {{ IfaValue::Nil }},
+            (IfaValue::Float(a), IfaValue::Float(b)) => if b != 0.0 {{ IfaValue::Float(a / b) }} else {{ IfaValue::Nil }},
+            _ => IfaValue::Nil,
+        }}
+    }}
+}}
+
+impl std::ops::Rem for IfaValue {{
+    type Output = Self;
+    fn rem(self, other: Self) -> Self {{
+        match (self, other) {{
+            (IfaValue::Int(a), IfaValue::Int(b)) => if b != 0 {{ IfaValue::Int(a % b) }} else {{ IfaValue::Nil }},
+            _ => IfaValue::Nil,
+        }}
+    }}
+}}
+
+impl std::ops::Neg for IfaValue {{
+    type Output = Self;
+    fn neg(self) -> Self {{
+        match self {{
+            IfaValue::Int(a) => IfaValue::Int(-a),
+            IfaValue::Float(a) => IfaValue::Float(-a),
+            _ => IfaValue::Nil,
+        }}
+    }}
+}}
+
+impl std::ops::Not for IfaValue {{
+    type Output = Self;
+    fn not(self) -> Self {{
+        IfaValue::Bool(!self.is_truthy())
     }}
 }}
 
@@ -90,8 +188,9 @@ fn main() {{
 
         match stmt {
             Statement::VarDecl { name, value, .. } => {
+                let m_name = self.mangle_identifier(name);
                 let val = self.transpile_expression(value);
-                format!("{}let mut {} = {};", indent, name, val)
+                format!("{}let mut {} = {};", indent, m_name, val)
             }
 
             Statement::Assignment { target, value, .. } => {
@@ -112,7 +211,7 @@ fn main() {{
                 ..
             } => {
                 let cond = self.transpile_expression(condition);
-                let mut result = format!("{}if {} {{\n", indent, cond);
+                let mut result = format!("{}if ({}).is_truthy() {{\n", indent, cond);
 
                 self.indent += 1;
                 for s in then_body {
@@ -141,7 +240,7 @@ fn main() {{
                 condition, body, ..
             } => {
                 let cond = self.transpile_expression(condition);
-                let mut result = format!("{}while {} {{\n", indent, cond);
+                let mut result = format!("{}while ({}).is_truthy() {{\n", indent, cond);
 
                 self.indent += 1;
                 for s in body {
@@ -161,7 +260,11 @@ fn main() {{
                 ..
             } => {
                 let iter = self.transpile_expression(iterable);
-                let mut result = format!("{}for {} in {} {{\n", indent, var, iter);
+                let m_var = self.mangle_identifier(var);
+                let mut result = format!("{}if let IfaValue::List(items) = {} {{\n", indent, iter);
+                self.indent += 1;
+                let indent2 = self.indent_str();
+                result.push_str(&format!("{}for {} in items {{\n", indent2, m_var));
 
                 self.indent += 1;
                 for s in body {
@@ -170,13 +273,49 @@ fn main() {{
                 }
                 self.indent -= 1;
 
+                result.push_str(&format!("{}}}\n", indent2));
+                self.indent -= 1;
                 result.push_str(&format!("{}}}", indent));
                 result
             }
 
+            Statement::Match {
+                condition,
+                arms,
+                ..
+            } => {
+                let cond = self.transpile_expression(condition);
+                let mut result = format!("{}let cond_val = {};\n", indent, cond);
+
+                for (i, arm) in arms.iter().enumerate() {
+                    let prefix = if i == 0 { "if" } else { "else if" };
+                    let condition = match &arm.pattern {
+                        MatchPattern::Literal(expr) => {
+                            format!("cond_val == {}", self.transpile_expression(expr))
+                        }
+                        MatchPattern::Range { start, end } => {
+                            let s = self.transpile_expression(start);
+                            let e = self.transpile_expression(end);
+                            format!("cond_val >= {} && cond_val <= {}", s, e)
+                        }
+                        MatchPattern::Wildcard => "true".to_string(),
+                    };
+
+                    result.push_str(&format!("{}{} {} {{\n", indent, prefix, condition));
+                    self.indent += 1;
+                    for s in &arm.body {
+                        result.push_str(&self.transpile_statement(s));
+                        result.push('\n');
+                    }
+                    self.indent -= 1;
+                    result.push_str(&format!("{}}}\n", indent));
+                }
+                result.trim_end().to_string()
+            }
+
             Statement::Return { value, .. } => {
                 if let Some(v) = value {
-                    format!("{}return {};", indent, self.transpile_expression(v))
+                    format!("{}early_return = Some({}); return;", indent, self.transpile_expression(v))
                 } else {
                     format!("{}return;", indent)
                 }
@@ -202,16 +341,17 @@ fn main() {{
                     "{}{}fn {}({}) -> IfaValue {{\n",
                     indent,
                     vis,
-                    name,
+                    self.mangle_identifier(name),
                     params_str.join(", ")
                 );
 
                 self.indent += 1;
+                result.push_str(&format!("{}let mut early_return: Option<IfaValue> = None;\n", self.indent_str()));
                 for s in body {
                     result.push_str(&self.transpile_statement(s));
                     result.push('\n');
                 }
-                result.push_str(&format!("{}IfaValue::Nil\n", self.indent_str()));
+                result.push_str(&format!("{}early_return.unwrap_or(IfaValue::Nil)\n", self.indent_str()));
                 self.indent -= 1;
 
                 result.push_str(&format!("{}}}", indent));
@@ -229,19 +369,46 @@ fn main() {{
                     Visibility::Public => "pub ",
                     _ => "",
                 };
-                let mut result = format!("{}{}struct {} {{\n", indent, vis, name);
-                result.push_str(&format!("{}    // TODO: Extract fields\n", indent));
-                result.push_str(&format!("{}}}\n\n", indent));
+                let mut struct_fields = Vec::new();
+                let mut methods = Vec::new();
 
-                result.push_str(&format!("{}impl {} {{\n", indent, name));
-                self.indent += 1;
-                for s in body {
-                    result.push_str(&self.transpile_statement(s));
-                    result.push('\n');
+                for stmt in body {
+                    match stmt {
+                        Statement::VarDecl { name, type_hint, .. } => {
+                            let type_str = match type_hint {
+                                Some(TypeHint::Int) => "i64",
+                                Some(TypeHint::Float) => "f64",
+                                Some(TypeHint::Str) => "String",
+                                Some(TypeHint::Bool) => "bool",
+                                _ => "IfaValue",
+                            };
+                            struct_fields.push(format!("    pub {}: {},", name, type_str));
+                        }
+                        Statement::EseDef { .. } => {
+                            methods.push(stmt.clone());
+                        }
+                        _ => {}
+                    }
                 }
-                self.indent -= 1;
-                result.push_str(&format!("{}}}", indent));
 
+                let indent = self.indent_str();
+                let m_name = self.mangle_identifier(name);
+                let mut result = format!("{}{}struct {} {{\n", indent, vis, m_name);
+                for field in struct_fields {
+                    result.push_str(&format!("{}{}\n", indent, field));
+                }
+                result.push_str(&format!("{}}}\n\n", indent));
+ 
+                if !methods.is_empty() {
+                    result.push_str(&format!("{}{}impl {} {{\n", indent, vis, m_name));
+                    self.indent += 1;
+                    for method in methods {
+                        result.push_str(&self.transpile_statement(&method));
+                        result.push('\n');
+                    }
+                    self.indent -= 1;
+                    result.push_str(&format!("{}}}\n", indent));
+                }
                 result
             }
 
@@ -267,7 +434,7 @@ fn main() {{
                 let msg = message
                     .clone()
                     .unwrap_or_else(|| "Assertion failed".to_string());
-                format!("{}assert({}, \"{}\");", indent, cond, msg)
+                format!("{}assert(({}).is_truthy(), \"{}\");", indent, cond, msg)
             }
 
             // Opon - Memory configuration directive (compile-time)
@@ -284,9 +451,9 @@ fn main() {{
 
     fn transpile_assign_target(&self, target: &AssignTarget) -> String {
         match target {
-            AssignTarget::Variable(name) => name.clone(),
+            AssignTarget::Variable(name) => self.mangle_identifier(name),
             AssignTarget::Index { name, index } => {
-                format!("{}[{}]", name, self.transpile_expression(index))
+                format!("{}[{}]", self.mangle_identifier(name), self.transpile_expression(index))
             }
         }
     }
@@ -303,48 +470,62 @@ fn main() {{
         let method = call.method.to_lowercase();
 
         match (domain_str.as_str(), method.as_str()) {
-            // ÌROSÙ - Console I/O
-            ("irosu", "fo") | ("irosu", "print") | ("irosu", "log") | ("irosu", "so") => {
-                if args.is_empty() {
-                    "println!()".to_string()
-                } else {
-                    format!("println!(\"{{}}\", {})", args.join(", "))
-                }
+            // ÌROSÙ (1100) - Console I/O
+            ("irosu", "fo") | ("irosu", "sọ") | ("irosu", "print") => {
+                format!("println!(\"{{}}\", {})", args.join(", "))
+            }
+            ("irosu", "ka") | ("irosu", "input") => {
+                "{ let mut s = String::new(); std::io::stdin().read_line(&mut s).ok(); IfaValue::Str(s.trim().to_string()) }".to_string()
             }
 
-            // ỌBÀRÀ - Math
+            // ỌBÀRÀ (1000) - Math (Add/Mul)
             ("obara", "fikun") | ("obara", "add") => {
-                if args.len() >= 2 {
-                    format!("({} + {})", args[0], args[1])
-                } else {
-                    args.join(" + ")
-                }
+                args.join(" + ")
             }
-            ("obara", "din") | ("obara", "sub") => {
+            ("obara", "isodipupo") | ("obara", "mul") => {
+                args.join(" * ")
+            }
+
+            // ÒTÚÚRÚPỌ̀N (0010) - Math (Sub/Div)
+            ("oturupon", "din") | ("oturupon", "sub") => {
                 if args.len() >= 2 {
                     format!("({} - {})", args[0], args[1])
                 } else {
                     args.join(" - ")
                 }
             }
-
-            // ÌKÁ - String operations
-            ("ika", "sopo") | ("ika", "concat") => {
-                format!("format!(\"{{}}{{}}\", {})", args.join(", "))
-            }
-            ("ika", "ka") | ("ika", "len") => {
-                if let Some(arg) = args.first() {
-                    format!("{}.len()", arg)
+            ("oturupon", "pin") | ("oturupon", "div") => {
+                if args.len() >= 2 {
+                    format!("({} / {})", args[0], args[1])
                 } else {
-                    "0".to_string()
+                    args.join(" / ")
                 }
             }
 
-            // ÌWÒRÌ - Time
-            ("iwori", "duro") | ("iwori", "sleep") => {
+            // ÌKÁ (0100) - Strings
+            ("ika", "so") | ("ika", "concat") => {
+                format!("format!(\"{{}}{{}}\", {})", args.iter().map(|a| format!("{}", a)).collect::<Vec<_>>().join(", "))
+            }
+            ("ika", "gigun") | ("ika", "len") => {
+                if let Some(arg) = args.first() {
+                    format!("IfaValue::Int(if let IfaValue::Str(s) = {} {{ s.chars().count() as i64 }} else {{ 0 }})", arg)
+                } else {
+                    "IfaValue::Int(0)".to_string()
+                }
+            }
+
+            // Ọ̀YÈKÚ (0000) - Exit/Sleep
+            ("oyeku", "jade") | ("oyeku", "exit") => {
+                if let Some(arg) = args.first() {
+                    format!("std::process::exit(match {} {{ IfaValue::Int(n) => n as i32, _ => 0 }})", arg)
+                } else {
+                    "std::process::exit(0)".to_string()
+                }
+            }
+            ("oyeku", "sun") | ("oyeku", "sleep") => {
                 if let Some(arg) = args.first() {
                     format!(
-                        "std::thread::sleep(std::time::Duration::from_millis({} as u64))",
+                        "std::thread::sleep(std::time::Duration::from_millis(match {} {{ IfaValue::Int(n) => n as u64, _ => 1000 }}))",
                         arg
                     )
                 } else {
@@ -352,19 +533,21 @@ fn main() {{
                 }
             }
 
-            // ỌYẸ̀KÚ - Exit
-            ("oyeku", "ku") | ("oyeku", "exit") => {
+            // ÒGÚNDÁ (1110) - Arrays
+            ("ogunda", "da") | ("ogunda", "create") => {
+                format!("IfaValue::List(vec![{}])", args.join(", "))
+            }
+            ("ogunda", "gigun") | ("ogunda", "len") => {
                 if let Some(arg) = args.first() {
-                    format!("std::process::exit({} as i32)", arg)
+                    format!("IfaValue::Int(if let IfaValue::List(l) = {} {{ l.len() as i64 }} else {{ 0 }})", arg)
                 } else {
-                    "std::process::exit(0)".to_string()
+                    "IfaValue::Int(0)".to_string()
                 }
             }
-            ("oyeku", "duro") | ("oyeku", "halt") => "std::process::exit(0)".to_string(),
 
             // Default: generate a TODO comment
             _ => {
-                format!("/* TODO: {}.{}({}) */", domain_str, method, args.join(", "))
+                format!("/* TODO: {}.{}({}) */ IfaValue::Nil", domain_str, method, args.join(", "))
             }
         }
     }
@@ -376,21 +559,30 @@ fn main() {{
             Expression::String(s) => format!("IfaValue::Str(\"{}\".to_string())", s),
             Expression::Bool(b) => format!("IfaValue::Bool({})", b),
             Expression::Nil => "IfaValue::Nil".to_string(),
-            Expression::Identifier(name) => name.clone(),
-
+            Expression::Identifier(name) => self.mangle_identifier(name),
+ 
             Expression::BinaryOp { left, op, right } => {
                 let l = self.transpile_expression(left);
                 let r = self.transpile_expression(right);
-                format!("({} {} {})", l, op, r)
+                match op {
+                    BinaryOperator::Eq => format!("IfaValue::Bool({} == {})", l, r),
+                    BinaryOperator::NotEq => format!("IfaValue::Bool({} != {})", l, r),
+                    BinaryOperator::Lt => format!("IfaValue::Bool({} < {})", l, r),
+                    BinaryOperator::LtEq => format!("IfaValue::Bool({} <= {})", l, r),
+                    BinaryOperator::Gt => format!("IfaValue::Bool({} > {})", l, r),
+                    BinaryOperator::GtEq => format!("IfaValue::Bool({} >= {})", l, r),
+                    BinaryOperator::And => format!("IfaValue::Bool(({}).is_truthy() && ({}).is_truthy())", l, r),
+                    BinaryOperator::Or => format!("IfaValue::Bool(({}).is_truthy() || ({}).is_truthy())", l, r),
+                    _ => format!("({} {} {})", l, op, r),
+                }
             }
 
             Expression::UnaryOp { op, expr } => {
                 let o = self.transpile_expression(expr);
-                let op_str = match op {
-                    UnaryOperator::Neg => "-",
-                    UnaryOperator::Not => "!",
-                };
-                format!("({}{})", op_str, o)
+                match op {
+                    UnaryOperator::Neg => format!("(-{})", o),
+                    UnaryOperator::Not => format!("(!{})", o),
+                }
             }
 
             Expression::List(items) => {

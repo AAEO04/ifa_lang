@@ -97,14 +97,24 @@ function registerCommands(context: ExtensionContext) {
         })
     );
 
-    // Format document (placeholder)
+    // Format document
     context.subscriptions.push(
         vscode.commands.registerCommand('ifa.format', async () => {
             const editor = vscode.window.activeTextEditor;
-            if (!editor) return;
+            if (!editor || editor.document.languageId !== 'ifa') return;
 
-            // TODO: Implement formatter via LSP or external tool
-            vscode.window.showInformationMessage('Ifa formatter coming soon!');
+            await editor.document.save();
+            const filePath = editor.document.fileName;
+            const ifaPath = workspace.getConfiguration('ifa').get<string>('path', 'ifa');
+
+            const { exec } = require('child_process');
+            exec(`${ifaPath} fmt "${filePath}"`, (error: any, stdout: string, stderr: string) => {
+                if (error) {
+                    vscode.window.showErrorMessage(`Format failed: ${stderr || error.message}`);
+                } else {
+                    vscode.window.showInformationMessage('Syntactic harmony restored!');
+                }
+            });
         })
     );
 

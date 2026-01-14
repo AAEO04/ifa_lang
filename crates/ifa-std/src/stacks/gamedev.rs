@@ -260,17 +260,84 @@ impl Default for SpriteComponent {
     }
 }
 
+/// Sparse Set storage for components
+/// Provides cache coherence for iteration and O(1) random access.
+pub struct SparseSet<T> {
+    pub dense: Vec<T>,
+    pub entities: Vec<Entity>,
+    pub sparse: HashMap<Entity, usize>,
+}
+
+impl<T> SparseSet<T> {
+    pub fn new() -> Self {
+        Self {
+            dense: Vec::new(),
+            entities: Vec::new(),
+            sparse: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, entity: Entity, value: T) {
+        if let Some(&index) = self.sparse.get(&entity) {
+            self.dense[index] = value;
+        } else {
+            self.sparse.insert(entity, self.dense.len());
+            self.entities.push(entity);
+            self.dense.push(value);
+        }
+    }
+
+    pub fn get(&self, entity: Entity) -> Option<&T> {
+        self.sparse.get(&entity).map(|&index| &self.dense[index])
+    }
+
+    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
+        self.sparse.get(&entity).map(|&index| &mut self.dense[index])
+    }
+
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.sparse.contains_key(&entity)
+    }
+
+    pub fn remove(&mut self, entity: Entity) {
+        if let Some(&index) = self.sparse.get(&entity) {
+            let last_index = self.dense.len() - 1;
+            let last_entity = self.entities[last_index];
+
+            self.dense.swap_remove(index);
+            self.entities.swap_remove(index);
+
+            if index != last_index {
+                self.sparse.insert(last_entity, index);
+            }
+            self.sparse.remove(&entity);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.dense.clear();
+        self.entities.clear();
+        self.sparse.clear();
+    }
+}
+
+impl<T> Default for SparseSet<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Simple ECS World
 pub struct World {
     next_entity: u64,
     entities: Vec<Entity>,
 
-    // Component storage (sparse sets would be better)
-    transforms: HashMap<Entity, Transform>,
-    velocities: HashMap<Entity, Velocity>,
-    colliders: HashMap<Entity, Collider>,
-    sprites: HashMap<Entity, SpriteComponent>,
-    tags: HashMap<Entity, Vec<String>>,
+    // Component storage using Sparse Sets
+    transforms: SparseSet<Transform>,
+    velocities: SparseSet<Velocity>,
+    colliders: SparseSet<Collider>,
+    sprites: SparseSet<SpriteComponent>,
+    tags: SparseSet<Vec<String>>,
 }
 
 impl World {
@@ -278,11 +345,11 @@ impl World {
         World {
             next_entity: 1,
             entities: Vec::new(),
-            transforms: HashMap::new(),
-            velocities: HashMap::new(),
-            colliders: HashMap::new(),
-            sprites: HashMap::new(),
-            tags: HashMap::new(),
+            transforms: SparseSet::new(),
+            velocities: SparseSet::new(),
+            colliders: SparseSet::new(),
+            sprites: SparseSet::new(),
+            tags: SparseSet::new(),
         }
     }
 
@@ -297,11 +364,11 @@ impl World {
     /// Despawn an entity
     pub fn despawn(&mut self, entity: Entity) {
         self.entities.retain(|e| *e != entity);
-        self.transforms.remove(&entity);
-        self.velocities.remove(&entity);
-        self.colliders.remove(&entity);
-        self.sprites.remove(&entity);
-        self.tags.remove(&entity);
+        self.transforms.remove(entity);
+        self.velocities.remove(entity);
+        self.colliders.remove(entity);
+        self.sprites.remove(entity);
+        self.tags.remove(entity);
     }
 
     /// Add transform
@@ -326,24 +393,28 @@ impl World {
 
     /// Add tag
     pub fn add_tag(&mut self, entity: Entity, tag: &str) {
-        self.tags.entry(entity).or_default().push(tag.to_string());
+        if let Some(tags) = self.tags.get_mut(entity) {
+            tags.push(tag.to_string());
+        } else {
+            self.tags.insert(entity, vec![tag.to_string()]);
+        }
     }
 
     /// Get transform
     pub fn transform(&self, entity: Entity) -> Option<&Transform> {
-        self.transforms.get(&entity)
+        self.transforms.get(entity)
     }
 
     /// Get mutable transform
     pub fn transform_mut(&mut self, entity: Entity) -> Option<&mut Transform> {
-        self.transforms.get_mut(&entity)
+        self.transforms.get_mut(entity)
     }
 
     /// Query entities with transform and velocity
     pub fn query_movable(&self) -> Vec<Entity> {
-        self.entities
+        self.transforms.entities
             .iter()
-            .filter(|e| self.transforms.contains_key(e) && self.velocities.contains_key(e))
+            .filter(|&e| self.velocities.contains(*e))
             .copied()
             .collect()
     }
@@ -354,7 +425,7 @@ impl World {
             .iter()
             .filter(|e| {
                 self.tags
-                    .get(e)
+                    .get(*e)
                     .map(|t| t.contains(&tag.to_string()))
                     .unwrap_or(false)
             })
@@ -362,12 +433,58 @@ impl World {
             .collect()
     }
 
-    /// Update physics
+
+    /// Update physics using parallel CPU orchestration
+    #[cfg(feature = "parallel")]
+    pub fn update_physics(&mut self, dt: f32) {
+        use crate::infra::cpu::CpuContext;
+
+        // 1. Gather Data (Read Phase)
+        let entities = self.query_movable();
+        // Pack data into a Vec for Rayon
+        let mut updates: Vec<(Entity, Vec2, f32, Vec2, f32)> = Vec::with_capacity(entities.len());
+        
+        for &entity in &entities {
+            if let (Some(transform), Some(velocity)) = (
+                self.transforms.get(entity),
+                self.velocities.get(entity),
+            ) {
+                updates.push((
+                    entity,
+                    transform.position,
+                    transform.rotation,
+                    velocity.linear,
+                    velocity.angular,
+                ));
+            }
+        }
+
+        // 2. Compute in Parallel (Work Phase)
+        // Returns list of new (Entity, NewPos, NewRot)
+        let results = CpuContext::par_map(&updates, |(_e, pos, rot, lin, ang)| {
+            (
+                pos.add(lin.scale(dt)),
+                rot + ang * dt
+            )
+        });
+
+        // 3. Apply Updates (Write Phase)
+        for (i, &entity) in entities.iter().enumerate() {
+            if let Some(transform) = self.transforms.get_mut(entity) {
+                let (new_pos, new_rot) = results[i];
+                transform.position = new_pos;
+                transform.rotation = new_rot;
+            }
+        }
+    }
+
+    /// Fallback sequential update
+    #[cfg(not(feature = "parallel"))]
     pub fn update_physics(&mut self, dt: f32) {
         for entity in self.query_movable() {
             if let (Some(transform), Some(velocity)) = (
-                self.transforms.get_mut(&entity),
-                self.velocities.get(&entity),
+                self.transforms.get_mut(entity),
+                self.velocities.get(entity),
             ) {
                 transform.position = transform.position.add(velocity.linear.scale(dt));
                 transform.rotation += velocity.angular * dt;

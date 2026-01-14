@@ -60,18 +60,14 @@ if %ERRORLEVEL% neq 0 (
 :: Docs
 copy "%SOURCE_DIR%README.md" "%BUILD_DIR%\" >nul
 copy "%SOURCE_DIR%DOCS.md" "%BUILD_DIR%\" >nul
-copy "%SOURCE_DIR%CHANGELOG.md" "%BUILD_DIR%\" >nul
-copy "%SOURCE_DIR%TUTORIAL.md" "%BUILD_DIR%\" >nul
-copy "%SOURCE_DIR%LICENSE" "%BUILD_DIR%\" >nul
-xcopy "%SOURCE_DIR%docs\*" "%BUILD_DIR%\docs\" /s /e /q /y >nul
 
 :: Examples
 copy "%SOURCE_DIR%examples\min_*.ifa" "%BUILD_DIR%\examples\" >nul
 copy "%SOURCE_DIR%examples\05_advanced\*.ifa" "%BUILD_DIR%\examples\advanced\" >nul
 
 :: Installers
-copy "%SOURCE_DIR%install.bat" "%BUILD_DIR%\" >nul
-copy "%SOURCE_DIR%uninstall.bat" "%BUILD_DIR%\" >nul
+copy "%SOURCE_DIR%crates\ifa-installer-gui\scripts\install.bat" "%BUILD_DIR%\" >nul
+copy "%SOURCE_DIR%crates\ifa-installer-gui\scripts\uninstall.bat" "%BUILD_DIR%\" >nul
 
 :: Create ZIP
 echo [4/5] Creating ZIP archive...

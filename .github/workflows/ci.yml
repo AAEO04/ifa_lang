@@ -27,12 +27,15 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: ifa
+            asset_name: ifa-linux-x86_64.zip
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: ifa
+            asset_name: ifa-macos-aarch64.zip
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: ifa.exe
+            asset_name: ifa-windows-x86_64.zip
 
     steps:
       - name: Checkout
@@ -64,11 +67,22 @@ jobs:
       - name: Build (Release)
         run: cargo build --workspace --release
 
+      - name: Compress Binary (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/release
+          zip -j ../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
+
+      - name: Compress Binary (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          Compress-Archive -Path target/release/${{ matrix.artifact_name }} -DestinationPath ${{ matrix.asset_name }}
+
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: ifa-${{ matrix.target }}
-          path: target/release/${{ matrix.artifact_name }}
+          name: ifa-archive-${{ matrix.target }}
+          path: ${{ matrix.asset_name }}
           if-no-files-found: warn
 
   # ═══════════════════════════════════════════════════════════════════════════════
@@ -142,29 +156,6 @@ jobs:
           path: target/doc
 
   # ═══════════════════════════════════════════════════════════════════════════════
-  # MINIMAL BUILD (for embedded/no_std testing)
-  # ═══════════════════════════════════════════════════════════════════════════════
-  minimal:
-    name: Minimal Build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Build ifa-core only
-        run: cargo build -p ifa-core
-      
-      - name: Build ifa-embedded
-        run: cargo build -p ifa-embedded
-
-  # NOTE: MSRV check removed - dependencies require Rust edition 2024 features
-  # The stable Rust toolchain in 'build' job is the de-facto MSRV
-
-  # ═══════════════════════════════════════════════════════════════════════════════
   # RELEASE (on tags)
   # ═══════════════════════════════════════════════════════════════════════════════
   release:
@@ -182,14 +173,16 @@ jobs:
         with:
           path: artifacts
       
-      - name: Display artifacts
-        run: ls -R artifacts/
+      - name: List files for upload
+        run: ls -lR artifacts/
       
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          fail_on_unmatched_files: true
           files: |
-            artifacts/ifa-*/ifa*
+            artifacts/ifa-archive-*/ifa-*.zip
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+

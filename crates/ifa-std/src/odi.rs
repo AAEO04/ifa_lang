@@ -172,7 +172,6 @@ impl Odi {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
     use tempfile::tempdir;
 
     #[test]
@@ -218,6 +217,25 @@ mod tests {
 
         // Reading within sandbox should work (if file exists)
         // Reading outside sandbox should fail capability check
-        // Note: Without file actually existing, this tests capability enforcement
+        // 1. Reading allowed path should pass (logic check, file doesn't exist but capability does)
+        let allowed_path = dir.path().join("allowed.txt");
+        // We expect IoError (NotFound) not PermissionDenied
+        match odi.ka(allowed_path.to_str().unwrap()) {
+            Err(IfaError::PermissionDenied(_)) => panic!("Should have permission!"),
+            _ => {} // IoError is expected
+        }
+
+        // 2. Reading disallowed path should fail
+        let denied_path = if cfg!(windows) {
+             PathBuf::from("C:\\Windows\\System32\\drivers\\etc\\hosts") 
+        } else {
+             PathBuf::from("/etc/passwd") 
+        };
+        
+        match odi.ka(denied_path.to_str().unwrap()) {
+            Err(IfaError::PermissionDenied(_)) => {}, // Success!
+            Err(e) => panic!("Expected PermissionDenied, got {:?}", e),
+            Ok(_) => panic!("Should have been denied!"),
+        }
     }
 }

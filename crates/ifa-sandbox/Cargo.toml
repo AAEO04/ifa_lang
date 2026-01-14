@@ -1,12 +1,13 @@
 [package]
 name = "ifa-sandbox"
-version = "1.2.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
 # Core sandbox dependencies - updated to latest
 wasmtime = "40.0"
 wasmtime-wasi = "40.0"
+wat = "1.0"
 
 # Error handling
 eyre = "0.6"

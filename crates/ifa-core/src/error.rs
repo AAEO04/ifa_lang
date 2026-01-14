@@ -25,6 +25,12 @@ pub enum IfaError {
     // =========================================================================
     // TYPE ERRORS
     // =========================================================================
+    #[error("Arity mismatch: expected {expected} arguments, got {got}")]
+    ArityMismatch { expected: usize, got: usize },
+
+    #[error("Argument error: {0}")]
+    ArgumentError(String),
+
     #[error("Type mismatch: expected {expected}, got {got}")]
     TypeError { expected: String, got: String },
 

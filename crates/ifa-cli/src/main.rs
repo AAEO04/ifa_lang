@@ -5,9 +5,11 @@
 mod docgen;
 mod oja;
 mod sandbox;
+mod lsp;
+mod deploy;
 
 use clap::{Parser, Subcommand};
-use color_eyre::eyre::Result;
+use eyre::{Result, WrapErr};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -59,6 +61,14 @@ enum Commands {
         #[arg(long, default_value = "true")]
         allow_random: bool,
 
+        /// Allow Polyglot FFI for JavaScript
+        #[arg(long)]
+        allow_js: bool,
+
+        /// Allow Polyglot FFI for Python
+        #[arg(long)]
+        allow_python: bool,
+
         /// Sandbox mode: wasm (OmniBox WASM sandbox), native (Igbale OS sandbox), none (no sandbox)
         #[arg(long, default_value = "none")]
         sandbox: String,
@@ -89,6 +99,29 @@ enum Commands {
         /// Target triple (e.g., x86_64-unknown-linux-gnu)
         #[arg(long)]
         target: Option<String>,
+
+        /// Build for Backend domain (default)
+        #[arg(long)]
+        backend: bool,
+        /// Build for Frontend domain (WASM)
+        #[arg(long)]
+        frontend: bool,
+        /// Build for Game domain
+        #[arg(long)]
+        game: bool,
+        /// Build for IoT domain (no_std)
+        #[arg(long)]
+        iot: bool,
+        /// Build for Crypto domain (constant-time)
+        #[arg(long)]
+        crypto: bool,
+
+        /// Build for ML/AI domain (Python interop + GPU)
+        #[arg(long)]
+        ml: bool,
+        /// Build as Fullstack Hybrid Executable (Backend + Frontend)
+        #[arg(long)]
+        fullstack: bool,
     },
 
     /// Flash to embedded device
@@ -149,6 +182,9 @@ enum Commands {
         /// Output format: minimal, compact, json, verbose
         #[arg(long, default_value = "minimal")]
         format: String,
+        /// Fast mode (skip proverbs/wisdom for performance)
+        #[arg(long)]
+        fast: bool,
     },
 
     /// Generate documentation
@@ -167,6 +203,13 @@ enum Commands {
         /// Verbose output
         #[arg(short, long)]
         verbose: bool,
+    },
+
+    /// Zero-Config Deployment scanner
+    Deploy {
+        /// Project directory
+        #[arg(default_value = ".")]
+        path: PathBuf,
     },
 }
 
@@ -191,6 +234,10 @@ enum OjaCommands {
         /// Project name (default: current directory name)
         #[arg(default_value = "ifa-project")]
         name: String,
+        
+        /// Project Domain Template (basic, fullstack, game, ml, iot)
+        #[arg(long, default_value = "basic")]
+        domain: String,
     },
     /// Add dependency
     Add {
@@ -225,6 +272,8 @@ enum OjaCommands {
     List,
     /// Upgrade Ifá-Lang CLI to latest version
     Upgrade,
+    /// Publish package to registry (Git Tag)
+    Publish,
 }
 
 fn main() -> Result<()> {
@@ -243,6 +292,8 @@ fn main() -> Result<()> {
             allow_env,
             allow_time,
             allow_random,
+            allow_js,
+            allow_python,
             sandbox,
         } => {
             use ifa_core::{Interpreter, parse};
@@ -300,6 +351,12 @@ fn main() -> Result<()> {
                 }
                 if allow_random {
                     caps.grant(Ofun::Random);
+                }
+                if allow_js {
+                    caps.grant(Ofun::Bridge { language: "js".into() });
+                }
+                if allow_python {
+                    caps.grant(Ofun::Bridge { language: "python".into() });
                 }
 
                 // Always allow reading the script itself and its directory (for imports)
@@ -436,6 +493,13 @@ fn main() -> Result<()> {
             file,
             output,
             target,
+            backend,
+            frontend,
+            game,
+            iot,
+            crypto,
+            ml,
+            fullstack,
         } => {
             use std::process::Command;
 
@@ -478,6 +542,24 @@ fn main() -> Result<()> {
             // Write main.rs
             std::fs::write(src_dir.join("main.rs"), &rust_code)?;
 
+            // Determine features
+            let mut features = Vec::new();
+            if frontend { features.push("frontend"); }
+            if game { features.push("game"); }
+            if iot { features.push("iot"); }
+            if crypto { features.push("crypto"); }
+            if ml { features.push("ml"); }
+            if fullstack { 
+                features.push("backend"); 
+                features.push("frontend"); 
+                // Fullstack implies both
+            }
+            // Default to backend if nothing else strictly selected (or if backend explicitly selected)
+            if backend || features.is_empty() { features.push("backend"); }
+
+            let features_str = features.iter().map(|f| format!("\"{}\"", f)).collect::<Vec<_>>().join(", ");
+            let default_features = if iot { "false" } else { "true" };
+
             // Write Cargo.toml
             let cargo_toml = format!(
                 r#"[package]
@@ -487,6 +569,7 @@ edition = "2021"
 
 [dependencies]
 ifa-core = {{ path = "{}" }}
+ifa-std = {{ path = "{}", features = [{}], default-features = {} }}
 
 [profile.release]
 opt-level = 3
@@ -497,7 +580,14 @@ lto = true
                     .join("crates/ifa-core")
                     .display()
                     .to_string()
-                    .replace("\\", "/")
+                    .replace("\\", "/"),
+                std::env::current_dir()?
+                    .join("crates/ifa-std")
+                    .display()
+                    .to_string()
+                    .replace("\\", "/"),
+                features_str,
+                default_features
             );
             std::fs::write(temp_dir.join("Cargo.toml"), cargo_toml)?;
 
@@ -575,7 +665,7 @@ lto = true
                 println!("   Port: {}", p);
             }
             ifa_std::stacks::iot::flash(&target, file.to_str().unwrap_or(""), port.as_deref())
-                .map_err(|e| color_eyre::eyre::eyre!(e))?;
+                .map_err(|e| color_eyre::eyre::eyre!("IoT Error: {}", e))?;
             Ok(())
         }
 
@@ -614,8 +704,8 @@ lto = true
             let oja_manager = oja::Oja::new(&project_root);
 
             match command {
-                OjaCommands::Init { name } => {
-                    oja_manager.init(&name)?;
+                OjaCommands::Init { name, domain } => {
+                    oja_manager.init(&name, &domain)?;
                 }
                 OjaCommands::Add { url, alias } => {
                     oja_manager.add(&url, alias.as_deref())?;
@@ -641,30 +731,75 @@ lto = true
                 OjaCommands::Upgrade => {
                     oja::update_cli()?;
                 }
+                OjaCommands::Publish => {
+                    oja_manager.publish()?;
+                }
             }
             Ok(())
         }
 
         Commands::Check { file } => {
-            println!("🔍 Checking: {}", file.display());
-            // TODO: Implement syntax checker
-            println!("No syntax errors");
+            println!("🔍 Checking syntax of {}...", file.display());
+            let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
+            match ifa_core::parse(&source) {
+                Ok(_) => {
+                    println!("✅ No syntax errors found in {}", file.display());
+                }
+                Err(e) => {
+                    eprintln!("❌ Syntax Error: {}", e);
+                    std::process::exit(1);
+                }
+            }
             Ok(())
         }
 
         Commands::Fmt { file, check } => {
-            if check {
-                println!("🔍 Checking format: {}", file.display());
-            } else {
-                println!("✨ Formatting: {}", file.display());
+            let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
+            
+            // Simple Indentation Formatter logic
+            let mut formatted = String::new();
+            let mut indent: usize = 0;
+            
+            for line in source.lines() {
+                let trimmed = line.trim();
+                if trimmed.is_empty() {
+                    formatted.push('\n');
+                    continue;
+                }
+                
+                if trimmed.contains('}') || trimmed.contains("ase") {
+                    indent = indent.saturating_sub(1);
+                }
+                
+                formatted.push_str(&"    ".repeat(indent));
+                formatted.push_str(trimmed);
+                formatted.push('\n');
+                
+                if trimmed.contains('{') || trimmed.contains("ese") || trimmed.contains("odu") {
+                    indent += 1;
+                }
             }
-            // TODO: Implement formatter
+            
+            if check {
+                if source == formatted {
+                    println!("✅ Perfect alignment in {}", file.display());
+                } else {
+                    println!("⚠️ Misaligned lines in {}", file.display());
+                    std::process::exit(1);
+                }
+            } else {
+                std::fs::write(&file, formatted).wrap_err("Failed to write formatted file")?;
+                println!("✨ Syntactic harmony restored in {}", file.display());
+            }
             Ok(())
         }
 
         Commands::Lsp => {
             println!("🚀 Starting LSP server...");
-            // TODO: Implement LSP
+            if let Err(e) = lsp::run() {
+                eprintln!("LSP Error: {}", e);
+                std::process::exit(1);
+            }
             Ok(())
         }
 
@@ -811,11 +946,15 @@ lto = true
             path,
             strict,
             format,
+            fast,
         } => {
-            use ifa_babalawo::check_program;
+            use ifa_babalawo::{check_program_with_config, BabalawoConfig};
             use ifa_core::parse;
 
             println!("babalawo: {}", path.display());
+            if fast {
+                println!("   (Fast mode enabled: Wisdom generation skipped)");
+            }
             println!();
 
             // Collect files to check
@@ -838,7 +977,10 @@ lto = true
 
                 match parse(&source) {
                     Ok(program) => {
-                        let baba = check_program(&program, &filename);
+                        let config = BabalawoConfig {
+                            include_wisdom: !fast,
+                        };
+                        let baba = check_program_with_config(&program, &filename, config);
                         total_errors += baba.error_count();
                         total_warnings += baba.warning_count();
 
@@ -990,6 +1132,12 @@ lto = true
                 std::process::exit(1);
             }
 
+            Ok(())
+        }
+
+
+        Commands::Deploy { path } => {
+            deploy::scan_and_generate(&path)?;
             Ok(())
         }
     }

@@ -10,13 +10,15 @@ use std::fmt;
 use std::ops::{Add, Div, Mul, Neg, Not, Rem, Sub};
 use std::rc::Rc;
 
+use serde::{Deserialize, Serialize};
+
 use crate::error::{IfaError, IfaResult};
 
 /// Function signature for lambdas: takes arguments, returns a value
 pub type IfaFn = Rc<dyn Fn(Vec<IfaValue>) -> IfaValue>;
 
 /// The universal container (Odù wrapper) for dynamic typing
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum IfaValue {
     /// Integer (i64)
     Int(i64),
@@ -31,17 +33,34 @@ pub enum IfaValue {
     /// Map/Dictionary
     Map(HashMap<String, IfaValue>),
     /// Object (heap-allocated, reference-counted)
+    #[serde(skip)] // Cannot serialize Rc<RefCell> easily without custom logic
     Object(Rc<RefCell<HashMap<String, IfaValue>>>),
     /// Lambda/First-class function (closure)
-    Fn(IfaFn),
+    #[serde(skip)]
+    Fn(#[serde(skip)] IfaFn), // Skip functions
     /// AST-based function (for interpreter)
     AstFn {
         name: String,
         params: Vec<String>,
+        #[serde(skip)] // Skip parsing logic serialization for now
         body: Vec<crate::ast::Statement>,
+    },
+    /// VM-based function (compiled bytecode offset)
+    BytecodeFn {
+        name: String,
+        start_ip: usize,
+        arity: u8,
+    },
+    /// Class definition (Odù)
+    Class {
+        name: String,
+        fields: Vec<String>,
+        methods: HashMap<String, IfaValue>,
     },
     /// Null/None
     Null,
+    /// Return signal (for interpreter)
+    Return(Box<IfaValue>),
 }
 
 // =============================================================================
@@ -60,7 +79,10 @@ impl fmt::Debug for IfaValue {
             IfaValue::Object(v) => write!(f, "Object({:?})", v.borrow()),
             IfaValue::Fn(_) => write!(f, "Fn(<lambda>)"),
             IfaValue::AstFn { name, .. } => write!(f, "AstFn({})", name),
+            IfaValue::BytecodeFn { name, .. } => write!(f, "BytecodeFn({})", name),
+            IfaValue::Class { name, .. } => write!(f, "Class({})", name),
             IfaValue::Null => write!(f, "Null"),
+            IfaValue::Return(v) => write!(f, "Return({:?})", v),
         }
     }
 }
@@ -87,7 +109,10 @@ impl fmt::Display for IfaValue {
             }
             IfaValue::Fn(_) => write!(f, "<function>"),
             IfaValue::AstFn { name, .. } => write!(f, "<fn {}>", name),
+            IfaValue::BytecodeFn { name, .. } => write!(f, "<fn {}>", name),
+            IfaValue::Class { name, .. } => write!(f, "<class {}>", name),
             IfaValue::Null => write!(f, "àìsí"),
+            IfaValue::Return(v) => write!(f, "<return {}>", v),
         }
     }
 }
@@ -160,11 +185,14 @@ impl Mul for IfaValue {
 impl Div for IfaValue {
     type Output = IfaValue;
 
+    /// Division operator. Returns `Null` on division by zero.
+    /// 
+    /// **Note**: Use `checked_div()` for proper error handling.
     fn div(self, other: IfaValue) -> IfaValue {
         match (&self, &other) {
             (IfaValue::Int(a), IfaValue::Int(b)) => {
                 if *b == 0 {
-                    return IfaValue::Null;
+                    return IfaValue::Null; // Use checked_div() for error
                 }
                 IfaValue::Float(*a as f64 / *b as f64)
             }
@@ -187,6 +215,44 @@ impl Div for IfaValue {
                 IfaValue::Float(a / *b as f64)
             }
             _ => IfaValue::Null,
+        }
+    }
+}
+
+impl IfaValue {
+    /// Checked division that returns proper errors.
+    /// 
+    /// Use this instead of the `/` operator when you need to handle division by zero.
+    pub fn checked_div(&self, other: &IfaValue) -> IfaResult<IfaValue> {
+        match (self, other) {
+            (IfaValue::Int(a), IfaValue::Int(b)) => {
+                if *b == 0 {
+                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                }
+                Ok(IfaValue::Float(*a as f64 / *b as f64))
+            }
+            (IfaValue::Float(a), IfaValue::Float(b)) => {
+                if *b == 0.0 {
+                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                }
+                Ok(IfaValue::Float(a / b))
+            }
+            (IfaValue::Int(a), IfaValue::Float(b)) => {
+                if *b == 0.0 {
+                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                }
+                Ok(IfaValue::Float(*a as f64 / b))
+            }
+            (IfaValue::Float(a), IfaValue::Int(b)) => {
+                if *b == 0 {
+                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                }
+                Ok(IfaValue::Float(a / *b as f64))
+            }
+            _ => Err(IfaError::TypeError {
+                expected: "numeric type".to_string(),
+                got: format!("{} / {}", self.type_name(), other.type_name()),
+            }),
         }
     }
 }
@@ -242,8 +308,25 @@ impl PartialEq for IfaValue {
         match (self, other) {
             (IfaValue::Int(a), IfaValue::Int(b)) => a == b,
             (IfaValue::Float(a), IfaValue::Float(b)) => a == b,
-            (IfaValue::Int(a), IfaValue::Float(b)) => (*a as f64) == *b,
-            (IfaValue::Float(a), IfaValue::Int(b)) => *a == (*b as f64),
+            // For Int<->Float comparison, check if int can be exactly represented as f64
+            (IfaValue::Int(a), IfaValue::Float(b)) => {
+                // i64 can be exactly represented in f64 if |a| <= 2^53
+                let a_f64 = *a as f64;
+                if a_f64 as i64 == *a {
+                    a_f64 == *b
+                } else {
+                    // Large integer cannot be exactly compared to float
+                    false
+                }
+            }
+            (IfaValue::Float(a), IfaValue::Int(b)) => {
+                let b_f64 = *b as f64;
+                if b_f64 as i64 == *b {
+                    *a == b_f64
+                } else {
+                    false
+                }
+            }
             (IfaValue::Str(a), IfaValue::Str(b)) => a == b,
             (IfaValue::Bool(a), IfaValue::Bool(b)) => a == b,
             (IfaValue::Null, IfaValue::Null) => true,
@@ -258,8 +341,32 @@ impl PartialOrd for IfaValue {
         match (self, other) {
             (IfaValue::Int(a), IfaValue::Int(b)) => a.partial_cmp(b),
             (IfaValue::Float(a), IfaValue::Float(b)) => a.partial_cmp(b),
-            (IfaValue::Int(a), IfaValue::Float(b)) => (*a as f64).partial_cmp(b),
-            (IfaValue::Float(a), IfaValue::Int(b)) => a.partial_cmp(&(*b as f64)),
+            // For Int<->Float comparison, check representability
+            (IfaValue::Int(a), IfaValue::Float(b)) => {
+                let a_f64 = *a as f64;
+                if a_f64 as i64 == *a {
+                    a_f64.partial_cmp(b)
+                } else {
+                    // Large integer: compare as integers if b is whole
+                    if b.fract() == 0.0 && *b >= i64::MIN as f64 && *b <= i64::MAX as f64 {
+                        a.partial_cmp(&(*b as i64))
+                    } else {
+                        None // Incomparable
+                    }
+                }
+            }
+            (IfaValue::Float(a), IfaValue::Int(b)) => {
+                let b_f64 = *b as f64;
+                if b_f64 as i64 == *b {
+                    a.partial_cmp(&b_f64)
+                } else {
+                    if a.fract() == 0.0 && *a >= i64::MIN as f64 && *a <= i64::MAX as f64 {
+                        (*a as i64).partial_cmp(b)
+                    } else {
+                        None
+                    }
+                }
+            }
             (IfaValue::Str(a), IfaValue::Str(b)) => a.partial_cmp(b),
             _ => None,
         }
@@ -283,7 +390,10 @@ impl IfaValue {
             IfaValue::Object(o) => !o.borrow().is_empty(),
             IfaValue::Fn(_) => true,
             IfaValue::AstFn { .. } => true,
+            IfaValue::BytecodeFn { .. } => true,
+            IfaValue::Class { .. } => true,
             IfaValue::Null => false,
+            IfaValue::Return(v) => v.is_truthy(),
         }
     }
 
@@ -314,7 +424,10 @@ impl IfaValue {
             IfaValue::Object(_) => "Object",
             IfaValue::Fn(_) => "Fn",
             IfaValue::AstFn { .. } => "AstFn",
+            IfaValue::BytecodeFn { .. } => "BytecodeFn",
+            IfaValue::Class { .. } => "Class",
             IfaValue::Null => "Null",
+            IfaValue::Return(_) => "Return",
         }
     }
 

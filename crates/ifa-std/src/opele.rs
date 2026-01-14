@@ -130,37 +130,19 @@ impl OpeleChain {
 
     /// Simple hash function (SHA-256-like using basic ops)
     /// In production, use ring or sha2 crate
+    /// Secure hash function using SHA-256 (via ring)
     fn compute_hash(&self, data: &str, prev: &[u8; 32], index: u64, ts: u64) -> [u8; 32] {
+        use ring::digest::{Context, SHA256};
+
+        let mut context = Context::new(&SHA256);
+        context.update(data.as_bytes());
+        context.update(prev);
+        context.update(&index.to_le_bytes());
+        context.update(&ts.to_le_bytes());
+
+        let digest = context.finish();
         let mut hash = [0u8; 32];
-
-        // Mix data bytes
-        for (i, b) in data.bytes().enumerate() {
-            hash[i % 32] ^= b;
-            hash[(i + 1) % 32] = hash[(i + 1) % 32].wrapping_add(b);
-        }
-
-        // Mix previous hash
-        for i in 0..32 {
-            hash[i] ^= prev[i];
-            hash[(i + 7) % 32] = hash[(i + 7) % 32].wrapping_add(prev[i]);
-        }
-
-        // Mix index and timestamp
-        let idx_bytes = index.to_le_bytes();
-        let ts_bytes = ts.to_le_bytes();
-        for i in 0..8 {
-            hash[i] ^= idx_bytes[i];
-            hash[i + 8] ^= ts_bytes[i];
-        }
-
-        // Final mixing rounds
-        for round in 0..4 {
-            for i in 0..32 {
-                let j = (i + round * 7 + 1) % 32;
-                hash[j] = hash[j].wrapping_add(hash[i].rotate_left(3));
-            }
-        }
-
+        hash.copy_from_slice(digest.as_ref());
         hash
     }
 }

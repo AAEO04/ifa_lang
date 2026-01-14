@@ -288,6 +288,43 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
             }))
         }
 
+        Rule::match_stmt => {
+            let mut inner = pair.into_inner();
+            let condition = parse_expression(inner.next().unwrap())?;
+            let mut arms = Vec::new();
+
+            for arm_pair in inner {
+                let mut arm_inner = arm_pair.into_inner();
+                let pattern_pair = arm_inner.next().unwrap();
+                let pattern = parse_match_pattern(pattern_pair)?;
+                
+                let mut body = Vec::new();
+                let body_pair = arm_inner.next().unwrap();
+                match body_pair.as_rule() {
+                    Rule::statement => {
+                        if let Some(stmt) = parse_statement(body_pair)? {
+                            body.push(stmt);
+                        }
+                    }
+                    _ => { // Block
+                        for stmt_pair in body_pair.into_inner() {
+                            if let Some(stmt) = parse_statement(stmt_pair)? {
+                                body.push(stmt);
+                            }
+                        }
+                    }
+                }
+                
+                arms.push(MatchArm { pattern, body });
+            }
+
+            Ok(Some(Statement::Match {
+                condition,
+                arms,
+                span,
+            }))
+        }
+
         Rule::EOI => Ok(None),
 
         _ => Ok(None),
@@ -500,6 +537,30 @@ fn parse_binary_op(pair: &pest::iterators::Pair<Rule>) -> IfaResult<BinaryOperat
         _ => Err(IfaError::Parse(format!(
             "Unknown operator: {:?}",
             pair.as_rule()
+        ))),
+    }
+}
+
+fn parse_match_pattern(pair: pest::iterators::Pair<Rule>) -> IfaResult<MatchPattern> {
+    let inner = pair.into_inner().next().unwrap();
+    match inner.as_rule() {
+        Rule::literal_pattern => {
+            let expr = parse_expression(inner.into_inner().next().unwrap())?;
+            Ok(MatchPattern::Literal(expr))
+        }
+        Rule::range_pattern => {
+            let mut range_inner = inner.into_inner();
+            let start = parse_expression(range_inner.next().unwrap())?;
+            let end = parse_expression(range_inner.next().unwrap())?;
+            Ok(MatchPattern::Range {
+                start: Box::new(start),
+                end: Box::new(end),
+            })
+        }
+        Rule::wildcard_pattern => Ok(MatchPattern::Wildcard),
+        _ => Err(IfaError::Parse(format!(
+            "Unexpected pattern rule: {:?}",
+            inner.as_rule()
         ))),
     }
 }

@@ -7,7 +7,7 @@ members = [
     "crates/ifa-embedded",
     "crates/ifa-macros",
     "crates/ifa-wasm",
-    "crates/ifa-babalawo", "crates/ifa-sandbox",
+    "crates/ifa-babalawo", "crates/ifa-sandbox", "crates/ifa-installer-core", "crates/ifa-installer-gui",
 ]
 
 [workspace.package]

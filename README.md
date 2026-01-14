@@ -51,48 +51,19 @@ This will automatically link your library for use in their projects!
 
 ```
 ifa-lang/
-├── bin/
-│   └── ifa                 # CLI entry point
-├── src/                    # Compiler Core (10 modules)
-│   ├── __init__.py         # Package with lazy imports
-│   ├── cli.py              # CLI (run, build, debug, check, matrix, library, repl)
-│   ├── lexer.py            # Tokenizer with Yoruba Unicode
-│   ├── parser.py           # Ese Parser (high-level syntax)
-│   ├── validator.py        # Ìwà Engine (balance checker)
-│   ├── transpiler.py       # Rust code generator
-│   ├── vm.py               # OponVM + Babalawo debugger
-│   ├── ffi.py              # Foreign Function Interface
-│   ├── isa.py              # Amúlù 8-bit ISA (256 instructions)
-│   └── memory.py           # 12-bit Calabash (4KB memory)
-├── lib/
-│   ├── std/                # Standard Library (18 modules)
-│   │   ├── __init__.py     # StandardLibrary registry
-│   │   ├── base.py         # OduModule base class
-│   │   ├── ogbe.py         # System (1111)
-│   │   ├── oyeku.py        # Process (0000)
-│   │   ├── iwori.py        # Time (0110)
-│   │   ├── odi.py          # File I/O (1001)
-│   │   ├── irosu.py        # Console (1100)
-│   │   ├── owonrin.py      # Random (0011)
-│   │   ├── obara.py        # Math+ (1000)
-│   │   ├── okanran.py      # Errors (0001)
-│   │   ├── ogunda.py       # Arrays (1110)
-│   │   ├── osa.py          # Concurrency (0111) - Async & JSON/CSV
-│   │   ├── ika.py          # Strings (0100)
-│   │   ├── oturupon.py     # Math- (0010)
-│   │   ├── otura.py        # Network (1011) - Real UDP Ether
-│   │   ├── irete.py        # Crypto (1101) - Hash & Compression
-│   │   ├── ose.py          # Graphics (1010)
-│   │   └── ofun.py         # Permissions (0101) - Meta & Config
-│   └── core.rs             # Rust runtime
-├── examples/
-│   ├── hello.ifa           # Hello World
-│   ├── demo.ifa            # Math & Network demo
-│   └── math.ifa            # Arithmetic operations
-├── tests/
-│   └── test_balance.py     # Ìwà Engine tests
-├── ifa.toml                # Project configuration
-└── README.md
+├── crates/
+│   ├── ifa-core/           # VM & Runtime logic
+│   ├── ifa-std/            # Standard Library (Odu domains)
+│   ├── ifa-cli/            # Command Line Interface (ifa)
+│   ├── ifa-embedded/       # no_std runtime for microcontrollers
+│   ├── ifa-wasm/           # WebAssembly bindings
+│   ├── ifa-babalawo/       # Debugger
+│   ├── ifa-sandbox/        # Security & Isolation
+│   ├── ifa-macros/         # Procedural macros
+│   └── ifa-installer-gui/  # Graphical Installer
+├── docs/                   # HTML Documentation
+├── examples/               # extensive example code
+└── vscode_extension/       # Editor support
 ```
 
 ## 📥 Download & Install
@@ -111,6 +82,11 @@ iwr https://raw.githubusercontent.com/AAEO04/ifa-lang/main/install.ps1 -useb | i
 
 ### 📦 Manual Download
 Download the latest binary for your platform from the [Releases Page](https://github.com/AAEO04/ifa-lang/releases).
+
+### 🔒 Security & Verification
+Official binaries are signed and their checksums are published.
+- **Verify**: Download `SHA256SUMS` and verify using `sha256sum -c SHA256SUMS --ignore-missing`.
+- Automated installers (`install.sh`, `install.ps1`) handle this automatically.
 
 ### 🦀 From Source (Rust)
 ```bash
@@ -230,7 +206,9 @@ ifa test examples/math_test.ifa
 
 Assertions use the **Ọ̀kànràn** (Error) domain:
 ```ifa
-Òkànràn.jé(x == 10, "Value mismatch error");
+Òkànràn.jé(x == 10, "Value mismatch"); // Assert true
+Òkànràn.dogba(x, 10);                  // Assert equal
+Òkànràn.yato(x, 5);                    // Assert not equal
 ```
 
 ##  VS Code Extension (Ilé Ìwé)

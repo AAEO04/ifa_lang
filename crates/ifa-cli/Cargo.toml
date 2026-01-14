@@ -12,7 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 ifa-core = { path = "../ifa-core" }
-ifa-std = { path = "../ifa-std" }
+ifa-std = { path = "../ifa-std", features = ["iot"] }
 ifa-babalawo = { path = "../ifa-babalawo" }
 ifa-sandbox = { path = "../ifa-sandbox" }
 
@@ -25,6 +25,9 @@ color-eyre.workspace = true
 
 # Serialization (for ifa.toml)
 serde.workspace = true
+serde_json.workspace = true
+lsp-server = "0.7"
+lsp-types = "0.94"
 toml = "0.8"
 
 # Async runtime
@@ -35,3 +38,9 @@ chrono = "0.4"
 
 # Self Update
 self_update = "0.39"
+uuid = { version = "1.0", features = ["v4"] }
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+flate2 = "1.0"
+tar = "0.4"
+ring = "0.17"
+

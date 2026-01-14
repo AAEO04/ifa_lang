@@ -101,8 +101,54 @@ impl Ogunda {
     // PROCESS OPERATIONS
     // =========================================================================
 
+    /// Dangerous shell metacharacters that could enable injection
+    const SHELL_METACHARACTERS: &'static [char] = &['|', '&', ';', '$', '`', '\n', '\r', '(', ')', '{', '}', '<', '>'];
+
+    /// Validate command is safe (no path traversal, no shell builtins for injection)
+    fn validate_command(command: &str) -> IfaResult<()> {
+        // Block empty commands
+        if command.is_empty() {
+            return Err(IfaError::Custom("Empty command".to_string()));
+        }
+        
+        // Block shell metacharacters in command name
+        if command.chars().any(|c| Self::SHELL_METACHARACTERS.contains(&c)) {
+            return Err(IfaError::Custom(format!(
+                "Command contains dangerous characters: {}",
+                command
+            )));
+        }
+        
+        // Block path traversal
+        if command.contains("..") {
+            return Err(IfaError::Custom("Path traversal not allowed in command".to_string()));
+        }
+        
+        Ok(())
+    }
+
+    /// Validate arguments are safe
+    fn validate_args(args: &[&str]) -> IfaResult<()> {
+        for arg in args {
+            // Block shell metacharacters that could enable injection
+            if arg.chars().any(|c| Self::SHELL_METACHARACTERS.contains(&c)) {
+                return Err(IfaError::Custom(format!(
+                    "Argument contains dangerous shell metacharacters: {}",
+                    arg
+                )));
+            }
+        }
+        Ok(())
+    }
+
     /// Run command and get output (ṣiṣẹ́)
+    /// 
+    /// # Security
+    /// Commands and arguments are validated to prevent shell injection.
     pub fn sise(&self, command: &str, args: &[&str]) -> IfaResult<Output> {
+        Self::validate_command(command)?;
+        Self::validate_args(args)?;
+        
         Command::new(command)
             .args(args)
             .output()
@@ -118,6 +164,9 @@ impl Ogunda {
 
     /// Spawn detached process (bẹ̀rẹ̀)
     pub fn bere(&self, command: &str, args: &[&str]) -> IfaResult<u32> {
+        Self::validate_command(command)?;
+        Self::validate_args(args)?;
+        
         let child = Command::new(command)
             .args(args)
             .stdin(Stdio::null())
