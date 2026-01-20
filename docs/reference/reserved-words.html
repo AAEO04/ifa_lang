@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserved Words - Ifá-Lang Reference</title>
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
+    <script src="../js/common.js" defer></script>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Reserved Words & Domain Aliases</h1>
+        <p>Canonical reference for all reserved keywords and domain names in Ifá-Lang, extracted from
+            <code>crates/ifa-core/src/lexer.rs</code>.
+        </p>
+
+        <h2>Reserved Keywords</h2>
+        <p>These words cannot be used as identifiers. All keywords have Yoruba and English variants.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Yoruba</th>
+                    <th>English</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ayanmo</code>, <code>àyànmọ́</code></td>
+                    <td><code>let</code></td>
+                    <td>Variable declaration</td>
+                </tr>
+                <tr>
+                    <td>—</td>
+                    <td><code>const</code></td>
+                    <td>Constant declaration</td>
+                </tr>
+                <tr>
+                    <td><code>ti</code>, <code>bí</code></td>
+                    <td><code>if</code></td>
+                    <td>Conditional</td>
+                </tr>
+                <tr>
+                    <td><code>bibẹkọ</code>, <code>bíbẹ́kọ́</code></td>
+                    <td><code>else</code></td>
+                    <td>Else branch</td>
+                </tr>
+                <tr>
+                    <td><code>fun</code></td>
+                    <td><code>for</code></td>
+                    <td>For loop</td>
+                </tr>
+                <tr>
+                    <td><code>nigba</code></td>
+                    <td><code>while</code></td>
+                    <td>While loop</td>
+                </tr>
+                <tr>
+                    <td><code>pada</code></td>
+                    <td><code>return</code></td>
+                    <td>Return from function</td>
+                </tr>
+                <tr>
+                    <td><code>da</code></td>
+                    <td><code>break</code></td>
+                    <td>Break loop</td>
+                </tr>
+                <tr>
+                    <td>—</td>
+                    <td><code>continue</code></td>
+                    <td>Continue loop</td>
+                </tr>
+                <tr>
+                    <td><code>yàn</code>, <code>yán</code></td>
+                    <td><code>match</code></td>
+                    <td>Pattern matching</td>
+                </tr>
+                <tr>
+                    <td><code>ese</code>, <code>ẹsẹ</code></td>
+                    <td><code>fn</code>, <code>function</code>, <code>def</code></td>
+                    <td>Function definition</td>
+                </tr>
+                <tr>
+                    <td><code>odu</code>, <code>ọdù</code></td>
+                    <td><code>class</code></td>
+                    <td>Class/struct definition</td>
+                </tr>
+                <tr>
+                    <td><code>iba</code>, <code>ìbà</code></td>
+                    <td><code>import</code></td>
+                    <td>Import module</td>
+                </tr>
+                <tr>
+                    <td><code>otito</code></td>
+                    <td><code>true</code></td>
+                    <td>Boolean true</td>
+                </tr>
+                <tr>
+                    <td><code>iro</code></td>
+                    <td><code>false</code></td>
+                    <td>Boolean false</td>
+                </tr>
+                <tr>
+                    <td><code>ohunkohun</code></td>
+                    <td><code>nil</code>, <code>null</code></td>
+                    <td>Null value</td>
+                </tr>
+                <tr>
+                    <td><code>gbangba</code></td>
+                    <td><code>pub</code>, <code>public</code></td>
+                    <td>Public visibility</td>
+                </tr>
+                <tr>
+                    <td><code>ikoko</code>, <code>àdáni</code></td>
+                    <td><code>private</code></td>
+                    <td>Private visibility</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>CEN Model Keywords</h2>
+        <p>Cultural-Enhanced-Naming keywords for resource management and safety.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Yoruba</th>
+                    <th>English</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>ebo</code>, <code>ẹbọ</code></td>
+                    <td><code>sacrifice</code></td>
+                    <td>RAII resource cleanup block</td>
+                </tr>
+                <tr>
+                    <td><code>ewo</code>, <code>ẹ̀wọ̀</code></td>
+                    <td><code>assert</code>, <code>verify</code></td>
+                    <td>Runtime assertion</td>
+                </tr>
+                <tr>
+                    <td><code>ewọ</code>, <code>èèwọ̀</code></td>
+                    <td><code>taboo</code></td>
+                    <td>Taboo/forbidden operation marker</td>
+                </tr>
+                <tr>
+                    <td><code>ajose</code>, <code>àjọṣe</code></td>
+                    <td><code>co-op</code></td>
+                    <td>Reactive binding</td>
+                </tr>
+                <tr>
+                    <td><code>ase</code>, <code>àṣẹ</code></td>
+                    <td><code>end</code></td>
+                    <td>Block terminator</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Domain Names (Odù)</h2>
+        <p>The 16 core Odù domains plus infrastructure and application stacks.</p>
+
+        <h3>Core 16 Odù</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Pattern</th>
+                    <th>Yoruba</th>
+                    <th>English Aliases</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>1111</code></td>
+                    <td>Ogbe</td>
+                    <td><code>Sys</code>, <code>Os</code></td>
+                    <td>System lifecycle, CLI, env</td>
+                </tr>
+                <tr>
+                    <td><code>0000</code></td>
+                    <td>Oyeku</td>
+                    <td><code>Exit</code></td>
+                    <td>Exit, sleep, shutdown</td>
+                </tr>
+                <tr>
+                    <td><code>0110</code></td>
+                    <td>Iwori</td>
+                    <td><code>Time</code>, <code>Datetime</code></td>
+                    <td>Date/time operations</td>
+                </tr>
+                <tr>
+                    <td><code>1001</code></td>
+                    <td>Odi</td>
+                    <td><code>Fs</code>, <code>Io</code></td>
+                    <td>File I/O</td>
+                </tr>
+                <tr>
+                    <td><code>1100</code></td>
+                    <td>Irosu</td>
+                    <td><code>Fmt</code>, <code>Log</code></td>
+                    <td>Console print/logging</td>
+                </tr>
+                <tr>
+                    <td><code>0011</code></td>
+                    <td>Owonrin</td>
+                    <td><code>Rand</code></td>
+                    <td>Random number generation</td>
+                </tr>
+                <tr>
+                    <td><code>1000</code></td>
+                    <td>Obara</td>
+                    <td><code>Math</code></td>
+                    <td>Math operations</td>
+                </tr>
+                <tr>
+                    <td><code>0001</code></td>
+                    <td>Okanran</td>
+                    <td><code>Err</code>, <code>Panic</code></td>
+                    <td>Error handling</td>
+                </tr>
+                <tr>
+                    <td><code>1110</code></td>
+                    <td>Ogunda</td>
+                    <td><code>Vec</code>, <code>List</code></td>
+                    <td>Collections/arrays</td>
+                </tr>
+                <tr>
+                    <td><code>0111</code></td>
+                    <td>Osa</td>
+                    <td><code>Async</code>, <code>Thread</code></td>
+                    <td>Concurrency</td>
+                </tr>
+                <tr>
+                    <td><code>0100</code></td>
+                    <td>Ika</td>
+                    <td><code>Str</code>, <code>String</code></td>
+                    <td>String operations</td>
+                </tr>
+                <tr>
+                    <td><code>0010</code></td>
+                    <td>Oturupon</td>
+                    <td><code>Div</code></td>
+                    <td>Division/math-</td>
+                </tr>
+                <tr>
+                    <td><code>1011</code></td>
+                    <td>Otura</td>
+                    <td><code>Net</code>, <code>Http</code></td>
+                    <td>Networking</td>
+                </tr>
+                <tr>
+                    <td><code>1101</code></td>
+                    <td>Irete</td>
+                    <td><code>Crypto</code>, <code>Hash</code></td>
+                    <td>Cryptography</td>
+                </tr>
+                <tr>
+                    <td><code>1010</code></td>
+                    <td>Ose</td>
+                    <td><code>Tui</code>, <code>Term</code></td>
+                    <td>Terminal UI</td>
+                </tr>
+                <tr>
+                    <td><code>0101</code></td>
+                    <td>Ofun</td>
+                    <td><code>Perm</code>, <code>Auth</code></td>
+                    <td>Permissions</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Pseudo-Domains</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Yoruba</th>
+                    <th>English Aliases</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Coop / Àjọṣe</td>
+                    <td><code>Ffi</code>, <code>Bridge</code></td>
+                    <td>FFI to Rust/Python/JS</td>
+                </tr>
+                <tr>
+                    <td>Opele / Ọpẹlẹ</td>
+                    <td><code>Oracle</code></td>
+                    <td>Compound Odù divination</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Infrastructure Layer</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>Aliases</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Cpu</td>
+                    <td><code>Parallel</code></td>
+                    <td>Parallel computing (rayon)</td>
+                </tr>
+                <tr>
+                    <td>Gpu</td>
+                    <td><code>Compute</code></td>
+                    <td>GPU compute (wgpu)</td>
+                </tr>
+                <tr>
+                    <td>Storage</td>
+                    <td><code>Kv</code>, <code>Db</code></td>
+                    <td>Key-value store</td>
+                </tr>
+                <tr>
+                    <td>Ohun</td>
+                    <td><code>Audio</code>, <code>Sound</code></td>
+                    <td>Audio I/O</td>
+                </tr>
+                <tr>
+                    <td>Fidio</td>
+                    <td><code>Video</code>, <code>Media</code></td>
+                    <td>Video/media I/O</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Application Stacks</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>Aliases</th>
+                    <th>Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Backend</td>
+                    <td><code>Server</code></td>
+                    <td>HTTP server, ORM</td>
+                </tr>
+                <tr>
+                    <td>Frontend</td>
+                    <td><code>Html</code>, <code>Web</code></td>
+                    <td>HTML/CSS generation</td>
+                </tr>
+                <tr>
+                    <td>Ml</td>
+                    <td><code>Tensor</code>, <code>Ai</code></td>
+                    <td>Machine learning</td>
+                </tr>
+                <tr>
+                    <td>GameDev</td>
+                    <td><code>Game</code>, <code>Engine</code></td>
+                    <td>Game engine, ECS</td>
+                </tr>
+                <tr>
+                    <td>Iot</td>
+                    <td><code>Gpio</code>, <code>Embedded</code></td>
+                    <td>Embedded/GPIO</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Soft Reserved Words</h2>
+        <p>These identifiers have special meaning in certain contexts but can be used as variable names:</p>
+        <ul>
+            <li><code>self</code> — Current instance in methods</li>
+            <li><code>super</code> — Parent class reference</li>
+            <li><code>_</code> — Wildcard/ignored binding</li>
+        </ul>
+
+        <footer class="doc-footer">
+            <p><a href="grammar.html">← Grammar Reference</a> · <a href="types.html">Types →</a></p>
+            <p><a href="../index.html">Documentation Home</a></p>
+        </footer>
+    </div>
+</body>
+
+</html>

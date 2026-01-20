@@ -211,6 +211,14 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
             Ok(Some(Statement::Opon { size, span }))
         }
 
+        Rule::ebo_stmt => {
+            let mut inner = pair.into_inner();
+            // Skip the ebo keyword
+            inner.next();
+            let offering = parse_expression(inner.next().unwrap())?;
+            Ok(Some(Statement::Ebo { offering, span }))
+        }
+
         Rule::ese_def => {
             let mut inner = pair.into_inner();
             let mut visibility = Visibility::Private;

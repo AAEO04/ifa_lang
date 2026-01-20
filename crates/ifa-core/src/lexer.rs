@@ -109,15 +109,30 @@ fn check_domain(lex: &mut Lexer<Token>) -> Option<OduDomain> {
                 // Coop - FFI Bridge
                 "ffi" | "bridge" => Some(OduDomain::Coop),
 
+                // Infrastructure Layer
+                "cpu" | "parallel" => Some(OduDomain::Cpu),
+                "gpu" | "compute" => Some(OduDomain::Gpu),
+                "storage" | "kv" | "db" => Some(OduDomain::Storage),
+                "ohun" | "audio" | "sound" => Some(OduDomain::Ohun),
+                "fidio" | "video" | "media" => Some(OduDomain::Fidio),
+
+                // Application Stacks
+                "backend" | "server" => Some(OduDomain::Backend),
+                "frontend" | "html" | "web" => Some(OduDomain::Frontend),
+                "ml" | "tensor" | "ai" => Some(OduDomain::Ml),
+                "gamedev" | "game" | "engine" => Some(OduDomain::GameDev),
+                "iot" | "gpio" | "embedded" => Some(OduDomain::Iot),
+
                 _ => None,
             }
         }
     }
 }
 
-/// The 16 Odù domains
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The 16 Odù domains + Infrastructure + Stacks
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum OduDomain {
+    // Core 16 Odù
     Ogbe,     // 1111 - Lifecycle
     Oyeku,    // 0000 - Exit/Sleep
     Iwori,    // 0110 - Time
@@ -134,8 +149,25 @@ pub enum OduDomain {
     Irete,    // 1101 - Crypto
     Ose,      // 1010 - UI
     Ofun,     // 0101 - Permissions
-    Coop,     // Co-op / Àjọṣe - FFI Bridge (pseudo-domain)
-    Opele,    // Ọpẹlẹ - Divination/Compound Odù (pseudo-domain)
+    
+    // Pseudo-domains
+    Coop,     // Co-op / Àjọṣe - FFI Bridge
+    Opele,    // Ọpẹlẹ - Divination/Compound Odù
+    
+    // Infrastructure Layer
+    Cpu,      // Parallel computing (rayon)
+    Gpu,      // GPU compute (wgpu)
+    Storage,  // Key-value store (OduStore)
+    Ohun,     // Audio I/O (rodio)
+    Fidio,    // Video I/O (ffmpeg)
+    
+    // Application Stacks
+    Backend,  // HTTP server, ORM
+    Frontend, // HTML, CSS generation
+    Crypto,   // Hashing, encryption (extends Irete)
+    Ml,       // Machine learning, tensors
+    GameDev,  // Game engine, ECS
+    Iot,      // Embedded, GPIO
 }
 
 /// Token types for Ifá-Lang
@@ -225,11 +257,13 @@ pub enum Token {
     // CEN Model
     #[token("ebo")]
     #[token("ẹbọ")]
+    #[token("sacrifice")]
     Ebo,
 
     #[token("ewo")]
     #[token("ẹ̀wọ̀")]
     #[token("assert")]
+    #[token("verify")]
     Ewo,
 
     #[token("ajose")]
@@ -239,6 +273,7 @@ pub enum Token {
 
     #[token("ase")]
     #[token("àṣẹ")]
+    #[token("end")]
     Ase,
 
     #[token("ewọ")]

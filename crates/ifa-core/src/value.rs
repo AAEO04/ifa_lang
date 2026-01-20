@@ -359,12 +359,10 @@ impl PartialOrd for IfaValue {
                 let b_f64 = *b as f64;
                 if b_f64 as i64 == *b {
                     a.partial_cmp(&b_f64)
+                } else if a.fract() == 0.0 && *a >= i64::MIN as f64 && *a <= i64::MAX as f64 {
+                    (*a as i64).partial_cmp(b)
                 } else {
-                    if a.fract() == 0.0 && *a >= i64::MIN as f64 && *a <= i64::MAX as f64 {
-                        (*a as i64).partial_cmp(b)
-                    } else {
-                        None
-                    }
+                    None
                 }
             }
             (IfaValue::Str(a), IfaValue::Str(b)) => a.partial_cmp(b),

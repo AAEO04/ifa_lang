@@ -1,0 +1,37 @@
+<!-- Universal Language Switcher Loader -->
+<!-- This ensures language switching works on ALL pages with Ifá-Lang code -->
+<link rel="stylesheet" href="js/language-switcher.css">
+<script src="js/language-switcher.js"></script>
+
+<script>
+// Universal initialization - works on any page
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit for other scripts to load
+    setTimeout(function() {
+        // Initialize language switcher if available
+        if (typeof enhanceAllCodeExamples === 'function') {
+            enhanceAllCodeExamples();
+            console.log('Universal language switcher activated');
+        }
+        
+        // Auto-add toggle buttons to any code examples that don't have them
+        document.querySelectorAll('.code-example, .example, pre').forEach(container => {
+            const header = container.querySelector('.code-header, .example-header');
+            if (header && !header.querySelector('.lang-toggle')) {
+                const toggleDiv = document.createElement('div');
+                toggleDiv.className = 'lang-toggle';
+                toggleDiv.innerHTML = `
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                `;
+                header.appendChild(toggleDiv);
+            }
+        });
+        
+        // Initialize switchable words in all code blocks
+        if (typeof initializeSwitchableWords === 'function') {
+            initializeSwitchableWords();
+        }
+    }, 100);
+});
+</script>

@@ -45,17 +45,17 @@ git push origin v1.0.0
 ### 4. Test Installation
 ```bash
 # Linux/macOS
-curl -sSL https://get.ifa-lang.org | bash
+curl -sSL https://aaeo04.github.io/ifa_lang/install.sh | sh
 ifa --version
 
-# Windows
-irm https://get.ifa-lang.org/windows | iex
+# Windows: Download installer from GitHub Releases
+# Run ifa-installer-v*-windows-x86_64.exe
 ifa --version
 ```
 
 ### 5. Post-Release
 - [ ] Verify GitHub Release is published
-- [ ] Update documentation site
+- [ ] Verify docs site updated (download links)
 - [ ] Announce on social media
 - [ ] Update package managers (if applicable)
 

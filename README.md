@@ -4,7 +4,7 @@
 
 ```
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║                              IFÁ-LANG v1.2.1                                 ║
+║                              IFÁ-LANG v1.2.2                                 ║
 ║                       "Code with good character"                             ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
@@ -68,29 +68,34 @@ ifa-lang/
 
 ## 📥 Download & Install
 
-### 🚀 Quick Install
-
-**Unix (Linux / macOS)**
+### Quick Install (Linux/macOS)
 ```bash
-curl -sSL https://raw.githubusercontent.com/AAEO04/ifa-lang/main/install.sh | bash
+curl -sSL https://aaeo04.github.io/ifa_lang/install.sh | sh
 ```
 
-**Windows (PowerShell)**
-```powershell
-iwr https://raw.githubusercontent.com/AAEO04/ifa-lang/main/install.ps1 -useb | iex
+### Download from Releases
+
+[**→ GitHub Releases**](https://github.com/AAEO04/ifa_lang/releases)
+
+| Platform | Download |
+|----------|----------|
+| **Windows** | `ifa-installer-v*-windows-x86_64.exe` (GUI installer) |
+| Windows (manual) | `ifa-v*-windows-x86_64.exe` |
+| macOS ARM | `ifa-v*-macos-arm64` |
+| macOS Intel | `ifa-v*-macos-x86_64` |
+| Linux x64 | `ifa-v*-linux-x86_64` |
+| Linux ARM | `ifa-v*-linux-arm64` |
+
+### 🔒 Verification
+
+Download `checksums-v*.sha256` and verify:
+```bash
+sha256sum -c checksums-v*.sha256 --ignore-missing
 ```
 
-### 📦 Manual Download
-Download the latest binary for your platform from the [Releases Page](https://github.com/AAEO04/ifa-lang/releases).
-
-### 🔒 Security & Verification
-Official binaries are signed and their checksums are published.
-- **Verify**: Download `SHA256SUMS` and verify using `sha256sum -c SHA256SUMS --ignore-missing`.
-- Automated installers (`install.sh`, `install.ps1`) handle this automatically.
-
-### 🦀 From Source (Rust)
+### 🦀 From Source
 ```bash
-cargo install ifa-cli --git https://github.com/AAEO04/ifa-lang
+cargo install ifa-cli --git https://github.com/AAEO04/ifa_lang
 ```
 
 ### VS Code Extension
@@ -126,7 +131,7 @@ ifa oja upgrade
 ifa oja add https://github.com/user/repo.git
 ```
 
-> **Full Documentation**: See [`DOCS.md`](DOCS.md) or visit [aaeo04.github.io/ifa-lang](https://aaeo04.github.io/ifa-lang/)
+> **Full Documentation**: [aaeo04.github.io/ifa_lang](https://aaeo04.github.io/ifa_lang/)
 
 ## Language Syntax
 

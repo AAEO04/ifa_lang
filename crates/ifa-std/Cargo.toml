@@ -11,6 +11,9 @@ name = "ifa_std"
 path = "src/lib.rs"
 
 [dependencies]
+# Shared types (IfaValue, IfaError, OduDomain)
+ifa-types = { path = "../ifa-types" }
+
 ifa-sandbox = { path = "../ifa-sandbox" }
 ifa-core = { path = "../ifa-core" }
 
@@ -63,8 +66,15 @@ ratatui = { workspace = true, optional = true }
 
 # Polyglot FFI (Ìrẹtẹ̀/Òfún)
 libloading = "0.8"
+libffi = { version = "3.2", optional = true }  # Native dynamic calls
 boa_engine = { version = "0.17", optional = true }
 pyo3 = { version = "0.20", features = ["auto-initialize"], optional = true }
+
+# Kernel / System info
+sysinfo = { version = "0.30", optional = true }
+
+# Audio (Ìrosù)
+rodio = { version = "0.17", optional = true }
 
 
 [dev-dependencies]
@@ -101,6 +111,7 @@ default = ["backend", "parallel"]
 # Language Features
 js = ["boa_engine"]
 python = ["pyo3"]
+native_ffi = ["libffi"]  # Dynamic C calls via libffi (not WASM-compatible)
 
 # Domain Features
 backend = ["tokio", "reqwest", "tokio-rustls", "rusqlite"]
@@ -118,6 +129,8 @@ parallel = ["rayon"]
 gpu = ["wgpu", "pollster", "tokio", "bytemuck"]
 persistence = ["bincode", "tokio/fs", "tokio/io-util"]
 profiling = []
+kernel = ["sysinfo"]
+audio = ["rodio"]
 
 # Legacy Alias
 full = ["backend", "game", "crypto", "ml", "parallel", "gpu", "persistence"]

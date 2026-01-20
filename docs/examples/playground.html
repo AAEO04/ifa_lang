@@ -1,0 +1,145 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playground - Ifa-Lang</title>
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
+    <script src="../js/common.js" defer></script>
+    <style>
+        .playground-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; height: 60vh; margin: 1rem 0; }
+        @media (max-width: 900px) { .playground-container { grid-template-columns: 1fr; height: auto; } }
+        .editor-panel, .output-panel { background: var(--bg-card); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--accent); }
+        .panel-title { color: var(--gold); font-weight: bold; }
+        #code-editor { flex: 1; font-family: Consolas, Monaco, monospace; font-size: 14px; padding: 1rem; background: #0d1321; color: var(--text); border: none; resize: none; outline: none; }
+        #output { flex: 1; font-family: Consolas, Monaco, monospace; font-size: 14px; padding: 1rem; background: #0d1321; color: #00ff88; overflow: auto; white-space: pre-wrap; }
+        .btn-run { background: linear-gradient(135deg, var(--accent), #ff6b6b); color: white; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .examples-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .example-btn { background: var(--bg-card); color: var(--gold); border: 1px solid var(--accent); padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+        .example-btn:hover { background: var(--accent); color: white; }
+        .lang-toggle-btn { background: rgba(255,215,0,0.2); color: var(--gold); border: 1px solid var(--gold); padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
+        .capabilities { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
+        .cap-card { background: var(--bg-card); border-radius: 8px; padding: 1rem; }
+        .cap-card h4 { color: var(--gold); margin-bottom: 0.5rem; }
+        .cap-card.supported { border-left: 3px solid #00ff88; }
+        .cap-card.limited { border-left: 3px solid #ffaa00; }
+        .cap-card.unsupported { border-left: 3px solid #ff4444; }
+        .cap-card ul { margin: 0; padding-left: 1.2rem; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <h1>Ifa-Lang Playground</h1>
+        <p>Write and run Ifa-Lang code in your browser. Powered by WebAssembly.</p>
+
+        <div class="examples-bar">
+            <span style="color: var(--text-dim);">Examples:</span>
+            <button class="example-btn" onclick="loadExample('hello')">Hello World</button>
+            <button class="example-btn" onclick="loadExample('math')">Math</button>
+            <button class="example-btn" onclick="loadExample('strings')">Strings</button>
+            <button class="example-btn" onclick="loadExample('lists')">Lists</button>
+            <button class="lang-toggle-btn" onclick="toggleEditorLang()">Toggle Yoruba/English</button>
+        </div>
+
+        <div class="playground-container">
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Code</span>
+                    <button class="btn-run" onclick="runCode()">Run</button>
+                </div>
+                <textarea id="code-editor" spellcheck="false">// Welcome to Ifa-Lang!
+ayanmo oruko = "World";
+Irosu.fo("Hello, " + oruko + "!");
+
+ayanmo x = 10;
+ayanmo y = 20;
+Irosu.fo("Sum: " + (x + y));</textarea>
+            </div>
+            <div class="output-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Output</span>
+                    <span id="status" style="color: var(--text-dim); font-size: 0.85rem;">Ready</span>
+                </div>
+                <div id="output">Click Run to execute...</div>
+            </div>
+        </div>
+
+        <h2>Playground Capabilities</h2>
+        <div class="capabilities">
+            <div class="cap-card supported">
+                <h4>Fully Supported</h4>
+                <ul>
+                    <li><strong>Irosu / Fmt</strong> - Console output</li>
+                    <li><strong>Ika / String</strong> - String operations</li>
+                    <li><strong>Obara / Math</strong> - Math functions</li>
+                    <li><strong>Ogunda / List</strong> - Arrays</li>
+                    <li><strong>Owonrin / Rand</strong> - Random</li>
+                    <li><strong>Iwori / Time</strong> - Current time</li>
+                </ul>
+            </div>
+            <div class="cap-card limited">
+                <h4>Limited Support</h4>
+                <ul>
+                    <li><strong>Irete / Crypto</strong> - SHA256, UUID</li>
+                    <li><strong>Opele / Oracle</strong> - Random Odu</li>
+                </ul>
+            </div>
+            <div class="cap-card unsupported">
+                <h4>Not Available</h4>
+                <ul>
+                    <li><strong>Odi / Fs</strong> - File system</li>
+                    <li><strong>Otura / Net</strong> - Network</li>
+                    <li><strong>Osa / Async</strong> - Threading</li>
+                    <li><strong>Ogbe / Sys</strong> - OS access</li>
+                    <li><strong>Ohun / Audio</strong> - Audio I/O</li>
+                    <li><strong>Fidio / Video</strong> - Video I/O</li>
+                    <li><strong>Coop / FFI</strong> - FFI calls</li>
+                </ul>
+            </div>
+        </div>
+        <p style="text-align: center;"><a href="../getting-started/install.html" style="color: var(--gold);">Install locally</a> for full domain access.</p>
+    </div>
+
+    <script type="module">
+        import init, { run_code, get_version } from './wasm/ifa_wasm.js';
+        let wasmReady = false;
+        async function initWasm() {
+            try { await init(); wasmReady = true; document.getElementById('status').textContent = get_version(); }
+            catch (e) { document.getElementById('output').textContent = 'WASM load error: ' + e; }
+        }
+        window.runCode = function() {
+            if (!wasmReady) { document.getElementById('output').textContent = 'WASM loading...'; return; }
+            const code = document.getElementById('code-editor').value;
+            try { document.getElementById('output').textContent = run_code(code) || '(no output)'; }
+            catch (e) { document.getElementById('output').textContent = 'Error: ' + e; }
+        };
+        initWasm();
+    </script>
+
+    <script>
+        const examples = {
+            hello: 'ayanmo oruko = "World";\nIrosu.fo("Hello, " + oruko + "!");',
+            math: 'ayanmo a = 25;\nayanmo b = 7;\nIrosu.fo("Sum: " + (a + b));\nIrosu.fo("Product: " + (a * b));',
+            strings: 'ayanmo text = "Ifa is wisdom";\nIrosu.fo("Length: " + Ika.len(text));\nIrosu.fo("Upper: " + Ika.uppercase(text));',
+            lists: 'ayanmo nums = [1, 2, 3, 4, 5];\nIrosu.fo("List: " + nums);\nIrosu.fo("Sum: " + Ogunda.sum(nums));'
+        };
+        function loadExample(name) { document.getElementById('code-editor').value = examples[name] || ''; }
+        
+        let inYoruba = true;
+        const yToE = { 'ayanmo': 'let', 'Irosu': 'Fmt', 'Ika': 'String', 'Ogunda': 'List', '.fo(': '.println(' };
+        const eToY = {}; for (const [y, e] of Object.entries(yToE)) { eToY[e] = y; }
+        function toggleEditorLang() {
+            const editor = document.getElementById('code-editor');
+            let code = editor.value;
+            const map = inYoruba ? yToE : eToY;
+            for (const [f, t] of Object.entries(map)) { code = code.split(f).join(t); }
+            editor.value = code;
+            inYoruba = !inYoruba;
+        }
+    </script>
+</body>
+</html>

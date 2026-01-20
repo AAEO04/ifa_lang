@@ -34,13 +34,17 @@ toml = "0.8"
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 
 # Datetime
-chrono = "0.4"
+chrono.workspace = true
 
 # Self Update
 self_update = "0.39"
 uuid = { version = "1.0", features = ["v4"] }
-reqwest = { version = "0.11", features = ["blocking", "json"] }
+reqwest = { workspace = true, features = ["blocking", "json"] }
 flate2 = "1.0"
 tar = "0.4"
-ring = "0.17"
+ring.workspace = true
+
+# System info for memory tracking
+sysinfo = "0.30"
+
 

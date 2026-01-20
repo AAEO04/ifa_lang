@@ -26,6 +26,10 @@ export function activate(context: ExtensionContext) {
         startLanguageServer(context);
     }
 
+    // Register Debug Adapter
+    const factory = new IfaDebugAdapterDescriptorFactory();
+    context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('ifa', factory));
+
     outputChannel.appendLine('Ifa-Lang extension activated');
 }
 
@@ -211,4 +215,22 @@ export function deactivate(): Thenable<void> | undefined {
         return undefined;
     }
     return client.stop();
+}
+return client.stop();
+}
+
+class IfaDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
+    createDebugAdapterDescriptor(session: vscode.DebugSession, executable: vscode.DebugAdapterExecutable | undefined): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
+        const config = workspace.getConfiguration('ifa');
+        const ifaPath = config.get<string>('path', 'ifa');
+
+        // Use the program path from launch config if available
+        const program = session.configuration.program;
+        const args = ['debug'];
+        if (program) {
+            args.push('--file', program);
+        }
+
+        return new vscode.DebugAdapterExecutable(ifaPath, args);
+    }
 }

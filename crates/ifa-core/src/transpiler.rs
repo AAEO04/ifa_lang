@@ -446,6 +446,12 @@ fn main() {{
             Statement::Expr { expr, .. } => {
                 format!("{}{};", indent, self.transpile_expression(expr))
             }
+
+            // Ẹbọ - Sacrifice/aspect directive
+            Statement::Ebo { offering, .. } => {
+                let val = self.transpile_expression(offering);
+                format!("{}// EBO: Initiating aspect with {}", indent, val)
+            }
         }
     }
 
@@ -504,7 +510,7 @@ fn main() {{
 
             // ÌKÁ (0100) - Strings
             ("ika", "so") | ("ika", "concat") => {
-                format!("format!(\"{{}}{{}}\", {})", args.iter().map(|a| format!("{}", a)).collect::<Vec<_>>().join(", "))
+                format!("format!(\"{{}}{{}}\", {})", args.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(", "))
             }
             ("ika", "gigun") | ("ika", "len") => {
                 if let Some(arg) = args.first() {

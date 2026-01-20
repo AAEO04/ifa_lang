@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static Site Generator - Ifa-Lang Use Cases</title>
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
+    <script src="../../js/common.js" defer></script>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <h1>Static Site Generator</h1>
+        <p>Build a static site generator using Ifa-Lang's file I/O and string processing.</p>
+
+        <h2>Overview</h2>
+        <p>This example demonstrates using <strong>Odi (Fs)</strong> for file operations and <strong>Ika (String)</strong> for template processing.</p>
+
+        <h2>Domains Used</h2>
+        <ul>
+            <li><strong>Odi / Fs</strong> - Read markdown files, write HTML output</li>
+            <li><strong>Ika / String</strong> - Template substitution, markdown parsing</li>
+            <li><strong>Ogunda / List</strong> - File lists, navigation</li>
+            <li><strong>Irosu / Fmt</strong> - Build logging</li>
+        </ul>
+
+        <h2>Code Example</h2>
+        <pre><code>// Static Site Generator
+ayanmo template = Odi.ka("template.html");
+ayanmo posts = Odi.akojopo("posts/*.md");
+
+fun post ninu posts {
+    ayanmo content = Odi.ka(post);
+    ayanmo html = markdown_to_html(content);
+    ayanmo output = Ika.ropo(template, "{{content}}", html);
+    
+    ayanmo filename = Ika.ropo(post, ".md", ".html");
+    Odi.ko("public/" + filename, output);
+    Irosu.fo("Built: " + filename);
+}
+
+Irosu.fo("Site generated!");</code></pre>
+
+        <h2>Template System</h2>
+        <pre><code>// Simple template engine
+ese markdown_to_html(text) {
+    ayanmo result = text;
+    
+    // Headers
+    result = Ika.ropo(result, "# ", "&lt;h1&gt;");
+    result = Ika.ropo(result, "## ", "&lt;h2&gt;");
+    
+    // Bold
+    result = Ika.ropo(result, "**", "&lt;strong&gt;");
+    
+    pada result;
+}</code></pre>
+
+        <footer class="doc-footer">
+            <p><a href="index.html">Back to Use Cases</a></p>
+        </footer>
+    </div>
+</body>
+</html>

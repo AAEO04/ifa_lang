@@ -1,22 +1,22 @@
 # Ifá-Lang Spec Validation Check
 # Testing newly added functions from the strict spec
 
-gbé Ogbè;
-gbé Ọ̀yẹ̀kú;
-gbé Ìwòrì;
-gbé Òdí;
-gbé Ìrosù;
-gbé Ọ̀wọ́nrín;
-gbé Ọ̀bàrà;
-gbé Ọ̀kànràn;
-gbé Ògúndá;
-gbé Ọ̀sá;
-gbé Ìká;
-gbé Òtúúrúpọ̀n;
-gbé Òtúrá;
-gbé Ìrẹtẹ̀;
-gbé Ọ̀ṣẹ́;
-gbé Òfún;
+ìbà Ogbè;
+ìbà Ọ̀yẹ̀kú;
+ìbà Ìwòrì;
+ìbà Òdí;
+ìbà Ìrosù;
+ìbà Ọ̀wọ́nrín;
+ìbà Ọ̀bàrà;
+ìbà Ọ̀kànràn;
+ìbà Ògúndá;
+ìbà Ọ̀sá;
+ìbà Ìká;
+ìbà Òtúúrúpọ̀n;
+ìbà Òtúrá;
+ìbà Ìrẹtẹ̀;
+ìbà Ọ̀ṣẹ́;
+ìbà Òfún;
 
 # 1. Ogbè (The Opener)
 Ìrosù.fo("[TEST] Checking Ogbè...");

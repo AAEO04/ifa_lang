@@ -201,11 +201,12 @@ impl IfaFfi {
         }
 
         let config = config.unwrap_or_default();
+        let _timeout = if config.timeout_sec > 0 { config.timeout_sec } else { 30 };
 
         match language {
             #[cfg(feature = "js")]
             "js" | "javascript" => {
-                println!("[FFI] Summoning JavaScript bridge...");
+                println!("[FFI] Summoning JavaScript bridge (timeout: {}s)...", timeout);
                 Ok(())
             }
             #[cfg(feature = "python")]
@@ -360,12 +361,23 @@ impl IfaFfi {
         match backend {
             Backend::Native(_) => {
                 let key = format!("{}.{}", lib, func);
-                let _bound = self.functions.get(&key)
-                    .ok_or_else(|| FfiError::FunctionNotFound(key))?;
+                let bound = self.functions.get(&key)
+                    .ok_or_else(|| FfiError::FunctionNotFound(key.clone()))?;
                 
-                // Real implementation would need dyncall or libffi-sys to call arbitrary ptrs
-                // For now, we'll keep the error loud instead of silent failure
-                Err(FfiError::CallFailed(format!("Native dynamic call for {}({:?}) requires libffi-sys (Phase 2)", func, args)))
+                #[cfg(feature = "native_ffi")]
+                {
+                    self.call_native_libffi(bound, args)
+                }
+                
+                #[cfg(not(feature = "native_ffi"))]
+                {
+                    let _ = bound;
+                    Err(FfiError::CallFailed(format!(
+                        "Native dynamic call for {}({:?}) requires native_ffi feature. \
+                         Rebuild with --features native_ffi",
+                        func, args
+                    )))
+                }
             }
             #[cfg(feature = "js")]
             Backend::JavaScript { context } => {
@@ -399,8 +411,119 @@ impl IfaFfi {
                     Ok(self.py_to_ffi(result))
                 })
             }
+            // Feature-gated backends may not all be present
             #[allow(unreachable_patterns)]
             _ => Err(FfiError::CallFailed("Selected FFI backend not included in this build".into())),
+        }
+    }
+    
+    /// Native function call implementation using libffi
+    #[cfg(feature = "native_ffi")]
+    fn call_native_libffi(&self, bound: &BoundFunction, args: &[FfiValue]) -> FfiResult<FfiValue> {
+        use libffi::high::{call, Arg};
+        use libffi::low::CodePtr;
+        
+        // Verify argument count
+        if args.len() != bound.sig.arg_types.len() {
+            return Err(FfiError::TypeMismatch(format!(
+                "{}: expected {} args, got {}",
+                bound.name, bound.sig.arg_types.len(), args.len()
+            )));
+        }
+        
+        // Build argument list for libffi
+        // We need to hold the actual values in memory
+        let mut i32_args: Vec<i32> = Vec::new();
+        let mut i64_args: Vec<i64> = Vec::new();
+        let mut f64_args: Vec<f64> = Vec::new();
+        let mut str_args: Vec<std::ffi::CString> = Vec::new();
+        
+        for (i, (val, expected_type)) in args.iter().zip(bound.sig.arg_types.iter()).enumerate() {
+            match (val, expected_type) {
+                (FfiValue::I32(v), IfaType::I32) => i32_args.push(*v),
+                (FfiValue::I64(v), IfaType::I64) => i64_args.push(*v),
+                (FfiValue::I32(v), IfaType::I64) => i64_args.push(*v as i64),
+                (FfiValue::F64(v), IfaType::F64) => f64_args.push(*v),
+                (FfiValue::Str(s), IfaType::Str) => {
+                    str_args.push(std::ffi::CString::new(s.as_str())
+                        .map_err(|_| FfiError::TypeMismatch("String contains null byte".into()))?);
+                }
+                _ => return Err(FfiError::TypeMismatch(format!(
+                    "Arg {}: cannot convert {:?} to {:?}",
+                    i, val, expected_type
+                ))),
+            }
+        }
+        
+        // Build the Arg vector for the call
+        let mut ffi_args: Vec<Arg> = Vec::with_capacity(args.len());
+        let mut i32_idx = 0;
+        let mut i64_idx = 0;
+        let mut f64_idx = 0;
+        let mut str_idx = 0;
+        
+        for (val, expected_type) in args.iter().zip(bound.sig.arg_types.iter()) {
+            match (val, expected_type) {
+                (FfiValue::I32(_), IfaType::I32) => {
+                    ffi_args.push(Arg::new(&i32_args[i32_idx]));
+                    i32_idx += 1;
+                }
+                (FfiValue::I64(_), IfaType::I64) | (FfiValue::I32(_), IfaType::I64) => {
+                    ffi_args.push(Arg::new(&i64_args[i64_idx]));
+                    i64_idx += 1;
+                }
+                (FfiValue::F64(_), IfaType::F64) => {
+                    ffi_args.push(Arg::new(&f64_args[f64_idx]));
+                    f64_idx += 1;
+                }
+                (FfiValue::Str(_), IfaType::Str) => {
+                    ffi_args.push(Arg::new(&str_args[str_idx].as_ptr()));
+                    str_idx += 1;
+                }
+                _ => unreachable!(), // Already validated above
+            }
+        }
+        
+        // Make the call based on return type
+        let code_ptr = CodePtr::from_ptr(bound.ptr as *const _);
+        
+        unsafe {
+            match bound.sig.ret_type {
+                IfaType::Void => {
+                    call::<()>(code_ptr, ffi_args.as_slice());
+                    Ok(FfiValue::Null)
+                }
+                IfaType::I32 => {
+                    let result: i32 = call(code_ptr, ffi_args.as_slice());
+                    Ok(FfiValue::I32(result))
+                }
+                IfaType::I64 => {
+                    let result: i64 = call(code_ptr, ffi_args.as_slice());
+                    Ok(FfiValue::I64(result))
+                }
+                IfaType::F64 => {
+                    let result: f64 = call(code_ptr, ffi_args.as_slice());
+                    Ok(FfiValue::F64(result))
+                }
+                IfaType::Ptr => {
+                    let result: usize = call(code_ptr, ffi_args.as_slice());
+                    Ok(FfiValue::Ptr(result))
+                }
+                IfaType::U8 => {
+                    let result: u8 = call(code_ptr, ffi_args.as_slice());
+                    Ok(FfiValue::U8(result))
+                }
+                IfaType::Str => {
+                    // C strings returned from FFI - be careful with ownership!
+                    let result: *const std::os::raw::c_char = call(code_ptr, ffi_args.as_slice());
+                    if result.is_null() {
+                        Ok(FfiValue::Null)
+                    } else {
+                        let c_str = std::ffi::CStr::from_ptr(result);
+                        Ok(FfiValue::Str(c_str.to_string_lossy().into_owned()))
+                    }
+                }
+            }
         }
     }
 

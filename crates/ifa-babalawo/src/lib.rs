@@ -18,3 +18,6 @@ pub use history::{StateHistoryBuffer, StateSnapshot};
 pub use iwa::{IwaEngine, LIFECYCLE_RULES, ResourceDebt};
 pub use taboo::{Taboo, TabooEnforcer, TabooViolation};
 pub use wisdom::{ERROR_TO_ODU, ODU_WISDOM, OduWisdom};
+
+// Re-export Odu from core for tests
+pub use ifa_core::lexer::OduDomain as Odu;

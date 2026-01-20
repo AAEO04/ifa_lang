@@ -35,6 +35,12 @@ impl IpcMessage {
 /// The Fusion Runtime
 pub struct FusionRuntime;
 
+impl Default for FusionRuntime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FusionRuntime {
     pub fn new() -> Self {
         FusionRuntime

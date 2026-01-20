@@ -411,6 +411,10 @@ impl Compiler {
             Statement::Match { .. } => {
                 return Err(crate::error::IfaError::Runtime("Bytecode compilation for 'match' not yet implemented".to_string()));
             }
+
+            Statement::Ebo { .. } => {
+                // Ebo (sacrifice) is a semantic directive, no bytecode emitted
+            }
         }
         Ok(())
     }
@@ -613,6 +617,7 @@ impl Compiler {
 /// Convert OduDomain to byte
 fn domain_to_byte(domain: &OduDomain) -> u8 {
     match domain {
+        // Core 16 Odù
         OduDomain::Ogbe => 0,
         OduDomain::Oyeku => 1,
         OduDomain::Iwori => 2,
@@ -629,8 +634,22 @@ fn domain_to_byte(domain: &OduDomain) -> u8 {
         OduDomain::Irete => 13,
         OduDomain::Ose => 14,
         OduDomain::Ofun => 15,
-        OduDomain::Coop => 16,  // Pseudo-domain for FFI
-        OduDomain::Opele => 17, // Pseudo-domain for Divination
+        // Pseudo-domains
+        OduDomain::Coop => 16,
+        OduDomain::Opele => 17,
+        // Infrastructure Layer
+        OduDomain::Cpu => 18,
+        OduDomain::Gpu => 19,
+        OduDomain::Storage => 20,
+        OduDomain::Ohun => 27,    // Audio
+        OduDomain::Fidio => 28,   // Video
+        // Application Stacks
+        OduDomain::Backend => 21,
+        OduDomain::Frontend => 22,
+        OduDomain::Crypto => 23,
+        OduDomain::Ml => 24,
+        OduDomain::GameDev => 25,
+        OduDomain::Iot => 26,
     }
 }
 

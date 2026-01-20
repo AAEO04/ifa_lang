@@ -26,6 +26,8 @@ use alloc::format;
 use alloc::vec::Vec;
 #[cfg(not(feature = "backend"))]
 use alloc::vec;
+#[cfg(not(feature = "backend"))]
+use alloc::collections::VecDeque;
 
 #[cfg(feature = "backend")]
 macro_rules! log {
@@ -331,9 +333,9 @@ pub struct EmbeddedSerial {
     baud: u32,
     initialized: bool,
     #[cfg(feature = "iot")]
-    buffer: heapless::Vec<u8, 256>, // Bounded to 256 bytes
+    buffer: heapless::Deque<u8, 256>, // Bounded ring buffer (256 bytes)
     #[cfg(not(feature = "iot"))]
-    buffer: Vec<u8>,
+    buffer: VecDeque<u8>,
 }
 
 impl EmbeddedSerial {
@@ -342,9 +344,9 @@ impl EmbeddedSerial {
             baud: 0,
             initialized: false,
             #[cfg(feature = "iot")]
-            buffer: heapless::Vec::new(),
+            buffer: heapless::Deque::new(),
             #[cfg(not(feature = "iot"))]
-            buffer: Vec::new(),
+            buffer: VecDeque::new(),
         }
     }
 
@@ -376,16 +378,15 @@ impl EmbeddedSerial {
         self.write(s.as_bytes())
     }
 
-    /// Read available bytes
+    /// Read available bytes (O(n) copy, O(1) per-byte drain via ring buffer)
     pub fn read(&mut self, buffer: &mut [u8]) -> EmbeddedResult<usize> {
         if !self.initialized {
             return Err(EmbeddedError::NotInitialized);
         }
         let count = self.buffer.len().min(buffer.len());
-        buffer[..count].copy_from_slice(&self.buffer[..count]);
-        // Drain from the front
-        for _ in 0..count {
-            self.buffer.remove(0);
+        for i in 0..count {
+            // pop_front is O(1) for VecDeque and heapless::Deque
+            buffer[i] = self.buffer.pop_front().unwrap_or(0);
         }
         Ok(count)
     }
@@ -395,15 +396,15 @@ impl EmbeddedSerial {
         self.buffer.len()
     }
 
-    /// Buffer capacity (bounded)
+    /// Buffer capacity
     #[cfg(feature = "iot")]
     pub fn capacity(&self) -> usize {
-        256
+        self.buffer.capacity() // heapless::Deque returns N (256)
     }
 
     #[cfg(not(feature = "iot"))]
     pub fn capacity(&self) -> usize {
-        usize::MAX // Unbounded when not in IoT mode
+        self.buffer.capacity() // VecDeque's actual allocated capacity
     }
 }
 
@@ -527,7 +528,13 @@ impl Default for EmbeddedSPI {
 }
 
 /// Flash to embedded device via probe-rs
+///
+/// Requires `probe-rs` CLI to be installed (`cargo install probe-rs-tools`).
+/// Supported targets: esp32, esp32c3, stm32f4, rp2040, etc.
+#[cfg(feature = "backend")]
 pub fn flash(target: &str, binary_path: &str, port: Option<&str>) -> EmbeddedResult<()> {
+    use std::process::Command;
+
     log!(
         "Flashing to {} via {}",
         target,
@@ -535,11 +542,38 @@ pub fn flash(target: &str, binary_path: &str, port: Option<&str>) -> EmbeddedRes
     );
     log!("   Binary: {}", binary_path);
 
-    // Will use probe-rs for actual flashing
-    // For now, just simulate
-    log!("Flash complete!");
+    let mut cmd = Command::new("probe-rs");
+    cmd.arg("download")
+        .arg("--chip")
+        .arg(target)
+        .arg(binary_path);
 
+    if let Some(p) = port {
+        cmd.arg("--probe").arg(p);
+    }
+
+    let output = cmd.output().map_err(|e| {
+        EmbeddedError::IoError(format!("Failed to run probe-rs: {}", e))
+    })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(EmbeddedError::IoError(format!(
+            "probe-rs failed: {}",
+            stderr
+        )));
+    }
+
+    log!("Flash complete!");
     Ok(())
+}
+
+/// Flash stub for no_std (cannot invoke subprocesses)
+#[cfg(not(feature = "backend"))]
+pub fn flash(_target: &str, _binary_path: &str, _port: Option<&str>) -> EmbeddedResult<()> {
+    Err(EmbeddedError::IoError(
+        "Flashing requires std (use backend feature)".into(),
+    ))
 }
 
 /// Sensor reading helper
@@ -557,7 +591,7 @@ impl SensorReading {
             use std::time::{SystemTime, UNIX_EPOCH};
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or_default() // Avoid panic on pre-epoch clocks
                 .as_millis() as u64
         };
         #[cfg(not(feature = "backend"))]

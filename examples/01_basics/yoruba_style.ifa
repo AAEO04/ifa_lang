@@ -5,58 +5,45 @@
 // Both files compile to the EXACT SAME AST/bytecode!
 // ═══════════════════════════════════════════════════════════════════
 
-ìbà std.irosu;
-ìbà std.otura;
+ìbà Irosu;
+ìbà Otura;
 
 // Variables using 'ayanmo' (destiny) keyword
-ayanmo counter: Int = 0;
-ayanmo message = "Ẹ kú àbọ̀ sí Ifá!";
+ayanmọ counter = 0;
+ayanmọ message = "Ẹ kú àbọ̀ sí Ifá!";
 
 // Class using 'odù' keyword
 odù Server {
-    ayanmo port = 8080;
+    ayanmọ port = 8080;
     
     ese start() {
-        Ìrosù.fọ̀("Starting server...");
-        Òtúrá.dè(port);
+        Irosu.fo("Starting server...");
+        Otura.de(port);
     }
     
     ese handle(request) {
         ti port > 80 {
-            Ìrosù.fọ̀("Handling request");
+            Irosu.fo("Handling request");
         } bibẹkọ {
-            Ìrosù.fọ̀("Invalid port");
+            Irosu.fo("Invalid port");
         }
     }
 }
 
 // Control flow with Yoruba keywords
 nigba counter < 5 {
-    Ìrosù.fọ̀(counter);
+    Irosu.fo(counter);
     counter = counter + 1;
 }
 
 // For loop
-ayanmo items = [1, 2, 3, 4, 5];
+ayanmọ items = [1, 2, 3, 4, 5];
 fun item ninu items {
-    Ìrosù.fọ̀(item);
-}
-
-// Try/catch
-dida_ewu {
-    Òtúrá.rán("Sending data...");
-} kaka_ewu (err) {
-    Ìrosù.fọ̀("Error occurred");
-}
-
-// Critical section
-àṣẹ_pàtàkì {
-    // Transaction-safe code
-    Ìrosù.fọ̀("Critical operation");
+    Irosu.fo(item);
 }
 
 // Output
-Ìrosù.fọ̀(message);
-Ọ̀wọ́nrín.bọ̀(100);
+Irosu.fo(message);
+Owonrin.bo(100);
 
 àṣẹ;

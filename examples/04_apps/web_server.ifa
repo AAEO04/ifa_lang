@@ -45,7 +45,7 @@ ti Otura.de(PORT) {
                 ti data == "exit" {
                     Irosu.fo("Client requested exit");
                     Otura.ran("Goodbye from Ifá-Lang!");
-                    dabọ;  // Yoruba: break
+                    da;  // Yoruba: break
                 }
                 
                 // Echo back

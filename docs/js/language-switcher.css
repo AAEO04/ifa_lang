@@ -1,0 +1,134 @@
+/* Enhanced Language Switcher Styles */
+.switchable-word {
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px 3px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.switchable-word:hover {
+    background-color: rgba(255, 215, 0, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.switchable-word[data-lang="yoruba"] {
+    color: #2c5aa0;
+    font-weight: 500;
+}
+
+.switchable-word[data-lang="english"] {
+    color: #d35400;
+    font-weight: 500;
+}
+
+.switchable-word:active {
+    transform: scale(0.95);
+}
+
+/* Tooltip for switchable words */
+.switchable-word::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1000;
+}
+
+.switchable-word:hover::after {
+    opacity: 1;
+}
+
+/* Enhanced toggle buttons */
+.lang-toggle {
+    display: inline-flex;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    padding: 2px;
+    border: 1px solid #dee2e6;
+}
+
+.lang-toggle button {
+    padding: 6px 12px;
+    border: none;
+    background-color: transparent;
+    color: #6c757d;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.lang-toggle button.active {
+    background-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.lang-toggle button:hover:not(.active) {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+/* Animation for language switching */
+@keyframes wordSwitch {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.switchable-word.switching {
+    animation: wordSwitch 0.3s ease;
+}
+
+/* Code block enhancements */
+.code-example {
+    position: relative;
+}
+
+.code-example .switchable-word {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+/* Language indicator */
+.language-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 10;
+}
+
+.language-indicator.yoruba {
+    background-color: #2c5aa0;
+}
+
+.language-indicator.english {
+    background-color: #d35400;
+}

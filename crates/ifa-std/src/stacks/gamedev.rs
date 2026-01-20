@@ -692,25 +692,138 @@ impl Animation {
     }
 }
 
-/// Audio placeholder
+/// Game Audio System using rodio
+#[cfg(feature = "audio")]
+pub struct Audio {
+    _stream: Option<rodio::OutputStream>,
+    stream_handle: Option<rodio::OutputStreamHandle>,
+    music_sink: Option<rodio::Sink>,
+}
+
+#[cfg(feature = "audio")]
+impl Audio {
+    pub fn new() -> Result<Self, String> {
+        let (stream, handle) = rodio::OutputStream::try_default()
+            .map_err(|e| format!("No audio device: {}", e))?;
+        Ok(Audio {
+            _stream: Some(stream),
+            stream_handle: Some(handle),
+            music_sink: None,
+        })
+    }
+    
+    /// Play a sound effect (one-shot)
+    pub fn play_sound(&self, path: &str, volume: f32) -> Result<(), String> {
+        use rodio::{Decoder, Sink};
+        use std::fs::File;
+        use std::io::BufReader;
+        
+        let handle = self.stream_handle.as_ref()
+            .ok_or("No audio stream")?;
+        
+        let file = File::open(path).map_err(|e| format!("Cannot open: {}", e))?;
+        let source = Decoder::new(BufReader::new(file))
+            .map_err(|e| format!("Cannot decode: {}", e))?;
+        
+        let sink = Sink::try_new(handle)
+            .map_err(|e| format!("Cannot create sink: {}", e))?;
+        sink.set_volume(volume.clamp(0.0, 1.0));
+        sink.append(source);
+        sink.detach(); // Let it play to completion
+        Ok(())
+    }
+    
+    /// Start looping background music
+    pub fn play_music(&mut self, path: &str, looping: bool) -> Result<(), String> {
+        use rodio::{Decoder, Sink, Source};
+        use std::fs::File;
+        use std::io::BufReader;
+        
+        // Stop existing music
+        self.stop_music();
+        
+        let handle = self.stream_handle.as_ref()
+            .ok_or("No audio stream")?;
+        
+        let file = File::open(path).map_err(|e| format!("Cannot open: {}", e))?;
+        let source = Decoder::new(BufReader::new(file))
+            .map_err(|e| format!("Cannot decode: {}", e))?;
+        
+        let sink = Sink::try_new(handle)
+            .map_err(|e| format!("Cannot create sink: {}", e))?;
+        
+        if looping {
+            sink.append(source.repeat_infinite());
+        } else {
+            sink.append(source);
+        }
+        
+        self.music_sink = Some(sink);
+        Ok(())
+    }
+    
+    /// Stop background music
+    pub fn stop_music(&mut self) {
+        if let Some(sink) = self.music_sink.take() {
+            sink.stop();
+        }
+    }
+    
+    /// Set music volume
+    pub fn set_volume(&self, volume: f32) {
+        if let Some(sink) = &self.music_sink {
+            sink.set_volume(volume.clamp(0.0, 1.0));
+        }
+    }
+    
+    /// Pause music
+    pub fn pause_music(&self) {
+        if let Some(sink) = &self.music_sink {
+            sink.pause();
+        }
+    }
+    
+    /// Resume music
+    pub fn resume_music(&self) {
+        if let Some(sink) = &self.music_sink {
+            sink.play();
+        }
+    }
+}
+
+#[cfg(feature = "audio")]
+impl Default for Audio {
+    fn default() -> Self {
+        Audio::new().unwrap_or(Audio {
+            _stream: None,
+            stream_handle: None,
+            music_sink: None,
+        })
+    }
+}
+
+/// Fallback Audio stub (no audio feature)
+#[cfg(not(feature = "audio"))]
 pub struct Audio;
 
+#[cfg(not(feature = "audio"))]
 impl Audio {
-    pub fn play_sound(name: &str, volume: f32) {
-        println!("[AUDIO] Play: {} (vol: {})", name, volume);
+    pub fn new() -> Result<Self, String> { Ok(Audio) }
+    pub fn play_sound(&self, name: &str, volume: f32) -> Result<(), String> {
+        eprintln!("[AUDIO] Play: {} (vol: {}) - audio feature disabled", name, volume);
+        Ok(())
     }
+    pub fn play_music(&mut self, name: &str, looping: bool) -> Result<(), String> {
+        eprintln!("[AUDIO] Music: {} (loop: {}) - audio feature disabled", name, looping);
+        Ok(())
+    }
+    pub fn stop_music(&mut self) {}
+    pub fn set_volume(&self, _volume: f32) {}
+}
 
-    pub fn play_music(name: &str, looping: bool) {
-        println!("[AUDIO] Music: {} (loop: {})", name, looping);
-    }
-
-    pub fn stop_music() {
-        println!("[AUDIO] Music stopped");
-    }
-
-    pub fn set_volume(volume: f32) {
-        println!("[AUDIO] Volume: {}", volume);
-    }
+#[cfg(not(feature = "audio"))]
+impl Default for Audio {
+    fn default() -> Self { Audio }
 }
 
 #[cfg(test)]

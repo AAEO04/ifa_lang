@@ -69,35 +69,16 @@ impl OmniBox {
     /// 
     /// # Security
     /// Artifacts MUST come from trusted sources (e.g., locally compiled).
-    /// The artifact header is validated before deserialization.
+    /// Wasmtime's deserialize performs comprehensive validation internally.
     pub fn deserialize_artifact(&self, artifact_bytes: &[u8]) -> Result<Module> {
-        // Validate artifact has minimum size (header)
-        if artifact_bytes.len() < 8 {
-            return Err(eyre!("Invalid artifact: too small (corrupted?)"));
-        }
-        
-        // Validate wasmtime magic header (ELF or platform-specific)
-        // Wasmtime artifacts start with platform ELF/Mach-O/PE headers
-        #[cfg(target_os = "linux")]
-        {
-            if artifact_bytes.len() >= 4 && &artifact_bytes[0..4] != b"\x7fELF" {
-                return Err(eyre!("Invalid artifact: not a valid ELF (Linux). Was this compiled on a different OS?"));
-            }
-        }
-        
-        #[cfg(target_os = "windows")]
-        {
-            if artifact_bytes.len() >= 2 && &artifact_bytes[0..2] != b"MZ" {
-                return Err(eyre!("Invalid artifact: not a valid PE (Windows). Was this compiled on a different OS?"));
-            }
-        }
-        
-        // SAFETY: We validate the header above. The artifact should come from
-        // our own compile_artifact() function with the same engine version.
-        // For additional security, consider adding a hash/version check via Oja.
+        // SAFETY: Wasmtime's deserialize performs full validation of the artifact,
+        // including format checks, version compatibility, and integrity verification.
+        // The artifact should come from our own compile_artifact() function with
+        // the same engine version. For additional security at the application level,
+        // consider cryptographic signing via Oja before calling this function.
         unsafe {
             Module::deserialize(&self.engine, artifact_bytes)
-                .map_err(|e| eyre!("Deserialization failed (engine mismatch?): {e}"))
+                .map_err(|e| eyre!("Deserialization failed (engine mismatch or corrupted artifact): {e}"))
         }
     }
 

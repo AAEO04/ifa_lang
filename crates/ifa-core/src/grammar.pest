@@ -12,6 +12,7 @@ program = { SOI ~ statement* ~ EOI }
 statement = {
     import_stmt
     | opon_stmt
+    | ebo_stmt
     | var_decl
     | assignment_stmt
     | odu_def
@@ -34,13 +35,17 @@ module_path = { ident ~ ("." ~ ident)* }
 
 // Opon (memory) directive: #opon kekere; or opon: nla;
 opon_stmt = { opon_kw ~ ":"? ~ opon_size ~ ";"? }
-opon_kw = { "#opon" | "opon" | "#Opon" | "Opon" }
+opon_kw = { "#opon" | "opon" | "#Opon" | "Opon" | "#mem" | "mem" }
 opon_size = { 
     "kekere" | "kẹ́kẹ́rẹ́" | "small" | "tiny" | "embedded"
     | "arinrin" | "àrínrin" | "medium" | "standard" | "default"
     | "nla" | "nlá" | "large" | "big"
     | "ailopin" | "àìlópin" | "unlimited" | "dynamic" | "max"
 }
+
+// Ebo (offering/initiation): ebo "server"; or sacrifice config;
+ebo_stmt = { ebo_kw ~ expression ~ ";"? }
+ebo_kw = { "ebo" | "ẹbọ" | "sacrifice" }
 
 // Variable: ayanmo x = 5;
 var_decl = { var_kw ~ ident ~ type_hint? ~ "=" ~ expression ~ ";" }
@@ -82,7 +87,7 @@ taboo_kw = { "èèwọ̀" | "ewọ" | "taboo" }
 
 // Assertion: ewo x > 0; or assert balance >= 0;
 ewo_stmt = { ewo_kw ~ expression ~ ("," ~ string)? ~ ";" }
-ewo_kw = { "ewo" | "ẹ̀wọ̀" | "assert" }
+ewo_kw = { "ewo" | "ẹ̀wọ̀" | "assert" | "verify" }
 
 // End: ase;
 ase_stmt = { ase_kw ~ ";"? }

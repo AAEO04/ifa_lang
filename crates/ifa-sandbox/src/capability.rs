@@ -90,4 +90,23 @@ impl CapabilitySet {
             timestamp: format!("{:?}", std::time::SystemTime::now()),
         });
     }
+    
+    /// Revoke a previously granted capability
+    pub fn revoke(&mut self, cap: &Ofun) {
+        self.capabilities.retain(|c| c != cap);
+    }
+    
+    /// Inherit capabilities from a parent set
+    pub fn inherit_from(&mut self, parent: &CapabilitySet) {
+        for cap in &parent.capabilities {
+            if !self.capabilities.contains(cap) {
+                self.capabilities.push(cap.clone());
+            }
+        }
+    }
+    
+    /// Check if a specific capability is granted (exact match)
+    pub fn has(&self, cap: &Ofun) -> bool {
+        self.capabilities.contains(cap)
+    }
 }

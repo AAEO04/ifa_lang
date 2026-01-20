@@ -1,7 +1,7 @@
 use clap::Parser;
 use eframe::egui;
 use ifa_installer_core::{
-    args::InstallerArgs, check, config::InstallConfig, install, profiles::Profile, uninstall
+    args::InstallerArgs, check, config::InstallConfig, install, profiles, uninstall
 };
 use std::thread;
 use std::sync::mpsc::{channel, Receiver};
@@ -69,13 +69,12 @@ fn run_headless(args: InstallerArgs) {
     println!("Detected: {} {}", sys.os, sys.arch);
     
     let config = InstallConfig {
-        profile: args.profile,
         install_dir: args.dir.unwrap_or_else(|| dirs::home_dir().unwrap().join(".ifa")),
         ..Default::default()
     };
 
-    println!("Installing profile: {:?}", config.profile);
-    let components = config.profile.components();
+    println!("Installing Ifá-Lang (complete bundle)...");
+    let components = profiles::all_components();
     
     match install::install(&config, &components) {
         Ok(_) => println!("Installation complete!"),
@@ -86,7 +85,6 @@ fn run_headless(args: InstallerArgs) {
 #[derive(PartialEq)]
 enum AppState {
     Welcome,
-    ProfileSelect,
     Config,
     Installing,
     Finished,
@@ -123,7 +121,7 @@ impl InstallerApp {
             thread::sleep(std::time::Duration::from_millis(500)); // Sim delay
             
             let _ = tx.send("Checking requirements...".to_string());
-            let components = config.profile.components();
+            let components = profiles::all_components();
             
             match install::install(&config, &components) {
                 Ok(_) => { let _ = tx.send("Done!".to_string()); },
@@ -142,37 +140,18 @@ impl InstallerApp {
         });
     }
 
-    fn render_profile_card(&mut self, ui: &mut egui::Ui, profile: Profile, title: &str, desc: &str) {
-        let is_selected = self.config.profile == profile;
-        let bg_color = if is_selected { egui::Color32::from_rgb(30, 40, 30) } else { egui::Color32::from_gray(30) };
-        let border_color = if is_selected { IFA_GREEN } else { egui::Color32::TRANSPARENT };
-
-        let card = egui::Frame::group(ui.style())
-            .fill(bg_color)
-            .stroke(egui::Stroke::new(2.0, border_color))
-            .inner_margin(15.0)
-            .rounding(5.0);
-
-        card.show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.horizontal(|ui| {
-                ui.vertical(|ui| {
-                    ui.label(egui::RichText::new(title).size(18.0).strong());
-                    ui.label(desc);
+    fn render_components_list(&self, ui: &mut egui::Ui) {
+        ui.group(|ui| {
+            ui.label(egui::RichText::new("Components to Install:").strong());
+            ui.add_space(10.0);
+            for component in profiles::all_components() {
+                ui.horizontal(|ui| {
+                    ui.label("✓");
+                    ui.label(egui::RichText::new(&component.name).strong().color(IFA_GREEN));
+                    ui.label(format!("- {}", component.description));
                 });
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                   if ui.radio(is_selected, "").clicked() {
-                       self.config.profile = profile;
-                   }
-                });
-            });
-            // Use a stable, unique ID for this card's click interaction
-            let card_id = ui.make_persistent_id(format!("card_interact_{:?}", profile));
-            if ui.interact(ui.min_rect(), card_id, egui::Sense::click()).clicked() {
-                self.config.profile = profile;
             }
         });
-        ui.add_space(10.0);
     }
 }
 
@@ -197,7 +176,7 @@ impl eframe::App for InstallerApp {
                     self.render_header(ui, "Welcome to Ifá-Lang");
                     ui.vertical_centered(|ui| {
                         ui.label(egui::RichText::new("The Yoruba Programming Language Toolchain").size(16.0));
-                        ui.add_space(40.0);
+                        ui.add_space(20.0);
                         
                         // System Check Badge
                         ui.group(|ui| {
@@ -208,26 +187,17 @@ impl eframe::App for InstallerApp {
                              });
                         });
                         
-                        ui.add_space(40.0);
-                        if ui.add(egui::Button::new(egui::RichText::new("Get Started").size(18.0)).min_size([150.0, 40.0].into())).clicked() {
-                            self.state = AppState::ProfileSelect;
-                        }
+                        ui.add_space(20.0);
                     });
-                }
-                AppState::ProfileSelect => {
-                    self.render_header(ui, "Select Installation Profile");
-                    
-                    self.render_profile_card(ui, Profile::Fusion, "Fusion (Recommended)", "Fullstack Hybrid Support, ML Stacks, and Python Bridge.");
-                    self.render_profile_card(ui, Profile::Standard, "Standard", "Compiler, Oja Package Manager, and Standard Library.");
-                    self.render_profile_card(ui, Profile::Dev, "Developer", "Complete toolchain including LSP, Linter, and debugging tools.");
-                    self.render_profile_card(ui, Profile::Minimal, "Minimal", "Compiler and Package Manager only.");
+
+                    // Show what will be installed
+                    self.render_components_list(ui);
 
                     ui.add_space(20.0);
-                    ui.horizontal(|ui| {
-                         if ui.button("Back").clicked() { self.state = AppState::Welcome; }
-                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                             if ui.button("Next").clicked() { self.state = AppState::Config; }
-                         });
+                    ui.vertical_centered(|ui| {
+                        if ui.add(egui::Button::new(egui::RichText::new("Configure Installation").size(18.0)).min_size([200.0, 40.0].into())).clicked() {
+                            self.state = AppState::Config;
+                        }
                     });
                 }
                 AppState::Config => {
@@ -253,10 +223,13 @@ impl eframe::App for InstallerApp {
                     ui.checkbox(&mut self.config.update_shell, "Update Shell Profile (.bashrc/.zshrc)");
 
                     ui.add_space(40.0);
-                    ui.vertical_centered(|ui| {
-                        if ui.add(egui::Button::new(egui::RichText::new("INSTALL").size(20.0).strong()).fill(IFA_GREEN).min_size([200.0, 50.0].into())).clicked() {
-                            self.start_install();
-                        }
+                    ui.horizontal(|ui| {
+                        if ui.button("Back").clicked() { self.state = AppState::Welcome; }
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui.add(egui::Button::new(egui::RichText::new("INSTALL").size(20.0).strong()).fill(IFA_GREEN).min_size([200.0, 50.0].into())).clicked() {
+                                self.start_install();
+                            }
+                        });
                     });
                 }
                 AppState::Installing => {

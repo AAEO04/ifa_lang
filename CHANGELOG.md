@@ -7,9 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.2] - 2026-01-11
+## [1.2.2] - 2026-01-14
 
 ### Added
+
+#### Production Infrastructure Upgrades
+- **SHA-256**: Real FIPS 180-4 compliant implementation in interpreter (replaces placeholder hash)
+- **Base64**: RFC 4648 compliant encoding/decoding (replaces hex-encoding placeholder)
+- **Audio Domain (Ìrosù)**: Integrated `rodio` for audio playback, pause, resume, volume control
+- **Gamedev Audio**: Production audio system with sound effects and background music
+- **AjoseBridge Expansion**: Added `sin/cos/tan/log/exp/pow/floor/ceil/abs`, string ops, built-in intrinsics
+
+#### FFI Documentation
+- **Comprehensive FFI section** in `DOCS.md` covering Python, JavaScript, and native library support
+- **Workarounds documented** for native function calls (ctypes, plugins, intrinsics)
+- **Security requirements** for FFI capability flags
+
+### Changed
+- **AjoseBridge.rust()**: Now returns `Result<i64, String>` instead of `i64`
+- **Shell security**: Expanded blocked commands list (18 commands blocked)
+- **eval() blocked**: Dynamic code execution disabled for security
+
+### Security
+- **eval() removed**: Interpreter now blocks dangerous dynamic evaluation
+- **SQL placeholder fixed**: Returns proper error instead of empty list
+- **Shell command validation**: Case-insensitive blocking, length limits
+
+### Fixed
+- **Dead code warnings**: Fixed unused variables in `ffi.rs`, `cpu.rs`, `gpu.rs`
+- **Duplicate comments**: Removed duplicate comment lines in `lib.rs`
+- **Clippy suppressions**: Documented intentional suppressions
 
 #### Ìwòrì LSP Integration (Language Server)
 - **Full LSP Implementation**: Provides real-time feedback for IDEs.
@@ -32,10 +59,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Ọjà Package Manager Improvements
 - **Missing Commands**: Implemented `ifa oja run`, `test`, `install`, `list`, `add`, `remove`.
 - **Project Structure**: Improved `init` templates for different domains.
+- **Function Upgrades**: Enhanced dependency resolution and build pipeline integration.
+
+#### Ifá-Std Infrastructure (GPU & CPU)
+- **Compute Brackets**: New infrastructure for low-level CPU/GPU resource management.
+- **Benchmarks**: Integrated performance monitoring for standard library domains.
 
 ### Fixed
 - **IoT Stack Conflicts**: Resolved `impl std::error::Error` conflicts in `ifa-std/stacks/iot.rs`.
 - **CLI Compilation**: Fixed missing symbols and type inference issues in `ifa-cli`.
+- **Embedded Stability**: Resolved critical bugs in `ifa-embedded` affecting memory allocation on constrained devices.
+- **Sandbox Security (CVEs)**: Addressed multiple vulnerabilities in `ifa-sandbox`, including potential breakout points and instruction-level validation errors.
+
+### Security
+- **CI/CD Hardening**: Updated GitHub Actions workflows with enhanced security permissions and dependency auditing.
+- **Architectural Rules**: Integrated system-level security guidelines for "simple, functional, and non-spaghetti" code development.
 
 ---
 

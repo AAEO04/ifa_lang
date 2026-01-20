@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ifá-Lang vs Others - Comparison</title>
+    <meta name="description" content="Comparing Ifá-Lang type safety and features with TypeScript, Python, and Rust.">
+    <link rel="stylesheet" href="../js/common.css">
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Ifá-Lang Compared</h1>
+            <p class="subtitle">Type Safety, Philosophy, and Performance</p>
+        </header>
+
+        <div class="comparison-section">
+            <h2>vs. TypeScript</h2>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>TypeScript</th>
+                    <th>Ifá-Lang</th>
+                </tr>
+                <tr>
+                    <td><strong>Type System</strong></td>
+                    <td>Static (Compile-time)</td>
+                    <td>Dynamic (Runtime)</td>
+                </tr>
+                <tr>
+                    <td><strong>Safety</strong></td>
+                    <td>Checks types before running. Type erasure at runtime.</td>
+                    <td><strong>Runtime Type Checking</strong>. Values carry type info.</td>
+                </tr>
+                <tr>
+                    <td><strong>Philosophy</strong></td>
+                    <td>"JavaScript with Types"</td>
+                    <td><strong>Domain-Driven Standard Library</strong> (16 Odù)</td>
+                </tr>
+                <tr>
+                    <td><strong>Contracts</strong></td>
+                    <td>None built-in (needs libraries)</td>
+                    <td>Built-in <code>ewo</code> (assert) for invariants.</td>
+                </tr>
+                <tr>
+                    <td><strong>Linter/Static Analysis</strong></td>
+                    <td>ESLint (External)</td>
+                    <td><strong>Babalawo</strong> (Built-in). Checks unused vars, logic errors, and architectural
+                        violations.</td>
+                </tr>
+            </table>
+            <p><strong>Verdict:</strong> Use TypeScript for compile-time safety in large codebases. Use Ifá-Lang for a
+                Python-like development experience with the performance and safety of a Rust/WASM runtime.</p>
+        </div>
+
+        <div class="comparison-section">
+            <h2>vs. Python</h2>
+            <p>Ifá-Lang feels very similar to Python but compiles to optimized bytecode. The key difference is the
+                <strong>Runtime Model</strong>:
+            </p>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>Python</th>
+                    <th>Ifá-Lang</th>
+                </tr>
+                <tr>
+                    <td><strong>Concurrency</strong></td>
+                    <td>GIL (Global Interpreter Lock). Threading is limited.</td>
+                    <td><strong>Multithreading</strong> via <code>Osa</code> (Rayon). No GIL.</td>
+                </tr>
+                <tr>
+                    <td><strong>Sandboxing</strong></td>
+                    <td>No native sandbox. Requires containers (Docker).</td>
+                    <td><strong>Wasm Sandbox</strong> via <code>ifa-sandbox</code> (Wasmtime/WASI).</td>
+                </tr>
+                <tr>
+                    <td><strong>Mobile/Embedded</strong></td>
+                    <td>MicroPython (separate subset)</td>
+                    <td><strong>no_std Runtime</strong> via `ifa-embedded`. Targets ESP32/STM32.</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="comparison-section">
+            <h2>vs. JavaScript / Node.js</h2>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>Node.js</th>
+                    <th>Ifá-Lang</th>
+                </tr>
+                <tr>
+                    <td><strong>Web</strong></td>
+                    <td>Native (V8 Engine)</td>
+                    <td><strong>WASM</strong> via `ifa-wasm`. Runs in browser alongside JS.</td>
+                </tr>
+                <tr>
+                    <td><strong>Package Manager</strong></td>
+                    <td>npm (Huge ecosystem, supply chain risks)</td>
+                    <td><strong>Ọjà</strong> (Market). Curated, decentralized registry built in.</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="comparison-section">
+            <h2>vs. Rust</h2>
+            <p>Ifá-Lang is written in Rust and exposes its power through high-level domains:</p>
+            <ul>
+                <li><strong>Macros:</strong> Rust has `macro_rules!`. Ifá-Lang has <code>ifa-macros</code> for cultural
+                    enforcement (like `iwa_pele`).</li>
+                <li><strong>Ownership:</strong> Rust has strict borrow checker. Ifá-Lang has <strong>Ẹbọ</strong>
+                    (Sacrifice) - a simplified resource scope system.</li>
+            </ul>
+        </div>
+
+        <footer class="doc-footer">
+            <p><a href="../index.html">← Back to Documentation</a></p>
+        </footer>
+    </div>
+
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+
+</html>

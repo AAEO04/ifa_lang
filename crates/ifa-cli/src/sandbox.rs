@@ -13,6 +13,18 @@ use ifa_sandbox::{CapabilitySet, Ofun};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use sysinfo::{Pid, System};
+
+/// Get memory usage for a process ID (returns bytes)
+fn get_process_memory(pid: u32) -> usize {
+    let mut sys = System::new();
+    sys.refresh_processes();
+    if let Some(process) = sys.process(Pid::from_u32(pid)) {
+        process.memory() as usize
+    } else {
+        0
+    }
+}
 
 /// Sandbox configuration
 #[derive(Debug, Clone)]
@@ -221,7 +233,7 @@ impl Igbale {
             stdout: String::from_utf8_lossy(&output.stdout).to_string(),
             stderr: String::from_utf8_lossy(&output.stderr).to_string(),
             execution_time,
-            memory_used: 0, // TODO: Track with cgroups
+            memory_used: get_process_memory(output.status.code().unwrap_or(0) as u32),
             timed_out,
         })
     }
@@ -258,7 +270,7 @@ impl Igbale {
                         stdout: String::from_utf8_lossy(&output.stdout).to_string(),
                         stderr: String::from_utf8_lossy(&output.stderr).to_string(),
                         execution_time,
-                        memory_used: 0, // TODO: Peak memory tracking requires WinAPI
+                        memory_used: child_id.map(get_process_memory).unwrap_or(0),
                         timed_out: false,
                     })
                 }

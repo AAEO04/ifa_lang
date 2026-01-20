@@ -1,0 +1,7 @@
+// verifying uppercase naming convention
+ayanmo PI = 3.14159;
+ayanmo MAX_USERS = 100;
+ayanmo CONFIG_PATH = "/etc/config";
+
+Irosu.sọ("PI:", PI);
+Irosu.sọ("Max:", MAX_USERS);

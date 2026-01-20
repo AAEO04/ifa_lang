@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Language Switcher Demo - Ifá-Lang</title>
+    <link rel="stylesheet" href="js/common.css">
+    <link rel="stylesheet" href="js/language-switcher.css">
+    <style>
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .info-box {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .word-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .word-item {
+            background-color: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>Enhanced Language Switcher Demo</h1>
+        <p>Click on any blue/orange word in the code examples to switch between Yoruba and English!</p>
+        
+        <div class="controls">
+            <div class="lang-toggle">
+                <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                <button class="toggle-english" onclick="setLang('english')">English</button>
+            </div>
+            <button onclick="switchLanguage()" style="margin-left: 10px;">Toggle All</button>
+        </div>
+
+        <div class="demo-section">
+            <h2>Hello World Example</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">hello.ifa</span>
+                    <div class="language-indicator yoruba">Yoruba</div>
+                </div>
+                <pre><code>// Ifá-Lang Hello World
+ayanmo oruko = "Ifá";
+Irosu.fo("Kaabo, " + oruko + "!");
+
+// Function definition
+ese kaabo() {
+    ti (oruko != "") {
+        pada "Kaabo, " + oruko;
+    } bibẹkọ {
+        pada "Kaabo!";
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>Cryptography Example</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">crypto.ifa</span>
+                    <div class="language-indicator yoruba">Yoruba</div>
+                </div>
+                <pre><code>// Hash a message with Irete (Crypto)
+ayanmo ifiranṣẹ = "Ifá is wisdom";
+ayanmo hash = Irete.sha256(ifiranṣẹ);
+Irosu.fo("SHA256: " + hash);
+
+// Generate a UUID
+ayanmo id = Irete.uuid();
+Irosu.fo("UUID: " + id);
+
+// Boolean operations
+ayanmo otito = true;
+ayanmo aro = false;
+
+// Loop example
+fun i ninu Iwori.range(1, 5) {
+    Irosu.fo("Number: " + i);
+}</code></pre>
+            </div>
+
+            <h2>Network Example</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">network.ifa</span>
+                    <div class="language-indicator yoruba">Yoruba</div>
+                </div>
+                <pre><code>// Fetch data from API
+ayanmo response = Otura.get("https://api.example.com/users");
+
+ti (response["status"] >= 200) {
+    // Parse JSON response
+    ayanmo users = Ogbe.parse_json(response["body"]);
+    
+    fun user ninu users {
+        Irosu.fo("User: " + user["name"]);
+    }
+} bibẹkọ {
+    Irosu.kigbe("Request failed!");
+}</code></pre>
+            </div>
+
+            <h2>Concurrency Example</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">concurrency.ifa</span>
+                    <div class="language-indicator yoruba">Yoruba</div>
+                </div>
+                <pre><code>// Parallel data processing
+ayanmo numbers = Iwori.range(1, 1000);
+ayanmo sum = Osa.sum(numbers);
+ayanmo max = Osa.max(numbers);
+ayanmo min = Osa.min(numbers);
+
+Irosu.fo("Sum: " + sum);
+Irosu.fo("Max: " + max);
+Irosu.fo("Min: " + min);</code></pre>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>Available Word Mappings</h2>
+            <div class="info-box">
+                <strong>How it works:</strong> Each word in the code is mapped to its Yoruba and English equivalents. 
+                Click any highlighted word to switch it individually, or use the toggle buttons to switch all words at once.
+            </div>
+            <div id="word-mappings" class="word-list">
+                <!-- Word mappings will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>Features</h2>
+            <ul>
+                <li><strong>Individual Word Switching:</strong> Click any highlighted word to switch just that word</li>
+                <li><strong>Global Language Toggle:</strong> Use Yoruba/English buttons to switch all words</li>
+                <li><strong>Visual Feedback:</strong> Words are color-coded (blue for Yoruba, orange for English)</li>
+                <li><strong>Hover Effects:</strong> Hover over words to see interactive feedback</li>
+                <li><strong>Smooth Animations:</strong> Words animate when switching</li>
+                <li><strong>Comprehensive Mappings:</strong> Covers keywords, operators, domains, and more</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="js/language-switcher.js"></script>
+    <script>
+        // Populate word mappings display
+        function displayWordMappings() {
+            const container = document.getElementById('word-mappings');
+            const mappings = [
+                { canonical: 'import', yoruba: 'iba/ìbà', english: 'import' },
+                { canonical: 'let', yoruba: 'ayanmo/àyànmọ́', english: 'let/var' },
+                { canonical: 'function', yoruba: 'ese/ẹsẹ', english: 'fn/function/def' },
+                { canonical: 'if', yoruba: 'ti/bí', english: 'if' },
+                { canonical: 'else', yoruba: 'bibẹkọ', english: 'else' },
+                { canonical: 'while', yoruba: 'nigba', english: 'while' },
+                { canonical: 'for', yoruba: 'fun', english: 'for' },
+                { canonical: 'in', yoruba: 'ninu', english: 'in' },
+                { canonical: 'return', yoruba: 'pada', english: 'return' },
+                { canonical: 'and', yoruba: 'ati', english: 'and/&&' },
+                { canonical: 'or', yoruba: 'tabi', english: 'or/||' },
+                { canonical: 'not', yoruba: 'kii', english: 'not/!' },
+                { canonical: 'true', yoruba: 'otito', english: 'true' },
+                { canonical: 'false', yoruba: 'iro', english: 'false' },
+                { canonical: 'Ogbe', yoruba: 'Ogbe/Ogbè', english: 'Ogbe' },
+                { canonical: 'Irete', yoruba: 'Irete/Ìrẹtẹ̀', english: 'Irete' }
+            ];
+
+            container.innerHTML = mappings.map(mapping => `
+                <div class="word-item">
+                    <strong>${mapping.canonical}</strong><br>
+                    <small>
+                        🇾🇹 ${mapping.yoruba}<br>
+                        🇺🇸 ${mapping.english}
+                    </small>
+                </div>
+            `).join('');
+        }
+
+        // Update language indicators
+        function updateLanguageIndicators() {
+            document.querySelectorAll('.language-indicator').forEach(indicator => {
+                indicator.className = `language-indicator ${currentLanguage}`;
+                indicator.textContent = currentLanguage === 'yoruba' ? 'Yoruba' : 'English';
+            });
+        }
+
+        // Override switchLanguage to update indicators
+        const originalSwitchLanguage = switchLanguage;
+        switchLanguage = function(targetLang) {
+            const result = originalSwitchLanguage(targetLang);
+            updateLanguageIndicators();
+            return result;
+        };
+
+        // Override setLang to update indicators
+        const originalSetLang = setLang;
+        setLang = function(lang) {
+            originalSetLang(lang);
+            updateLanguageIndicators();
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            displayWordMappings();
+            updateLanguageIndicators();
+        });
+    </script>
+</body>
+</html>

@@ -42,8 +42,11 @@ fn validate_uninstall_dir(install_dir: &Path) -> Result<(), UninstallError> {
     
     #[cfg(windows)]
     {
-        let win_dir = std::env::var("windir").map(Path::new).unwrap_or(Path::new("C:\\Windows"));
-        if canonical.starts_with(win_dir) || canonical == Path::new("C:\\") {
+        use std::path::PathBuf;
+        let win_dir: PathBuf = std::env::var("windir")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("C:\\Windows"));
+        if canonical.starts_with(&win_dir) || canonical == Path::new("C:\\") {
             return Err(UninstallError::InvalidPath(format!("Path {:?} is a protected system directory", canonical)));
         }
     }
@@ -68,14 +71,14 @@ pub fn uninstall(install_dir: &Path) -> Result<(), UninstallError> {
     // 1. Remove from PATH
     #[cfg(target_os = "windows")]
     {
-        use crate::platform::windows::remove_from_path;
-        remove_from_path(install_dir).map_err(|e| UninstallError::Platform(e.to_string()))?;
+        crate::platform::remove_from_path(install_dir)
+            .map_err(|e| UninstallError::Platform(e.to_string()))?;
     }
     
     #[cfg(unix)]
     {
-        use crate::platform::unix::remove_from_path;
-        remove_from_path(install_dir).map_err(|e| UninstallError::Platform(e.to_string()))?;
+        crate::platform::remove_from_path(install_dir)
+            .map_err(|e| UninstallError::Platform(e.to_string()))?;
     }
 
     // 2. Delete files

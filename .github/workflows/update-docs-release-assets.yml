@@ -1,4 +1,4 @@
-# Updates docs/*.html download links to point at the released assets (browser_download_url)
+# Updates docs/*.html download links to point at the released installer assets
 # Runs when a release is published.
 
 name: Update Docs Release Assets
@@ -27,43 +27,59 @@ jobs:
           TAG="${{ github.event.release.tag_name }}"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           
-          # Get all asset URLs
-          gh release view "$TAG" --json assets -q '.assets[] | "\(.name)|\(.url)"' > assets.txt
-          
-          # Find Windows asset (.exe or setup)
-          WINDOWS_URL=$(gh release view "$TAG" --json assets -q '.assets[] | select(.name | test("windows.*setup.*\\.exe$|setup.*windows.*\\.exe$|\\.exe$")) | .url' | head -1)
+          # Find Windows installer
+          WINDOWS_URL=$(gh release view "$TAG" --json assets -q '.assets[] | select(.name | test("ifa-installer.*windows.*\\.exe$")) | .url' | head -1)
           echo "windows_url=$WINDOWS_URL" >> $GITHUB_OUTPUT
           
-          # Find Linux asset (.tar.gz or .tgz)
-          LINUX_URL=$(gh release view "$TAG" --json assets -q '.assets[] | select(.name | test("linux.*\\.(tar\\.gz|tgz|zip)$")) | .url' | head -1)
+          # Find Linux binary (for curl | sh)
+          LINUX_URL=$(gh release view "$TAG" --json assets -q '.assets[] | select(.name | test("^ifa-.*linux-x86_64$")) | .url' | head -1)
           echo "linux_url=$LINUX_URL" >> $GITHUB_OUTPUT
           
-          echo "Found Windows: $WINDOWS_URL"
+          # Find macOS ARM binary
+          MACOS_ARM_URL=$(gh release view "$TAG" --json assets -q '.assets[] | select(.name | test("^ifa-.*macos-arm64$")) | .url' | head -1)
+          echo "macos_arm_url=$MACOS_ARM_URL" >> $GITHUB_OUTPUT
+          
+          # Find macOS Intel binary
+          MACOS_INTEL_URL=$(gh release view "$TAG" --json assets -q '.assets[] | select(.name | test("^ifa-.*macos-x86_64$")) | .url' | head -1)
+          echo "macos_intel_url=$MACOS_INTEL_URL" >> $GITHUB_OUTPUT
+          
+          echo "Found Windows installer: $WINDOWS_URL"
           echo "Found Linux: $LINUX_URL"
+          echo "Found macOS ARM: $MACOS_ARM_URL"
+          echo "Found macOS Intel: $MACOS_INTEL_URL"
 
       - name: Update docs with new asset URLs
         env:
           TAG: ${{ steps.release.outputs.tag }}
           WINDOWS_URL: ${{ steps.release.outputs.windows_url }}
           LINUX_URL: ${{ steps.release.outputs.linux_url }}
+          MACOS_ARM_URL: ${{ steps.release.outputs.macos_arm_url }}
+          MACOS_INTEL_URL: ${{ steps.release.outputs.macos_intel_url }}
         run: |
           echo "Updating docs for release $TAG"
           
-          # Update docs/*.html files
           for file in docs/*.html; do
             if [ -f "$file" ]; then
               echo "Processing $file..."
               
-              # Update Windows download link
+              # Update Windows installer download link
               if [ -n "$WINDOWS_URL" ]; then
-                # Replace any existing Windows release download URL
-                sed -i -E "s|https://github.com/AAEO04/ifa_lang/releases/download/[^/]+/ifa-lang-[^\"]+windows[^\"]*\.exe|$WINDOWS_URL|g" "$file"
+                sed -i -E "s|https://github.com/AAEO04/ifa_lang/releases/download/[^/]+/ifa-installer[^\"]*\.exe|$WINDOWS_URL|g" "$file"
               fi
               
-              # Update Linux download link  
+              # Update Linux download link
               if [ -n "$LINUX_URL" ]; then
-                # Replace any existing Linux release download URL
-                sed -i -E "s|https://github.com/AAEO04/ifa_lang/releases/download/[^/]+/ifa-lang-[^\"]+linux[^\"]*\.(tar\.gz|tgz|zip)|$LINUX_URL|g" "$file"
+                sed -i -E "s|https://github.com/AAEO04/ifa_lang/releases/download/[^/]+/ifa-[^\"]*linux-x86_64|$LINUX_URL|g" "$file"
+              fi
+              
+              # Update macOS ARM download link
+              if [ -n "$MACOS_ARM_URL" ]; then
+                sed -i -E "s|https://github.com/AAEO04/ifa_lang/releases/download/[^/]+/ifa-[^\"]*macos-arm64|$MACOS_ARM_URL|g" "$file"
+              fi
+              
+              # Update macOS Intel download link
+              if [ -n "$MACOS_INTEL_URL" ]; then
+                sed -i -E "s|https://github.com/AAEO04/ifa_lang/releases/download/[^/]+/ifa-[^\"]*macos-x86_64|$MACOS_INTEL_URL|g" "$file"
               fi
               
               # Fallback: Update version tag in any remaining release URLs

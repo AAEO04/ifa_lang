@@ -1,0 +1,101 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Player - Ifa-Lang Use Cases</title>
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
+    <script src="../../js/common.js" defer></script>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <h1>Audio Player</h1>
+        <p>Build an audio player with Ifa-Lang's Ohun (Audio) domain.</p>
+
+        <h2>Features</h2>
+        <ul>
+            <li>Play MP3, WAV, FLAC files</li>
+            <li>Playlist management</li>
+            <li>Volume and playback control</li>
+            <li>Audio visualization</li>
+        </ul>
+
+        <h2>Domains Used</h2>
+        <ul>
+            <li><strong>Ohun / Audio</strong> - Audio playback</li>
+            <li><strong>Odi / Fs</strong> - File discovery</li>
+            <li><strong>Ogunda / List</strong> - Playlist</li>
+            <li><strong>Ose / Tui</strong> - Terminal UI</li>
+        </ul>
+
+        <h2>Code Example</h2>
+        <pre><code>// Simple Audio Player
+ayanmo playlist = Odi.akojopo("music/*.mp3");
+ayanmo current = 0;
+ayanmo playing = iro;
+
+ese play_track(index) {
+    ti index >= 0 && index < Ogunda.len(playlist) {
+        ayanmo track = Ogunda.gba(playlist, index);
+        Ohun.play(track);
+        playing = otito;
+        Irosu.fo("Playing: " + track);
+    }
+}
+
+ese pause() {
+    Ohun.pause();
+    playing = iro;
+}
+
+ese next() {
+    current = current + 1;
+    ti current >= Ogunda.len(playlist) {
+        current = 0;
+    }
+    play_track(current);
+}
+
+ese previous() {
+    current = current - 1;
+    ti current < 0 {
+        current = Ogunda.len(playlist) - 1;
+    }
+    play_track(current);
+}
+
+// Start playing
+play_track(0);
+
+// Handle events
+Ohun.on_complete(ese() {
+    next();
+});</code></pre>
+
+        <h2>TUI Interface</h2>
+        <pre><code>// Terminal UI for player
+nigba otito {
+    Ose.clear();
+    Irosu.fo("=== Ifa Music Player ===");
+    Irosu.fo("Now: " + Ogunda.gba(playlist, current));
+    Irosu.fo("");
+    Irosu.fo("[P] Play/Pause  [N] Next  [B] Back  [Q] Quit");
+    
+    ayanmo key = Ose.getch();
+    yÃ n key {
+        "p" => ti playing { pause(); } bibáº¹ká» { play_track(current); }
+        "n" => next();
+        "b" => previous();
+        "q" => da;
+    }
+}</code></pre>
+
+        <footer class="doc-footer">
+            <p><a href="index.html">Back to Use Cases</a></p>
+        </footer>
+    </div>
+</body>
+</html>

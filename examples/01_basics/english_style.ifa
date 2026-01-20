@@ -5,58 +5,45 @@
 // as the Yoruba version. The 16 Odù domains are still available!
 // ═══════════════════════════════════════════════════════════════════
 
-import std.log;
-import std.net;
+import Irosu;
+import Otura;
 
 // Variables using 'let' keyword
-let counter: Int = 0;
+let counter = 0;
 let message = "Hello from Ifá!";
 
-// Class using 'domain' keyword
-domain Server {
+// Class using 'class' keyword (alias for odù)
+class Server {
     let port = 8080;
     
-    verse start() {
-        Log.fo("Starting server...");
-        Net.de(port);
+    fn start() {
+        Irosu.fo("Starting server...");
+        Otura.de(port);
     }
     
-    verse handle(request) {
+    fn handle(request) {
         if port > 80 {
-            Log.fo("Handling request");
-        } otherwise {
-            Log.fo("Invalid port");
+            Irosu.fo("Handling request");
+        } else {
+            Irosu.fo("Invalid port");
         }
     }
 }
 
 // Control flow with English keywords
 while counter < 5 {
-    Log.fo(counter);
+    Irosu.fo(counter);
     counter = counter + 1;
 }
 
 // For loop
 let items = [1, 2, 3, 4, 5];
 for item in items {
-    Log.fo(item);
-}
-
-// Try/catch
-try {
-    Net.ran("Sending data...");
-} catch (err) {
-    Log.fo("Error occurred");
-}
-
-// Critical section
-atomic {
-    // Transaction-safe code
-    Log.fo("Critical operation");
+    Irosu.fo(item);
 }
 
 // Output
-Log.fo(message);
-Rand.bo(100);
+Irosu.fo(message);
+Owonrin.bo(100);
 
 end;

@@ -10,6 +10,9 @@ pub mod cpu;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
+#[cfg(feature = "gpu")]
+pub mod shaders;
+
 #[cfg(feature = "persistence")]
 pub mod storage;
 

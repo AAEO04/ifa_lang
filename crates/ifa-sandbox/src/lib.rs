@@ -13,12 +13,18 @@
 //! - `config` - Sandbox configuration and security profiles
 //! - `runtime` - Native runtime capability enforcement
 //! - `omnibox` - WASM-based isolated runtime
+//! - `sandbox` - Process isolation wrapper
+//! - `monitor` - Resource monitoring (memory, CPU, files, network)
 
 pub mod capability;
 pub mod config;
+pub mod monitor;
 pub mod omnibox;
 pub mod runtime;
+pub mod sandbox;
 
 pub use capability::{CapabilitySet, Ofun};
 pub use config::{SandboxConfig, SecurityProfile};
+pub use monitor::ResourceMonitor;
 pub use omnibox::OmniBox;
+pub use sandbox::Sandbox;

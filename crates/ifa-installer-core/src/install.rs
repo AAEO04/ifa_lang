@@ -6,6 +6,46 @@ use crate::net::NetManager;
 use crate::check::check_system;
 use thiserror::Error;
 
+/// RAII transaction guard for installation rollback
+/// Files are tracked and automatically cleaned up if not committed
+struct InstallTransaction {
+    files: Vec<PathBuf>,
+    committed: bool,
+}
+
+impl InstallTransaction {
+    fn new() -> Self {
+        Self { files: Vec::new(), committed: false }
+    }
+
+    fn track(&mut self, path: PathBuf) {
+        self.files.push(path);
+    }
+
+    fn untrack_last(&mut self) {
+        self.files.pop();
+    }
+
+    fn commit(mut self) {
+        self.committed = true;
+    }
+}
+
+impl Drop for InstallTransaction {
+    fn drop(&mut self) {
+        if !self.committed {
+            println!("[Rollback] Cleaning up {} partial files...", self.files.len());
+            for file in &self.files {
+                if file.exists() {
+                    if let Err(e) = fs::remove_file(file) {
+                        eprintln!("[Rollback] Failed to remove {:?}: {}", file, e);
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum InstallError {
     #[error("IO error: {0}")]
@@ -47,8 +87,8 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
 
     let net = NetManager::new();
     
-    // Track installed files for rollback
-    let mut installed_files: Vec<PathBuf> = Vec::new();
+    // RAII transaction - automatically rolls back on drop if not committed
+    let mut txn = InstallTransaction::new();
 
     // 1. Create install directory
     if !config.install_dir.exists() {
@@ -114,11 +154,9 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
                     continue;
                 }
                 
-                // Asset Logic: Map component name to GitHub Asset Name fragment
-                let asset_name_fragment = match component.name.as_str() {
-                    "ifa-compiler" => "ifa",
-                    _ => component.name.as_str(),
-                };
+                
+                // Asset name matches component name directly (e.g., "ifa")
+                let asset_name_fragment = component.name.as_str();
 
                 // Fallback to Network with verification
                 if let Some(release) = &release_metadata {
@@ -126,7 +164,7 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
                         let target_path = config.install_dir.join(&asset.name);
                         
                         // Register for rollback before download completes
-                        installed_files.push(target_path.clone());
+                        txn.track(target_path.clone());
                         
                         println!("Downloading {} to {:?}...", asset.name, target_path);
                         
@@ -152,7 +190,7 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
                         crate::extraction::extract(&target_path, &config.install_dir)?;
                         // Clean up downloaded archive
                         let _ = fs::remove_file(&target_path);
-                        installed_files.pop(); // Archive successfully extracted and removed
+                        txn.untrack_last(); // Archive successfully extracted and removed
                     } else {
                          println!("Warning: Could not find asset for component {} (looked for '{}')", component.name, asset_name_fragment);
                     }
@@ -169,13 +207,13 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
         if config.add_to_path {
             #[cfg(target_os = "windows")]
             {
-                use crate::platform::windows::add_to_path;
+                use crate::windows::add_to_path;
                 add_to_path(&config.install_dir).map_err(|e| InstallError::Platform(e.to_string()))?;
             }
             
             #[cfg(unix)]
             {
-                use crate::platform::unix::add_to_path;
+                use crate::unix::add_to_path;
                 add_to_path(&config.install_dir).map_err(|e| InstallError::Platform(e.to_string()))?;
             }
         }
@@ -183,19 +221,9 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
         Ok(())
     })();
 
-    // Rollback on failure
-    if let Err(e) = result {
-        println!("Installation failed: {}. Cleaning up...", e);
-        for file in installed_files {
-            if file.exists() {
-                let _ = fs::remove_file(file);
-            }
-        }
-        // If the directory was empty and created by us, we could remove it, 
-        // but for now, we just clean up partial artifacts.
-        return Err(e);
-    }
-
-    println!("✅ Installation complete.");
-    Ok(())
+    // Commit transaction on success (prevents Drop-based rollback)
+    result.map(|()| {
+        txn.commit();
+        println!("✅ Installation complete.");
+    })
 }

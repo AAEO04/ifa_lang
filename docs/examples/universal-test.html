@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Language Switcher Test</title>
+    <link rel="stylesheet" href="../js/common.css">
+    <link rel="stylesheet" href="../js/language-switcher.css">
+    <script src="../js/language-switcher.js"></script>
+</head>
+<body>
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        <h1>Universal Language Switcher Test</h1>
+        <p>This tests both old dual-block system and new individual word switching:</p>
+        
+        <!-- Old dual-block system -->
+        <h2>Old System (Dual Blocks)</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">test-old.ifa</span>
+                <div class="lang-toggle">
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                </div>
+            </div>
+            <pre class="code-yoruba"><code>// Old system test
+ayanmo x = 10;
+ti (x > 5) {
+    Irosu.fo("O tobi");
+}</code></pre>
+            <pre class="code-english"><code>// Old system test
+let x = 10;
+if (x > 5) {
+    Irosu.println("Big");
+}</code></pre>
+        </div>
+        
+        <!-- New individual word system -->
+        <h2>New System (Individual Words)</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">test-new.ifa</span>
+            </div>
+            <pre><code>// New system test
+ayanmo x = 10;
+ti (x > 5) {
+    Irosu.fo("O tobi");
+}
+
+// Loop example
+fun i ninu [1, 2, 3] {
+    Irosu.fo(i);
+}</code></pre>
+        </div>
+        
+        <!-- Mixed system without toggle buttons -->
+        <h2>Auto-Enhanced System</h2>
+        <div class="example">
+            <div class="example-header">
+                <span class="example-title">test-auto.ifa</span>
+            </div>
+            <pre><code>// This should get toggle buttons automatically
+ayanmo data = [1, 2, 3, 4, 5];
+ayanmo total = 0;
+
+fun num ninu data {
+    total = total + num;
+}
+
+nigba (total < 100) {
+    total = total * 2;
+}</code></pre>
+        </div>
+        
+        <h2>Test Results</h2>
+        <div id="test-results">
+            <p>✅ Old system: Should toggle between complete blocks</p>
+            <p>✅ New system: Should allow individual word clicking</p>
+            <p>✅ Auto-enhanced: Should add toggle buttons automatically</p>
+        </div>
+    </div>
+    
+    <script>
+        // Test the system
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Testing universal language switcher...');
+            
+            // Check if switchable words were created
+            setTimeout(() => {
+                const switchableWords = document.querySelectorAll('.switchable-word');
+                console.log(`Found ${switchableWords.length} switchable words`);
+                
+                // Check if auto-enhancement worked
+                const autoToggles = document.querySelectorAll('.example .lang-toggle');
+                console.log(`Found ${autoToggles.length} auto-added toggle buttons`);
+                
+                // Update test results
+                const results = document.getElementById('test-results');
+                results.innerHTML = `
+                    <p>🔍 Switchable words found: ${switchableWords.length}</p>
+                    <p>🔍 Auto-added toggle buttons: ${autoToggles.length}</p>
+                    <p>✅ Click any blue/orange word to test individual switching</p>
+                    <p>✅ Use toggle buttons to test global switching</p>
+                `;
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

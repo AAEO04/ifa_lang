@@ -7,16 +7,14 @@ use lsp_types::{
 };
 use std::error::Error;
 use ifa_core::parse;
+use ifa_babalawo::{check_program, Severity as IfaSeverity};
 
 /// Run the LSP server
 pub fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
     eprintln!("Starting Ifá-Lang LSP Server...");
 
-    // Create the transport. Includes the stdio (stdin and stdout) versions but this could
-    // also be implemented to use sockets or HTTP.
     let (connection, io_threads) = Connection::stdio();
 
-    // Run the server and wait for the two threads to end (typically by trigger shutdown request).
     let server_capabilities = serde_json::to_value(&ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Options(
             TextDocumentSyncOptions {
@@ -60,19 +58,7 @@ fn main_loop(
                 match cast_req::<lsp_types::request::Completion>(Message::Request(req)) {
                     Ok((id, params)) => {
                         eprintln!("Got completion request for: {}", params.text_document_position.text_document.uri);
-                        let result = Some(lsp_types::CompletionResponse::Array(vec![
-                            completion_item("fun", "Function definition (fún)", CompletionItemKind::KEYWORD),
-                            completion_item("ninu", "Loop (nínú)", CompletionItemKind::KEYWORD),
-                            completion_item("ti", "Conditional (tí)", CompletionItemKind::KEYWORD),
-                            completion_item("tabi", "Else (tàbí)", CompletionItemKind::KEYWORD),
-                            completion_item("se", "Do/Execute (ṣe)", CompletionItemKind::KEYWORD),
-                            completion_item("gbe", "Variable declaration (gbé)", CompletionItemKind::KEYWORD),
-                            completion_item("pads", "Return (padà)", CompletionItemKind::KEYWORD),
-                            completion_item("Ogbè", "The Supporter (System)", CompletionItemKind::MODULE),
-                            completion_item("Ọyẹ̀kú", "The Mother (Exit/Sleep)", CompletionItemKind::MODULE),
-                            completion_item("Ìwòrì", "The Viewer (Time)", CompletionItemKind::MODULE),
-                            completion_item("Ìrosùn", "The Sound (Sound)", CompletionItemKind::MODULE),
-                        ]));
+                        let result = Some(lsp_types::CompletionResponse::Array(get_completions()));
                         let result = serde_json::to_value(&result)
                             .map_err(|e| format!("Failed to serialize completion: {}", e))?;
                         let resp = Response {
@@ -100,7 +86,6 @@ fn main_loop(
                     Err(Message::Notification(not)) => match cast_not::<lsp_types::notification::DidChangeTextDocument>(Message::Notification(not)) {
                         Ok(params) => {
                              eprintln!("DidChange: {}", params.text_document.uri);
-                             // Since we requested FULL sync, content_changes[0].text is the full content
                              if let Some(change) = params.content_changes.into_iter().next() {
                                  publish_diagnostics(&connection, params.text_document.uri, &change.text)?;
                              }
@@ -113,6 +98,7 @@ fn main_loop(
                     _ => {}
                 }
             }
+
         }
     }
     Ok(())
@@ -121,34 +107,74 @@ fn main_loop(
 fn publish_diagnostics(connection: &Connection, uri: Url, text: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
     let mut diagnostics = Vec::new();
 
-    // Use ifa_core parser to check syntax
-    if let Err(e) = parse(text) {
-        // e is IfaError, which might be SyntaxError
-        // We need to extract line/col from the error message or error type if available.
-        // Currently IfaError formatting is string-based. A real implementation would expose line/col struct.
-        // For now, we'll try to parse the default formatted string or just put it on line 1.
-        
-        // Assuming parsing error text handling. 
-        // In a real implementation: `e` should have `line` and `column`. 
-        // Let's assume raw string for now and default to 0.
-        
-        let message = e.to_string();
-        
-        let diagnostic = Diagnostic {
-            range: Range {
-                start: Position { line: 0, character: 0 },
-                end: Position { line: 0, character: 1 }, 
-            },
-            severity: Some(DiagnosticSeverity::ERROR),
-            code: None,
-            code_description: None,
-            source: Some("ifa-lsp".to_string()),
-            message,
-            related_information: None,
-            tags: None,
-            data: None,
-        };
-        diagnostics.push(diagnostic);
+    // 1. Parse Syntax
+    match parse(text) {
+        Ok(program) => {
+            // 2. Run Babalawo Linter
+            let baba = check_program(&program, uri.path());
+            
+            for diag in baba.diagnostics {
+                let severity = match diag.severity {
+                    IfaSeverity::Error => DiagnosticSeverity::ERROR,
+                    IfaSeverity::Warning => DiagnosticSeverity::WARNING,
+                    IfaSeverity::Info => DiagnosticSeverity::INFORMATION,
+                    IfaSeverity::Style => DiagnosticSeverity::HINT,
+                };
+
+                let range = Range {
+                    start: Position { 
+                        line: (diag.error.line).saturating_sub(1) as u32, 
+                        character: (diag.error.column).saturating_sub(1) as u32 
+                    },
+                    end: Position { 
+                        line: (diag.error.line).saturating_sub(1) as u32, 
+                        character: (diag.error.column + 5) as u32 
+                    }, // Approx length
+                };
+
+                let message = if let Some(wisdom) = &diag.wisdom {
+                     format!("[{}] {} (Wisdom: {})", diag.odu, diag.error.message, wisdom)
+                } else {
+                     format!("[{}] {}", diag.odu, diag.error.message)
+                };
+
+                diagnostics.push(Diagnostic {
+                    range,
+                    severity: Some(severity),
+                    code: Some(lsp_types::NumberOrString::String(diag.error.code)),
+                    code_description: None,
+                    source: Some("ifa-babalawo".to_string()),
+                    message,
+                    related_information: None,
+                    tags: None,
+                    data: None,
+                });
+            }
+        }
+        Err(e) => {
+            // Simple syntax error handling
+            // Note: IfaError display format is typically "Error at line L: Msg" or similar
+            // For robust LSP we should parse the error or have parser return structured error.
+            // Using a fallback for now.
+            let msg = e.to_string();
+            // Try to extract line? simplistic heuristic
+            let line = 0; 
+            
+            diagnostics.push(Diagnostic {
+                range: Range {
+                    start: Position { line, character: 0 },
+                    end: Position { line, character: 1 }, 
+                },
+                severity: Some(DiagnosticSeverity::ERROR),
+                code: None,
+                code_description: None,
+                source: Some("ifa-core".to_string()),
+                message: msg,
+                related_information: None,
+                tags: None,
+                data: None,
+            });
+        }
     }
 
     let params = PublishDiagnosticsParams {
@@ -165,7 +191,53 @@ fn publish_diagnostics(connection: &Connection, uri: Url, text: &str) -> Result<
     Ok(())
 }
 
-fn completion_item(label: &str, detail: &str, kind: CompletionItemKind) -> CompletionItem {
+fn get_completions() -> Vec<CompletionItem> {
+    vec![
+        // Keywords
+        ci("fun", "Function definition (fn)", CompletionItemKind::KEYWORD),
+        ci("ninu", "Loop (in/for)", CompletionItemKind::KEYWORD),
+        ci("ti", "Conditional (if)", CompletionItemKind::KEYWORD),
+        ci("tabi", "Else (else)", CompletionItemKind::KEYWORD),
+        ci("se", "Do/Execute", CompletionItemKind::KEYWORD),
+        ci("gbe", "Variable declaration (let)", CompletionItemKind::KEYWORD),
+        ci("pada", "Return values", CompletionItemKind::KEYWORD),
+        ci("nla", "Large / True", CompletionItemKind::KEYWORD),
+        ci("kekere", "Small / False", CompletionItemKind::KEYWORD),
+        
+        // Modules (Odu)
+        ci("Ogbe", "The Supporter (Lifecycle)", CompletionItemKind::MODULE),
+        ci("Oyeku", "The Mother (Death/Exit)", CompletionItemKind::MODULE),
+        ci("Iwori", "The Viewer (Time/Date)", CompletionItemKind::MODULE),
+        ci("Odi", "The Sealer (Files/IO)", CompletionItemKind::MODULE),
+        ci("Irosu", "The Sound (Log/Print)", CompletionItemKind::MODULE),
+        ci("Owonrin", "The Reverse (Random)", CompletionItemKind::MODULE),
+        ci("Obara", "The Resting (Math +)", CompletionItemKind::MODULE),
+        ci("Okanran", "The Striker (Strings)", CompletionItemKind::MODULE),
+        ci("Ogunda", "The Creator (Arrays)", CompletionItemKind::MODULE),
+        ci("Osa", "The Spirit (Concurrency)", CompletionItemKind::MODULE),
+        ci("Ika", "The Controller (Control)", CompletionItemKind::MODULE),
+        ci("Oturupon", "The Bearer (Math -)", CompletionItemKind::MODULE),
+        ci("Otura", "The Vision (Network)", CompletionItemKind::MODULE),
+        ci("Irete", "The Crusher (Crypto)", CompletionItemKind::MODULE),
+        ci("Ose", "The Conqueror (UI/Docs)", CompletionItemKind::MODULE),
+        ci("Ofun", "The Giver (Permissions)", CompletionItemKind::MODULE),
+
+        // Std Functions
+        ci("ka", "Read (read)", CompletionItemKind::FUNCTION),
+        ci("ko", "Write (write)", CompletionItemKind::FUNCTION),
+        ci("so", "Speak/Print (print)", CompletionItemKind::FUNCTION),
+        ci("gbo", "Listen/Input (input)", CompletionItemKind::FUNCTION),
+        ci("sun", "Sleep (sleep)", CompletionItemKind::FUNCTION),
+        ci("ji", "Wake/Start", CompletionItemKind::FUNCTION),
+        ci("mo", "Clean/Clear", CompletionItemKind::FUNCTION),
+        ci("ya", "Draw/Render", CompletionItemKind::FUNCTION),
+        ci("roi", "Report/Log", CompletionItemKind::FUNCTION),
+        ci("pin", "Divide/Split", CompletionItemKind::FUNCTION),
+        ci("dapo", "Join/Merge", CompletionItemKind::FUNCTION),
+    ]
+}
+
+fn ci(label: &str, detail: &str, kind: CompletionItemKind) -> CompletionItem {
     CompletionItem {
         label: label.to_string(),
         detail: Some(detail.to_string()),

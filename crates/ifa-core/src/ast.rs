@@ -131,6 +131,12 @@ pub enum Statement {
         span: Span,
     },
 
+    /// Ebo (offering/initiation): ebo "server";
+    Ebo {
+        offering: Expression,
+        span: Span,
+    },
+
     /// Match statement: yàn (condition) { arm1, arm2, ... }
     Match {
         condition: Expression,

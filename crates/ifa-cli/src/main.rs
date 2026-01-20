@@ -7,6 +7,7 @@ mod oja;
 mod sandbox;
 mod lsp;
 mod deploy;
+mod debug_adapter;
 
 use clap::{Parser, Subcommand};
 use eyre::{Result, WrapErr};
@@ -15,7 +16,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "ifa")]
 #[command(author = "Ifá-Lang Contributors")]
-#[command(version = "1.0.0")]
+#[command(version = "1.2.2")]
 #[command(about = "Ifá-Lang - The Yoruba Programming Language", long_about = None)]
 #[command(propagate_version = true)]
 struct Cli {
@@ -211,6 +212,13 @@ enum Commands {
         #[arg(default_value = ".")]
         path: PathBuf,
     },
+
+    /// Start Debug Adapter (DAP)
+    Debug {
+        /// File to debug
+        #[arg(long)]
+        file: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -299,7 +307,7 @@ fn main() -> Result<()> {
             use ifa_core::{Interpreter, parse};
             use ifa_sandbox::{CapabilitySet, Ofun};
 
-            println!("Ifa-Lang Interpreter v1.2.0");
+            println!("Ifa-Lang Interpreter v1.2.2");
             println!();
             println!("Running: {}", file.display());
 
@@ -790,6 +798,21 @@ lto = true
             } else {
                 std::fs::write(&file, formatted).wrap_err("Failed to write formatted file")?;
                 println!("✨ Syntactic harmony restored in {}", file.display());
+            }
+            Ok(())
+        }
+
+        Commands::Debug { file } => {
+            if let Some(path) = file {
+                debug_adapter::run_debug_session(path)?;
+            } else {
+                // If no file provided (e.g. launch request with no args initially?), 
+                // the adapter might expect to receive 'launch' request with program path.
+                // But our run_debug_session implementation currently requires a file to start interpreter.
+                // DAP Launch request usually comes later.
+                // We'll need to adjust run_debug_session to handle "wait for launch config".
+                // For now, let's require file or error.
+                return Err(color_eyre::eyre::eyre!("Debug command requires --file <PATH>"));
             }
             Ok(())
         }

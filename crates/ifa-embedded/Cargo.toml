@@ -13,10 +13,14 @@ path = "src/lib.rs"
 [dependencies]
 # Core without std
 ifa-core = { path = "../ifa-core", default-features = false }
+# Bounded collections for no_std
+heapless = "0.8"
+# Interrupt-safe critical sections
+critical-section = "1.1"
 
 [features]
 default = []
-# Enable for specific targets
-esp32 = []
-stm32 = []
-rp2040 = []
+# Target-specific HAL implementations (future embassy/esp-hal integration)
+esp32 = []   # ESP32 (Xtensa) - will integrate with esp-hal
+stm32 = []   # STM32 (Cortex-M) - will integrate with embassy-stm32
+rp2040 = []  # RP2040 (Cortex-M0+) - will integrate with embassy-rp

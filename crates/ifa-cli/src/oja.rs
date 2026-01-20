@@ -19,6 +19,22 @@ use reqwest::blocking::Client;
 use flate2::read::GzDecoder;
 use tar::Archive;
 
+const OJA_REGISTRY_URL: &str = "https://raw.githubusercontent.com/AAEO04/oja-registry/main";
+
+#[derive(Debug, Deserialize)]
+struct RegistryPackage {
+    name: String,
+    repository: String,
+    versions: Vec<RegistryVersion>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RegistryVersion {
+    version: String,
+    #[serde(default)]
+    yanked: bool,
+}
+
 /// Ọjà project manifest (Iwe.toml)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IfaManifest {
@@ -443,10 +459,61 @@ opt-level = 3
     }
 
     /// Resolve package name to download URL (Registry Stub)
-    fn resolve_registry(&self, name: &str, _version: &str) -> String {
-        // Implement query to ifa-lang/oja-registry here
-        // For now, assume GitHub release tarball
-        format!("https://github.com/ifa-lang/{}/archive/refs/tags/v{}.tar.gz", name, _version)
+    /// Resolve package name to download URL via Registry
+    fn resolve_registry(&self, name: &str, version: &str) -> String {
+        // 1. Calculate Index Path
+        let index_path = self.get_index_path(name);
+        let url = format!("{}/index/{}", OJA_REGISTRY_URL, index_path);
+
+        println!("     🔍 Searching registry: {}", url);
+
+        // 2. Fetch Metadata (blocking)
+        let client = Client::new();
+        match client.get(&url).send() {
+            Ok(resp) => {
+                if resp.status().is_success() {
+                    // Parse registry Entry
+                    if let Ok(entry) = resp.json::<RegistryPackage>() {
+                        println!("     ✅ Found package: {}", entry.name);
+                        
+                        // Find version
+                        let target_ver = if version == "latest" || version == "*" {
+                            // Get last non-yanked version
+                            entry.versions.iter().filter(|v| !v.yanked).last()
+                        } else {
+                            entry.versions.iter().find(|v| v.version == version)
+                        };
+
+                        if let Some(v) = target_ver {
+                            if v.yanked {
+                                println!("     ⚠️  Warning: Version {} is yanked!", v.version);
+                            }
+                            // Construct GitHub Archive URL
+                            // Format: https://github.com/user/repo/archive/refs/tags/v1.0.0.tar.gz
+                            return format!("{}/archive/refs/tags/v{}.tar.gz", entry.repository, v.version);
+                        } else {
+                             println!("     ❌ Version {} not found in registry. Falling back to simple resolution.", version);
+                        }
+                    }
+                }
+            }
+            Err(_) => {
+                 // Offline or Registry unreachable - Fallback
+            }
+        }
+
+        // Fallback: Assume GitHub release tarball convention directly
+        format!("https://github.com/ifa-lang/{}/archive/refs/tags/v{}.tar.gz", name, version)
+    }
+
+    /// Calculate registry index path based on package name length
+    fn get_index_path(&self, name: &str) -> String {
+        match name.len() {
+            1 => format!("1/{}", name),
+            2 => format!("2/{}", name),
+            3 => format!("3/{}/{}", &name[0..1], name),
+            _ => format!("{}/{}/{}", &name[0..2], &name[2..4], name),
+        }
     }
 
     /// Download and Extract Tarball

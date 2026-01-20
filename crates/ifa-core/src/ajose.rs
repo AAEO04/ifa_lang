@@ -307,89 +307,161 @@ macro_rules! bind {
 /// Ajose FFI Bridge - The gateway to other languages
 ///
 /// Provides high-level access to Python, C, and other languages.
-/// Uses the low-level FFI from ifa-std.
+/// For full FFI capabilities, use `ifa_std::ffi::IfaFfi` directly.
+///
+/// This bridge provides:
+/// - Built-in math functions (no external deps)
+/// - Sandboxed shell execution
+/// - Placeholder for native FFI (requires ifa-std)
 pub struct AjoseBridge {
-    /// Python modules (simulated - full impl needs pyo3)
+    /// Cached module imports
     py_cache: std::collections::HashMap<String, String>,
+    /// Blocked shell commands for security
+    blocked_commands: Vec<&'static str>,
 }
 
 impl AjoseBridge {
     pub fn new() -> Self {
         AjoseBridge {
             py_cache: std::collections::HashMap::new(),
+            blocked_commands: vec![
+                "rm", "del", "format", "mkfs", "dd", "sudo", "chmod",
+                "chown", "kill", "pkill", "shutdown", "reboot", "curl",
+                "wget", "nc", "netcat", "powershell", "cmd.exe",
+            ],
         }
     }
 
-    /// Call a Python function
+    /// Call a Python-like function (built-in implementations)
     /// Ifá syntax: coop.py("math", "sqrt", 16)
+    ///
+    /// Supports: math.sqrt, math.factorial, math.pow, math.sin, math.cos,
+    ///           math.log, math.exp, math.floor, math.ceil, math.abs
     pub fn py(&mut self, module: &str, func: &str, args: &[&str]) -> String {
-        // In production, this would use pyo3
-        // For now, simulate common math functions
         match (module, func) {
-            ("math", "sqrt") => {
-                if let Some(arg) = args.first() {
-                    if let Ok(n) = arg.parse::<f64>() {
-                        return n.sqrt().to_string();
+            // Math module
+            ("math", "sqrt") => self.parse_f64(args, 0).map(|n| n.sqrt()).unwrap_or(f64::NAN).to_string(),
+            ("math", "pow") => {
+                let base = self.parse_f64(args, 0).unwrap_or(0.0);
+                let exp = self.parse_f64(args, 1).unwrap_or(1.0);
+                base.powf(exp).to_string()
+            }
+            ("math", "sin") => self.parse_f64(args, 0).map(|n| n.sin()).unwrap_or(f64::NAN).to_string(),
+            ("math", "cos") => self.parse_f64(args, 0).map(|n| n.cos()).unwrap_or(f64::NAN).to_string(),
+            ("math", "tan") => self.parse_f64(args, 0).map(|n| n.tan()).unwrap_or(f64::NAN).to_string(),
+            ("math", "log") => self.parse_f64(args, 0).map(|n| n.ln()).unwrap_or(f64::NAN).to_string(),
+            ("math", "log10") => self.parse_f64(args, 0).map(|n| n.log10()).unwrap_or(f64::NAN).to_string(),
+            ("math", "exp") => self.parse_f64(args, 0).map(|n| n.exp()).unwrap_or(f64::NAN).to_string(),
+            ("math", "floor") => self.parse_f64(args, 0).map(|n| n.floor()).unwrap_or(f64::NAN).to_string(),
+            ("math", "ceil") => self.parse_f64(args, 0).map(|n| n.ceil()).unwrap_or(f64::NAN).to_string(),
+            ("math", "abs") => self.parse_f64(args, 0).map(|n| n.abs()).unwrap_or(f64::NAN).to_string(),
+            ("math", "factorial") => {
+                if let Some(n) = self.parse_u64(args, 0) {
+                    if n <= 20 { // Prevent overflow
+                        return (1..=n).product::<u64>().to_string();
                     }
+                    return "overflow".to_string();
                 }
                 "NaN".to_string()
             }
-            ("math", "factorial") => {
-                if let Some(arg) = args.first() {
-                    if let Ok(n) = arg.parse::<u64>() {
-                        let result: u64 = (1..=n).product();
-                        return result.to_string();
-                    }
-                }
-                "1".to_string()
-            }
-            ("json", "dumps") => {
-                format!("\"{}\"", args.join(", "))
-            }
-            _ => format!("[py] {}.{}({:?})", module, func, args),
+            ("math", "pi") => std::f64::consts::PI.to_string(),
+            ("math", "e") => std::f64::consts::E.to_string(),
+            
+            // JSON module
+            ("json", "dumps") => format!("\"{}\"", args.join(", ")),
+            ("json", "loads") => args.first().map(|s| s.to_string()).unwrap_or_default(),
+            
+            // String module
+            ("str", "upper") => args.first().map(|s| s.to_uppercase()).unwrap_or_default(),
+            ("str", "lower") => args.first().map(|s| s.to_lowercase()).unwrap_or_default(),
+            ("str", "len") => args.first().map(|s| s.len().to_string()).unwrap_or("0".to_string()),
+            
+            // Unknown - return debug info
+            _ => format!("[py:stub] {}.{}({:?}) - use ifa_std::ffi for real Python", module, func, args),
         }
     }
+    
+    fn parse_f64(&self, args: &[&str], idx: usize) -> Option<f64> {
+        args.get(idx).and_then(|s| s.parse::<f64>().ok())
+    }
+    
+    fn parse_u64(&self, args: &[&str], idx: usize) -> Option<u64> {
+        args.get(idx).and_then(|s| s.parse::<u64>().ok())
+    }
 
-    /// Execute a shell command (sandboxed)
+    /// Execute a shell command (heavily sandboxed)
     /// Ifá syntax: coop.sh("echo hello")
+    ///
+    /// SECURITY: Many dangerous commands are blocked by default.
+    /// For unrestricted shell access, use ifa_std::ffi with proper capabilities.
     pub fn sh(&self, cmd: &str) -> Result<String, String> {
-        // Block dangerous commands
-        let blocked = ["rm", "del", "format", "mkfs", "dd", "sudo"];
-        for b in blocked {
-            if cmd.contains(b) {
-                return Err(format!("Blocked command: {}", b));
+        // Security: Block dangerous commands
+        let cmd_lower = cmd.to_lowercase();
+        for blocked in &self.blocked_commands {
+            if cmd_lower.contains(blocked) {
+                return Err(format!(
+                    "Security: '{}' is blocked. Use ifa_std::ffi with Execute capability for unrestricted access.",
+                    blocked
+                ));
             }
         }
-
-        // Execute (in production, use proper sandboxing)
-        #[cfg(windows)]
-        {
-            std::process::Command::new("cmd")
-                .args(["/C", cmd])
-                .output()
-                .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
-                .map_err(|e| e.to_string())
+        
+        // Additional security: limit command length
+        if cmd.len() > 1000 {
+            return Err("Command too long (max 1000 chars)".to_string());
         }
+
+        // Execute with platform-specific shell
+        #[cfg(windows)]
+        let output = std::process::Command::new("cmd")
+            .args(["/C", cmd])
+            .output();
+            
         #[cfg(not(windows))]
-        {
-            std::process::Command::new("sh")
-                .args(["-c", cmd])
-                .output()
-                .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
-                .map_err(|e| e.to_string())
+        let output = std::process::Command::new("sh")
+            .args(["-c", cmd])
+            .output();
+        
+        match output {
+            Ok(o) if o.status.success() => Ok(String::from_utf8_lossy(&o.stdout).trim().to_string()),
+            Ok(o) => Err(String::from_utf8_lossy(&o.stderr).trim().to_string()),
+            Err(e) => Err(format!("Execution failed: {}", e)),
         }
     }
 
-    /// Load and call a Rust function via FFI
-    /// Ifá syntax: coop.rust("add", [5, 3])
-    pub fn rust(&self, _func: &str, _args: &[i64]) -> i64 {
-        // Placeholder - would use dlopen/dlsym in production
-        0
+    /// Load and call a native function via FFI
+    /// NOTE: This is a stub. For real native FFI, use ifa_std::ffi::IfaFfi
+    /// which provides libloading integration.
+    pub fn rust(&self, func: &str, args: &[i64]) -> Result<i64, String> {
+        // Built-in functions for testing
+        match func {
+            "add" if args.len() >= 2 => Ok(args[0].saturating_add(args[1])),
+            "sub" if args.len() >= 2 => Ok(args[0].saturating_sub(args[1])),
+            "mul" if args.len() >= 2 => Ok(args[0].saturating_mul(args[1])),
+            "div" if args.len() >= 2 && args[1] != 0 => Ok(args[0] / args[1]),
+            "max" if args.len() >= 2 => Ok(args[0].max(args[1])),
+            "min" if args.len() >= 2 => Ok(args[0].min(args[1])),
+            "abs" if !args.is_empty() => Ok(args[0].abs()),
+            _ => Err(format!(
+                "Unknown function '{}'. For real native FFI, use ifa_std::ffi::IfaFfi with libloading.",
+                func
+            )),
+        }
     }
 
     /// Import a Python module for caching
     pub fn import_py(&mut self, module: &str) {
         self.py_cache.insert(module.to_string(), module.to_string());
+    }
+    
+    /// Check if a module is cached
+    pub fn has_module(&self, module: &str) -> bool {
+        self.py_cache.contains_key(module)
+    }
+    
+    /// List all blocked shell commands
+    pub fn blocked_commands(&self) -> &[&'static str] {
+        &self.blocked_commands
     }
 }
 

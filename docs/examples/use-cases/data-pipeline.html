@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Pipeline - Ifa-Lang Use Cases</title>
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
+    <script src="../../js/common.js" defer></script>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <h1>Data Pipeline</h1>
+        <p>Build ETL pipelines with Ifa-Lang's functional data processing.</p>
+
+        <h2>Pipeline Stages</h2>
+        <ol>
+            <li><strong>Extract</strong> - Fetch data from APIs or files</li>
+            <li><strong>Transform</strong> - Filter, map, aggregate</li>
+            <li><strong>Load</strong> - Write to database or file</li>
+        </ol>
+
+        <h2>Domains Used</h2>
+        <ul>
+            <li><strong>Otura / Net</strong> - API data fetching</li>
+            <li><strong>Ogunda / List</strong> - Data transformations</li>
+            <li><strong>Storage / Db</strong> - Persistence</li>
+            <li><strong>Osa / Async</strong> - Parallel processing</li>
+        </ul>
+
+        <h2>Code Example</h2>
+        <pre><code>// ETL Data Pipeline
+ese extract() {
+    // Fetch from API
+    ayanmo response = Otura.gba("https://api.example.com/data");
+    ayanmo data = Ika.json_parse(response);
+    pada data;
+}
+
+ese transform(records) {
+    // Filter and map
+    ayanmo result = [];
+    fun record ninu records {
+        ti record.active == otito {
+            ayanmo cleaned = {
+                id: record.id,
+                name: Ika.uppercase(record.name),
+                score: record.value * 100
+            };
+            Ogunda.fi(result, cleaned);
+        }
+    }
+    pada result;
+}
+
+ese load(data) {
+    // Write to storage
+    Storage.set("pipeline_results", data);
+    Irosu.fo("Loaded " + Ogunda.len(data) + " records");
+}
+
+// Run pipeline
+ayanmo raw = extract();
+ayanmo processed = transform(raw);
+load(processed);</code></pre>
+
+        <footer class="doc-footer">
+            <p><a href="index.html">Back to Use Cases</a></p>
+        </footer>
+    </div>
+</body>
+</html>

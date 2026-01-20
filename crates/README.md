@@ -6,10 +6,16 @@ This directory contains the Rust implementation of Ifá-Lang.
 
 | Crate | Description |
 |-------|-------------|
-| `ifa-core` | Core VM, bytecode, and IfaValue type system |
-| `ifa-std` | Standard library - 16 Odù domains |
-| `ifa-cli` | Command-line interface |
-| `ifa-embedded` | no_std runtime for embedded devices |
+| `ifa-core` | Core VM, bytecode, parser, interpreter, and IfaValue type system |
+| `ifa-std` | Standard library - 16 Odù domains + stacks + infra |
+| `ifa-cli` | Command-line interface and REPL |
+| `ifa-embedded` | no_std runtime for embedded/IoT devices |
+| `ifa-sandbox` | WASM sandbox with capability-based security |
+| `ifa-macros` | Procedural macros (ẹbọ, àjọṣe, etc.) |
+| `ifa-babalawo` | LSP server & developer tools |
+| `ifa-wasm` | WASM bindings for browser playground |
+| `ifa-installer-core` | Cross-platform installer logic |
+| `ifa-installer-gui` | Graphical installer UI |
 
 ## Building
 
@@ -27,26 +33,50 @@ cargo build --workspace --release
 cargo run -p ifa-cli -- --help
 ```
 
-## 16 Odù Domains
+## Standard Library (ifa-std)
 
-| Binary | Name | Purpose | Key Crates |
-|--------|------|---------|------------|
-| 1111 | Ọ̀gbè | System/Lifecycle | std::env |
-| 0000 | Ọ̀yẹ̀kú | Exit/Sleep | RAII guards |
-| 0110 | Ìwòrì | Time/Iteration | chrono |
-| 1001 | Òdí | Files/Database | rusqlite |
-| 1100 | Ìrosù | Console I/O | crossterm |
+### 16 Odù Domains
+
+| Binary | Name | Purpose | Key Features |
+|--------|------|---------|--------------|
+| 1111 | Ọ̀gbè | System | CLI args, env vars |
+| 0000 | Ọ̀yẹ̀kú | Exit | Process termination |
+| 0110 | Ìwòrì | Time | chrono, timers |
+| 1001 | Òdí | Files | rusqlite, I/O |
+| 1100 | Ìrosù | Console | I/O, logging |
 | 0011 | Ọ̀wọ́nrín | Random | rand_chacha |
-| 1000 | Ọ̀bàrà | Math (Add/Mul) | std::ops |
-| 0001 | Ọ̀kànràn | Errors | thiserror |
-| 1110 | Ògúndá | Arrays/Processes | std::process |
-| 0111 | Ọ̀sá | Concurrency | tokio |
-| 0100 | Ìká | Strings | ropey, regex |
-| 0010 | Òtúúrúpọ̀n | Math (Sub/Div) | checked ops |
-| 1011 | Òtúrá | Networking | reqwest, rustls |
-| 1101 | Ìrẹtẹ̀ | Crypto/Compress | ring, zstd |
-| 1010 | Ọ̀ṣẹ́ | Graphics/UI | ratatui |
-| 0101 | Òfún | Permissions | capability-based |
+| 1000 | Ọ̀bàrà | Math | arithmetic |
+| 0001 | Ọ̀kànràn | Errors | Result types |
+| 1110 | Ògúndá | Arrays | std::process |
+| 0111 | Ọ̀sá | Flow | async, tokio |
+| 0100 | Ìká | Strings | regex, ropey |
+| 0010 | Òtúúrúpọ̀n | Reduce | sub/div/mod |
+| 1011 | Òtúrá | Net | reqwest, TLS |
+| 1101 | Ìrẹtẹ̀ | Crypto | ring, zstd |
+| 1010 | Ọ̀ṣẹ́ | UI | ratatui |
+| 0101 | Òfún | Perms | capabilities |
+
+### Domain Stacks
+
+| Stack | Description |
+|-------|-------------|
+| `stacks/crypto` | SHA, HMAC, Argon2, Base64, SecureRng |
+| `stacks/backend` | HTTP, Request/Response, ORM |
+| `stacks/frontend` | XSS-safe HTML, Element builder |
+| `stacks/gamedev` | Vec2, AABB, ECS, Animation |
+| `stacks/ml` | Tensor, activations, matmul |
+| `stacks/iot` | GPIO, Serial, I2C/SPI |
+| `stacks/fusion` | Fullstack IPC runtime |
+
+### Infrastructure
+
+| Module | Description |
+|--------|-------------|
+| `infra/cpu` | Parallel iterators (rayon), task graphs |
+| `infra/gpu` | WGPU compute, memory pools |
+| `infra/storage` | OduStore key-value database |
+| `infra/kernel` | System info, memory stats |
+| `infra/shaders` | Pre-built WGSL compute shaders |
 
 ## Architecture
 
@@ -63,12 +93,16 @@ crates/
 ├── ifa-std/           # Standard library
 │   └── src/
 │       ├── lib.rs     # Domain exports
-│       ├── traits.rs  # OduDomain trait
-│       └── *.rs       # 16 domain modules
+│       ├── stacks/    # Crypto, ML, IoT, etc.
+│       └── infra/     # CPU, GPU, Storage
 ├── ifa-cli/           # CLI
-│   └── src/
-│       └── main.rs    # Clap-based CLI
-└── ifa-embedded/      # Embedded runtime
-    └── src/
-        └── lib.rs     # no_std scaffold
+│   └── src/main.rs    # Clap-based CLI
+├── ifa-embedded/      # Embedded runtime
+│   └── src/lib.rs     # no_std VM
+├── ifa-sandbox/       # WASM sandbox
+├── ifa-macros/        # Proc macros
+├── ifa-babalawo/      # LSP server
+├── ifa-wasm/          # Browser bindings
+├── ifa-installer-core/# Installer logic
+└── ifa-installer-gui/ # Installer UI
 ```

@@ -1,15 +1,6 @@
-use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Serialize, Deserialize)]
-pub enum Profile {
-    Standard,
-    Fusion,  // Hybrid Development (Default)
-    Minimal,
-    Dev,     // Complete toolchain
-    Custom,
-}
-
+/// Component that can be installed by the Ifá-Lang installer.
 #[derive(Debug, Clone)]
 pub struct Component {
     pub name: String,
@@ -18,32 +9,32 @@ pub struct Component {
     pub selected: bool,
 }
 
+/// Returns all components that the ifa binary provides.
+/// 
+/// The `ifa` binary is a complete toolchain that includes:
+/// - Runtime/interpreter
+/// - Oja package manager (`ifa oja` subcommand)
+/// - Babalawo error checker (compiled in)
+/// - WASM sandbox (compiled in)
+/// - All 16 Odù domains and stacks
+pub fn all_components() -> Vec<Component> {
+    vec![
+        Component { 
+            name: "ifa".into(), 
+            description: "Ifá-Lang CLI — Runtime, Oja package manager, Babalawo, Sandbox".into(), 
+            required: true, 
+            selected: true 
+        },
+    ]
+}
+
+// Keep Profile struct for backwards compatibility with existing config files
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct Profile;
+
 impl Profile {
+    /// Returns all components — Profile is now a no-op, everything is bundled.
     pub fn components(&self) -> Vec<Component> {
-        match self {
-            Profile::Standard => vec![
-                Component { name: "ifa-compiler".into(), description: "Ifá Compiler & Runtime".into(), required: true, selected: true },
-                Component { name: "oja".into(), description: "package Manager".into(), required: true, selected: true },
-                Component { name: "ifa-std".into(), description: "Standard Library".into(), required: false, selected: true },
-            ],
-            Profile::Fusion => vec![
-                Component { name: "ifa-compiler".into(), description: "Ifá Compiler (Hybrid Support)".into(), required: true, selected: true },
-                Component { name: "oja".into(), description: "Oja (Registry & Publish)".into(), required: true, selected: true },
-                Component { name: "ifa-std".into(), description: "IFA-STD (Stacks: ML, Game, Fusion)".into(), required: true, selected: true },
-                Component { name: "python-bridge".into(), description: "Python 3.11 Bridge (for ML)".into(), required: false, selected: true },
-            ],
-            Profile::Minimal => vec![
-                Component { name: "ifa-compiler".into(), description: "Ifá Runtime".into(), required: true, selected: true },
-                Component { name: "oja".into(), description: "package Manager".into(), required: true, selected: true },
-            ],
-            Profile::Dev => vec![
-                 Component { name: "ifa-compiler".into(), description: "Compiler".into(), required: true, selected: true },
-                 Component { name: "oja".into(), description: "Oja".into(), required: true, selected: true },
-                 Component { name: "ifa-std".into(), description: "Std Lib".into(), required: true, selected: true },
-                 Component { name: "ifa-lsp".into(), description: "LSP Server".into(), required: false, selected: true },
-                 Component { name: "babalawo".into(), description: "Babalawo Linter".into(), required: false, selected: true },
-            ],
-            _ => vec![],
-        }
+        all_components()
     }
 }

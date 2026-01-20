@@ -13,8 +13,16 @@ path = "src/lib.rs"
 [features]
 default = ["native"]
 native = ["ifa-sandbox"]
+network = ["ureq"]
+audio = ["rodio"]
 
 [dependencies]
+# Shared types (IfaValue, IfaError, OduDomain)
+ifa-types = { path = "../ifa-types" }
+
+# For CPU thread count (lightweight, no cycle)
+num_cpus = "1.16"
+
 # Sandbox is only for native builds (not WASM)
 ifa-sandbox = { path = "../ifa-sandbox", optional = true }
 
@@ -28,6 +36,7 @@ bincode.workspace = true
 
 # Data structures
 indexmap = "2.2"
+serde_json = "1.0"
 
 # Lexer (logos for fast tokenization)
 logos = "0.14"
@@ -36,6 +45,23 @@ logos = "0.14"
 pest = "2.7"
 pest_derive = "2.7"
 
+# Crypto for handlers (lightweight)
+sha2 = "0.10"
+getrandom = { version = "0.2", features = ["std", "js"] }
+base64 = "0.22"
+uuid = { version = "1.8", features = ["v4", "js"] }
+
+# Network for handlers (optional, blocking)
+ureq = { version = "3", optional = true }
+
+# Parallel operations (used internally on primitives)
+rayon = "1.10"
+
+# Audio for ohun handler (optional)
+rodio = { version = "0.17", optional = true }
+
 [dev-dependencies]
 proptest = "1.4"
+
+
 

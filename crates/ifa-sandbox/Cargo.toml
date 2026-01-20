@@ -10,12 +10,12 @@ wasmtime-wasi = "40.0"
 wat = "1.0"
 
 # Error handling
-eyre = "0.6"
-thiserror = "2.0"
+eyre.workspace = true
+thiserror.workspace = true
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
 
 [dev-dependencies]
 tempfile = "3.0"

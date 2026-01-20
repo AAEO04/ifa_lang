@@ -1,7 +1,7 @@
 #![allow(clippy::collapsible_if)]
-#![allow(clippy::type_complexity)]
 #![allow(clippy::collapsible_str_replace)]
 #![allow(clippy::should_implement_trait)]
+#![allow(clippy::type_complexity)]
 
 //! # Ifá-Core
 //!

@@ -224,6 +224,18 @@ impl Ika {
     pub fn rope_len(&self, rope: &Rope) -> usize {
         rope.len_chars()
     }
+
+    // --- English Aliases ---
+
+    pub fn len(&self, s: &str) -> usize { self.gigun(s) }
+    pub fn find(&self, haystack: &str, needle: &str) -> Option<usize> { self.wa(haystack, needle) }
+    pub fn has(&self, haystack: &str, needle: &str) -> bool { self.ni(haystack, needle) }
+    pub fn split(&self, s: &str, delimiter: &str) -> Vec<String> { self.pin(s, delimiter) }
+    pub fn join(&self, parts: &[&str], separator: &str) -> String { self.dapo(parts, separator) }
+    pub fn replace(&self, s: &str, from: &str, to: &str) -> String { self.yi_pada(s, from, to) }
+    pub fn matches(&self, pattern: &str, text: &str) -> IfaResult<bool> { self.ba_mu(pattern, text) }
+    pub fn encode(&self, val: &IfaValue) -> IfaResult<String> { self.yi_si_json(val) }
+    pub fn decode(&self, json: &str) -> IfaResult<IfaValue> { self.yi_pada_json(json) }
 }
 
 #[cfg(test)]

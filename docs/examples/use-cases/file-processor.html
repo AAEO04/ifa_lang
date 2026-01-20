@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Processor - Ifa-Lang Use Cases</title>
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
+    <script src="../../js/common.js" defer></script>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <h1>File Processor</h1>
+        <p>Batch process files with Ifa-Lang's powerful I/O and concurrency features.</p>
+
+        <h2>Use Case</h2>
+        <p>Process multiple files in parallel - resize images, convert formats, or extract data.</p>
+
+        <h2>Domains Used</h2>
+        <ul>
+            <li><strong>Odi / Fs</strong> - File reading/writing</li>
+            <li><strong>Osa / Async</strong> - Parallel processing</li>
+            <li><strong>Ika / String</strong> - Path manipulation</li>
+        </ul>
+
+        <h2>Code Example</h2>
+        <pre><code>// Batch File Processor
+ayanmo files = Odi.akojopo("input/*.txt");
+ayanmo processed = 0;
+
+// Process files in parallel
+Osa.pelu_ara(files, ese(file) {
+    ayanmo content = Odi.ka(file);
+    
+    // Transform content
+    ayanmo upper = Ika.uppercase(content);
+    
+    // Write to output
+    ayanmo outname = Ika.ropo(file, "input/", "output/");
+    Odi.ko(outname, upper);
+    
+    processed = processed + 1;
+});
+
+Irosu.fo("Processed " + processed + " files");</code></pre>
+
+        <h2>CSV Processing Example</h2>
+        <pre><code>// Parse and transform CSV
+ayanmo csv = Odi.ka("data.csv");
+ayanmo lines = Ika.pin(csv, "\n");
+ayanmo output = [];
+
+fun line ninu lines {
+    ayanmo fields = Ika.pin(line, ",");
+    ti Ogunda.len(fields) >= 2 {
+        ayanmo name = Ogunda.gba(fields, 0);
+        ayanmo value = Ogunda.gba(fields, 1);
+        Ogunda.fi(output, name + ": " + value);
+    }
+}
+
+Odi.ko("output.txt", Ika.so(output, "\n"));</code></pre>
+
+        <footer class="doc-footer">
+            <p><a href="index.html">Back to Use Cases</a></p>
+        </footer>
+    </div>
+</body>
+</html>

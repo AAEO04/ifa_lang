@@ -100,8 +100,27 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let fn_sig = &input.sig;
     let fn_block = &input.block;
 
-    // Convert block to string for analysis
-    let block_str = quote!(#fn_block).to_string();
+    // Use AST visitor to properly count method calls
+    use syn::visit::Visit;
+    
+    struct MethodCallCounter {
+        counts: std::collections::HashMap<String, usize>,
+    }
+    
+    impl<'ast> Visit<'ast> for MethodCallCounter {
+        fn visit_expr_method_call(&mut self, node: &'ast syn::ExprMethodCall) {
+            // Get the method name
+            let method_name = node.method.to_string();
+            *self.counts.entry(method_name).or_insert(0) += 1;
+            // Continue visiting nested expressions
+            syn::visit::visit_expr_method_call(self, node);
+        }
+    }
+    
+    let mut counter = MethodCallCounter {
+        counts: std::collections::HashMap::new(),
+    };
+    syn::visit::visit_block(&mut counter, fn_block);
 
     // Define pairs to check (open_method, close_method)
     let pairs = [
@@ -114,11 +133,8 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut errors = Vec::new();
 
     for (open, close) in &pairs {
-        let open_pattern = format!(".{}(", open);
-        let close_pattern = format!(".{}(", close);
-
-        let open_count = block_str.matches(&open_pattern).count();
-        let close_count = block_str.matches(&close_pattern).count();
+        let open_count = *counter.counts.get(*open).unwrap_or(&0);
+        let close_count = *counter.counts.get(*close).unwrap_or(&0);
 
         if open_count > close_count {
             errors.push(format!(
