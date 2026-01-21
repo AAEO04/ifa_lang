@@ -1,0 +1,20 @@
+{
+  "name": "ifa-wasm",
+  "type": "module",
+  "collaborators": [
+    "Ifá-Lang Contributors"
+  ],
+  "description": "WebAssembly bindings for Ifa-Lang playground",
+  "version": "1.2.2",
+  "license": "MIT",
+  "files": [
+    "ifa_wasm_bg.wasm",
+    "ifa_wasm.js",
+    "ifa_wasm.d.ts"
+  ],
+  "main": "ifa_wasm.js",
+  "types": "ifa_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
