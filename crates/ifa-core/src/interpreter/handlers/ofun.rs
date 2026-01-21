@@ -50,19 +50,23 @@ fn get_domain_methods(domain: &str) -> Vec<IfaValue> {
         "fidio" | "video" => &["play", "record", "frame", "duration"],
         _ => &[],
     };
-    methods.iter().map(|m| IfaValue::Str(m.to_string())).collect()
+    methods
+        .iter()
+        .map(|m| IfaValue::Str(m.to_string()))
+        .collect()
 }
 
 impl OduHandler for OfunHandler {
     fn domain(&self) -> OduDomain {
         OduDomain::Ofun
     }
-    
+
     fn call(
-        &self, 
-        method: &str, 
-        args: Vec<IfaValue>, 
-        _env: &mut Environment
+        &self,
+        method: &str,
+        args: Vec<IfaValue>,
+        _env: &mut Environment,
+        _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         match method {
             // Check if capability is granted
@@ -76,9 +80,11 @@ impl OduHandler for OfunHandler {
                     let has_cap = cap_type != "Unknown";
                     return Ok(IfaValue::Bool(has_cap));
                 }
-                Err(IfaError::Runtime("has_capability requires capability name".into()))
+                Err(IfaError::Runtime(
+                    "has_capability requires capability name".into(),
+                ))
             }
-            
+
             // Request capability (logs and returns success)
             "beere" | "request" => {
                 if let Some(IfaValue::Str(cap)) = args.first() {
@@ -94,7 +100,7 @@ impl OduHandler for OfunHandler {
                 }
                 Err(IfaError::Runtime("request requires capability name".into()))
             }
-            
+
             // Reflect on type - real implementation
             "iru" | "typeof" => {
                 if let Some(val) = args.first() {
@@ -102,7 +108,7 @@ impl OduHandler for OfunHandler {
                 }
                 Ok(IfaValue::Str("null".to_string()))
             }
-            
+
             // Reflect on methods - real implementation with domain lookup
             "awọn_ẹsẹ" | "methods" => {
                 if let Some(IfaValue::Str(domain)) = args.first() {
@@ -110,41 +116,59 @@ impl OduHandler for OfunHandler {
                 }
                 // Return all domains if no argument
                 let domains: Vec<IfaValue> = vec![
-                    "irosu", "ogbe", "obara", "oturupon", "ika", "oyeku", 
-                    "owonrin", "ogunda", "iwori", "okanran", "otura", "odi",
-                    "osa", "ofun", "irete", "ose", "ohun", "fidio"
-                ].into_iter().map(|d| IfaValue::Str(d.to_string())).collect();
+                    "irosu", "ogbe", "obara", "oturupon", "ika", "oyeku", "owonrin", "ogunda",
+                    "iwori", "okanran", "otura", "odi", "osa", "ofun", "irete", "ose", "ohun",
+                    "fidio",
+                ]
+                .into_iter()
+                .map(|d| IfaValue::Str(d.to_string()))
+                .collect();
                 Ok(IfaValue::List(domains))
             }
-            
+
             // List available capabilities
             "awọn_agbara" | "capabilities" => {
                 let caps: Vec<IfaValue> = vec![
-                    "stdio", "time", "random", "network", "files", "env", "execute", "bridge"
-                ].into_iter().map(|c| IfaValue::Str(c.to_string())).collect();
+                    "stdio", "time", "random", "network", "files", "env", "execute", "bridge",
+                ]
+                .into_iter()
+                .map(|c| IfaValue::Str(c.to_string()))
+                .collect();
                 Ok(IfaValue::List(caps))
             }
-            
+
             // Get module info - real implementation
-            "alaye_ẹka" | "module_info" => {
-                Ok(IfaValue::Map(std::collections::HashMap::from([
-                    ("name".to_string(), IfaValue::Str("ifá-core".to_string())),
-                    ("version".to_string(), IfaValue::Str(env!("CARGO_PKG_VERSION").to_string())),
-                    ("edition".to_string(), IfaValue::Str("2024".to_string())),
-                ])))
-            }
-            
+            "alaye_ẹka" | "module_info" => Ok(IfaValue::Map(std::collections::HashMap::from([
+                ("name".to_string(), IfaValue::Str("ifá-core".to_string())),
+                (
+                    "version".to_string(),
+                    IfaValue::Str(env!("CARGO_PKG_VERSION").to_string()),
+                ),
+                ("edition".to_string(), IfaValue::Str("2024".to_string())),
+            ]))),
+
             _ => Err(IfaError::Runtime(format!(
                 "Unknown Òfún method: {}",
                 method
             ))),
         }
     }
-    
+
     fn methods(&self) -> &'static [&'static str] {
-        &["ni_agbara", "has_capability", "can", "beere", "request",
-          "iru", "typeof", "awọn_ẹsẹ", "methods", "awọn_agbara", "capabilities",
-          "alaye_ẹka", "module_info"]
+        &[
+            "ni_agbara",
+            "has_capability",
+            "can",
+            "beere",
+            "request",
+            "iru",
+            "typeof",
+            "awọn_ẹsẹ",
+            "methods",
+            "awọn_agbara",
+            "capabilities",
+            "alaye_ẹka",
+            "module_info",
+        ]
     }
 }
-

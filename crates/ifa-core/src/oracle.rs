@@ -4,11 +4,11 @@
 
 #[cfg(test)]
 pub mod oracle {
-    use crate::{parse, Interpreter, transpile_to_rust};
-    use std::process::Command;
+    use crate::{Interpreter, parse, transpile_to_rust};
     use std::fs;
-    use std::path::PathBuf;
     use std::io::Write;
+    use std::path::PathBuf;
+    use std::process::Command;
 
     pub struct OracleResult {
         pub interpreter_stdout: String,
@@ -19,12 +19,14 @@ pub mod oracle {
         // 1. Run Interpreter
         let program = parse(source).expect("Failed to parse source");
         let mut interpreter = Interpreter::new();
-        interpreter.execute(&program).expect("Interpreter execution failed");
+        interpreter
+            .execute(&program)
+            .expect("Interpreter execution failed");
         let int_stdout = interpreter.get_output().join("\n");
 
         // 2. Transpile and Compile
         let rust_code = transpile_to_rust(&program);
-        
+
         // Use a temporary directory for compilation
         let tmp_dir = std::env::temp_dir().join("ifa_oracle");
         if !tmp_dir.exists() {
@@ -58,7 +60,7 @@ pub mod oracle {
             .expect("Failed to run generated binary");
 
         let trans_stdout_raw = String::from_utf8_lossy(&output.stdout).to_string();
-        
+
         // Cleanup "Àṣẹ! (Success)" and leading/trailing whitespace
         let trans_stdout = trans_stdout_raw
             .replace("\nÀṣẹ! (Success)", "")

@@ -14,25 +14,33 @@ fn main() {
 
     // Initialize GPU
     let ctx = GpuContext::new_blocking().expect("Failed to initialize GPU");
-    println!("✓ GPU initialized: {:?}", ctx.device.limits().max_compute_workgroups_per_dimension);
+    println!(
+        "✓ GPU initialized: {:?}",
+        ctx.device.limits().max_compute_workgroups_per_dimension
+    );
 
     // Test data
     let data_size: u32 = 10_000_000;
     let input_data: Vec<f32> = (0..data_size).map(|i| i as f32).collect();
-    
+
     // --- CPU Baseline ---
     let start = Instant::now();
     let _cpu_result: Vec<f32> = input_data.iter().map(|x| x * 2.0 + 1.0).collect();
     let cpu_duration = start.elapsed();
-    println!("CPU sequential ({} elements): {:?}", data_size, cpu_duration);
+    println!(
+        "CPU sequential ({} elements): {:?}",
+        data_size, cpu_duration
+    );
 
     // --- GPU Compute ---
     // Create input buffer
-    let input_buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Input Buffer"),
-        contents: bytemuck::cast_slice(&input_data),
-        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-    });
+    let input_buffer = ctx
+        .device
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Input Buffer"),
+            contents: bytemuck::cast_slice(&input_data),
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        });
 
     // Create output buffer
     let output_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {
@@ -85,11 +93,13 @@ fn main() {
 
     // Execute compute pass
     let start = Instant::now();
-    
-    let mut encoder = ctx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Compute Encoder"),
-    });
-    
+
+    let mut encoder = ctx
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Compute Encoder"),
+        });
+
     {
         let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some("Compute Pass"),
@@ -101,18 +111,26 @@ fn main() {
         let workgroups = (data_size + 255) / 256;
         compute_pass.dispatch_workgroups(workgroups, 1, 1);
     }
-    
+
     // Copy output to staging buffer
-    encoder.copy_buffer_to_buffer(&output_buffer, 0, &staging_buffer, 0, 
-        (data_size as u64) * std::mem::size_of::<f32>() as u64);
-    
+    encoder.copy_buffer_to_buffer(
+        &output_buffer,
+        0,
+        &staging_buffer,
+        0,
+        (data_size as u64) * std::mem::size_of::<f32>() as u64,
+    );
+
     ctx.queue.submit(std::iter::once(encoder.finish()));
-    
+
     // Wait for GPU to complete
     ctx.device.poll(wgpu::Maintain::Wait);
-    
+
     let gpu_duration = start.elapsed();
-    println!("GPU compute    ({} elements): {:?}", data_size, gpu_duration);
+    println!(
+        "GPU compute    ({} elements): {:?}",
+        data_size, gpu_duration
+    );
 
     // Calculate speedup
     let speedup = cpu_duration.as_secs_f64() / gpu_duration.as_secs_f64();

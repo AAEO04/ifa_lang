@@ -23,7 +23,7 @@ mod wisdom_lookup_tests {
         // Verify common errors map to Odù
         assert_eq!(ERROR_TO_ODU.get("UNINITIALIZED"), Some(&"OGBE"));
         assert_eq!(ERROR_TO_ODU.get("DIVISION_BY_ZERO"), Some(&"OTURUPON"));
-        
+
         // Verify mapped Odù exists in wisdom DB
         let odu = ERROR_TO_ODU.get("UNINITIALIZED").unwrap();
         let wisdom = ODU_WISDOM.get(odu).unwrap();
@@ -46,11 +46,11 @@ mod taboo_tests {
         let mut enforcer = TabooEnforcer::new();
         // Block all network calls (Otura)
         enforcer.add_wildcard_taboo("otura");
-        
+
         let allowed = enforcer.check_call("ose", "otura", 1, 1);
         assert!(!allowed);
         assert!(!enforcer.is_clean());
-        
+
         // Output should mention violation
         let violations = enforcer.get_violations();
         assert_eq!(violations.len(), 1);
@@ -62,11 +62,11 @@ mod taboo_tests {
         let mut enforcer = TabooEnforcer::new();
         // UI (ose) cannot call Database (odi)
         enforcer.add_taboo("ose", "UI", "odi", "", false);
-        
+
         enforcer.set_context("UI");
         let allowed = enforcer.check_call("ose", "odi", 1, 1);
         assert!(!allowed);
-        
+
         // But Backend can (different context)
         enforcer.set_context("Backend");
         // We need a fresh check or just inspect the return
@@ -85,7 +85,7 @@ mod iwa_tests {
         // Open a file (Odi.si)
         engine.open_resource("Odi", "si", 10, 1);
         assert!(!engine.is_balanced());
-        
+
         // Check unstructured debt
         let debt = engine.unclosed_resources();
         assert_eq!(debt.len(), 1);
@@ -101,7 +101,7 @@ mod iwa_tests {
     fn test_unbalanced_resource() {
         let mut engine = IwaEngine::new(true);
         engine.open_resource("Otura", "so", 1, 1); // Connect
-        
+
         assert!(!engine.check_balance());
         // Verify it complains (implicit via check_balance return false)
     }
@@ -111,7 +111,7 @@ mod iwa_tests {
         let mut engine = IwaEngine::new(true);
         // "ogbe.bi" is in AUTO_CLOSE list
         engine.open_resource("ogbe", "bi", 1, 1);
-        
+
         // Should be considered balanced because it auto-closes
         assert!(engine.is_balanced());
     }

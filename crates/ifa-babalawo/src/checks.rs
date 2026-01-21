@@ -306,31 +306,31 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             check_expression(value, ctx, baba, file, span);
 
             // Check if target variable is defined
-            if let ifa_core::ast::AssignTarget::Variable(name) = target {
-                if !ctx.defined_vars.contains(name) {
-                    baba.error(
-                        "UNDEFINED_VARIABLE",
-                        &format!("Variable '{}' assigned before declaration", name),
-                        file,
-                        span.line,
-                        span.column,
-                    );
-                }
+            if let ifa_core::ast::AssignTarget::Variable(name) = target
+                && !ctx.defined_vars.contains(name)
+            {
+                baba.error(
+                    "UNDEFINED_VARIABLE",
+                    &format!("Variable '{}' assigned before declaration", name),
+                    file,
+                    span.line,
+                    span.column,
+                );
             }
         }
 
         Statement::Instruction { call, span } => {
             // Check for division by zero
-            if call.method == "pin" || call.method == "div" {
-                if let Some(Expression::Int(0)) = call.args.get(1) {
-                    baba.error(
-                        "DIVISION_BY_ZERO",
-                        "Division by zero detected",
-                        file,
-                        span.line,
-                        span.column,
-                    );
-                }
+            if (call.method == "pin" || call.method == "div")
+                && let Some(Expression::Int(0)) = call.args.get(1)
+            {
+                baba.error(
+                    "DIVISION_BY_ZERO",
+                    "Division by zero detected",
+                    file,
+                    span.line,
+                    span.column,
+                );
             }
 
             // Track resource lifecycle
@@ -417,7 +417,9 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
         }
 
         Statement::While {
-            condition, body, span
+            condition,
+            body,
+            span,
         } => {
             check_expression(condition, ctx, baba, file, span);
 
@@ -454,7 +456,13 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
 use ifa_core::ast::Span;
 
 /// Check an expression for issues
-fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalawo, file: &str, span: &Span) {
+fn check_expression(
+    expr: &Expression,
+    ctx: &mut LintContext,
+    baba: &mut Babalawo,
+    file: &str,
+    span: &Span,
+) {
     match expr {
         Expression::Identifier(name) => {
             ctx.use_var(name);
@@ -481,16 +489,15 @@ fn check_expression(expr: &Expression, ctx: &mut LintContext, baba: &mut Babalaw
             if matches!(
                 op,
                 ifa_core::ast::BinaryOperator::Div | ifa_core::ast::BinaryOperator::Mod
-            ) {
-                if let Expression::Int(0) = **right {
-                    baba.error(
-                        "DIVISION_BY_ZERO",
-                        "Division by zero in expression",
-                        file,
-                        span.line,
-                        span.column,
-                    );
-                }
+            ) && let Expression::Int(0) = **right
+            {
+                baba.error(
+                    "DIVISION_BY_ZERO",
+                    "Division by zero in expression",
+                    file,
+                    span.line,
+                    span.column,
+                );
             }
         }
 

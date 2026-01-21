@@ -36,7 +36,7 @@ pub fn total_memory() -> u64 {
 /// Get available system memory in bytes (refreshes on each call)
 #[cfg(feature = "sysinfo")]
 pub fn available_memory() -> u64 {
-    // Note: For truly fresh data, we refresh. For the cached static, 
+    // Note: For truly fresh data, we refresh. For the cached static,
     // we'd need RefCell/Mutex. For now, create a fresh System for this call.
     use sysinfo::System;
     let mut sys = System::new_all();

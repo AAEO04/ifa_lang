@@ -4,10 +4,10 @@
 //! Generates secure manifests (Iwe.toml / AppArmor profiles).
 
 use eyre::{Result, WrapErr};
-use std::path::{Path, PathBuf};
-use ifa_core::parse;
 use ifa_babalawo::infer_capabilities;
+use ifa_core::parse;
 use ifa_sandbox::{CapabilitySet, Ofun};
+use std::path::{Path, PathBuf};
 
 /// Scan directory and generate capability manifest
 pub fn scan_and_generate(path: &Path) -> Result<()> {
@@ -30,7 +30,7 @@ pub fn scan_and_generate(path: &Path) -> Result<()> {
         debug_assert!(src_path.exists());
         let content = std::fs::read_to_string(&src_path)
             .wrap_err_with(|| format!("Failed to read {}", src_path.display()))?;
-        
+
         match parse(&content) {
             Ok(program) => {
                 let caps = infer_capabilities(&program);
@@ -53,14 +53,17 @@ pub fn scan_and_generate(path: &Path) -> Result<()> {
     println!("📜 Generated Manifest Snippet (Iwe.toml):");
     println!("```toml");
     println!("[package.capabilities]");
-    
+
     // Check for network - iterate manually
-    let has_network_star = total_caps.all().iter().any(|c| matches!(c, Ofun::Network { domains } if domains.contains(&"*".to_string())));
-    
+    let has_network_star = total_caps
+        .all()
+        .iter()
+        .any(|c| matches!(c, Ofun::Network { domains } if domains.contains(&"*".to_string())));
+
     if has_network_star {
-         println!("network = true # Detected 'Otura'");
+        println!("network = true # Detected 'Otura'");
     }
-    
+
     for grant in total_caps.all() {
         match grant {
             Ofun::ReadFiles { root } => println!("read = [{:?}]", root),
@@ -81,7 +84,7 @@ pub fn scan_and_generate(path: &Path) -> Result<()> {
 fn traverse_dir(dir: &Path) -> Result<Vec<PathBuf>> {
     let mut files = Vec::new();
     if dir.is_file() {
-        if dir.extension().map_or(false, |e| e == "ifa") {
+        if dir.extension().is_some_and(|e| e == "ifa") {
             files.push(dir.to_path_buf());
         }
     } else if dir.is_dir() {
@@ -90,10 +93,8 @@ fn traverse_dir(dir: &Path) -> Result<Vec<PathBuf>> {
             let path = entry.path();
             if path.is_dir() {
                 files.extend(traverse_dir(&path)?);
-            } else {
-                 if path.extension().map_or(false, |e| e == "ifa") {
-                    files.push(path);
-                }
+            } else if path.extension().is_some_and(|e| e == "ifa") {
+                files.push(path);
             }
         }
     }
@@ -102,15 +103,15 @@ fn traverse_dir(dir: &Path) -> Result<Vec<PathBuf>> {
 
 fn print_capabilities(caps: &CapabilitySet) {
     for grant in caps.all() {
-         match grant {
-             Ofun::ReadFiles { root } => println!("   - Read: {:?}", root),
-             Ofun::WriteFiles { root } => println!("   - Write: {:?}", root),
-             Ofun::Network { .. } => println!("   - Network: Full Access"), // simplified
-             Ofun::Time => println!("   - Access to Time"),
-             Ofun::Environment { .. } => println!("   - Access to Env"),
-             Ofun::Execute { .. } => println!("   - Spawn Processes"),
-             Ofun::Stdio => {}, // default
-             _ => println!("   - {:?}", grant),
-         }
+        match grant {
+            Ofun::ReadFiles { root } => println!("   - Read: {:?}", root),
+            Ofun::WriteFiles { root } => println!("   - Write: {:?}", root),
+            Ofun::Network { .. } => println!("   - Network: Full Access"), // simplified
+            Ofun::Time => println!("   - Access to Time"),
+            Ofun::Environment { .. } => println!("   - Access to Env"),
+            Ofun::Execute { .. } => println!("   - Spawn Processes"),
+            Ofun::Stdio => {} // default
+            _ => println!("   - {:?}", grant),
+        }
     }
 }

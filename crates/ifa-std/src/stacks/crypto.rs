@@ -270,7 +270,9 @@ impl SecureRng {
     pub fn fill_bytes(&self, dest: &mut [u8]) -> Result<(), CryptoError> {
         use rand::RngCore;
         use rand::rngs::OsRng;
-        OsRng.try_fill_bytes(dest).map_err(|_| CryptoError::RngError)
+        OsRng
+            .try_fill_bytes(dest)
+            .map_err(|_| CryptoError::RngError)
     }
 
     /// Generate random bytes
@@ -290,7 +292,9 @@ impl SecureRng {
     /// Generate random value in range [0, max)
     pub fn gen_range(&self, max: u64) -> Result<u64, CryptoError> {
         if max == 0 {
-            return Err(CryptoError::InvalidInput("Range max cannot be 0".to_string()));
+            return Err(CryptoError::InvalidInput(
+                "Range max cannot be 0".to_string(),
+            ));
         }
         use rand::Rng;
         use rand::rngs::OsRng;

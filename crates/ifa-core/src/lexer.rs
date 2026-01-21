@@ -149,18 +149,18 @@ pub enum OduDomain {
     Irete,    // 1101 - Crypto
     Ose,      // 1010 - UI
     Ofun,     // 0101 - Permissions
-    
+
     // Pseudo-domains
-    Coop,     // Co-op / Àjọṣe - FFI Bridge
-    Opele,    // Ọpẹlẹ - Divination/Compound Odù
-    
+    Coop,  // Co-op / Àjọṣe - FFI Bridge
+    Opele, // Ọpẹlẹ - Divination/Compound Odù
+
     // Infrastructure Layer
-    Cpu,      // Parallel computing (rayon)
-    Gpu,      // GPU compute (wgpu)
-    Storage,  // Key-value store (OduStore)
-    Ohun,     // Audio I/O (rodio)
-    Fidio,    // Video I/O (ffmpeg)
-    
+    Cpu,     // Parallel computing (rayon)
+    Gpu,     // GPU compute (wgpu)
+    Storage, // Key-value store (OduStore)
+    Ohun,    // Audio I/O (rodio)
+    Fidio,   // Video I/O (ffmpeg)
+
     // Application Stacks
     Backend,  // HTTP server, ORM
     Frontend, // HTML, CSS generation

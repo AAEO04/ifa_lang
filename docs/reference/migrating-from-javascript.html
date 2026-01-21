@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrating from JavaScript - Ifá-Lang</title>
+    <meta name="description" content="A guide for JavaScript developers migrating to Ifá-Lang.">
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Migrating from JavaScript to Ifá-Lang">
+    <meta property="og:description" content="From the event loop to the Odù.">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
+    <script src="../js/common.js" defer></script>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Migrating from JavaScript 🟨</h1>
+        <p class="tagline">From the event loop to the system of Odù.</p>
+
+        <div class="concept">
+            <div class="concept-item">
+                <h4>Similarities</h4>
+                <p>C-style syntax, first-class functions, JSON-like objects.</p>
+            </div>
+            <div class="concept-item">
+                <h4>Differences</h4>
+                <p>No prototype inheritance, explicit domains, optional sync/async.</p>
+            </div>
+        </div>
+
+        <h2>Variables</h2>
+        <p>JS uses <code>let/const/var</code>. Ifá-Lang uses <code>ayanmo</code> (let) or <code>const</code>.</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Variables</span>
+            </div>
+            <pre><code class="language-javascript">// JavaScript
+let name = "Bola";
+const PI = 3.14;</code></pre>
+            <pre><code class="language-ifa">// Ifá-Lang
+ayanmo oruko = "Bola";
+const PI = 3.14;</code></pre>
+        </div>
+
+        <h2>Console & Logging</h2>
+        <p><code>console.log</code> becomes <code>Irosu.fo</code> (The Voice speaks).</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Printing</span>
+            </div>
+            <pre><code class="language-javascript">// JavaScript
+console.log("Hello");
+console.error("Error");</code></pre>
+            <pre><code class="language-ifa">// Ifá-Lang
+Irosu.fo("Hello");
+Irosu.fo_error("Error");</code></pre>
+        </div>
+
+        <h2>Promises & Async</h2>
+        <p>JavaScript uses Promises/async/await. Ifá-Lang uses the <strong>Ọ̀sá</strong> (Wind) domain for concurrency.
+        </p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Concurrency</span>
+            </div>
+            <pre><code class="language-javascript">// JavaScript
+async function fetchData() {
+    const res = await fetch(url);
+    const json = await res.json();
+}</code></pre>
+            <pre><code class="language-ifa">// Ifá-Lang
+ayanmo res = Otura.get(url); // Synchronous by default for simplicity
+// ..or async
+Osa.spawn(iṣẹ() {
+    Otura.get(url);
+});</code></pre>
+        </div>
+
+        <h2>Arrays & Objects</h2>
+        <p>Very similar to JS, but methods live in domains.</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Arrays</span>
+            </div>
+            <pre><code class="language-javascript">// JavaScript
+let nums = [1, 2, 3];
+nums.push(4);
+let len = nums.length;</code></pre>
+            <pre><code class="language-ifa">// Ifá-Lang
+ayanmo nums = [1, 2, 3];
+Ogunda.fi(nums, 4); // or Ogunda.push - both work
+ayanmo len = Ogunda.iwon(nums); // or Ogunda.len - both work</code></pre>
+        </div>
+
+        <div class="next-steps">
+            <a href="../getting-started/quickstart.html" class="next-step">
+                <h3>📚 Quick Start</h3>
+                <p>Install Ifá-Lang now</p>
+            </a>
+            <a href="../reference/comparison.html" class="next-step">
+                <h3>🆚 Comparisons</h3>
+                <p>In-depth language comparison</p>
+            </a>
+        </div>
+    </div>
+
+    <footer class="doc-footer">
+        <p>Ifá-Lang — Built with wisdom from the Odù Ifá</p>
+        <p><a href="https://github.com/AAEO04/ifa-lang">GitHub</a> · <a
+                href="../getting-started/install.html">Install</a></p>
+    </footer>
+</body>
+
+</html>

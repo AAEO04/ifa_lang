@@ -5,18 +5,18 @@
 
 #![allow(dead_code)]
 
+use chrono::Local;
 use eyre::{Result, WrapErr, eyre};
+use flate2::read::GzDecoder;
+use ifa_sandbox::{OmniBox, SandboxConfig, SecurityProfile};
+use reqwest::blocking::Client;
+use ring::digest::{Context, SHA256};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self};
+use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use ring::digest::{Context, SHA256};
-use chrono::Local;
-use std::io::{Cursor, Write};
-use ifa_sandbox::{OmniBox, SandboxConfig, SecurityProfile};
-use reqwest::blocking::Client;
-use flate2::read::GzDecoder;
 use tar::Archive;
 
 const OJA_REGISTRY_URL: &str = "https://raw.githubusercontent.com/AAEO04/oja-registry/main";
@@ -72,7 +72,9 @@ pub enum Dependency {
         branch: Option<String>,
         tag: Option<String>,
     },
-    Path { path: String },
+    Path {
+        path: String,
+    },
 }
 
 /// Ọjà package manager
@@ -106,7 +108,7 @@ impl Oja {
         };
 
         if !self.project_root.exists() {
-             fs::create_dir_all(&self.project_root).wrap_err("Failed to create project root")?;
+            fs::create_dir_all(&self.project_root).wrap_err("Failed to create project root")?;
         }
 
         let manifest_path = self.project_root.join("Iwe.toml");
@@ -117,7 +119,8 @@ impl Oja {
         fs::create_dir_all(&src_dir).wrap_err("Failed to create src directory")?;
 
         let main_content = match domain {
-            "game" => r#"// Game Domain Project
+            "game" => {
+                r#"// Game Domain Project
 // Uses ifa-std::stacks::gamedev
 // Run with: ifa build --game
 
@@ -125,8 +128,10 @@ fn main() {
     println("🎮 Starting Game Engine...");
     // let world = World::new();
 }
-"#,
-            "ml" => r#"// ML Domain Project
+"#
+            }
+            "ml" => {
+                r#"// ML Domain Project
 // Uses ifa-std::stacks::ml
 // Run with: ifa build --ml
 
@@ -134,16 +139,20 @@ fn main() {
     println("🧠 Initializing Neural Network...");
     // let tensor = Tensor::zeros([2, 2]);
 }
-"#,
-            "fusion" | "fullstack" => r#"// Fusion Hybrid Project
+"#
+            }
+            "fusion" | "fullstack" => {
+                r#"// Fusion Hybrid Project
 // Uses ifa-std::stacks::fusion (Hybrid Runtime)
 // Run with: ifa build --fusion
 
 fn main() {
     println("🚀 Launching Fusion Runtime...");
 }
-"#,
-            "iot" => r#"// IoT Domain Project
+"#
+            }
+            "iot" => {
+                r#"// IoT Domain Project
 // Uses ifa-std::stacks::iot (no_std)
 // Run with: ifa build --iot
 
@@ -152,10 +161,13 @@ fn main() {
     //     gpio.write(HIGH);
     // }
 }
-"#,
-            _ => r#"// Ifá-Lang main entry point
+"#
+            }
+            _ => {
+                r#"// Ifá-Lang main entry point
 jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
 "#
+            }
         };
 
         fs::write(src_dir.join("main.ifa"), main_content).wrap_err("Failed to write main.ifa")?;
@@ -165,7 +177,8 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
 *.ifab
 .oja/
 "#;
-        fs::write(self.project_root.join(".gitignore"), gitignore_content).wrap_err("Failed to write .gitignore")?;
+        fs::write(self.project_root.join(".gitignore"), gitignore_content)
+            .wrap_err("Failed to write .gitignore")?;
 
         // Create Igbale Structure
         self.ensure_igbale()?;
@@ -177,25 +190,25 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
     /// Initialize a Monorepo Workspace
     fn init_workspace(&self, name: &str) -> Result<()> {
         println!("🏗️  Initializing Monorepo Workspace: {}", name);
-        
+
         let manifest = IfaManifest {
             package: None,
             workspace: Some(WorkspaceInfo {
-                members: vec!["backend".to_string(), "frontend".to_string()].into(),
+                members: vec!["backend".to_string(), "frontend".to_string()],
             }),
             dependencies: HashMap::new(),
             dev_dependencies: HashMap::new(),
         };
 
         if !self.project_root.exists() {
-             fs::create_dir_all(&self.project_root).wrap_err("Failed to create workspace root")?;
+            fs::create_dir_all(&self.project_root).wrap_err("Failed to create workspace root")?;
         }
-        
+
         // Root Iwe.toml
         let manifest_path = self.project_root.join("Iwe.toml");
         let toml = toml::to_string_pretty(&manifest).wrap_err("Failed to serialize manifest")?;
         fs::write(&manifest_path, toml).wrap_err("Failed to write Iwe.toml")?;
-        
+
         // Shared .oja
         self.ensure_igbale()?;
 
@@ -205,18 +218,24 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
 
         println!("   ✓ Created Iwe.toml (workspace)");
         println!("   ✓ Initialized shared .oja/");
-        println!("   💡 Add members with: ifa oja init <name> --domain <domain> inside proper folders");
-        
+        println!(
+            "   💡 Add members with: ifa oja init <name> --domain <domain> inside proper folders"
+        );
+
         Ok(())
     }
 
     /// Build project (Project-Centric Build)
+    #[allow(clippy::only_used_in_recursion)]
     pub fn build(&self, release: bool) -> Result<()> {
         let manifest = self.load_manifest()?;
 
         // 1. Workspace Build
         if let Some(workspace) = manifest.workspace {
-            println!("🏗️  Building Workspace ({} members)...", workspace.members.len());
+            println!(
+                "🏗️  Building Workspace ({} members)...",
+                workspace.members.len()
+            );
             for member in workspace.members {
                 let member_path = self.project_root.join(&member);
                 if !member_path.exists() {
@@ -234,37 +253,47 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
         // 2. Package Build
         if let Some(package) = manifest.package {
             println!("📦 Building Package: {} v{}", package.name, package.version);
-            
+
             let src_file = self.project_root.join("src/main.ifa");
             if !src_file.exists() {
-                 return Err(eyre!("Source file not found: src/main.ifa"));
+                return Err(eyre!("Source file not found: src/main.ifa"));
             }
 
             // --- Compilation Logic (Transpile -> Cargo) ---
             // Reusing logic similar to main.rs but adapted for Project Context
-            
+
             let source = std::fs::read_to_string(&src_file).wrap_err("Failed to read main.ifa")?;
             println!("   📝 Parsing Ifá source...");
             let program = ifa_core::parse(&source).wrap_err("Parse error")?;
-            
+
             println!("   🔄 Transpiling to Rust...");
             let rust_code = ifa_core::transpile_to_rust(&program);
 
             // Create temp build dir
             let temp_dir = self.project_root.join("target/build_tmp");
-            if temp_dir.exists() { fs::remove_dir_all(&temp_dir).ok(); }
-            fs::create_dir_all(&temp_dir.join("src"))?;
+            if temp_dir.exists() {
+                fs::remove_dir_all(&temp_dir).ok();
+            }
+            fs::create_dir_all(temp_dir.join("src"))?;
 
             fs::write(temp_dir.join("src/main.rs"), &rust_code)?;
 
-            let core_path = std::env::current_dir()?.join("crates/ifa-core").display().to_string().replace("\\", "/");
-            let std_path = std::env::current_dir()?.join("crates/ifa-std").display().to_string().replace("\\", "/");
+            let core_path = std::env::current_dir()?
+                .join("crates/ifa-core")
+                .display()
+                .to_string()
+                .replace("\\", "/");
+            let std_path = std::env::current_dir()?
+                .join("crates/ifa-std")
+                .display()
+                .to_string()
+                .replace("\\", "/");
 
             // Generate Cargo.toml with dependencies from Iwe.toml
             // Identify domain features
             // Simple heuristic for now: check description or add a 'runtime' field later.
             // defaulting to "backend" + "frontend" (fullstack safe default)
-            let features = "\"backend\", \"frontend\", \"ml\", \"game\""; 
+            let features = "\"backend\", \"frontend\", \"ml\", \"game\"";
 
             let cargo_toml = format!(
                 r#"[package]
@@ -285,7 +314,7 @@ opt-level = 3
                 std_path,
                 features
             );
-            
+
             // Write the formatted TOML
             fs::write(temp_dir.join("Cargo.toml"), cargo_toml)?;
 
@@ -295,28 +324,30 @@ opt-level = 3
                 .arg("--release")
                 .current_dir(&temp_dir)
                 .status()?;
-            
+
             if !status.success() {
                 return Err(eyre!("Cargo build failed"));
             }
 
             // Move artifact
-            let target_bin = temp_dir.join("target/release").join(format!("{}.exe", package.name)); // Win assumption
+            let target_bin = temp_dir
+                .join("target/release")
+                .join(format!("{}.exe", package.name)); // Win assumption
             let output_bin = self.project_root.join(format!("{}.exe", package.name));
-            
+
             if target_bin.exists() {
-                 fs::copy(&target_bin, &output_bin)?;
-                 println!("   ✨ Built: {}", output_bin.display());
+                fs::copy(&target_bin, &output_bin)?;
+                println!("   ✨ Built: {}", output_bin.display());
             } else {
-                 // Try non-exe
-                 let target_bin = temp_dir.join("target/release").join(&package.name);
-                 if target_bin.exists() {
-                     fs::copy(&target_bin, &output_bin)?;
-                     println!("   ✨ Built: {}", output_bin.display());
-                 }
+                // Try non-exe
+                let target_bin = temp_dir.join("target/release").join(&package.name);
+                if target_bin.exists() {
+                    fs::copy(&target_bin, &output_bin)?;
+                    println!("   ✨ Built: {}", output_bin.display());
+                }
             }
         }
-        
+
         Ok(())
     }
 
@@ -325,10 +356,10 @@ opt-level = 3
         let igbale = self.project_root.join(".oja");
         let lib = igbale.join("lib");
         let cache = igbale.join("cache");
-        
+
         fs::create_dir_all(&lib).wrap_err("Failed to create .oja/lib")?;
         fs::create_dir_all(&cache).wrap_err("Failed to create .oja/cache")?;
-        
+
         Ok((lib, cache))
     }
 
@@ -349,7 +380,7 @@ opt-level = 3
     /// `ifa fetch`: Download, Audit, and Compile
     pub fn fetch(&self) -> Result<()> {
         println!("🛒  Fetching dependencies...");
-        
+
         let (lib_dir, cache_dir) = self.ensure_igbale()?;
         let manifest = self.load_manifest()?;
 
@@ -366,7 +397,7 @@ opt-level = 3
 
         for (name, dep) in &manifest.dependencies {
             println!("   - {}", name);
-            
+
             // 1. Resolve & Download (Stub - assumes local file exists or uses path)
             // In real impl, git clone or http download happens here
             // 1. Resolve & Download
@@ -375,43 +406,51 @@ opt-level = 3
                 Dependency::Version(ver) => {
                     let url = self.resolve_registry(name, ver);
                     let target_dir = lib_dir.join(format!("{}-{}", name, ver));
-                    
+
                     if !target_dir.exists() {
-                         self.download_package(&url, &target_dir)?;
-                         self.verify_signature(&target_dir)?;
+                        self.download_package(&url, &target_dir)?;
+                        self.verify_signature(&target_dir)?;
                     }
-                    
+
                     // Assume the package layout puts the wasm in pkg/name.wasm or similar
                     // For now, look for any .wasm file or fallback
                     let candidate = target_dir.join(format!("{}.wasm", name));
                     if !candidate.exists() {
-                         // Fallback: maybe inside a subdir (github release structure)
-                         // logic simplified
+                        // Fallback: maybe inside a subdir (github release structure)
+                        // logic simplified
                     }
                     candidate
-                },
+                }
                 Dependency::Git { git: _, .. } => {
-                    println!("     ! Git dependencies not yet implemented, assuming {:?} exists", lib_dir);
+                    println!(
+                        "     ! Git dependencies not yet implemented, assuming {:?} exists",
+                        lib_dir
+                    );
                     lib_dir.join(format!("{}.wasm", name))
                 }
             };
 
             if wasm_source.exists() {
                 let wasm_bytes = fs::read(&wasm_source).wrap_err("Failed to read Wasm source")?;
-                
+
                 // 2. Audit Log (Opẹlẹ)
                 self.audit_log("FETCH", &format!("Compiled native artifact for {}", name))?;
-                
+
                 // 3. AOT Compile (Atomic Write)
                 let artifact = omnibox.compile_artifact(&wasm_bytes)?;
-                
+
                 // Calculate hash (Carmack's Cache Key)
                 let mut context = Context::new(&SHA256);
                 context.update(&wasm_bytes);
-                let hash_value: String = context.finish().as_ref().iter().map(|b| format!("{:02x}", b)).collect();
-                
+                let hash_value: String = context
+                    .finish()
+                    .as_ref()
+                    .iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect();
+
                 let target_path = cache_dir.join(format!("{}.cwasm", hash_value));
-                
+
                 // Atomic Write Strategy
                 self.atomic_write(&target_path, &artifact)?;
                 println!("     ✓ Compiled ({})", &hash_value[..8]);
@@ -419,19 +458,19 @@ opt-level = 3
                 println!("     ! Source not found (skipping download logic)");
             }
         }
-        
+
         println!("✨  Ready to run.");
         Ok(())
     }
-    
+
     /// Atomic write compatible with Windows (Linus Fix)
     fn atomic_write(&self, path: &Path, data: &[u8]) -> Result<()> {
         let dir = path.parent().ok_or_else(|| eyre!("Invalid path"))?;
         let temp_name = format!(".tmp.{}", uuid::Uuid::new_v4());
         let temp_path = dir.join(temp_name);
-        
+
         fs::write(&temp_path, data).wrap_err("Failed to write temp file")?;
-        
+
         // Windows-safe rename
         match fs::rename(&temp_path, path) {
             Ok(_) => Ok(()),
@@ -452,8 +491,12 @@ opt-level = 3
     pub fn load_manifest(&self) -> Result<IfaManifest> {
         let path = self.project_root.join("Iwe.toml");
         // Fallback for legacy
-        let path = if path.exists() { path } else { self.project_root.join("ifa.toml") };
-        
+        let path = if path.exists() {
+            path
+        } else {
+            self.project_root.join("ifa.toml")
+        };
+
         let content = fs::read_to_string(&path).wrap_err("Failed to read Iwe.toml")?;
         toml::from_str(&content).wrap_err("Failed to parse Iwe.toml")
     }
@@ -475,11 +518,11 @@ opt-level = 3
                     // Parse registry Entry
                     if let Ok(entry) = resp.json::<RegistryPackage>() {
                         println!("     ✅ Found package: {}", entry.name);
-                        
+
                         // Find version
                         let target_ver = if version == "latest" || version == "*" {
                             // Get last non-yanked version
-                            entry.versions.iter().filter(|v| !v.yanked).last()
+                            entry.versions.iter().rfind(|v| !v.yanked)
                         } else {
                             entry.versions.iter().find(|v| v.version == version)
                         };
@@ -490,20 +533,29 @@ opt-level = 3
                             }
                             // Construct GitHub Archive URL
                             // Format: https://github.com/user/repo/archive/refs/tags/v1.0.0.tar.gz
-                            return format!("{}/archive/refs/tags/v{}.tar.gz", entry.repository, v.version);
+                            return format!(
+                                "{}/archive/refs/tags/v{}.tar.gz",
+                                entry.repository, v.version
+                            );
                         } else {
-                             println!("     ❌ Version {} not found in registry. Falling back to simple resolution.", version);
+                            println!(
+                                "     ❌ Version {} not found in registry. Falling back to simple resolution.",
+                                version
+                            );
                         }
                     }
                 }
             }
             Err(_) => {
-                 // Offline or Registry unreachable - Fallback
+                // Offline or Registry unreachable - Fallback
             }
         }
 
         // Fallback: Assume GitHub release tarball convention directly
-        format!("https://github.com/ifa-lang/{}/archive/refs/tags/v{}.tar.gz", name, version)
+        format!(
+            "https://github.com/ifa-lang/{}/archive/refs/tags/v{}.tar.gz",
+            name, version
+        )
     }
 
     /// Calculate registry index path based on package name length
@@ -521,21 +573,21 @@ opt-level = 3
         println!("     ⬇ Downloading: {}", url);
         let client = Client::new();
         let response = client.get(url).send().wrap_err("Failed to send request")?;
-        
+
         if !response.status().is_success() {
-             return Err(eyre!("Download failed: {}", response.status()));
+            return Err(eyre!("Download failed: {}", response.status()));
         }
 
         let bytes = response.bytes().wrap_err("Failed to read bytes")?;
-        
+
         // Extract to temp dir first
         let tar = GzDecoder::new(Cursor::new(bytes));
         let mut archive = Archive::new(tar);
-        
+
         // Strip first component (github archives have root folder)
         // For simplicity, just unpack. Real impl needs strip_prefix
         archive.unpack(dest).wrap_err("Failed to extract archive")?;
-        
+
         Ok(())
     }
 
@@ -549,16 +601,21 @@ opt-level = 3
     /// Publish to Registry (Git Tagging Strategy)
     pub fn publish(&self) -> Result<()> {
         println!("📦  Publishing package...");
-        
+
         // 1. Load Manifest
         let manifest = self.load_manifest()?;
-        let version = manifest.package.as_ref()
-            .ok_or_else(|| eyre!("Cannot publish a workspace manifest. Run from within a package."))?
-            .version.clone();
+        let version = manifest
+            .package
+            .as_ref()
+            .ok_or_else(|| {
+                eyre!("Cannot publish a workspace manifest. Run from within a package.")
+            })?
+            .version
+            .clone();
         let tag = format!("v{}", version);
-        
+
         println!("   Version: {}", version);
-        
+
         // 2. Check Git Status
         println!("   🔍 Checking git status...");
         let status = Command::new("git")
@@ -567,11 +624,13 @@ opt-level = 3
             .current_dir(&self.project_root)
             .output()
             .wrap_err("Failed to check git status")?;
-            
+
         if !status.stdout.is_empty() {
-             return Err(eyre!("Git working directory not clean. Commit changes first."));
+            return Err(eyre!(
+                "Git working directory not clean. Commit changes first."
+            ));
         }
-        
+
         // 3. Tag
         println!("   🏷️  Creating tag: {}", tag);
         let tag_cmd = Command::new("git")
@@ -583,11 +642,14 @@ opt-level = 3
             .current_dir(&self.project_root)
             .output()
             .wrap_err("Failed to create git tag")?;
-            
+
         if !tag_cmd.status.success() {
-             return Err(eyre!("Failed to create tag: {}", String::from_utf8_lossy(&tag_cmd.stderr)));
+            return Err(eyre!(
+                "Failed to create tag: {}",
+                String::from_utf8_lossy(&tag_cmd.stderr)
+            ));
         }
-        
+
         // 4. Push
         println!("   🚀 Pushing to remote...");
         let push_cmd = Command::new("git")
@@ -599,9 +661,12 @@ opt-level = 3
             .wrap_err("Failed to push tag")?;
 
         if !push_cmd.status.success() {
-             return Err(eyre!("Failed to push tag: {}", String::from_utf8_lossy(&push_cmd.stderr)));
+            return Err(eyre!(
+                "Failed to push tag: {}",
+                String::from_utf8_lossy(&push_cmd.stderr)
+            ));
         }
-        
+
         println!("✨  Published successfully to Registry (Git)!");
         println!("✨  Published successfully to Registry (Git)!");
         Ok(())
@@ -611,16 +676,21 @@ opt-level = 3
     pub fn add(&self, url: &str, alias: Option<&str>) -> Result<()> {
         let mut manifest = self.load_manifest()?;
         let name = alias.unwrap_or_else(|| {
-            url.split('/').last().unwrap_or("unknown").trim_end_matches(".git")
+            url.split('/')
+                .next_back()
+                .unwrap_or("unknown")
+                .trim_end_matches(".git")
         });
 
         println!("Adding dependency: {} as {}", url, name);
-        manifest.dependencies.insert(name.to_string(), Dependency::Version(url.to_string()));
-        
+        manifest
+            .dependencies
+            .insert(name.to_string(), Dependency::Version(url.to_string()));
+
         let manifest_path = self.project_root.join("Iwe.toml");
         let toml = toml::to_string_pretty(&manifest).wrap_err("Failed to serialize manifest")?;
         fs::write(&manifest_path, toml).wrap_err("Failed to update Iwe.toml")?;
-        
+
         self.audit_log("ADD", &format!("Added dependency: {}", name))?;
         Ok(())
     }
@@ -631,7 +701,8 @@ opt-level = 3
         if manifest.dependencies.remove(name).is_some() {
             println!("Removing dependency: {}", name);
             let manifest_path = self.project_root.join("Iwe.toml");
-            let toml = toml::to_string_pretty(&manifest).wrap_err("Failed to serialize manifest")?;
+            let toml =
+                toml::to_string_pretty(&manifest).wrap_err("Failed to serialize manifest")?;
             fs::write(&manifest_path, toml).wrap_err("Failed to update Iwe.toml")?;
             self.audit_log("REMOVE", &format!("Removed dependency: {}", name))?;
         } else {
@@ -643,8 +714,12 @@ opt-level = 3
     /// Run project
     pub fn run(&self, args: &[String]) -> Result<()> {
         let manifest = self.load_manifest()?;
-        let name = manifest.package.as_ref().map(|p| &p.name).ok_or_else(|| eyre!("No package name found"))?;
-        
+        let name = manifest
+            .package
+            .as_ref()
+            .map(|p| &p.name)
+            .ok_or_else(|| eyre!("No package name found"))?;
+
         let bin_path = if cfg!(windows) {
             self.project_root.join(format!("{}.exe", name))
         } else {
@@ -657,7 +732,7 @@ opt-level = 3
                 .args(args)
                 .status()
                 .wrap_err("Failed to run binary")?;
-            
+
             if !status.success() {
                 return Err(eyre!("Execution failed with status: {}", status));
             }
@@ -669,7 +744,9 @@ opt-level = 3
                 let source = fs::read_to_string(&src_file)?;
                 let program = ifa_core::parse(&source).map_err(|e| eyre!("Parse error: {}", e))?;
                 let mut interp = ifa_core::Interpreter::with_file(&src_file);
-                interp.execute(&program).map_err(|e| eyre!("Runtime error: {}", e))?;
+                interp
+                    .execute(&program)
+                    .map_err(|e| eyre!("Runtime error: {}", e))?;
             } else {
                 return Err(eyre!("No binary or source found to run"));
             }
@@ -692,7 +769,7 @@ opt-level = 3
             let entry = entry?;
             let path = entry.path();
             let name = path.file_name().unwrap_or_default().to_string_lossy();
-            
+
             if name.ends_with("_test.ifa") || name.starts_with("test_") && name.ends_with(".ifa") {
                 print!("  {} ... ", name);
                 let source = fs::read_to_string(&path)?;
@@ -718,7 +795,12 @@ opt-level = 3
             }
         }
 
-        println!("\nTests: {}, Passed: {}, Failed: {}", passed + failed, passed, failed);
+        println!(
+            "\nTests: {}, Passed: {}, Failed: {}",
+            passed + failed,
+            passed,
+            failed
+        );
         if failed > 0 {
             return Err(eyre!("Some tests failed"));
         }

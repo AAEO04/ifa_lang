@@ -85,6 +85,16 @@ const wordMappings = {
     'dapọ': { yoruba: ['join', 'dapọ'], english: ['join', 'concat'] },
     'concat': { yoruba: ['join', 'dapọ'], english: ['join', 'concat'] },
 
+    // String case methods (Ika)
+    'nla': { yoruba: ['nla'], english: ['uppercase', 'upper'] },
+    'kekere': { yoruba: ['kekere'], english: ['lowercase', 'lower'] },
+
+    // Array/List methods (Ogunda)
+    'iwon': { yoruba: ['iwon'], english: ['len', 'length'] },
+    'fi': { yoruba: ['fi'], english: ['push', 'append'] },
+    'mu': { yoruba: ['mu'], english: ['pop'] },
+    'pada': { yoruba: ['pada'], english: ['reverse'] },
+
     // Math methods (Oturupon)
     'sub': { yoruba: ['sub', 'yokuro'], english: ['sub', 'subtract'] },
     'yokuro': { yoruba: ['sub', 'yokuro'], english: ['sub', 'subtract'] },

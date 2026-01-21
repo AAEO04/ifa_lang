@@ -102,7 +102,9 @@ impl Ogunda {
     // =========================================================================
 
     /// Dangerous shell metacharacters that could enable injection
-    const SHELL_METACHARACTERS: &'static [char] = &['|', '&', ';', '$', '`', '\n', '\r', '(', ')', '{', '}', '<', '>'];
+    const SHELL_METACHARACTERS: &'static [char] = &[
+        '|', '&', ';', '$', '`', '\n', '\r', '(', ')', '{', '}', '<', '>',
+    ];
 
     /// Validate command is safe (no path traversal, no shell builtins for injection)
     fn validate_command(command: &str) -> IfaResult<()> {
@@ -110,20 +112,25 @@ impl Ogunda {
         if command.is_empty() {
             return Err(IfaError::Custom("Empty command".to_string()));
         }
-        
+
         // Block shell metacharacters in command name
-        if command.chars().any(|c| Self::SHELL_METACHARACTERS.contains(&c)) {
+        if command
+            .chars()
+            .any(|c| Self::SHELL_METACHARACTERS.contains(&c))
+        {
             return Err(IfaError::Custom(format!(
                 "Command contains dangerous characters: {}",
                 command
             )));
         }
-        
+
         // Block path traversal
         if command.contains("..") {
-            return Err(IfaError::Custom("Path traversal not allowed in command".to_string()));
+            return Err(IfaError::Custom(
+                "Path traversal not allowed in command".to_string(),
+            ));
         }
-        
+
         Ok(())
     }
 
@@ -142,13 +149,13 @@ impl Ogunda {
     }
 
     /// Run command and get output (ṣiṣẹ́)
-    /// 
+    ///
     /// # Security
     /// Commands and arguments are validated to prevent shell injection.
     pub fn sise(&self, command: &str, args: &[&str]) -> IfaResult<Output> {
         Self::validate_command(command)?;
         Self::validate_args(args)?;
-        
+
         Command::new(command)
             .args(args)
             .output()
@@ -166,7 +173,7 @@ impl Ogunda {
     pub fn bere(&self, command: &str, args: &[&str]) -> IfaResult<u32> {
         Self::validate_command(command)?;
         Self::validate_args(args)?;
-        
+
         let child = Command::new(command)
             .args(args)
             .stdin(Stdio::null())

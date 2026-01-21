@@ -3,8 +3,8 @@ use crate::config::SandboxConfig;
 use eyre::{Result, eyre};
 use std::path::Path;
 use wasmtime::{
-    Config, Engine, Linker, Module, PoolingAllocationConfig, Store, StoreLimits,
-    StoreLimitsBuilder, InstanceAllocationStrategy,
+    Config, Engine, InstanceAllocationStrategy, Linker, Module, PoolingAllocationConfig, Store,
+    StoreLimits, StoreLimitsBuilder,
 };
 use wasmtime_wasi::p1::{self, WasiP1Ctx};
 use wasmtime_wasi::{DirPerms, FilePerms, WasiCtxBuilder};
@@ -36,11 +36,11 @@ impl OmniBox {
         // 3. Enable Pooling Allocator (The "Linus Optimization")
         // This pre-allocates virtual memory to avoid `mmap` syscalls on every instantiation.
         let mut pooling_config = PoolingAllocationConfig::default();
-        
+
         // Customize pooling based on our known limits
         // 128 concurrent instances should be plenty for a CLI tool
-        pooling_config.total_core_instances(128); 
-        
+        pooling_config.total_core_instances(128);
+
         // Ensure memory pages fit within our limits (default is often 6MB or 4GB depending on platform)
         // Here we align with typical Ifá embedded philosophy
         pooling_config.max_memory_size(10 * 1024 * 1024); // 10MB per instance max linear memory
@@ -49,24 +49,27 @@ impl OmniBox {
 
         wasm_config.allocation_strategy(InstanceAllocationStrategy::Pooling(pooling_config));
 
-        let engine = Engine::new(&wasm_config).map_err(|e| eyre!("Failed to init Wasmtime engine: {e}"))?;
-        
+        let engine =
+            Engine::new(&wasm_config).map_err(|e| eyre!("Failed to init Wasmtime engine: {e}"))?;
+
         Ok(OmniBox { engine, config })
     }
 
     /// Compile Wasm source to AOT artifact (Serialized Machine Code)
     /// This is the "Install Time" operation.
     pub fn compile_artifact(&self, wasm_bytes: &[u8]) -> Result<Vec<u8>> {
-        let module = Module::new(&self.engine, wasm_bytes)
-            .map_err(|e| eyre!("Compilation failed: {e}"))?;
-        
+        let module =
+            Module::new(&self.engine, wasm_bytes).map_err(|e| eyre!("Compilation failed: {e}"))?;
+
         // Serialize to native machine code (.cwasm)
-        module.serialize().map_err(|e| eyre!("Serialization failed: {e}"))
+        module
+            .serialize()
+            .map_err(|e| eyre!("Serialization failed: {e}"))
     }
 
     /// Load a pre-compiled artifact directly into memory
     /// This is the "Run Time" fast-path (Startup < 2ms).
-    /// 
+    ///
     /// # Security
     /// Artifacts MUST come from trusted sources (e.g., locally compiled).
     /// Wasmtime's deserialize performs comprehensive validation internally.
@@ -77,8 +80,9 @@ impl OmniBox {
         // the same engine version. For additional security at the application level,
         // consider cryptographic signing via Oja before calling this function.
         unsafe {
-            Module::deserialize(&self.engine, artifact_bytes)
-                .map_err(|e| eyre!("Deserialization failed (engine mismatch or corrupted artifact): {e}"))
+            Module::deserialize(&self.engine, artifact_bytes).map_err(|e| {
+                eyre!("Deserialization failed (engine mismatch or corrupted artifact): {e}")
+            })
         }
     }
 
@@ -97,7 +101,14 @@ impl OmniBox {
         let wasi = self.build_wasi_context()?;
         let limits = self.build_store_limits();
 
-        let mut store = Store::new(&self.engine, StoreState { wasi, limits, config: self.config.clone() });
+        let mut store = Store::new(
+            &self.engine,
+            StoreState {
+                wasi,
+                limits,
+                config: self.config.clone(),
+            },
+        );
 
         // Apply resource limits to store
         store.limiter(|state| &mut state.limits);
@@ -189,41 +200,84 @@ impl OmniBox {
     /// Link Ewo (Capability) host functions to the WebAssembly module
     fn link_ewo_capabilities(&self, linker: &mut Linker<StoreState>) -> Result<()> {
         // ewo_can_read(path_ptr, path_len) -> i32
-        linker.func_wrap("ewo", "can_read", |state: wasmtime::Caller<'_, StoreState>| {
-            // Placeholder: For now just return if they have any read access
-            if state.data().config.capabilities.all().iter().any(|c| matches!(c, Ofun::ReadFiles { .. })) {
-                1
-            } else {
-                0
-            }
-        }).map_err(|e| eyre!("Failed to link ewo.can_read: {e}"))?;
+        linker
+            .func_wrap(
+                "ewo",
+                "can_read",
+                |state: wasmtime::Caller<'_, StoreState>| {
+                    // Placeholder: For now just return if they have any read access
+                    if state
+                        .data()
+                        .config
+                        .capabilities
+                        .all()
+                        .iter()
+                        .any(|c| matches!(c, Ofun::ReadFiles { .. }))
+                    {
+                        1
+                    } else {
+                        0
+                    }
+                },
+            )
+            .map_err(|e| eyre!("Failed to link ewo.can_read: {e}"))?;
 
         // ewo_can_write(path_ptr, path_len) -> i32
-        linker.func_wrap("ewo", "can_write", |state: wasmtime::Caller<'_, StoreState>| {
-            if state.data().config.capabilities.all().iter().any(|c| matches!(c, Ofun::WriteFiles { .. })) {
-                1
-            } else {
-                0
-            }
-        }).map_err(|e| eyre!("Failed to link ewo.can_write: {e}"))?;
-        
+        linker
+            .func_wrap(
+                "ewo",
+                "can_write",
+                |state: wasmtime::Caller<'_, StoreState>| {
+                    if state
+                        .data()
+                        .config
+                        .capabilities
+                        .all()
+                        .iter()
+                        .any(|c| matches!(c, Ofun::WriteFiles { .. }))
+                    {
+                        1
+                    } else {
+                        0
+                    }
+                },
+            )
+            .map_err(|e| eyre!("Failed to link ewo.can_write: {e}"))?;
+
         // ewo_is_secure() -> i32
-        linker.func_wrap("ewo", "is_secure", |state: wasmtime::Caller<'_, StoreState>| {
-            if state.data().config.capabilities.all().is_empty() {
-                0 // Wide open (unsafe)
-            } else {
-                1 // Some restrictions in place
-            }
-        }).map_err(|e| eyre!("Failed to link ewo.is_secure: {e}"))?;
+        linker
+            .func_wrap(
+                "ewo",
+                "is_secure",
+                |state: wasmtime::Caller<'_, StoreState>| {
+                    if state.data().config.capabilities.all().is_empty() {
+                        0 // Wide open (unsafe)
+                    } else {
+                        1 // Some restrictions in place
+                    }
+                },
+            )
+            .map_err(|e| eyre!("Failed to link ewo.is_secure: {e}"))?;
 
         // ewo_can_network() -> i32 (Òtúrá)
-        linker.func_wrap("ewo", "can_network", |state: wasmtime::Caller<'_, StoreState>| {
-            if state.data().config.capabilities.check(&Ofun::Network { domains: vec![] }) {
-                1
-            } else {
-                0
-            }
-        }).map_err(|e| eyre!("Failed to link ewo.can_network: {e}"))?;
+        linker
+            .func_wrap(
+                "ewo",
+                "can_network",
+                |state: wasmtime::Caller<'_, StoreState>| {
+                    if state
+                        .data()
+                        .config
+                        .capabilities
+                        .check(&Ofun::Network { domains: vec![] })
+                    {
+                        1
+                    } else {
+                        0
+                    }
+                },
+            )
+            .map_err(|e| eyre!("Failed to link ewo.can_network: {e}"))?;
 
         Ok(())
     }
@@ -249,24 +303,31 @@ mod tests {
     fn test_omnibox_creation_with_pooling() {
         let config = SandboxConfig::new(SecurityProfile::Untrusted);
         let omnibox = OmniBox::new(config);
-        assert!(omnibox.is_ok(), "Pooling allocator should initialize correctly");
+        assert!(
+            omnibox.is_ok(),
+            "Pooling allocator should initialize correctly"
+        );
     }
 
     #[test]
     fn test_aot_compilation_cycle() {
         let config = SandboxConfig::new(SecurityProfile::Untrusted);
         let omnibox = OmniBox::new(config).unwrap();
-        
+
         // Minimal valid WASM (empty module)
         let wasm_bytes = wat::parse_str("(module)").unwrap();
-        
+
         // 1. Compile
-        let artifact = omnibox.compile_artifact(&wasm_bytes).expect("Compilation failed");
+        let artifact = omnibox
+            .compile_artifact(&wasm_bytes)
+            .expect("Compilation failed");
         assert!(!artifact.is_empty(), "Artifact should contain bytes");
-        
+
         // 2. Deserialize
-        let module = omnibox.deserialize_artifact(&artifact).expect("Deserialization failed");
-        
+        let module = omnibox
+            .deserialize_artifact(&artifact)
+            .expect("Deserialization failed");
+
         // 3. Verify it works
         // (Just ensure module is valid, running requires _start which this empty module lacks)
         assert!(module.exports().count() == 0);

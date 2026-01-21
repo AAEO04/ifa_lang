@@ -12,13 +12,13 @@
 //! - [`IfaError`] / [`IfaResult`] - Error handling
 //! - [`OduDomain`] - The 16 Odù domains + infrastructure/stacks
 
-pub mod error;
-pub mod value;
 pub mod domain;
+pub mod error;
 pub mod traits;
+pub mod value;
 
 // Re-exports for convenience
-pub use error::{IfaError, IfaResult, SpannedError, format_error};
-pub use value::IfaValue;
 pub use domain::OduDomain;
+pub use error::{IfaError, IfaResult, SpannedError, format_error};
 pub use traits::*;
+pub use value::IfaValue;

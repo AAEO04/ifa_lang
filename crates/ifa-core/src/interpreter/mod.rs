@@ -7,17 +7,17 @@
 //! - `canvas.rs` - OseCanvas for ASCII graphics
 //! - `handlers/` - Modular domain-specific operation handlers
 
+mod canvas;
 mod core;
 mod environment;
-mod canvas;
 pub mod handlers;
 
 // Re-export main types from core
-pub use self::core::{Interpreter, CapabilitySet, Ofun, Debugger};
+pub use self::core::{CapabilitySet, Debugger, Interpreter, Ofun};
 
 // Re-export extracted modules
-pub use environment::Environment;
 pub use canvas::OseCanvas;
+pub use environment::Environment;
 
 // Re-export handler types
-pub use handlers::{OduHandler, HandlerRegistry};
+pub use handlers::{HandlerRegistry, OduHandler};

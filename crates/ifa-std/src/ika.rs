@@ -15,7 +15,12 @@ use ropey::Rope;
 /// Ìká - The Controller (Strings & Serialization)
 pub struct Ika;
 
-impl_odu_domain!(Ika, "Ìká", "0100", "The Controller - Strings & Serialization");
+impl_odu_domain!(
+    Ika,
+    "Ìká",
+    "0100",
+    "The Controller - Strings & Serialization"
+);
 
 impl Ika {
     /// Concatenate strings (sọ̀pọ̀)
@@ -227,15 +232,33 @@ impl Ika {
 
     // --- English Aliases ---
 
-    pub fn len(&self, s: &str) -> usize { self.gigun(s) }
-    pub fn find(&self, haystack: &str, needle: &str) -> Option<usize> { self.wa(haystack, needle) }
-    pub fn has(&self, haystack: &str, needle: &str) -> bool { self.ni(haystack, needle) }
-    pub fn split(&self, s: &str, delimiter: &str) -> Vec<String> { self.pin(s, delimiter) }
-    pub fn join(&self, parts: &[&str], separator: &str) -> String { self.dapo(parts, separator) }
-    pub fn replace(&self, s: &str, from: &str, to: &str) -> String { self.yi_pada(s, from, to) }
-    pub fn matches(&self, pattern: &str, text: &str) -> IfaResult<bool> { self.ba_mu(pattern, text) }
-    pub fn encode(&self, val: &IfaValue) -> IfaResult<String> { self.yi_si_json(val) }
-    pub fn decode(&self, json: &str) -> IfaResult<IfaValue> { self.yi_pada_json(json) }
+    pub fn len(&self, s: &str) -> usize {
+        self.gigun(s)
+    }
+    pub fn find(&self, haystack: &str, needle: &str) -> Option<usize> {
+        self.wa(haystack, needle)
+    }
+    pub fn has(&self, haystack: &str, needle: &str) -> bool {
+        self.ni(haystack, needle)
+    }
+    pub fn split(&self, s: &str, delimiter: &str) -> Vec<String> {
+        self.pin(s, delimiter)
+    }
+    pub fn join(&self, parts: &[&str], separator: &str) -> String {
+        self.dapo(parts, separator)
+    }
+    pub fn replace(&self, s: &str, from: &str, to: &str) -> String {
+        self.yi_pada(s, from, to)
+    }
+    pub fn matches(&self, pattern: &str, text: &str) -> IfaResult<bool> {
+        self.ba_mu(pattern, text)
+    }
+    pub fn encode(&self, val: &IfaValue) -> IfaResult<String> {
+        self.yi_si_json(val)
+    }
+    pub fn decode(&self, json: &str) -> IfaResult<IfaValue> {
+        self.yi_pada_json(json)
+    }
 }
 
 #[cfg(test)]
@@ -287,7 +310,10 @@ mod tests {
     fn test_csv_serialization() {
         let ika = Ika;
         let rows = IfaValue::List(vec![
-            IfaValue::List(vec![IfaValue::Str("Name".to_string()), IfaValue::Str("Age".to_string())]),
+            IfaValue::List(vec![
+                IfaValue::Str("Name".to_string()),
+                IfaValue::Str("Age".to_string()),
+            ]),
             IfaValue::List(vec![IfaValue::Str("Alice".to_string()), IfaValue::Int(30)]),
             IfaValue::List(vec![IfaValue::Str("Bob".to_string()), IfaValue::Int(25)]),
         ]);
@@ -302,7 +328,7 @@ mod tests {
         if let IfaValue::List(l) = parsed {
             assert_eq!(l.len(), 3);
             if let IfaValue::List(r0) = &l[0] {
-                 assert_eq!(r0[0], IfaValue::Str("Name".to_string()));
+                assert_eq!(r0[0], IfaValue::Str("Name".to_string()));
             }
         }
     }

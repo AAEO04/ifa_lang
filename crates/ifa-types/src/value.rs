@@ -197,25 +197,33 @@ impl IfaValue {
         match (self, other) {
             (IfaValue::Int(a), IfaValue::Int(b)) => {
                 if *b == 0 {
-                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                    return Err(IfaError::DivisionByZero(
+                        "Cannot divide by zero".to_string(),
+                    ));
                 }
                 Ok(IfaValue::Float(*a as f64 / *b as f64))
             }
             (IfaValue::Float(a), IfaValue::Float(b)) => {
                 if *b == 0.0 {
-                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                    return Err(IfaError::DivisionByZero(
+                        "Cannot divide by zero".to_string(),
+                    ));
                 }
                 Ok(IfaValue::Float(a / b))
             }
             (IfaValue::Int(a), IfaValue::Float(b)) => {
                 if *b == 0.0 {
-                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                    return Err(IfaError::DivisionByZero(
+                        "Cannot divide by zero".to_string(),
+                    ));
                 }
                 Ok(IfaValue::Float(*a as f64 / b))
             }
             (IfaValue::Float(a), IfaValue::Int(b)) => {
                 if *b == 0 {
-                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                    return Err(IfaError::DivisionByZero(
+                        "Cannot divide by zero".to_string(),
+                    ));
                 }
                 Ok(IfaValue::Float(a / *b as f64))
             }

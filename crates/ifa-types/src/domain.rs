@@ -3,7 +3,7 @@
 //! This module defines all callable domains in Ifá-Lang.
 
 /// The Odù domains enumeration
-/// 
+///
 /// Includes the 16 principal Odù, pseudo-domains (Coop, Opele),
 /// infrastructure layer (Cpu, Gpu, Storage), and application stacks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

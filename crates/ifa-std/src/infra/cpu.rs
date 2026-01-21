@@ -4,9 +4,9 @@
 
 use rayon::ThreadPoolBuilder;
 use std::collections::HashMap;
-use std::sync::OnceLock;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::OnceLock;
 
 /// Global CPU Context
 pub struct CpuContext;
@@ -38,7 +38,7 @@ impl CpuContext {
         R: Send,
     {
         static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
-        
+
         let runtime = RUNTIME.get_or_init(|| {
             tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(2)
@@ -46,7 +46,7 @@ impl CpuContext {
                 .build()
                 .expect("Failed to create async runtime")
         });
-        
+
         runtime.block_on(f())
     }
 
@@ -60,11 +60,11 @@ impl CpuContext {
         use rayon::prelude::*;
         data.par_iter().map(map_op).collect()
     }
-    
+
     // =========================================================================
     // HIGH-LEVEL COMPUTE API
     // =========================================================================
-    
+
     /// Parallel reduce with identity and combine function
     pub fn par_reduce<T, F, C>(data: &[T], identity: T, map_op: F, combine: C) -> T
     where
@@ -77,7 +77,7 @@ impl CpuContext {
             .map(map_op)
             .reduce(|| identity.clone(), combine)
     }
-    
+
     /// Parallel sum for numeric types
     pub fn par_sum<T>(data: &[T]) -> T
     where
@@ -86,7 +86,7 @@ impl CpuContext {
         use rayon::prelude::*;
         data.par_iter().cloned().sum()
     }
-    
+
     /// Parallel filter
     pub fn par_filter<T, F>(data: &[T], predicate: F) -> Vec<T>
     where
@@ -96,7 +96,7 @@ impl CpuContext {
         use rayon::prelude::*;
         data.par_iter().filter(|x| predicate(x)).cloned().collect()
     }
-    
+
     /// Parallel filter + map
     pub fn par_filter_map<T, U, F>(data: &[T], filter_map_op: F) -> Vec<U>
     where
@@ -107,7 +107,7 @@ impl CpuContext {
         use rayon::prelude::*;
         data.par_iter().filter_map(filter_map_op).collect()
     }
-    
+
     /// Parallel sort (stable)
     pub fn par_sort<T>(data: &mut [T])
     where
@@ -116,7 +116,7 @@ impl CpuContext {
         use rayon::prelude::*;
         data.par_sort();
     }
-    
+
     /// Parallel sort by key
     pub fn par_sort_by_key<T, K, F>(data: &mut [T], key_fn: F)
     where
@@ -127,7 +127,7 @@ impl CpuContext {
         use rayon::prelude::*;
         data.par_sort_by_key(key_fn);
     }
-    
+
     /// Parallel any: returns true if any element satisfies predicate
     pub fn par_any<T, F>(data: &[T], predicate: F) -> bool
     where
@@ -137,7 +137,7 @@ impl CpuContext {
         use rayon::prelude::*;
         data.par_iter().any(predicate)
     }
-    
+
     /// Parallel all: returns true if all elements satisfy predicate
     pub fn par_all<T, F>(data: &[T], predicate: F) -> bool
     where
@@ -147,7 +147,7 @@ impl CpuContext {
         use rayon::prelude::*;
         data.par_iter().all(predicate)
     }
-    
+
     /// Parallel find: returns first element satisfying predicate
     pub fn par_find<T, F>(data: &[T], predicate: F) -> Option<T>
     where
@@ -157,14 +157,14 @@ impl CpuContext {
         use rayon::prelude::*;
         data.par_iter().find_any(|x| predicate(*x)).cloned()
     }
-    
+
     /// Parallel matrix multiplication (CPU fallback when GPU unavailable)
     /// A[m x k] * B[k x n] = C[m x n]
     pub fn matmul(a: &[f32], b: &[f32], m: usize, n: usize, k: usize) -> Vec<f32> {
         use rayon::prelude::*;
-        
+
         let mut c = vec![0.0f32; m * n];
-        
+
         c.par_chunks_mut(n).enumerate().for_each(|(i, row)| {
             for j in 0..n {
                 let mut sum = 0.0f32;
@@ -174,40 +174,40 @@ impl CpuContext {
                 row[j] = sum;
             }
         });
-        
+
         c
     }
-    
+
     /// Parallel dot product
     pub fn dot(a: &[f32], b: &[f32]) -> f32 {
         use rayon::prelude::*;
         a.par_iter().zip(b.par_iter()).map(|(x, y)| x * y).sum()
     }
-    
+
     /// Parallel elementwise addition
     pub fn vec_add(a: &[f32], b: &[f32]) -> Vec<f32> {
         use rayon::prelude::*;
         a.par_iter().zip(b.par_iter()).map(|(x, y)| x + y).collect()
     }
-    
+
     /// Parallel elementwise multiplication
     pub fn vec_mul(a: &[f32], b: &[f32]) -> Vec<f32> {
         use rayon::prelude::*;
         a.par_iter().zip(b.par_iter()).map(|(x, y)| x * y).collect()
     }
-    
+
     /// Parallel scale and bias: output[i] = input[i] * scale + bias
     pub fn scale_bias(data: &[f32], scale: f32, bias: f32) -> Vec<f32> {
         use rayon::prelude::*;
         data.par_iter().map(|x| x * scale + bias).collect()
     }
-    
+
     /// Parallel ReLU activation
     pub fn relu(data: &mut [f32]) {
         use rayon::prelude::*;
         data.par_iter_mut().for_each(|x| *x = x.max(0.0));
     }
-    
+
     /// Get number of available CPU threads
     pub fn num_threads() -> usize {
         rayon::current_num_threads()
@@ -257,7 +257,8 @@ pub struct TaskResult {
 }
 
 /// Async task type
-type AsyncTask = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>> + Send + Sync>;
+type AsyncTask =
+    Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>> + Send + Sync>;
 
 /// Synchronous task type
 type SyncTask = Box<dyn Fn() -> Result<(), String> + Send + Sync>;
@@ -313,7 +314,8 @@ impl TaskGraph {
     {
         let id = TaskId(self.next_id);
         self.next_id += 1;
-        self.tasks.insert(id, TaskFn::Async(Box::new(move || Box::pin(task()))));
+        self.tasks
+            .insert(id, TaskFn::Async(Box::new(move || Box::pin(task()))));
         self.dependencies.insert(id, Vec::new());
         id
     }
@@ -326,12 +328,9 @@ impl TaskGraph {
         if !self.tasks.contains_key(&depends_on) {
             return Err("Dependency task not found");
         }
-        
-        self.dependencies
-            .entry(task)
-            .or_default()
-            .push(depends_on);
-        
+
+        self.dependencies.entry(task).or_default().push(depends_on);
+
         Ok(())
     }
 
@@ -343,19 +342,19 @@ impl TaskGraph {
     /// Execute all tasks synchronously (uses rayon for parallelism)
     pub fn execute_sync(self) -> Result<Vec<TaskResult>, TaskError> {
         use rayon::prelude::*;
-        
+
         // Build in-degree map
         let mut in_degree: HashMap<TaskId, usize> = HashMap::new();
         for (task, deps) in &self.dependencies {
             in_degree.insert(*task, deps.len());
         }
-        
+
         let mut completed: std::collections::HashSet<TaskId> = std::collections::HashSet::new();
         let mut failed: std::collections::HashSet<TaskId> = std::collections::HashSet::new();
         let mut results: Vec<TaskResult> = Vec::new();
         let tasks = self.tasks;
         let dependencies = self.dependencies;
-        
+
         loop {
             // Find all tasks with no remaining dependencies
             let ready: Vec<TaskId> = in_degree
@@ -363,7 +362,7 @@ impl TaskGraph {
                 .filter(|(id, deg)| **deg == 0 && !completed.contains(id) && !failed.contains(id))
                 .map(|(id, _)| *id)
                 .collect();
-            
+
             if ready.is_empty() {
                 if completed.len() + failed.len() == tasks.len() {
                     break;
@@ -373,13 +372,13 @@ impl TaskGraph {
                     break; // Some tasks couldn't run due to failed dependencies
                 }
             }
-            
+
             // Execute ready tasks in parallel
             let batch_results: Vec<TaskResult> = ready
                 .par_iter()
                 .map(|id| {
                     let start = std::time::Instant::now();
-                    
+
                     // Check if any dependency failed
                     if let Some(deps) = dependencies.get(id) {
                         for dep in deps {
@@ -393,18 +392,20 @@ impl TaskGraph {
                             }
                         }
                     }
-                    
+
                     let result = if let Some(task) = tasks.get(id) {
                         match task {
                             TaskFn::Sync(f) => f(),
-                            TaskFn::Async(_) => Err("Async task in sync execution - use execute_async".into()),
+                            TaskFn::Async(_) => {
+                                Err("Async task in sync execution - use execute_async".into())
+                            }
                         }
                     } else {
                         Err("Task not found".into())
                     };
-                    
+
                     let duration_ms = start.elapsed().as_millis() as u64;
-                    
+
                     match result {
                         Ok(()) => TaskResult {
                             id: *id,
@@ -421,7 +422,7 @@ impl TaskGraph {
                     }
                 })
                 .collect();
-            
+
             // Update state based on results
             for result in &batch_results {
                 if result.success {
@@ -429,20 +430,23 @@ impl TaskGraph {
                 } else {
                     failed.insert(result.id);
                 }
-                
+
                 // Decrease in-degree of dependent tasks
                 for (other_id, deps) in &dependencies {
-                    if deps.contains(&result.id) && !completed.contains(other_id) && !failed.contains(other_id) {
+                    if deps.contains(&result.id)
+                        && !completed.contains(other_id)
+                        && !failed.contains(other_id)
+                    {
                         if let Some(deg) = in_degree.get_mut(other_id) {
                             *deg = deg.saturating_sub(1);
                         }
                     }
                 }
             }
-            
+
             results.extend(batch_results);
         }
-        
+
         Ok(results)
     }
 }
@@ -463,27 +467,28 @@ where
 // TRAIT IMPLEMENTATION (ifa-types bridge)
 // =============================================================================
 
-use ifa_types::{CpuOps, IfaValue, IfaResult, IfaError};
+use ifa_types::{CpuOps, IfaError, IfaResult, IfaValue};
 
 impl CpuOps for CpuContext {
     fn num_threads() -> usize {
         rayon::current_num_threads()
     }
-    
+
     fn par_sum(data: &[IfaValue]) -> IfaResult<IfaValue> {
         // Note: Using sequential iteration since IfaValue doesn't implement Sync
         // For parallel sum of primitives, convert first then use rayon
-        let sum: i64 = data.iter().filter_map(|v| {
-            match v {
+        let sum: i64 = data
+            .iter()
+            .filter_map(|v| match v {
                 IfaValue::Int(n) => Some(*n),
                 IfaValue::Float(f) => Some(*f as i64),
                 _ => None,
-            }
-        }).sum();
-        
+            })
+            .sum();
+
         Ok(IfaValue::Int(sum))
     }
-    
+
     fn par_map<F>(data: &[IfaValue], f: F) -> IfaResult<Vec<IfaValue>>
     where
         F: Fn(&IfaValue) -> IfaValue + Sync + Send,
@@ -491,7 +496,7 @@ impl CpuOps for CpuContext {
         // Sequential map on IfaValue since it doesn't implement Sync
         Ok(data.iter().map(f).collect())
     }
-    
+
     fn configure(threads: usize) -> IfaResult<()> {
         rayon::ThreadPoolBuilder::new()
             .num_threads(threads)
@@ -499,4 +504,3 @@ impl CpuOps for CpuContext {
             .map_err(|e| IfaError::Runtime(e.to_string()))
     }
 }
-

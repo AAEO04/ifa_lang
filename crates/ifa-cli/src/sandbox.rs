@@ -8,7 +8,7 @@
 
 #![allow(dead_code)]
 
-use eyre::{Result};
+use eyre::Result;
 use ifa_sandbox::{CapabilitySet, Ofun};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -241,9 +241,9 @@ impl Igbale {
     /// Run code in sandbox (Windows)
     #[cfg(target_os = "windows")]
     pub fn run(&self, code_path: &Path) -> Result<SandboxResult> {
-        use tokio::process::Command;
         use std::process::Stdio;
         use std::time::Instant;
+        use tokio::process::Command;
         use tokio::time::timeout;
 
         let rt = tokio::runtime::Builder::new_current_thread()
@@ -259,7 +259,7 @@ impl Igbale {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn()?;
-            
+
             let child_id = child.id();
 
             match timeout(self.config.timeout, child.wait_with_output()).await {
@@ -287,7 +287,10 @@ impl Igbale {
                     #[cfg(not(windows))]
                     {
                         if let Some(pid) = child_id {
-                             let _ = std::process::Command::new("kill").arg("-9").arg(pid.to_string()).spawn();
+                            let _ = std::process::Command::new("kill")
+                                .arg("-9")
+                                .arg(pid.to_string())
+                                .spawn();
                         }
                     }
                     Ok(SandboxResult {

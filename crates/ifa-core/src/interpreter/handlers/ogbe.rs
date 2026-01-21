@@ -16,55 +16,52 @@ impl OduHandler for OgbeHandler {
     fn domain(&self) -> OduDomain {
         OduDomain::Ogbe
     }
-    
+
     fn call(
-        &self, 
-        method: &str, 
-        args: Vec<IfaValue>, 
-        _env: &mut Environment
+        &self,
+        method: &str,
+        args: Vec<IfaValue>,
+        _env: &mut Environment,
+        _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         match method {
             // Type introspection
             "type" | "iru" => {
-                let type_name = args.first()
-                    .map(|v| v.type_name())
-                    .unwrap_or("null");
+                let type_name = args.first().map(|v| v.type_name()).unwrap_or("null");
                 Ok(IfaValue::Str(type_name.to_string()))
             }
-            
+
             // Length
             "len" | "gigun" => {
-                let len = args.first()
-                    .map(|v| v.len() as i64)
-                    .unwrap_or(0);
+                let len = args.first().map(|v| v.len() as i64).unwrap_or(0);
                 Ok(IfaValue::Int(len))
             }
-            
+
             // Assertion
             "assert" | "jẹri" => {
-                let cond = args.first()
-                    .map(|v| v.is_truthy())
-                    .unwrap_or(false);
-                    
+                let cond = args.first().map(|v| v.is_truthy()).unwrap_or(false);
+
                 if cond {
                     Ok(IfaValue::Bool(true))
                 } else {
-                    let msg = args.get(1)
+                    let msg = args
+                        .get(1)
                         .map(|v| v.to_string())
                         .unwrap_or_else(|| "Assertion failed".to_string());
                     Err(IfaError::Runtime(format!("[assert] {}", msg)))
                 }
             }
-            
+
             // Format/stringify
             "format" | "ṣẹda" => {
                 let output: Vec<String> = args.iter().map(|a| a.to_string()).collect();
                 Ok(IfaValue::Str(output.join(" ")))
             }
-            
+
             // Parse integer
             "parse_int" => {
-                let val = args.first()
+                let val = args
+                    .first()
                     .and_then(|v| match v {
                         IfaValue::Str(s) => s.trim().parse::<i64>().ok(),
                         IfaValue::Int(n) => Some(*n),
@@ -74,10 +71,11 @@ impl OduHandler for OgbeHandler {
                     .unwrap_or(0);
                 Ok(IfaValue::Int(val))
             }
-            
+
             // Parse float
             "parse_float" => {
-                let val = args.first()
+                let val = args
+                    .first()
                     .and_then(|v| match v {
                         IfaValue::Str(s) => s.trim().parse::<f64>().ok(),
                         IfaValue::Float(f) => Some(*f),
@@ -87,15 +85,26 @@ impl OduHandler for OgbeHandler {
                     .unwrap_or(0.0);
                 Ok(IfaValue::Float(val))
             }
-            
+
             _ => Err(IfaError::Runtime(format!(
                 "Unknown Ọ̀gbè method: {}",
                 method
             ))),
         }
     }
-    
+
     fn methods(&self) -> &'static [&'static str] {
-        &["type", "iru", "len", "gigun", "assert", "jẹri", "format", "ṣẹda", "parse_int", "parse_float"]
+        &[
+            "type",
+            "iru",
+            "len",
+            "gigun",
+            "assert",
+            "jẹri",
+            "format",
+            "ṣẹda",
+            "parse_int",
+            "parse_float",
+        ]
     }
 }

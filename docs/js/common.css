@@ -523,6 +523,7 @@ footer a {
 
     .nav-toggle {
         display: block;
+        z-index: 1002;
     }
 
     .nav-menu {
@@ -535,10 +536,55 @@ footer a {
         background: var(--bg-card);
         padding: 1rem;
         border-bottom: 1px solid var(--accent);
+        z-index: 1001;
+        max-height: 80vh;
+        overflow-y: auto;
     }
 
     .nav-menu.nav-open {
         display: flex;
+    }
+
+    /* Mobile dropdown fixes */
+    .nav-dropdown {
+        position: relative;
+    }
+
+    .nav-dropdown>a {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        width: 100%;
+    }
+
+    .nav-dropdown-content {
+        position: static;
+        display: none;
+        background: rgba(0, 0, 0, 0.2);
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        min-width: 100%;
+        padding-left: 1rem;
+        margin: 0;
+    }
+
+    .nav-dropdown.dropdown-open .nav-dropdown-content {
+        display: block;
+    }
+
+    .nav-dropdown:hover .nav-dropdown-content {
+        display: none;
+    }
+
+    .nav-dropdown.dropdown-open:hover .nav-dropdown-content {
+        display: block;
+    }
+
+    .nav-dropdown-content a {
+        padding: 0.5rem 0.75rem;
+        border-left: 2px solid var(--accent);
     }
 
     /* Next Steps Navigation */
@@ -691,5 +737,191 @@ footer a {
         font-size: 0.85rem;
         color: var(--text);
         margin-top: 0.5rem;
+    }
+}
+
+/* ========================================
+   ACCESSIBILITY IMPROVEMENTS
+======================================== */
+
+/* Skip to content link */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--gold);
+    color: var(--bg-dark);
+    padding: 8px 16px;
+    z-index: 2000;
+    font-weight: bold;
+    text-decoration: none;
+    border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* Improved color contrast for dim text */
+.text-dim-accessible {
+    color: #b8b8b8;
+    /* WCAG AA compliant against #0f0f1a */
+}
+
+/* Focus visible for keyboard navigation */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+/* ========================================
+   BREADCRUMB STYLES
+======================================== */
+
+.breadcrumbs {
+    background: rgba(26, 26, 46, 0.6);
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(233, 69, 96, 0.2);
+}
+
+.breadcrumbs-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.breadcrumb-list {
+    display: flex;
+    gap: 0.5rem;
+    list-style: none;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.breadcrumb-list li {
+    display: flex;
+    align-items: center;
+}
+
+.breadcrumb-list li::after {
+    content: '›';
+    margin-left: 0.5rem;
+    color: var(--text-dim);
+}
+
+.breadcrumb-list li:last-child::after {
+    content: '';
+}
+
+.breadcrumb-list a {
+    color: var(--text-dim);
+    transition: color 0.2s;
+}
+
+.breadcrumb-list a:hover {
+    color: var(--gold);
+    text-decoration: none;
+}
+
+.breadcrumb-list li:last-child a,
+.breadcrumb-list li.current {
+    color: var(--text);
+    pointer-events: none;
+}
+
+/* ========================================
+   PRINT STYLES
+======================================== */
+
+@media print {
+
+    /* Hide navigation and interactive elements */
+    .nav-header,
+    .nav-toggle,
+    .nav-search,
+    .breadcrumbs,
+    .skip-link,
+    .lang-toggle,
+    .copy-btn,
+    footer.doc-footer {
+        display: none !important;
+    }
+
+    /* Reset backgrounds for printing */
+    body {
+        background: white !important;
+        color: black !important;
+        font-size: 12pt;
+        line-height: 1.5;
+    }
+
+    .container {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    /* Ensure text is readable */
+    h1,
+    h2,
+    h3 {
+        color: black !important;
+        background: none !important;
+        -webkit-text-fill-color: black !important;
+        page-break-after: avoid;
+    }
+
+    h2 {
+        border-bottom: 1px solid #ccc;
+    }
+
+    a {
+        color: black !important;
+        text-decoration: underline;
+    }
+
+    /* Code blocks */
+    pre,
+    code {
+        background: #f5f5f5 !important;
+        color: black !important;
+        border: 1px solid #ddd;
+        page-break-inside: avoid;
+    }
+
+    .code-example {
+        background: #f5f5f5 !important;
+        border: 1px solid #ccc;
+    }
+
+    .code-header {
+        background: #eee !important;
+        border-bottom: 1px solid #ccc;
+    }
+
+    /* Cards and features */
+    .feature,
+    .nav-card,
+    .domain-card {
+        background: white !important;
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+    }
+
+    /* Show only Yoruba code by default */
+    .code-english {
+        display: none !important;
+    }
+
+    .code-yoruba {
+        display: block !important;
+    }
+
+    /* Page breaks */
+    .step,
+    .method {
+        page-break-inside: avoid;
     }
 }

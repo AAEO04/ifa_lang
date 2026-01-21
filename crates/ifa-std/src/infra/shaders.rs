@@ -4,7 +4,7 @@
 //! Includes tiled matrix multiplication, reduction operations, and elementwise ops.
 
 /// Tiled Matrix Multiplication Shader
-/// 
+///
 /// Uses workgroup shared memory for cache efficiency.
 /// Tile size: 16x16 (256 threads per workgroup)
 pub const TILED_MATMUL_SHADER: &str = r#"
@@ -80,7 +80,7 @@ fn main(
 "#;
 
 /// Parallel Reduction Shader (Sum)
-/// 
+///
 /// Tree-based reduction for efficient summation.
 pub const REDUCE_SUM_SHADER: &str = r#"
 struct ReduceParams {

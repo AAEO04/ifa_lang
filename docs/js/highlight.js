@@ -4,11 +4,11 @@
  */
 (function () {
     const KEYWORDS_YORUBA = [
-        'ayanmo', 'ti', 'bibẹkọ', 'nigba', 'fun', 'ninu', 'pada', 'otito', 'iro', 'ohunkohun'
+        'ayanmo', 'ti', 'bibẹkọ', 'nigba', 'fun', 'ninu', 'pada', 'otito', 'iro', 'ohunkohun', 'ise', 'iṣẹ', 'kuro'
     ];
 
     const KEYWORDS_ENGLISH = [
-        'let', 'if', 'else', 'while', 'for', 'in', 'return', 'true', 'false', 'null'
+        'let', 'if', 'else', 'while', 'for', 'in', 'return', 'true', 'false', 'null', 'const', 'break', 'fn'
     ];
 
     const DOMAINS = [

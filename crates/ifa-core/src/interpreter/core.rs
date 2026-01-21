@@ -469,9 +469,7 @@ impl Interpreter {
             }
 
             Statement::Match {
-                condition,
-                arms,
-                ..
+                condition, arms, ..
             } => {
                 let cond_val = self.evaluate(condition)?;
                 for arm in arms {
@@ -538,7 +536,9 @@ impl Interpreter {
 
                 for stmt in body {
                     match stmt {
-                        Statement::EseDef { name, params, body, .. } => {
+                        Statement::EseDef {
+                            name, params, body, ..
+                        } => {
                             let method = IfaValue::AstFn {
                                 name: name.clone(),
                                 params: params.iter().map(|p| p.name.clone()).collect(),
@@ -590,7 +590,10 @@ impl Interpreter {
                         let msg = message
                             .clone()
                             .unwrap_or_else(|| "Assertion failed".to_string());
-                        Err(IfaError::Runtime(format!("[ẹ̀wọ̀/verify] Taboo violated: {}", msg)))
+                        Err(IfaError::Runtime(format!(
+                            "[ẹ̀wọ̀/verify] Taboo violated: {}",
+                            msg
+                        )))
                     }
                     other => {
                         // Non-boolean - throw error
@@ -729,7 +732,7 @@ impl Interpreter {
 
         // Try modular handlers first (for registered domains)
         if let Some(handler) = self.handlers.get(&call.domain) {
-            return handler.call(&call.method, args, &mut self.env);
+            return handler.call(&call.method, args, &mut self.env, &mut self.output);
         }
 
         // Fall back to legacy code for domains not yet migrated to handlers
@@ -752,7 +755,9 @@ impl Interpreter {
                     print!("> ");
                     io::stdout().flush().ok();
                     let mut input = String::new();
-                    io::stdin().read_line(&mut input).map_err(IfaError::IoError)?;
+                    io::stdin()
+                        .read_line(&mut input)
+                        .map_err(IfaError::IoError)?;
                     Ok(IfaValue::Str(input.trim().to_string()))
                 }
                 "kigbe" | "error" => {
@@ -846,8 +851,13 @@ impl Interpreter {
                 }
                 "dapo" | "join" => {
                     if args.len() >= 2 {
-                        if let (IfaValue::List(parts), IfaValue::Str(delim)) = (&args[0], &args[1]) {
-                            let result: String = parts.iter().map(|a| a.to_string()).collect::<Vec<String>>().join(delim.as_str());
+                        if let (IfaValue::List(parts), IfaValue::Str(delim)) = (&args[0], &args[1])
+                        {
+                            let result: String = parts
+                                .iter()
+                                .map(|a| a.to_string())
+                                .collect::<Vec<String>>()
+                                .join(delim.as_str());
                             return Ok(IfaValue::Str(result));
                         }
                     }
@@ -939,14 +949,21 @@ impl Interpreter {
                 "wa" | "find" => {
                     if args.len() >= 2 {
                         if let (IfaValue::Str(s), IfaValue::Str(sub)) = (&args[0], &args[1]) {
-                            return Ok(s.find(sub.as_str()).map(|i| IfaValue::Int(i as i64)).unwrap_or(IfaValue::Null));
+                            return Ok(s
+                                .find(sub.as_str())
+                                .map(|i| IfaValue::Int(i as i64))
+                                .unwrap_or(IfaValue::Null));
                         }
                     }
-                    Err(IfaError::Runtime("find requires string and substring".into()))
+                    Err(IfaError::Runtime(
+                        "find requires string and substring".into(),
+                    ))
                 }
                 "bo_asiri" | "encode" => {
                     if let Some(val) = args.first() {
-                        return Ok(IfaValue::Str(serde_json::to_string(val).unwrap_or_default()));
+                        return Ok(IfaValue::Str(
+                            serde_json::to_string(val).unwrap_or_default(),
+                        ));
                     }
                     Err(IfaError::Runtime("encode requires value".into()))
                 }
@@ -1671,18 +1688,18 @@ impl Interpreter {
                         // Security: Clear environment to prevent side-loading
                         // and add a timeout mechanism
                         let mut command = std::process::Command::new("python3");
-                        command.args(["-c", &script])
-                               .env_clear() // 🛡️ Prevent env-based injection
-                               .env("PATH", std::env::var("PATH").unwrap_or_default()); // Keep basic path
-                        
-                        let output = command.output()
-                            .or_else(|_| {
-                                std::process::Command::new("python")
-                                    .args(["-c", &script])
-                                    .env_clear()
-                                    .env("PATH", std::env::var("PATH").unwrap_or_default())
-                                    .output()
-                            });
+                        command
+                            .args(["-c", &script])
+                            .env_clear() // 🛡️ Prevent env-based injection
+                            .env("PATH", std::env::var("PATH").unwrap_or_default()); // Keep basic path
+
+                        let output = command.output().or_else(|_| {
+                            std::process::Command::new("python")
+                                .args(["-c", &script])
+                                .env_clear()
+                                .env("PATH", std::env::var("PATH").unwrap_or_default())
+                                .output()
+                        });
 
                         match output {
                             Ok(o) if o.status.success() => {
@@ -1843,14 +1860,18 @@ impl Interpreter {
                 "itumo" | "summon" | "bridge" => {
                     if let Some(IfaValue::Str(lang)) = args.first() {
                         // Check capability
-                        self.check_capability(&Ofun::Bridge { language: lang.clone() })?;
-                        
+                        self.check_capability(&Ofun::Bridge {
+                            language: lang.clone(),
+                        })?;
+
                         // In a real implementation, we'd initialize the bridge here
                         // For now, we'll log it and return success
                         println!("[ffi] Summoned {} bridge successfully", lang);
                         return Ok(IfaValue::Bool(true));
                     }
-                    Err(IfaError::Runtime("itumo requires language name (e.g. 'js', 'python')".into()))
+                    Err(IfaError::Runtime(
+                        "itumo requires language name (e.g. 'js', 'python')".into(),
+                    ))
                 }
                 "version" => Ok(IfaValue::Str("AjoseBridge v1.2".to_string())),
                 _ => Err(IfaError::Runtime(format!(
@@ -2026,18 +2047,17 @@ impl Interpreter {
 
             // CPU (Parallel Computing)
             OduDomain::Cpu => match call.method.as_str() {
-                "num_threads" | "iye_threads" => {
-                    Ok(IfaValue::Int(num_cpus::get() as i64))
-                }
+                "num_threads" | "iye_threads" => Ok(IfaValue::Int(num_cpus::get() as i64)),
                 "par_sum" | "apapọ" => {
                     if let Some(IfaValue::List(items)) = args.first() {
-                        let sum: i64 = items.iter().filter_map(|v| {
-                            match v {
+                        let sum: i64 = items
+                            .iter()
+                            .filter_map(|v| match v {
                                 IfaValue::Int(n) => Some(*n),
                                 IfaValue::Float(f) => Some(*f as i64),
                                 _ => None,
-                            }
-                        }).sum();
+                            })
+                            .sum();
                         Ok(IfaValue::Int(sum))
                     } else {
                         Err(IfaError::Runtime("par_sum requires a list".into()))
@@ -2051,7 +2071,10 @@ impl Interpreter {
                         Err(IfaError::Runtime("configure requires thread count".into()))
                     }
                 }
-                _ => Err(IfaError::Runtime(format!("Unknown Cpu method: {}", call.method))),
+                _ => Err(IfaError::Runtime(format!(
+                    "Unknown Cpu method: {}",
+                    call.method
+                ))),
             },
 
             // GPU (Compute Shaders)
@@ -2060,10 +2083,13 @@ impl Interpreter {
                     // Check if GPU is available (placeholder)
                     Ok(IfaValue::Bool(false)) // Default: no GPU
                 }
-                "info" | "àlàyé" => {
-                    Ok(IfaValue::Str("GPU: Not available (use native build)".into()))
-                }
-                _ => Err(IfaError::Runtime(format!("Unknown Gpu method: {}", call.method))),
+                "info" | "àlàyé" => Ok(IfaValue::Str(
+                    "GPU: Not available (use native build)".into(),
+                )),
+                _ => Err(IfaError::Runtime(format!(
+                    "Unknown Gpu method: {}",
+                    call.method
+                ))),
             },
 
             // Storage (Key-Value Store)
@@ -2097,7 +2123,10 @@ impl Interpreter {
                         Err(IfaError::Runtime("delete requires key".into()))
                     }
                 }
-                _ => Err(IfaError::Runtime(format!("Unknown Storage method: {}", call.method))),
+                _ => Err(IfaError::Runtime(format!(
+                    "Unknown Storage method: {}",
+                    call.method
+                ))),
             },
 
             // ═══════════════════════════════════════════════════════════════
@@ -2107,9 +2136,16 @@ impl Interpreter {
             // Backend (HTTP Server, ORM)
             OduDomain::Backend => match call.method.as_str() {
                 "serve" | "sìn" => {
-                    let port = args.first().and_then(|v| {
-                        if let IfaValue::Int(n) = v { Some(*n) } else { None }
-                    }).unwrap_or(8080);
+                    let port = args
+                        .first()
+                        .and_then(|v| {
+                            if let IfaValue::Int(n) = v {
+                                Some(*n)
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or(8080);
                     println!("[Backend] Server would start on port {}", port);
                     Ok(IfaValue::Bool(true))
                 }
@@ -2123,7 +2159,10 @@ impl Interpreter {
                         Err(IfaError::Runtime("route requires method and path".into()))
                     }
                 }
-                _ => Err(IfaError::Runtime(format!("Unknown Backend method: {}", call.method))),
+                _ => Err(IfaError::Runtime(format!(
+                    "Unknown Backend method: {}",
+                    call.method
+                ))),
             },
 
             // Frontend (HTML/CSS Generation)
@@ -2150,7 +2189,10 @@ impl Interpreter {
                         Err(IfaError::Runtime("element requires tag and content".into()))
                     }
                 }
-                _ => Err(IfaError::Runtime(format!("Unknown Frontend method: {}", call.method))),
+                _ => Err(IfaError::Runtime(format!(
+                    "Unknown Frontend method: {}",
+                    call.method
+                ))),
             },
 
             // Crypto (extends Irete with more functions)
@@ -2169,18 +2211,35 @@ impl Interpreter {
                     }
                 }
                 "random_bytes" | "nọmba_aṣírí" => {
-                    let count = args.first().and_then(|v| {
-                        if let IfaValue::Int(n) = v { Some(*n as usize) } else { None }
-                    }).unwrap_or(16);
+                    let count = args
+                        .first()
+                        .and_then(|v| {
+                            if let IfaValue::Int(n) = v {
+                                Some(*n as usize)
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or(16);
                     // Simple random bytes (not cryptographically secure - placeholder)
                     use std::time::{SystemTime, UNIX_EPOCH};
-                    let seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
-                    let bytes: Vec<IfaValue> = (0..count).map(|i| {
-                        IfaValue::Int(((seed.wrapping_mul(1103515245 + i as u64)) >> 24) as i64 & 0xFF)
-                    }).collect();
+                    let seed = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_nanos() as u64;
+                    let bytes: Vec<IfaValue> = (0..count)
+                        .map(|i| {
+                            IfaValue::Int(
+                                ((seed.wrapping_mul(1103515245 + i as u64)) >> 24) as i64 & 0xFF,
+                            )
+                        })
+                        .collect();
                     Ok(IfaValue::List(bytes))
                 }
-                _ => Err(IfaError::Runtime(format!("Unknown Crypto method: {}", call.method))),
+                _ => Err(IfaError::Runtime(format!(
+                    "Unknown Crypto method: {}",
+                    call.method
+                ))),
             },
 
             // ML (Machine Learning)
@@ -2196,13 +2255,14 @@ impl Interpreter {
                 "relu" => {
                     // ReLU activation
                     if let Some(IfaValue::List(data)) = args.first() {
-                        let result: Vec<IfaValue> = data.iter().map(|v| {
-                            match v {
+                        let result: Vec<IfaValue> = data
+                            .iter()
+                            .map(|v| match v {
                                 IfaValue::Float(f) => IfaValue::Float(f.max(0.0)),
                                 IfaValue::Int(n) => IfaValue::Int((*n).max(0)),
                                 other => other.clone(),
-                            }
-                        }).collect();
+                            })
+                            .collect();
                         Ok(IfaValue::List(result))
                     } else {
                         Err(IfaError::Runtime("relu requires tensor".into()))
@@ -2212,13 +2272,17 @@ impl Interpreter {
                     // Dot product
                     if args.len() >= 2 {
                         if let (IfaValue::List(a), IfaValue::List(b)) = (&args[0], &args[1]) {
-                            let sum: f64 = a.iter().zip(b.iter()).filter_map(|(x, y)| {
-                                match (x, y) {
+                            let sum: f64 = a
+                                .iter()
+                                .zip(b.iter())
+                                .filter_map(|(x, y)| match (x, y) {
                                     (IfaValue::Float(a), IfaValue::Float(b)) => Some(a * b),
-                                    (IfaValue::Int(a), IfaValue::Int(b)) => Some((*a as f64) * (*b as f64)),
+                                    (IfaValue::Int(a), IfaValue::Int(b)) => {
+                                        Some((*a as f64) * (*b as f64))
+                                    }
                                     _ => None,
-                                }
-                            }).sum();
+                                })
+                                .sum();
                             Ok(IfaValue::Float(sum))
                         } else {
                             Err(IfaError::Runtime("dot requires two tensors".into()))
@@ -2227,22 +2291,31 @@ impl Interpreter {
                         Err(IfaError::Runtime("dot requires two tensors".into()))
                     }
                 }
-                _ => Err(IfaError::Runtime(format!("Unknown Ml method: {}", call.method))),
+                _ => Err(IfaError::Runtime(format!(
+                    "Unknown Ml method: {}",
+                    call.method
+                ))),
             },
 
             // GameDev (Game Engine)
             OduDomain::GameDev => match call.method.as_str() {
                 "vec2" => {
-                    let x = args.first().and_then(|v| match v {
-                        IfaValue::Float(f) => Some(*f),
-                        IfaValue::Int(n) => Some(*n as f64),
-                        _ => None,
-                    }).unwrap_or(0.0);
-                    let y = args.get(1).and_then(|v| match v {
-                        IfaValue::Float(f) => Some(*f),
-                        IfaValue::Int(n) => Some(*n as f64),
-                        _ => None,
-                    }).unwrap_or(0.0);
+                    let x = args
+                        .first()
+                        .and_then(|v| match v {
+                            IfaValue::Float(f) => Some(*f),
+                            IfaValue::Int(n) => Some(*n as f64),
+                            _ => None,
+                        })
+                        .unwrap_or(0.0);
+                    let y = args
+                        .get(1)
+                        .and_then(|v| match v {
+                            IfaValue::Float(f) => Some(*f),
+                            IfaValue::Int(n) => Some(*n as f64),
+                            _ => None,
+                        })
+                        .unwrap_or(0.0);
                     let mut map = HashMap::new();
                     map.insert("x".to_string(), IfaValue::Float(x));
                     map.insert("y".to_string(), IfaValue::Float(y));
@@ -2252,10 +2325,46 @@ impl Interpreter {
                     // Distance between two Vec2
                     if args.len() >= 2 {
                         if let (IfaValue::Map(a), IfaValue::Map(b)) = (&args[0], &args[1]) {
-                            let ax = a.get("x").and_then(|v| if let IfaValue::Float(f) = v { Some(*f) } else { None }).unwrap_or(0.0);
-                            let ay = a.get("y").and_then(|v| if let IfaValue::Float(f) = v { Some(*f) } else { None }).unwrap_or(0.0);
-                            let bx = b.get("x").and_then(|v| if let IfaValue::Float(f) = v { Some(*f) } else { None }).unwrap_or(0.0);
-                            let by = b.get("y").and_then(|v| if let IfaValue::Float(f) = v { Some(*f) } else { None }).unwrap_or(0.0);
+                            let ax = a
+                                .get("x")
+                                .and_then(|v| {
+                                    if let IfaValue::Float(f) = v {
+                                        Some(*f)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .unwrap_or(0.0);
+                            let ay = a
+                                .get("y")
+                                .and_then(|v| {
+                                    if let IfaValue::Float(f) = v {
+                                        Some(*f)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .unwrap_or(0.0);
+                            let bx = b
+                                .get("x")
+                                .and_then(|v| {
+                                    if let IfaValue::Float(f) = v {
+                                        Some(*f)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .unwrap_or(0.0);
+                            let by = b
+                                .get("y")
+                                .and_then(|v| {
+                                    if let IfaValue::Float(f) = v {
+                                        Some(*f)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .unwrap_or(0.0);
                             let dist = ((bx - ax).powi(2) + (by - ay).powi(2)).sqrt();
                             Ok(IfaValue::Float(dist))
                         } else {
@@ -2265,7 +2374,10 @@ impl Interpreter {
                         Err(IfaError::Runtime("distance requires two vec2".into()))
                     }
                 }
-                _ => Err(IfaError::Runtime(format!("Unknown GameDev method: {}", call.method))),
+                _ => Err(IfaError::Runtime(format!(
+                    "Unknown GameDev method: {}",
+                    call.method
+                ))),
             },
 
             // IoT (Embedded/GPIO)
@@ -2283,17 +2395,20 @@ impl Interpreter {
                 "digital_write" | "kọ_pin" => {
                     if args.len() >= 2 {
                         let pin = args.first().map(|v| v.to_string()).unwrap_or_default();
-                        let value = args.get(1).and_then(|v| {
-                            match v {
+                        let value = args
+                            .get(1)
+                            .and_then(|v| match v {
                                 IfaValue::Bool(b) => Some(*b),
                                 IfaValue::Int(n) => Some(*n != 0),
                                 _ => None,
-                            }
-                        }).unwrap_or(false);
+                            })
+                            .unwrap_or(false);
                         println!("[IoT] Digital write pin {} = {}", pin, value);
                         Ok(IfaValue::Bool(true))
                     } else {
-                        Err(IfaError::Runtime("digital_write requires pin and value".into()))
+                        Err(IfaError::Runtime(
+                            "digital_write requires pin and value".into(),
+                        ))
                     }
                 }
                 "digital_read" | "ka_pin" => {
@@ -2304,7 +2419,10 @@ impl Interpreter {
                         Err(IfaError::Runtime("digital_read requires pin".into()))
                     }
                 }
-                _ => Err(IfaError::Runtime(format!("Unknown Iot method: {}", call.method))),
+                _ => Err(IfaError::Runtime(format!(
+                    "Unknown Iot method: {}",
+                    call.method
+                ))),
             },
 
             // Default for other domains
@@ -2464,7 +2582,7 @@ mod tests {
         // Grant Stdio capability for print tests
         interp.capabilities.grant(ifa_sandbox::Ofun::Stdio);
         let result = interp.execute(&program);
-        
+
         // Verify execution succeeds (print goes to stdout, visible in test output)
         assert!(result.is_ok());
     }
@@ -2579,21 +2697,23 @@ mod tests {
 /// SHA-256 implementation (FIPS 180-4 compliant)
 fn sha256_simple(data: &[u8]) -> [u8; 32] {
     const K: [u32; 64] = [
-        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-        0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-        0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-        0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-        0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-        0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-        0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
+        0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe,
+        0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f,
+        0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
+        0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc,
+        0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+        0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116,
+        0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7,
+        0xc67178f2,
     ];
-    
+
     let mut h: [u32; 8] = [
-        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab,
+        0x5be0cd19,
     ];
-    
+
     // Pad message
     let bit_len = (data.len() as u64) * 8;
     let mut padded = data.to_vec();
@@ -2602,7 +2722,7 @@ fn sha256_simple(data: &[u8]) -> [u8; 32] {
         padded.push(0);
     }
     padded.extend_from_slice(&bit_len.to_be_bytes());
-    
+
     // Process 512-bit chunks
     for chunk in padded.chunks(64) {
         let mut w = [0u32; 64];
@@ -2610,35 +2730,52 @@ fn sha256_simple(data: &[u8]) -> [u8; 32] {
             w[i] = u32::from_be_bytes([word[0], word[1], word[2], word[3]]);
         }
         for i in 16..64 {
-            let s0 = w[i-15].rotate_right(7) ^ w[i-15].rotate_right(18) ^ (w[i-15] >> 3);
-            let s1 = w[i-2].rotate_right(17) ^ w[i-2].rotate_right(19) ^ (w[i-2] >> 10);
-            w[i] = w[i-16].wrapping_add(s0).wrapping_add(w[i-7]).wrapping_add(s1);
+            let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);
+            let s1 = w[i - 2].rotate_right(17) ^ w[i - 2].rotate_right(19) ^ (w[i - 2] >> 10);
+            w[i] = w[i - 16]
+                .wrapping_add(s0)
+                .wrapping_add(w[i - 7])
+                .wrapping_add(s1);
         }
-        
-        let (mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut hh) = 
+
+        let (mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut hh) =
             (h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7]);
-        
+
         for i in 0..64 {
             let s1 = e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25);
             let ch = (e & f) ^ ((!e) & g);
-            let t1 = hh.wrapping_add(s1).wrapping_add(ch).wrapping_add(K[i]).wrapping_add(w[i]);
+            let t1 = hh
+                .wrapping_add(s1)
+                .wrapping_add(ch)
+                .wrapping_add(K[i])
+                .wrapping_add(w[i]);
             let s0 = a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22);
             let maj = (a & b) ^ (a & c) ^ (b & c);
             let t2 = s0.wrapping_add(maj);
-            
-            hh = g; g = f; f = e; e = d.wrapping_add(t1);
-            d = c; c = b; b = a; a = t1.wrapping_add(t2);
+
+            hh = g;
+            g = f;
+            f = e;
+            e = d.wrapping_add(t1);
+            d = c;
+            c = b;
+            b = a;
+            a = t1.wrapping_add(t2);
         }
-        
-        h[0] = h[0].wrapping_add(a); h[1] = h[1].wrapping_add(b);
-        h[2] = h[2].wrapping_add(c); h[3] = h[3].wrapping_add(d);
-        h[4] = h[4].wrapping_add(e); h[5] = h[5].wrapping_add(f);
-        h[6] = h[6].wrapping_add(g); h[7] = h[7].wrapping_add(hh);
+
+        h[0] = h[0].wrapping_add(a);
+        h[1] = h[1].wrapping_add(b);
+        h[2] = h[2].wrapping_add(c);
+        h[3] = h[3].wrapping_add(d);
+        h[4] = h[4].wrapping_add(e);
+        h[5] = h[5].wrapping_add(f);
+        h[6] = h[6].wrapping_add(g);
+        h[7] = h[7].wrapping_add(hh);
     }
-    
+
     let mut result = [0u8; 32];
     for (i, val) in h.iter().enumerate() {
-        result[i*4..i*4+4].copy_from_slice(&val.to_be_bytes());
+        result[i * 4..i * 4 + 4].copy_from_slice(&val.to_be_bytes());
     }
     result
 }
@@ -2647,15 +2784,15 @@ fn sha256_simple(data: &[u8]) -> [u8; 32] {
 fn base64_encode(data: &[u8]) -> String {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
-    
+
     for chunk in data.chunks(3) {
         let b0 = chunk[0] as usize;
         result.push(ALPHABET[b0 >> 2] as char);
-        
+
         if chunk.len() > 1 {
             let b1 = chunk[1] as usize;
             result.push(ALPHABET[((b0 & 0x03) << 4) | (b1 >> 4)] as char);
-            
+
             if chunk.len() > 2 {
                 let b2 = chunk[2] as usize;
                 result.push(ALPHABET[((b1 & 0x0f) << 2) | (b2 >> 6)] as char);
@@ -2676,20 +2813,30 @@ fn base64_encode(data: &[u8]) -> String {
 #[allow(dead_code)]
 fn base64_decode(encoded: &str) -> Result<Vec<u8>, String> {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    
-    let chars: Vec<char> = encoded.chars().filter(|&c| c != '=' && !c.is_whitespace()).collect();
+
+    let chars: Vec<char> = encoded
+        .chars()
+        .filter(|&c| c != '=' && !c.is_whitespace())
+        .collect();
     let mut result = Vec::with_capacity(chars.len() * 3 / 4);
-    
+
     for chunk in chars.chunks(4) {
-        if chunk.is_empty() { break; }
-        
-        let indices: Result<Vec<usize>, _> = chunk.iter().map(|&c| {
-            ALPHABET.iter().position(|&b| b as char == c)
-                .ok_or_else(|| format!("Invalid base64 char: {}", c))
-        }).collect();
-        
+        if chunk.is_empty() {
+            break;
+        }
+
+        let indices: Result<Vec<usize>, _> = chunk
+            .iter()
+            .map(|&c| {
+                ALPHABET
+                    .iter()
+                    .position(|&b| b as char == c)
+                    .ok_or_else(|| format!("Invalid base64 char: {}", c))
+            })
+            .collect();
+
         let indices = indices?;
-        
+
         if indices.len() >= 2 {
             result.push(((indices[0] << 2) | (indices[1] >> 4)) as u8);
         }

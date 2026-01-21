@@ -175,9 +175,10 @@ impl EmbeddedConfig {
 // =============================================================================
 
 /// Simplified value type for embedded contexts
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum EmbeddedValue {
     /// Null/None
+    #[default]
     Null,
     /// Boolean
     Bool(bool),
@@ -185,12 +186,6 @@ pub enum EmbeddedValue {
     Int(i32),
     /// 32-bit float (smaller footprint than f64)
     Float(f32),
-}
-
-impl Default for EmbeddedValue {
-    fn default() -> Self {
-        EmbeddedValue::Null
-    }
 }
 
 impl EmbeddedValue {
@@ -330,7 +325,9 @@ impl EmbeddedVm {
 
     /// Push value onto stack
     fn push(&mut self, value: EmbeddedValue) -> EmbeddedResult<()> {
-        self.stack.push(value).map_err(|_| EmbeddedError::StackOverflow)
+        self.stack
+            .push(value)
+            .map_err(|_| EmbeddedError::StackOverflow)
     }
 
     /// Pop value from stack
@@ -340,7 +337,10 @@ impl EmbeddedVm {
 
     /// Peek at top of stack
     fn peek(&self) -> EmbeddedResult<EmbeddedValue> {
-        self.stack.last().copied().ok_or(EmbeddedError::StackUnderflow)
+        self.stack
+            .last()
+            .copied()
+            .ok_or(EmbeddedError::StackUnderflow)
     }
 
     /// Read u8 from bytecode
@@ -358,7 +358,12 @@ impl EmbeddedVm {
         if self.ip + 4 > code.len() {
             return Err(EmbeddedError::InvalidBytecode);
         }
-        let bytes = [code[self.ip], code[self.ip + 1], code[self.ip + 2], code[self.ip + 3]];
+        let bytes = [
+            code[self.ip],
+            code[self.ip + 1],
+            code[self.ip + 2],
+            code[self.ip + 3],
+        ];
         self.ip += 4;
         Ok(i32::from_le_bytes(bytes))
     }
@@ -368,7 +373,12 @@ impl EmbeddedVm {
         if self.ip + 4 > code.len() {
             return Err(EmbeddedError::InvalidBytecode);
         }
-        let bytes = [code[self.ip], code[self.ip + 1], code[self.ip + 2], code[self.ip + 3]];
+        let bytes = [
+            code[self.ip],
+            code[self.ip + 1],
+            code[self.ip + 2],
+            code[self.ip + 3],
+        ];
         self.ip += 4;
         Ok(f32::from_le_bytes(bytes))
     }
@@ -516,7 +526,11 @@ impl EmbeddedVm {
                 }
                 EmbeddedOpCode::LoadLocal => {
                     let index = self.read_u8(code)? as usize;
-                    let value = self.locals.get(index).copied().unwrap_or(EmbeddedValue::Null);
+                    let value = self
+                        .locals
+                        .get(index)
+                        .copied()
+                        .unwrap_or(EmbeddedValue::Null);
                     self.push(value)?;
                 }
                 EmbeddedOpCode::StoreLocal => {
@@ -586,7 +600,7 @@ mod tests {
         // PushInt(42), Halt
         let bytecode = [
             0x01, // PushInt
-            42, 0, 0, 0, // 42 as i32 little-endian
+            42, 0, 0, 0,    // 42 as i32 little-endian
             0xFF, // Halt
         ];
         let result = vm.run(&bytecode).unwrap();
@@ -599,7 +613,7 @@ mod tests {
         // PushInt(10), PushInt(32), Add, Halt
         let bytecode = [
             0x01, 10, 0, 0, 0, // PushInt(10)
-            0x01, 32, 0, 0, 0, // PushInt(32)
+            0x01, 32, 0, 0, 0,    // PushInt(32)
             0x20, // Add
             0xFF, // Halt
         ];
@@ -613,7 +627,7 @@ mod tests {
         // PushInt(10), PushInt(0), Div
         let bytecode = [
             0x01, 10, 0, 0, 0, // PushInt(10)
-            0x01, 0, 0, 0, 0,  // PushInt(0)
+            0x01, 0, 0, 0, 0,    // PushInt(0)
             0x23, // Div
         ];
         let result = vm.run(&bytecode);
@@ -625,8 +639,8 @@ mod tests {
         let mut vm = EmbeddedVm::default();
         // PushInt(5), PushInt(10), Lt, Halt -> true
         let bytecode = [
-            0x01, 5, 0, 0, 0,  // PushInt(5)
-            0x01, 10, 0, 0, 0, // PushInt(10)
+            0x01, 5, 0, 0, 0, // PushInt(5)
+            0x01, 10, 0, 0, 0,    // PushInt(10)
             0x32, // Lt
             0xFF, // Halt
         ];
@@ -640,10 +654,10 @@ mod tests {
         // PushInt(100), StoreLocal(0), PushInt(0), LoadLocal(0), Halt
         let bytecode = [
             0x01, 100, 0, 0, 0, // PushInt(100)
-            0x51, 0,            // StoreLocal(0)
-            0x01, 0, 0, 0, 0,   // PushInt(0)
-            0x50, 0,            // LoadLocal(0)
-            0xFF,               // Halt
+            0x51, 0, // StoreLocal(0)
+            0x01, 0, 0, 0, 0, // PushInt(0)
+            0x50, 0,    // LoadLocal(0)
+            0xFF, // Halt
         ];
         let result = vm.run(&bytecode).unwrap();
         assert_eq!(result, EmbeddedValue::Int(100));

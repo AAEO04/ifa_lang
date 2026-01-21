@@ -305,7 +305,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                 let mut arm_inner = arm_pair.into_inner();
                 let pattern_pair = arm_inner.next().unwrap();
                 let pattern = parse_match_pattern(pattern_pair)?;
-                
+
                 let mut body = Vec::new();
                 let body_pair = arm_inner.next().unwrap();
                 match body_pair.as_rule() {
@@ -314,7 +314,8 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                             body.push(stmt);
                         }
                     }
-                    _ => { // Block
+                    _ => {
+                        // Block
                         for stmt_pair in body_pair.into_inner() {
                             if let Some(stmt) = parse_statement(stmt_pair)? {
                                 body.push(stmt);
@@ -322,7 +323,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                         }
                     }
                 }
-                
+
                 arms.push(MatchArm { pattern, body });
             }
 

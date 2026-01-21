@@ -37,17 +37,17 @@ impl ResourceMonitor {
             running: false,
         }
     }
-    
+
     /// Start monitoring
     pub fn start(&mut self) {
         self.start_time = Some(Instant::now());
         self.running = true;
-        
+
         // Get initial memory snapshot if possible
         self.current_memory = Self::get_process_memory();
         self.peak_memory = self.current_memory;
     }
-    
+
     /// Stop monitoring
     pub fn stop(&mut self) {
         if let Some(start) = self.start_time {
@@ -55,16 +55,16 @@ impl ResourceMonitor {
         }
         self.running = false;
     }
-    
+
     /// Check if monitor is running
     pub fn is_running(&self) -> bool {
         self.running
     }
-    
+
     // =========================================================================
     // Memory Monitoring
     // =========================================================================
-    
+
     /// Get current memory usage in bytes
     pub fn memory_usage(&self) -> usize {
         if self.running {
@@ -73,7 +73,7 @@ impl ResourceMonitor {
             self.current_memory
         }
     }
-    
+
     /// Get peak memory usage
     pub fn peak_memory_usage(&self) -> usize {
         let current = self.memory_usage();
@@ -83,7 +83,7 @@ impl ResourceMonitor {
             self.peak_memory
         }
     }
-    
+
     /// Update peak memory tracking
     pub fn update_peak_memory(&mut self) {
         let current = Self::get_process_memory();
@@ -92,7 +92,7 @@ impl ResourceMonitor {
         }
         self.current_memory = current;
     }
-    
+
     /// Get process memory (platform-specific)
     fn get_process_memory() -> usize {
         #[cfg(target_os = "linux")]
@@ -107,7 +107,7 @@ impl ResourceMonitor {
             }
             0
         }
-        
+
         #[cfg(not(target_os = "linux"))]
         {
             // Placeholder for other platforms
@@ -115,24 +115,26 @@ impl ResourceMonitor {
             0
         }
     }
-    
+
     // =========================================================================
     // CPU Monitoring
     // =========================================================================
-    
+
     /// Get CPU time used
     pub fn cpu_time(&self) -> Duration {
         if self.running {
-            self.start_time.map(|t| t.elapsed()).unwrap_or(Duration::ZERO)
+            self.start_time
+                .map(|t| t.elapsed())
+                .unwrap_or(Duration::ZERO)
         } else {
             self.cpu_time
         }
     }
-    
+
     // =========================================================================
     // File Monitoring
     // =========================================================================
-    
+
     /// Get number of open file descriptors
     pub fn file_count(&self) -> usize {
         #[cfg(target_os = "linux")]
@@ -143,53 +145,53 @@ impl ResourceMonitor {
             }
             0
         }
-        
+
         #[cfg(not(target_os = "linux"))]
         {
             self.file_count
         }
     }
-    
+
     /// Increment file count (for tracking)
     pub fn track_file_open(&mut self) {
         self.file_count += 1;
     }
-    
+
     /// Decrement file count
     pub fn track_file_close(&mut self) {
         if self.file_count > 0 {
             self.file_count -= 1;
         }
     }
-    
+
     // =========================================================================
     // Network Monitoring
     // =========================================================================
-    
+
     /// Get bytes sent
     pub fn bytes_sent(&self) -> u64 {
         self.bytes_sent
     }
-    
+
     /// Get bytes received
     pub fn bytes_received(&self) -> u64 {
         self.bytes_received
     }
-    
+
     /// Track bytes sent
     pub fn track_send(&mut self, bytes: u64) {
         self.bytes_sent += bytes;
     }
-    
+
     /// Track bytes received
     pub fn track_receive(&mut self, bytes: u64) {
         self.bytes_received += bytes;
     }
-    
+
     // =========================================================================
     // Reporting
     // =========================================================================
-    
+
     /// Generate a summary report
     pub fn report(&self) -> String {
         format!(
@@ -211,37 +213,37 @@ impl ResourceMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_monitor_creation() {
         let monitor = ResourceMonitor::new();
         assert!(!monitor.is_running());
     }
-    
+
     #[test]
     fn test_monitor_lifecycle() {
         let mut monitor = ResourceMonitor::new();
-        
+
         monitor.start();
         assert!(monitor.is_running());
-        
+
         // Do some work
         std::thread::sleep(Duration::from_millis(10));
-        
+
         let cpu_time = monitor.cpu_time();
         assert!(cpu_time >= Duration::from_millis(10));
-        
+
         monitor.stop();
         assert!(!monitor.is_running());
     }
-    
+
     #[test]
     fn test_network_tracking() {
         let mut monitor = ResourceMonitor::new();
-        
+
         monitor.track_send(100);
         monitor.track_receive(200);
-        
+
         assert_eq!(monitor.bytes_sent(), 100);
         assert_eq!(monitor.bytes_received(), 200);
     }

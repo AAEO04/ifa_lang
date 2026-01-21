@@ -99,7 +99,8 @@ impl Ofun {
             "env" | "ayika" => self.capabilities.env,
             s if s.starts_with("bridge:") => {
                 let lang = &s[7..];
-                self.capabilities.bridges.contains(&lang.to_string()) || self.capabilities.bridges.contains(&"*".to_string())
+                self.capabilities.bridges.contains(&lang.to_string())
+                    || self.capabilities.bridges.contains(&"*".to_string())
             }
             _ => false,
         }

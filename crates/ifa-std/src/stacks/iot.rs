@@ -19,15 +19,15 @@ extern crate std;
 #[cfg(not(feature = "backend"))]
 extern crate alloc;
 #[cfg(not(feature = "backend"))]
-use alloc::string::{String, ToString};
+use alloc::collections::VecDeque;
 #[cfg(not(feature = "backend"))]
 use alloc::format;
 #[cfg(not(feature = "backend"))]
-use alloc::vec::Vec;
+use alloc::string::{String, ToString};
 #[cfg(not(feature = "backend"))]
 use alloc::vec;
 #[cfg(not(feature = "backend"))]
-use alloc::collections::VecDeque;
+use alloc::vec::Vec;
 
 #[cfg(feature = "backend")]
 macro_rules! log {
@@ -36,7 +36,7 @@ macro_rules! log {
 
 #[cfg(not(feature = "backend"))]
 macro_rules! log {
-    ($($arg:tt)*) => { {} }
+    ($($arg:tt)*) => {{}};
 }
 
 // std::time moved to gated block below
@@ -225,14 +225,12 @@ impl EmbeddedGpio {
     }
 }
 
-#[cfg(feature = "backend")]
-use std::time::{Duration, Instant};
 #[cfg(not(feature = "backend"))]
 use core::time::Duration;
+#[cfg(feature = "backend")]
+use std::time::{Duration, Instant};
 
 // ... (Error types remain, but impl std::error::Error needs gating)
-
-
 
 // ...
 
@@ -247,7 +245,7 @@ pub struct EmbeddedTimer {
 
 impl EmbeddedTimer {
     pub fn new() -> Self {
-        EmbeddedTimer { 
+        EmbeddedTimer {
             #[cfg(feature = "backend")]
             deadline: None,
             #[cfg(not(feature = "backend"))]
@@ -274,7 +272,9 @@ impl EmbeddedTimer {
     /// Non-blocking: start a timer
     pub fn start(&mut self, _duration: Duration) {
         #[cfg(feature = "backend")]
-        { self.deadline = Some(Instant::now() + _duration); }
+        {
+            self.deadline = Some(Instant::now() + _duration);
+        }
     }
 
     /// Non-blocking: check if timer expired
@@ -313,7 +313,7 @@ impl EmbeddedTimer {
         let result = f();
         (result, start.elapsed())
     }
-    
+
     #[cfg(not(feature = "backend"))]
     pub fn measure<F: FnOnce() -> T, T>(f: F) -> (T, Duration) {
         (f(), Duration::from_secs(0))
@@ -552,9 +552,9 @@ pub fn flash(target: &str, binary_path: &str, port: Option<&str>) -> EmbeddedRes
         cmd.arg("--probe").arg(p);
     }
 
-    let output = cmd.output().map_err(|e| {
-        EmbeddedError::IoError(format!("Failed to run probe-rs: {}", e))
-    })?;
+    let output = cmd
+        .output()
+        .map_err(|e| EmbeddedError::IoError(format!("Failed to run probe-rs: {}", e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

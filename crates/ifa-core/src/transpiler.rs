@@ -280,9 +280,7 @@ fn main() {{
             }
 
             Statement::Match {
-                condition,
-                arms,
-                ..
+                condition, arms, ..
             } => {
                 let cond = self.transpile_expression(condition);
                 let mut result = format!("{}let cond_val = {};\n", indent, cond);
@@ -315,7 +313,11 @@ fn main() {{
 
             Statement::Return { value, .. } => {
                 if let Some(v) = value {
-                    format!("{}early_return = Some({}); return;", indent, self.transpile_expression(v))
+                    format!(
+                        "{}early_return = Some({}); return;",
+                        indent,
+                        self.transpile_expression(v)
+                    )
                 } else {
                     format!("{}return;", indent)
                 }
@@ -346,12 +348,18 @@ fn main() {{
                 );
 
                 self.indent += 1;
-                result.push_str(&format!("{}let mut early_return: Option<IfaValue> = None;\n", self.indent_str()));
+                result.push_str(&format!(
+                    "{}let mut early_return: Option<IfaValue> = None;\n",
+                    self.indent_str()
+                ));
                 for s in body {
                     result.push_str(&self.transpile_statement(s));
                     result.push('\n');
                 }
-                result.push_str(&format!("{}early_return.unwrap_or(IfaValue::Nil)\n", self.indent_str()));
+                result.push_str(&format!(
+                    "{}early_return.unwrap_or(IfaValue::Nil)\n",
+                    self.indent_str()
+                ));
                 self.indent -= 1;
 
                 result.push_str(&format!("{}}}", indent));
@@ -374,7 +382,9 @@ fn main() {{
 
                 for stmt in body {
                     match stmt {
-                        Statement::VarDecl { name, type_hint, .. } => {
+                        Statement::VarDecl {
+                            name, type_hint, ..
+                        } => {
                             let type_str = match type_hint {
                                 Some(TypeHint::Int) => "i64",
                                 Some(TypeHint::Float) => "f64",
@@ -398,7 +408,7 @@ fn main() {{
                     result.push_str(&format!("{}{}\n", indent, field));
                 }
                 result.push_str(&format!("{}}}\n\n", indent));
- 
+
                 if !methods.is_empty() {
                     result.push_str(&format!("{}{}impl {} {{\n", indent, vis, m_name));
                     self.indent += 1;
@@ -459,7 +469,11 @@ fn main() {{
         match target {
             AssignTarget::Variable(name) => self.mangle_identifier(name),
             AssignTarget::Index { name, index } => {
-                format!("{}[{}]", self.mangle_identifier(name), self.transpile_expression(index))
+                format!(
+                    "{}[{}]",
+                    self.mangle_identifier(name),
+                    self.transpile_expression(index)
+                )
             }
         }
     }
@@ -566,7 +580,7 @@ fn main() {{
             Expression::Bool(b) => format!("IfaValue::Bool({})", b),
             Expression::Nil => "IfaValue::Nil".to_string(),
             Expression::Identifier(name) => self.mangle_identifier(name),
- 
+
             Expression::BinaryOp { left, op, right } => {
                 let l = self.transpile_expression(left);
                 let r = self.transpile_expression(right);
@@ -577,8 +591,12 @@ fn main() {{
                     BinaryOperator::LtEq => format!("IfaValue::Bool({} <= {})", l, r),
                     BinaryOperator::Gt => format!("IfaValue::Bool({} > {})", l, r),
                     BinaryOperator::GtEq => format!("IfaValue::Bool({} >= {})", l, r),
-                    BinaryOperator::And => format!("IfaValue::Bool(({}).is_truthy() && ({}).is_truthy())", l, r),
-                    BinaryOperator::Or => format!("IfaValue::Bool(({}).is_truthy() || ({}).is_truthy())", l, r),
+                    BinaryOperator::And => {
+                        format!("IfaValue::Bool(({}).is_truthy() && ({}).is_truthy())", l, r)
+                    }
+                    BinaryOperator::Or => {
+                        format!("IfaValue::Bool(({}).is_truthy() || ({}).is_truthy())", l, r)
+                    }
                     _ => format!("({} {} {})", l, op, r),
                 }
             }

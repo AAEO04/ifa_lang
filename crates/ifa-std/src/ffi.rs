@@ -191,7 +191,12 @@ impl IfaFfi {
 
     /// Initialize a polyglot bridge (Summon Bridge)
     /// Ifa syntax: ffi.itumo("python", config)
-    pub fn itumo(&mut self, language: &str, config: Option<FfiConfig>, ofun: &crate::ofun::Ofun) -> FfiResult<()> {
+    pub fn itumo(
+        &mut self,
+        language: &str,
+        config: Option<FfiConfig>,
+        ofun: &crate::ofun::Ofun,
+    ) -> FfiResult<()> {
         let cap = format!("bridge:{}", language);
         if !ofun.le(&cap) {
             return Err(FfiError::SecurityViolation(format!(
@@ -201,28 +206,38 @@ impl IfaFfi {
         }
 
         let config = config.unwrap_or_default();
-        let _timeout = if config.timeout_sec > 0 { config.timeout_sec } else { 30 };
+        let _timeout = if config.timeout_sec > 0 {
+            config.timeout_sec
+        } else {
+            30
+        };
 
         match language {
             #[cfg(feature = "js")]
             "js" | "javascript" => {
-                println!("[FFI] Summoning JavaScript bridge (timeout: {}s)...", timeout);
+                println!(
+                    "[FFI] Summoning JavaScript bridge (timeout: {}s)...",
+                    timeout
+                );
                 Ok(())
             }
             #[cfg(feature = "python")]
             "python" | "py" => {
                 println!("[FFI] Summoning Python bridge...");
-                
+
                 // If an interpreter path (e.g. venv) is provided, we need to set it
                 // BEFORE the first Python::with_gil call if possible.
                 // Note: PyO3 auto-initialize uses the first python found on PATH
                 // if PYTHONHOME/PYTHONPATH aren't set.
                 if let Some(ref path) = config.interpreter_path {
                     if !path.exists() {
-                        return Err(FfiError::LibraryNotFound(format!("Python interpreter not found at {:?}", path)));
+                        return Err(FfiError::LibraryNotFound(format!(
+                            "Python interpreter not found at {:?}",
+                            path
+                        )));
                     }
                     println!("[FFI] Using isolated Python at: {:?}", path);
-                    
+
                     // On Unix, we set PYTHONHOME to the venv root
                     // This is a global operation and should be handled with care
                     #[cfg(unix)]
@@ -232,7 +247,7 @@ impl IfaFfi {
                         }
                     }
                 }
-                
+
                 Ok(())
             }
             "rust" | "c" | "native" => {
@@ -245,7 +260,10 @@ impl IfaFfi {
                 } else {
                     "not enabled in this build (rebuild with --features js,python)"
                 };
-                Err(FfiError::CallFailed(format!("Bridge '{}' {}", language, status)))
+                Err(FfiError::CallFailed(format!(
+                    "Bridge '{}' {}",
+                    language, status
+                )))
             }
         }
     }
@@ -253,9 +271,18 @@ impl IfaFfi {
     /// Load a shared library (C/Rust) with security validation
     pub fn load_native(&mut self, name: &str, path: Option<&str>) -> FfiResult<()> {
         let lib_path = path.map(String::from).unwrap_or_else(|| {
-            #[cfg(windows)] { format!("{}.dll", name) }
-            #[cfg(target_os = "macos")] { format!("lib{}.dylib", name) }
-            #[cfg(all(unix, not(target_os = "macos")))] { format!("lib{}.so", name) }
+            #[cfg(windows)]
+            {
+                format!("{}.dll", name)
+            }
+            #[cfg(target_os = "macos")]
+            {
+                format!("lib{}.dylib", name)
+            }
+            #[cfg(all(unix, not(target_os = "macos")))]
+            {
+                format!("lib{}.so", name)
+            }
         });
 
         // Security validation
@@ -272,31 +299,35 @@ impl IfaFfi {
     /// Validate library path for security
     fn validate_library_path(&self, path: &str) -> FfiResult<std::path::PathBuf> {
         use std::path::PathBuf;
-        
+
         let path_buf = PathBuf::from(path);
-        
+
         // 1. Check for path traversal attempts
         let path_str = path_buf.to_string_lossy();
         if path_str.contains("..") {
             return Err(FfiError::SecurityViolation(
-                "Path traversal (..) not allowed in library paths".to_string()
+                "Path traversal (..) not allowed in library paths".to_string(),
             ));
         }
-        
+
         // 2. If absolute path, must exist
         if path_buf.is_absolute() {
             if !path_buf.exists() {
                 return Err(FfiError::LibraryNotFound(format!(
-                    "Library not found at absolute path: {}", path
+                    "Library not found at absolute path: {}",
+                    path
                 )));
             }
             return Ok(path_buf);
         }
-        
+
         // 3. For relative paths, we allow libloading to search system paths
         // but log a warning
-        eprintln!("[FFI] Warning: Loading library from relative path '{}'. Consider using absolute paths.", path);
-        
+        eprintln!(
+            "[FFI] Warning: Loading library from relative path '{}'. Consider using absolute paths.",
+            path
+        );
+
         Ok(path_buf)
     }
 
@@ -304,50 +335,74 @@ impl IfaFfi {
     #[cfg(feature = "js")]
     pub fn load_js(&mut self, name: &str, code: &str) -> FfiResult<()> {
         let mut context = boa_engine::Context::default();
-        context.eval(boa_engine::Source::from_bytes(code.as_bytes()))
+        context
+            .eval(boa_engine::Source::from_bytes(code.as_bytes()))
             .map_err(|e| FfiError::CallFailed(format!("JS Init failed: {}", e)))?;
-        
-        self.backends.insert(name.to_string(), Backend::JavaScript { context: Box::new(context) });
+
+        self.backends.insert(
+            name.to_string(),
+            Backend::JavaScript {
+                context: Box::new(context),
+            },
+        );
         Ok(())
     }
 
     /// Load a Python module with environment config
     #[cfg(feature = "python")]
-    pub fn load_py(&mut self, name: &str, module: &str, interpreter_path: Option<std::path::PathBuf>) -> FfiResult<()> {
-        self.backends.insert(name.to_string(), Backend::Python { 
-            module_name: module.to_string(),
-            interpreter_path,
-        });
+    pub fn load_py(
+        &mut self,
+        name: &str,
+        module: &str,
+        interpreter_path: Option<std::path::PathBuf>,
+    ) -> FfiResult<()> {
+        self.backends.insert(
+            name.to_string(),
+            Backend::Python {
+                module_name: module.to_string(),
+                interpreter_path,
+            },
+        );
         Ok(())
     }
 
     /// Bind a function (Native only)
     pub fn bind(&mut self, lib: &str, func: &str, args: &[&str], ret: &str) -> FfiResult<()> {
-        let backend = self.backends.get(lib)
+        let backend = self
+            .backends
+            .get(lib)
             .ok_or_else(|| FfiError::LibraryNotFound(lib.to_string()))?;
 
         match backend {
-            Backend::Native(lib_handle) => {
-                unsafe {
-                    let symbol: libloading::Symbol<unsafe extern "C" fn()> = lib_handle.get(func.as_bytes())
-                        .map_err(|_| FfiError::FunctionNotFound(func.to_string()))?;
-                    
-                    let ptr = *symbol.deref() as *const () as *mut c_void;
-                    
-                    let arg_types: Vec<IfaType> = args.iter().filter_map(|s| IfaType::from_str(s)).collect();
-                    let ret_type = IfaType::from_str(ret).unwrap_or(IfaType::Void);
+            Backend::Native(lib_handle) => unsafe {
+                let symbol: libloading::Symbol<unsafe extern "C" fn()> = lib_handle
+                    .get(func.as_bytes())
+                    .map_err(|_| FfiError::FunctionNotFound(func.to_string()))?;
 
-                    let key = format!("{}.{}", lib, func);
-                    self.functions.insert(key, BoundFunction {
+                let ptr = *symbol.deref() as *const () as *mut c_void;
+
+                let arg_types: Vec<IfaType> =
+                    args.iter().filter_map(|s| IfaType::from_str(s)).collect();
+                let ret_type = IfaType::from_str(ret).unwrap_or(IfaType::Void);
+
+                let key = format!("{}.{}", lib, func);
+                self.functions.insert(
+                    key,
+                    BoundFunction {
                         name: func.to_string(),
                         ptr,
-                        sig: FfiSignature { arg_types, ret_type },
-                    });
-                }
-            }
+                        sig: FfiSignature {
+                            arg_types,
+                            ret_type,
+                        },
+                    },
+                );
+            },
             #[allow(unreachable_patterns)]
             _ => {
-                return Err(FfiError::CallFailed("Binding only supported for native libraries".into()));
+                return Err(FfiError::CallFailed(
+                    "Binding only supported for native libraries".into(),
+                ));
             }
         }
         Ok(())
@@ -355,20 +410,24 @@ impl IfaFfi {
 
     /// Call a function
     pub fn call(&mut self, lib: &str, func: &str, args: &[FfiValue]) -> FfiResult<FfiValue> {
-        let backend = self.backends.get_mut(lib)
+        let backend = self
+            .backends
+            .get_mut(lib)
             .ok_or_else(|| FfiError::LibraryNotFound(lib.to_string()))?;
 
         match backend {
             Backend::Native(_) => {
                 let key = format!("{}.{}", lib, func);
-                let bound = self.functions.get(&key)
+                let bound = self
+                    .functions
+                    .get(&key)
                     .ok_or_else(|| FfiError::FunctionNotFound(key.clone()))?;
-                
+
                 #[cfg(feature = "native_ffi")]
                 {
                     self.call_native_libffi(bound, args)
                 }
-                
+
                 #[cfg(not(feature = "native_ffi"))]
                 {
                     let _ = bound;
@@ -387,9 +446,12 @@ impl IfaFfi {
                     js_args.push(self.ffi_to_js(arg, context));
                 }
 
-                let result = context.eval(boa_engine::Source::from_bytes(format!("{}(...args)", func).as_bytes()))
+                let result = context
+                    .eval(boa_engine::Source::from_bytes(
+                        format!("{}(...args)", func).as_bytes(),
+                    ))
                     .map_err(|e| FfiError::CallFailed(format!("JS Call failed: {}", e)))?;
-                
+
                 Ok(self.js_to_ffi(result))
             }
             #[cfg(feature = "python")]
@@ -397,47 +459,58 @@ impl IfaFfi {
                 use pyo3::prelude::*;
                 Python::with_gil(|py| {
                     // Pre-check: Ensure the module is discoverable
-                    let module = py.import(module_name.as_str())
-                        .map_err(|e| FfiError::LibraryNotFound(format!("Py import failed for '{}': {}", module_name, e)))?;
-                    
+                    let module = py.import(module_name.as_str()).map_err(|e| {
+                        FfiError::LibraryNotFound(format!(
+                            "Py import failed for '{}': {}",
+                            module_name, e
+                        ))
+                    })?;
+
                     let py_args = PyTuple::new(py, args.iter().map(|a| self.ffi_to_py(a, py)));
-                    
+
                     // Call with timeout protection (simulated for internal PyO3 calls)
-                    let result = module.getattr(func)
-                        .map_err(|_| FfiError::FunctionNotFound(format!("{}.{}", module_name, func)))?
+                    let result = module
+                        .getattr(func)
+                        .map_err(|_| {
+                            FfiError::FunctionNotFound(format!("{}.{}", module_name, func))
+                        })?
                         .call1(py_args)
                         .map_err(|e| FfiError::CallFailed(format!("Py Runtime Error: {}", e)))?;
-                    
+
                     Ok(self.py_to_ffi(result))
                 })
             }
             // Feature-gated backends may not all be present
             #[allow(unreachable_patterns)]
-            _ => Err(FfiError::CallFailed("Selected FFI backend not included in this build".into())),
+            _ => Err(FfiError::CallFailed(
+                "Selected FFI backend not included in this build".into(),
+            )),
         }
     }
-    
+
     /// Native function call implementation using libffi
     #[cfg(feature = "native_ffi")]
     fn call_native_libffi(&self, bound: &BoundFunction, args: &[FfiValue]) -> FfiResult<FfiValue> {
-        use libffi::high::{call, Arg};
+        use libffi::high::{Arg, call};
         use libffi::low::CodePtr;
-        
+
         // Verify argument count
         if args.len() != bound.sig.arg_types.len() {
             return Err(FfiError::TypeMismatch(format!(
                 "{}: expected {} args, got {}",
-                bound.name, bound.sig.arg_types.len(), args.len()
+                bound.name,
+                bound.sig.arg_types.len(),
+                args.len()
             )));
         }
-        
+
         // Build argument list for libffi
         // We need to hold the actual values in memory
         let mut i32_args: Vec<i32> = Vec::new();
         let mut i64_args: Vec<i64> = Vec::new();
         let mut f64_args: Vec<f64> = Vec::new();
         let mut str_args: Vec<std::ffi::CString> = Vec::new();
-        
+
         for (i, (val, expected_type)) in args.iter().zip(bound.sig.arg_types.iter()).enumerate() {
             match (val, expected_type) {
                 (FfiValue::I32(v), IfaType::I32) => i32_args.push(*v),
@@ -445,23 +518,28 @@ impl IfaFfi {
                 (FfiValue::I32(v), IfaType::I64) => i64_args.push(*v as i64),
                 (FfiValue::F64(v), IfaType::F64) => f64_args.push(*v),
                 (FfiValue::Str(s), IfaType::Str) => {
-                    str_args.push(std::ffi::CString::new(s.as_str())
-                        .map_err(|_| FfiError::TypeMismatch("String contains null byte".into()))?);
+                    str_args.push(
+                        std::ffi::CString::new(s.as_str()).map_err(|_| {
+                            FfiError::TypeMismatch("String contains null byte".into())
+                        })?,
+                    );
                 }
-                _ => return Err(FfiError::TypeMismatch(format!(
-                    "Arg {}: cannot convert {:?} to {:?}",
-                    i, val, expected_type
-                ))),
+                _ => {
+                    return Err(FfiError::TypeMismatch(format!(
+                        "Arg {}: cannot convert {:?} to {:?}",
+                        i, val, expected_type
+                    )));
+                }
             }
         }
-        
+
         // Build the Arg vector for the call
         let mut ffi_args: Vec<Arg> = Vec::with_capacity(args.len());
         let mut i32_idx = 0;
         let mut i64_idx = 0;
         let mut f64_idx = 0;
         let mut str_idx = 0;
-        
+
         for (val, expected_type) in args.iter().zip(bound.sig.arg_types.iter()) {
             match (val, expected_type) {
                 (FfiValue::I32(_), IfaType::I32) => {
@@ -483,10 +561,10 @@ impl IfaFfi {
                 _ => unreachable!(), // Already validated above
             }
         }
-        
+
         // Make the call based on return type
         let code_ptr = CodePtr::from_ptr(bound.ptr as *const _);
-        
+
         unsafe {
             match bound.sig.ret_type {
                 IfaType::Void => {
@@ -547,10 +625,18 @@ impl IfaFfi {
             return FfiValue::F64(val.as_number().unwrap_or(0.0));
         }
         if val.is_string() {
-            return FfiValue::Str(val.as_string().map(|s| s.to_std_string_escaped()).unwrap_or_default());
+            return FfiValue::Str(
+                val.as_string()
+                    .map(|s| s.to_std_string_escaped())
+                    .unwrap_or_default(),
+            );
         }
         if val.is_boolean() {
-            return FfiValue::I32(if val.as_boolean().unwrap_or(false) { 1 } else { 0 });
+            return FfiValue::I32(if val.as_boolean().unwrap_or(false) {
+                1
+            } else {
+                0
+            });
         }
         FfiValue::Null
     }
@@ -928,8 +1014,9 @@ impl RpcResponse {
                 Some(FfiValue::U8(v)) => v.to_string(),
                 Some(FfiValue::Ptr(v)) => v.to_string(),
                 Some(FfiValue::List(l)) => {
-                    let items: Vec<String> = l.iter().map(|v| {
-                        match v {
+                    let items: Vec<String> = l
+                        .iter()
+                        .map(|v| match v {
                             FfiValue::I32(x) => x.to_string(),
                             FfiValue::I64(x) => x.to_string(),
                             FfiValue::F64(x) => x.to_string(),
@@ -938,8 +1025,8 @@ impl RpcResponse {
                             FfiValue::Ptr(x) => x.to_string(),
                             FfiValue::Null => "null".to_string(),
                             FfiValue::List(_) => "[...]".to_string(),
-                        }
-                    }).collect();
+                        })
+                        .collect();
                     format!("[{}]", items.join(","))
                 }
                 Some(FfiValue::Null) | None => "null".to_string(),

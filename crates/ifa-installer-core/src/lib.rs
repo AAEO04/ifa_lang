@@ -1,10 +1,10 @@
-pub mod check;
-pub mod profiles;
-pub mod config;
-pub mod net;
-pub mod install;
 pub mod args;
+pub mod check;
+pub mod config;
 pub mod extraction;
+pub mod install;
+pub mod net;
+pub mod profiles;
 pub mod uninstall;
 
 #[cfg(target_os = "windows")]

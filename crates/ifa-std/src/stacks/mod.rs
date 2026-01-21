@@ -16,14 +16,14 @@ pub mod backend;
 pub mod crypto;
 #[cfg(feature = "frontend")]
 pub mod frontend;
+#[cfg(any(feature = "fullstack", feature = "fusion", feature = "backend"))]
+pub mod fusion;
 #[cfg(feature = "game")]
 pub mod gamedev;
 #[cfg(feature = "iot")]
 pub mod iot;
 #[cfg(feature = "ml")]
 pub mod ml;
-#[cfg(any(feature = "fullstack", feature = "fusion", feature = "backend"))]
-pub mod fusion;
 
 // IoT re-exports
 #[cfg(feature = "iot")]
@@ -59,4 +59,4 @@ pub use frontend::{
 
 // Fusion re-exports
 #[cfg(any(feature = "fullstack", feature = "fusion", feature = "backend"))]
-pub use fusion::{FusionRuntime, FusionContext, FusionRole, IpcMessage};
+pub use fusion::{FusionContext, FusionRole, FusionRuntime, IpcMessage};

@@ -19,10 +19,10 @@ pub struct OturaHandler;
 #[cfg(feature = "network")]
 fn http_get(url: &str) -> IfaResult<String> {
     match ureq::get(url).call() {
-        Ok(response) => {
-            response.into_body().read_to_string()
-                .map_err(|e| IfaError::Runtime(format!("Failed to read response: {}", e)))
-        }
+        Ok(response) => response
+            .into_body()
+            .read_to_string()
+            .map_err(|e| IfaError::Runtime(format!("Failed to read response: {}", e))),
         Err(e) => Err(IfaError::Runtime(format!("HTTP GET failed: {}", e))),
     }
 }
@@ -33,10 +33,10 @@ fn http_post(url: &str, body: &str) -> IfaResult<String> {
         .header("Content-Type", "application/json")
         .send(body.as_bytes())
     {
-        Ok(response) => {
-            response.into_body().read_to_string()
-                .map_err(|e| IfaError::Runtime(format!("Failed to read response: {}", e)))
-        }
+        Ok(response) => response
+            .into_body()
+            .read_to_string()
+            .map_err(|e| IfaError::Runtime(format!("Failed to read response: {}", e))),
         Err(e) => Err(IfaError::Runtime(format!("HTTP POST failed: {}", e))),
     }
 }
@@ -45,14 +45,16 @@ fn http_post(url: &str, body: &str) -> IfaResult<String> {
 #[cfg(not(feature = "network"))]
 fn http_get(url: &str) -> IfaResult<String> {
     Err(IfaError::Runtime(format!(
-        "Network disabled. Enable 'network' feature to make real HTTP requests. URL: {}", url
+        "Network disabled. Enable 'network' feature to make real HTTP requests. URL: {}",
+        url
     )))
 }
 
 #[cfg(not(feature = "network"))]
 fn http_post(url: &str, _body: &str) -> IfaResult<String> {
     Err(IfaError::Runtime(format!(
-        "Network disabled. Enable 'network' feature to make real HTTP requests. URL: {}", url
+        "Network disabled. Enable 'network' feature to make real HTTP requests. URL: {}",
+        url
     )))
 }
 
@@ -60,12 +62,13 @@ impl OduHandler for OturaHandler {
     fn domain(&self) -> OduDomain {
         OduDomain::Otura
     }
-    
+
     fn call(
-        &self, 
-        method: &str, 
-        args: Vec<IfaValue>, 
-        _env: &mut Environment
+        &self,
+        method: &str,
+        args: Vec<IfaValue>,
+        _env: &mut Environment,
+        _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         match method {
             // HTTP GET - real or simulated based on feature
@@ -77,7 +80,7 @@ impl OduHandler for OturaHandler {
                     Err(IfaError::Runtime("http_get requires URL".into()))
                 }
             }
-            
+
             // HTTP POST - real or simulated based on feature
             "http_post" | "fi" | "post" => {
                 if args.len() >= 2 {
@@ -93,7 +96,7 @@ impl OduHandler for OturaHandler {
                 }
                 Err(IfaError::Runtime("http_post requires URL and body".into()))
             }
-            
+
             // Fetch JSON - parse response as JSON
             "fetch_json" | "gba_json" => {
                 if let Some(IfaValue::Str(url)) = args.first() {
@@ -117,41 +120,44 @@ impl OduHandler for OturaHandler {
                             serde_json::Value::Array(arr) => {
                                 IfaValue::List(arr.into_iter().map(json_to_ifa).collect())
                             }
-                            serde_json::Value::Object(obj) => {
-                                IfaValue::Map(obj.into_iter().map(|(k, v)| (k, json_to_ifa(v))).collect())
-                            }
+                            serde_json::Value::Object(obj) => IfaValue::Map(
+                                obj.into_iter().map(|(k, v)| (k, json_to_ifa(v))).collect(),
+                            ),
                         }
                     }
                     return Ok(json_to_ifa(json));
                 }
                 Err(IfaError::Runtime("fetch_json requires URL".into()))
             }
-            
+
             // Start HTTP server (placeholder - would need tokio/axum)
             "serve" | "sin" | "listen" => {
                 if let Some(IfaValue::Int(port)) = args.first() {
                     // Server functionality requires async runtime
                     return Err(IfaError::Runtime(format!(
-                        "HTTP server on port {} requires async runtime. Use ifa-std backend stack.", port
+                        "HTTP server on port {} requires async runtime. Use ifa-std backend stack.",
+                        port
                     )));
                 }
                 Err(IfaError::Runtime("serve requires port number".into()))
             }
-            
+
             // WebSocket connect (placeholder - would need tungstenite)
             "ws_connect" | "asopọ_ws" => {
                 if let Some(IfaValue::Str(url)) = args.first() {
                     return Err(IfaError::Runtime(format!(
-                        "WebSocket to {} requires websocket library. Use ifa-std backend stack.", url
+                        "WebSocket to {} requires websocket library. Use ifa-std backend stack.",
+                        url
                     )));
                 }
                 Err(IfaError::Runtime("ws_connect requires URL".into()))
             }
-            
+
             // URL encode
             "url_encode" | "koodu_url" => {
                 if let Some(IfaValue::Str(text)) = args.first() {
-                    let encoded: String = text.chars()
+                    let encoded: String = text
+                        .chars()
                         .map(|c| {
                             if c.is_ascii_alphanumeric() || "-_.~".contains(c) {
                                 c.to_string()
@@ -164,18 +170,31 @@ impl OduHandler for OturaHandler {
                 }
                 Err(IfaError::Runtime("url_encode requires string".into()))
             }
-            
+
             _ => Err(IfaError::Runtime(format!(
                 "Unknown Òtúrá method: {}",
                 method
             ))),
         }
     }
-    
+
     fn methods(&self) -> &'static [&'static str] {
-        &["http_get", "gba", "get", "http_post", "fi", "post", 
-          "serve", "sin", "listen", "ws_connect", "asopọ_ws", 
-          "fetch_json", "gba_json", "url_encode", "koodu_url"]
+        &[
+            "http_get",
+            "gba",
+            "get",
+            "http_post",
+            "fi",
+            "post",
+            "serve",
+            "sin",
+            "listen",
+            "ws_connect",
+            "asopọ_ws",
+            "fetch_json",
+            "gba_json",
+            "url_encode",
+            "koodu_url",
+        ]
     }
 }
-

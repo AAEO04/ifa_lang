@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,30 +9,153 @@
     <script src="../js/nav.js" defer></script>
     <script src="../js/common.js" defer></script>
     <style>
-        .playground-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; height: 60vh; margin: 1rem 0; }
-        @media (max-width: 900px) { .playground-container { grid-template-columns: 1fr; height: auto; } }
-        .editor-panel, .output-panel { background: var(--bg-card); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
-        .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--accent); }
-        .panel-title { color: var(--gold); font-weight: bold; }
-        #code-editor { flex: 1; font-family: Consolas, Monaco, monospace; font-size: 14px; padding: 1rem; background: #0d1321; color: var(--text); border: none; resize: none; outline: none; }
-        #output { flex: 1; font-family: Consolas, Monaco, monospace; font-size: 14px; padding: 1rem; background: #0d1321; color: #00ff88; overflow: auto; white-space: pre-wrap; }
-        .btn-run { background: linear-gradient(135deg, var(--accent), #ff6b6b); color: white; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .examples-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
-        .example-btn { background: var(--bg-card); color: var(--gold); border: 1px solid var(--accent); padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
-        .example-btn:hover { background: var(--accent); color: white; }
-        .lang-toggle-btn { background: rgba(255,215,0,0.2); color: var(--gold); border: 1px solid var(--gold); padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
-        .capabilities { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
-        .cap-card { background: var(--bg-card); border-radius: 8px; padding: 1rem; }
-        .cap-card h4 { color: var(--gold); margin-bottom: 0.5rem; }
-        .cap-card.supported { border-left: 3px solid #00ff88; }
-        .cap-card.limited { border-left: 3px solid #ffaa00; }
-        .cap-card.unsupported { border-left: 3px solid #ff4444; }
-        .cap-card ul { margin: 0; padding-left: 1.2rem; font-size: 0.9rem; }
+        .playground-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            height: 60vh;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 900px) {
+            .playground-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+
+        .editor-panel,
+        .output-panel {
+            background: var(--bg-card);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid var(--accent);
+        }
+
+        .panel-title {
+            color: var(--gold);
+            font-weight: bold;
+        }
+
+        #code-editor {
+            flex: 1;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 14px;
+            padding: 1rem;
+            background: #0d1321;
+            color: var(--text);
+            border: none;
+            resize: none;
+            outline: none;
+        }
+
+        #output {
+            flex: 1;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 14px;
+            padding: 1rem;
+            background: #0d1321;
+            color: #00ff88;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+
+        .btn-run {
+            background: linear-gradient(135deg, var(--accent), #ff6b6b);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .examples-bar {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .example-btn {
+            background: var(--bg-card);
+            color: var(--gold);
+            border: 1px solid var(--accent);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .example-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .lang-toggle-btn {
+            background: rgba(255, 215, 0, 0.2);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .capabilities {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .cap-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .cap-card h4 {
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .cap-card.supported {
+            border-left: 3px solid #00ff88;
+        }
+
+        .cap-card.limited {
+            border-left: 3px solid #ffaa00;
+        }
+
+        .cap-card.unsupported {
+            border-left: 3px solid #ff4444;
+        }
+
+        .cap-card ul {
+            margin: 0;
+            padding-left: 1.2rem;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
+
 <body>
     <div id="nav-placeholder"></div>
-    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
     <div class="container">
         <h1>Ifa-Lang Playground</h1>
         <p>Write and run Ifa-Lang code in your browser. Powered by WebAssembly.</p>
@@ -101,17 +225,18 @@ Irosu.fo("Sum: " + (x + y));</textarea>
                 </ul>
             </div>
         </div>
-        <p style="text-align: center;"><a href="../getting-started/install.html" style="color: var(--gold);">Install locally</a> for full domain access.</p>
+        <p style="text-align: center;"><a href="../getting-started/install.html" style="color: var(--gold);">Install
+                locally</a> for full domain access.</p>
     </div>
 
     <script type="module">
-        import init, { run_code, get_version } from './wasm/ifa_wasm.js';
+        import init, { run_code, get_version } from '../assets/pkg/ifa_wasm.js';
         let wasmReady = false;
         async function initWasm() {
             try { await init(); wasmReady = true; document.getElementById('status').textContent = get_version(); }
             catch (e) { document.getElementById('output').textContent = 'WASM load error: ' + e; }
         }
-        window.runCode = function() {
+        window.runCode = function () {
             if (!wasmReady) { document.getElementById('output').textContent = 'WASM loading...'; return; }
             const code = document.getElementById('code-editor').value;
             try { document.getElementById('output').textContent = run_code(code) || '(no output)'; }
@@ -125,13 +250,26 @@ Irosu.fo("Sum: " + (x + y));</textarea>
             hello: 'ayanmo oruko = "World";\nIrosu.fo("Hello, " + oruko + "!");',
             math: 'ayanmo a = 25;\nayanmo b = 7;\nIrosu.fo("Sum: " + (a + b));\nIrosu.fo("Product: " + (a * b));',
             strings: 'ayanmo text = "Ifa is wisdom";\nIrosu.fo("Length: " + Ika.len(text));\nIrosu.fo("Upper: " + Ika.uppercase(text));',
-            lists: 'ayanmo nums = [1, 2, 3, 4, 5];\nIrosu.fo("List: " + nums);\nIrosu.fo("Sum: " + Ogunda.sum(nums));'
+            lists: 'ayanmo nums = [1, 2, 3, 4, 5];\nIrosu.fo("List: " + nums);\nIrosu.fo("Sum: " + Ogunda.len(nums));'
         };
         function loadExample(name) { document.getElementById('code-editor').value = examples[name] || ''; }
-        
+
         let inYoruba = true;
-        const yToE = { 'ayanmo': 'let', 'Irosu': 'Fmt', 'Ika': 'String', 'Ogunda': 'List', '.fo(': '.println(' };
-        const eToY = {}; for (const [y, e] of Object.entries(yToE)) { eToY[e] = y; }
+        const yToE = {
+            'ayanmo': 'let',
+            'Irosu': 'Fmt',
+            'Ika': 'String',
+            'Ogunda': 'List',
+            '.fo(': '.println(',
+            '.iwon(': '.len(',
+            '.fi(': '.push(',
+            '.mu(': '.pop(',
+            '.pada(': '.reverse(',
+            '.nla(': '.uppercase(',
+            '.kekere(': '.lowercase('
+        };
+        const eToY = {};
+        for (const [y, e] of Object.entries(yToE)) { eToY[e] = y; }
         function toggleEditorLang() {
             const editor = document.getElementById('code-editor');
             let code = editor.value;
@@ -142,4 +280,5 @@ Irosu.fo("Sum: " + (x + y));</textarea>
         }
     </script>
 </body>
+
 </html>

@@ -6,11 +6,11 @@
 //!
 //! "The network is the computer... but the computer is one binary."
 
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 // Unused import removed
 // use std::sync::{Arc, Mutex};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// IPC Message Structure (JSON-RPC 2.0 style)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,9 +45,9 @@ impl FusionRuntime {
     pub fn new() -> Self {
         FusionRuntime
     }
-    
+
     /// Launch the Hybrid Application
-    /// 
+    ///
     /// Takes two closures:
     /// - `backend_fn`: The server-side logic
     /// - `frontend_fn`: The client-side logic (WebView controller)
@@ -61,7 +61,7 @@ impl FusionRuntime {
         // Setup Contexts
         // Backend needs to: Read from Frontend (brx), Write to Frontend (ftx)
         // We establish fresh channels for this session.
-        
+
         // Re-creating channels to pass ownership properly
         let (to_backend_tx, to_backend_rx) = channel::<IpcMessage>();
         let (to_frontend_tx, to_frontend_rx) = channel::<IpcMessage>();
@@ -111,7 +111,7 @@ pub struct FusionContext {
 impl FusionContext {
     /// Send message to the other side
     pub fn send(&self, method: &str, params: serde_json::Value) -> Result<(), String> {
-        let msg = IpcMessage::new(method, params, None); 
+        let msg = IpcMessage::new(method, params, None);
         self.tx.send(msg).map_err(|e| e.to_string())
     }
 
@@ -119,6 +119,6 @@ impl FusionContext {
     pub fn recv(&self) -> Result<IpcMessage, String> {
         self.rx.recv().map_err(|e| e.to_string())
     }
-    
+
     // Receive with timeout would need crossbeam-channel, keeping it simple for std
 }

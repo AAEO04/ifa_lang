@@ -4,11 +4,11 @@
 //! This module implements the scope chain pattern where variables are resolved
 //! by walking up from child → parent → grandparent scopes.
 
-use std::collections::HashMap;
 use crate::value::IfaValue;
+use std::collections::HashMap;
 
 /// Runtime environment (scope) - implements GPC pattern
-/// 
+///
 /// Variables are resolved by looking in the current scope first,
 /// then walking up the parent chain until found or reaching the root.
 #[derive(Debug, Clone)]
@@ -43,7 +43,7 @@ impl Environment {
     }
 
     /// Get a variable by walking up the scope chain (GPC resolution)
-    /// 
+    ///
     /// Resolution order: Child → Parent → Grandparent → ... → Root
     pub fn get(&self, name: &str) -> Option<IfaValue> {
         if let Some(value) = self.values.get(name) {

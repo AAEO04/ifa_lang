@@ -186,7 +186,7 @@ impl Div for IfaValue {
     type Output = IfaValue;
 
     /// Division operator. Returns `Null` on division by zero.
-    /// 
+    ///
     /// **Note**: Use `checked_div()` for proper error handling.
     fn div(self, other: IfaValue) -> IfaValue {
         match (&self, &other) {
@@ -221,31 +221,39 @@ impl Div for IfaValue {
 
 impl IfaValue {
     /// Checked division that returns proper errors.
-    /// 
+    ///
     /// Use this instead of the `/` operator when you need to handle division by zero.
     pub fn checked_div(&self, other: &IfaValue) -> IfaResult<IfaValue> {
         match (self, other) {
             (IfaValue::Int(a), IfaValue::Int(b)) => {
                 if *b == 0 {
-                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                    return Err(IfaError::DivisionByZero(
+                        "Cannot divide by zero".to_string(),
+                    ));
                 }
                 Ok(IfaValue::Float(*a as f64 / *b as f64))
             }
             (IfaValue::Float(a), IfaValue::Float(b)) => {
                 if *b == 0.0 {
-                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                    return Err(IfaError::DivisionByZero(
+                        "Cannot divide by zero".to_string(),
+                    ));
                 }
                 Ok(IfaValue::Float(a / b))
             }
             (IfaValue::Int(a), IfaValue::Float(b)) => {
                 if *b == 0.0 {
-                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                    return Err(IfaError::DivisionByZero(
+                        "Cannot divide by zero".to_string(),
+                    ));
                 }
                 Ok(IfaValue::Float(*a as f64 / b))
             }
             (IfaValue::Float(a), IfaValue::Int(b)) => {
                 if *b == 0 {
-                    return Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+                    return Err(IfaError::DivisionByZero(
+                        "Cannot divide by zero".to_string(),
+                    ));
                 }
                 Ok(IfaValue::Float(a / *b as f64))
             }

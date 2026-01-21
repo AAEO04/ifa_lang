@@ -67,16 +67,24 @@ impl NetManager {
         let release = self.client.get(url).send()?.json::<Release>()?;
         Ok(release)
     }
-    
+
     /// Downloads the SHA256SUMS file and parses it into a hashmap
-    pub fn fetch_checksums(&self, release: &Release) -> Result<std::collections::HashMap<String, String>, NetError> {
-        let checksum_asset = release.assets.iter()
+    pub fn fetch_checksums(
+        &self,
+        release: &Release,
+    ) -> Result<std::collections::HashMap<String, String>, NetError> {
+        let checksum_asset = release
+            .assets
+            .iter()
             .find(|a| a.name == "SHA256SUMS")
             .ok_or_else(|| NetError::AssetNotFound("SHA256SUMS".to_string()))?;
-        
-        let response = self.client.get(&checksum_asset.browser_download_url).send()?;
+
+        let response = self
+            .client
+            .get(&checksum_asset.browser_download_url)
+            .send()?;
         let content = response.text()?;
-        
+
         let mut checksums = std::collections::HashMap::new();
         for line in content.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -86,36 +94,36 @@ impl NetManager {
                 checksums.insert(filename.to_string(), hash);
             }
         }
-        
+
         Ok(checksums)
     }
 
     /// Downloads an asset with size limit validation
     pub fn download_asset(&self, url: &str, path: &Path) -> Result<(), NetError> {
         let response = self.client.get(url).send()?;
-        
+
         // Check content length if available
-        if let Some(content_length) = response.content_length() {
-            if content_length > MAX_DOWNLOAD_SIZE {
-                return Err(NetError::FileTooLarge {
-                    size: content_length,
-                    limit: MAX_DOWNLOAD_SIZE,
-                });
-            }
+        if let Some(content_length) = response.content_length()
+            && content_length > MAX_DOWNLOAD_SIZE
+        {
+            return Err(NetError::FileTooLarge {
+                size: content_length,
+                limit: MAX_DOWNLOAD_SIZE,
+            });
         }
-        
+
         // Stream download with size tracking
         let mut file = File::create(path)?;
         let mut downloaded: u64 = 0;
         let mut buffer = [0u8; 8192];
         let mut reader = response;
-        
+
         loop {
             let bytes_read = reader.read(&mut buffer)?;
             if bytes_read == 0 {
                 break;
             }
-            
+
             downloaded += bytes_read as u64;
             if downloaded > MAX_DOWNLOAD_SIZE {
                 // Clean up partial download
@@ -126,13 +134,13 @@ impl NetManager {
                     limit: MAX_DOWNLOAD_SIZE,
                 });
             }
-            
+
             file.write_all(&buffer[..bytes_read])?;
         }
-        
+
         Ok(())
     }
-    
+
     /// Downloads an asset and verifies its checksum in one operation
     pub fn download_and_verify(
         &self,
@@ -142,7 +150,7 @@ impl NetManager {
     ) -> Result<(), NetError> {
         // Download to temporary location first
         let temp_path = path.with_extension("partial");
-        
+
         // Ensure cleanup on error
         let result = (|| {
             self.download_asset(url, &temp_path)?;
@@ -150,12 +158,12 @@ impl NetManager {
             std::fs::rename(&temp_path, path)?;
             Ok(())
         })();
-        
+
         // Clean up temp file on error
         if result.is_err() {
             let _ = std::fs::remove_file(&temp_path);
         }
-        
+
         result
     }
 
@@ -197,25 +205,25 @@ mod tests {
     use super::*;
     use std::io::Write;
     use tempfile::NamedTempFile;
-    
+
     #[test]
     fn test_verify_checksum_valid() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"test content").unwrap();
-        
+
         // SHA256 of "test content"
         let expected = "6ae8a75555209fd6c44157c0aed8016e763ff435a19cf186f76863140143ff72";
-        
+
         assert!(NetManager::verify_checksum(file.path(), expected).is_ok());
     }
-    
+
     #[test]
     fn test_verify_checksum_invalid() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"test content").unwrap();
-        
+
         let wrong_hash = "0000000000000000000000000000000000000000000000000000000000000000";
-        
+
         assert!(matches!(
             NetManager::verify_checksum(file.path(), wrong_hash),
             Err(NetError::ChecksumMismatch { .. })

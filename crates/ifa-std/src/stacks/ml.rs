@@ -10,7 +10,6 @@
 //!
 //! Uses: ndarray, candle (when stable)
 
-
 use std::fmt;
 
 #[cfg(feature = "gpu")]
@@ -154,7 +153,7 @@ impl Tensor {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         let len: usize = shape.iter().product();
-        let data: Vec<f64> = (0..len).map(|_| rng.gen::<f64>()).collect();
+        let data: Vec<f64> = (0..len).map(|_| rng.r#gen::<f64>()).collect();
         Self::new_unchecked(data, shape.to_vec())
     }
 
@@ -424,13 +423,13 @@ impl Tensor {
         let n = other.shape[1];
 
         use ndarray::ArrayView2;
-        
+
         // Create views and use ndarray dot product (which uses BLAS if available/linked)
         let a = ArrayView2::from_shape((m, k), &self.data)
             .map_err(|e| TensorError::InvalidShape(format!("Ndarray error A: {}", e)))?;
         let b = ArrayView2::from_shape((k, n), &other.data)
             .map_err(|e| TensorError::InvalidShape(format!("Ndarray error B: {}", e)))?;
-            
+
         let c = a.dot(&b);
 
         // Convert back to Vec
@@ -544,25 +543,27 @@ impl Tensor {
         Self::new_unchecked(data, self.shape.clone())
     }
 
-
     pub fn clamp(&self, min: f64, max: f64) -> Self {
         self.map(|x| x.clamp(min, max))
     }
 
     // ==================== GPU Operations ====================
 
-
     #[cfg(feature = "gpu")]
     pub fn to_gpu(&self, ctx: &GpuContext) -> TensorResult<GpuVec<f64>> {
         // Create buffer
         let size = (self.data.len() * std::mem::size_of::<f64>()) as u64;
-        
+
         use wgpu::util::DeviceExt;
-        let buffer = ctx.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Tensor Buffer"),
-            contents: bytemuck::cast_slice(&self.data),
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-        });
+        let buffer = ctx
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Tensor Buffer"),
+                contents: bytemuck::cast_slice(&self.data),
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
+            });
 
         Ok(GpuVec::new(buffer, self.data.len()))
     }

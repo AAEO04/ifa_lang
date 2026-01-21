@@ -227,13 +227,13 @@ mod tests {
 
         // 2. Reading disallowed path should fail
         let denied_path = if cfg!(windows) {
-             PathBuf::from("C:\\Windows\\System32\\drivers\\etc\\hosts") 
+            PathBuf::from("C:\\Windows\\System32\\drivers\\etc\\hosts")
         } else {
-             PathBuf::from("/etc/passwd") 
+            PathBuf::from("/etc/passwd")
         };
-        
+
         match odi.ka(denied_path.to_str().unwrap()) {
-            Err(IfaError::PermissionDenied(_)) => {}, // Success!
+            Err(IfaError::PermissionDenied(_)) => {} // Success!
             Err(e) => panic!("Expected PermissionDenied, got {:?}", e),
             Ok(_) => panic!("Should have been denied!"),
         }

@@ -10,7 +10,7 @@ pub struct Component {
 }
 
 /// Returns all components that the ifa binary provides.
-/// 
+///
 /// The `ifa` binary is a complete toolchain that includes:
 /// - Runtime/interpreter
 /// - Oja package manager (`ifa oja` subcommand)
@@ -18,14 +18,12 @@ pub struct Component {
 /// - WASM sandbox (compiled in)
 /// - All 16 Odù domains and stacks
 pub fn all_components() -> Vec<Component> {
-    vec![
-        Component { 
-            name: "ifa".into(), 
-            description: "Ifá-Lang CLI — Runtime, Oja package manager, Babalawo, Sandbox".into(), 
-            required: true, 
-            selected: true 
-        },
-    ]
+    vec![Component {
+        name: "ifa".into(),
+        description: "Ifá-Lang CLI — Runtime, Oja package manager, Babalawo, Sandbox".into(),
+        required: true,
+        selected: true,
+    }]
 }
 
 // Keep Profile struct for backwards compatibility with existing config files

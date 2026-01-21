@@ -1,9 +1,9 @@
+use crate::check::check_system;
+use crate::config::InstallConfig;
+use crate::net::NetManager;
+use crate::profiles::Component;
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::config::InstallConfig;
-use crate::profiles::Component;
-use crate::net::NetManager;
-use crate::check::check_system;
 use thiserror::Error;
 
 /// RAII transaction guard for installation rollback
@@ -15,7 +15,10 @@ struct InstallTransaction {
 
 impl InstallTransaction {
     fn new() -> Self {
-        Self { files: Vec::new(), committed: false }
+        Self {
+            files: Vec::new(),
+            committed: false,
+        }
     }
 
     fn track(&mut self, path: PathBuf) {
@@ -34,12 +37,15 @@ impl InstallTransaction {
 impl Drop for InstallTransaction {
     fn drop(&mut self) {
         if !self.committed {
-            println!("[Rollback] Cleaning up {} partial files...", self.files.len());
+            println!(
+                "[Rollback] Cleaning up {} partial files...",
+                self.files.len()
+            );
             for file in &self.files {
-                if file.exists() {
-                    if let Err(e) = fs::remove_file(file) {
-                        eprintln!("[Rollback] Failed to remove {:?}: {}", file, e);
-                    }
+                if file.exists()
+                    && let Err(e) = fs::remove_file(file)
+                {
+                    eprintln!("[Rollback] Failed to remove {:?}: {}", file, e);
                 }
             }
         }
@@ -71,22 +77,27 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
     // 0. Pre-installation Checks
     println!("Performing system checks...");
     let sys = check_system();
-    
+
     if sys.available_disk_gb < MIN_DISK_GB {
         return Err(InstallError::RequirementsNotMet(format!(
-            "Insufficient disk space. Need {}GB, have {}GB", MIN_DISK_GB, sys.available_disk_gb
+            "Insufficient disk space. Need {}GB, have {}GB",
+            MIN_DISK_GB, sys.available_disk_gb
         )));
     }
-    
+
     if sys.total_memory_gb < MIN_MEMORY_GB {
         return Err(InstallError::RequirementsNotMet(format!(
-            "Insufficient memory. Need {}GB, have {}GB", MIN_MEMORY_GB, sys.total_memory_gb
+            "Insufficient memory. Need {}GB, have {}GB",
+            MIN_MEMORY_GB, sys.total_memory_gb
         )));
     }
-    println!("✓ System requirements met (Memory: {}GB, Disk: {}GB available)", sys.total_memory_gb, sys.available_disk_gb);
+    println!(
+        "✓ System requirements met (Memory: {}GB, Disk: {}GB available)",
+        sys.total_memory_gb, sys.available_disk_gb
+    );
 
     let net = NetManager::new();
-    
+
     // RAII transaction - automatically rolls back on drop if not committed
     let mut txn = InstallTransaction::new();
 
@@ -133,41 +144,49 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
         for component in components {
             if component.selected {
                 println!("Installing {}...", component.name);
-                
+
                 // Try to find local sidecar first
-                let expected_name = format!("{}-{}-{}.zip", component.name, std::env::consts::OS, std::env::consts::ARCH);
+                let expected_name = format!(
+                    "{}-{}-{}.zip",
+                    component.name,
+                    std::env::consts::OS,
+                    std::env::consts::ARCH
+                );
                 let local_path = exe_dir.join(&expected_name);
 
                 if local_path.exists() {
                     println!("Found local asset: {:?}", local_path);
-                    
+
                     // Verify local asset if checksums available
-                    if let Some(ref checksums) = checksums {
-                        if let Some(expected_hash) = checksums.get(&expected_name) {
-                            println!("Verifying local asset integrity...");
-                            NetManager::verify_checksum(&local_path, expected_hash)?;
-                            println!("✓ Checksum verified");
-                        }
+                    if let Some(ref checksums) = checksums
+                        && let Some(expected_hash) = checksums.get(&expected_name)
+                    {
+                        println!("Verifying local asset integrity...");
+                        NetManager::verify_checksum(&local_path, expected_hash)?;
+                        println!("✓ Checksum verified");
                     }
-                    
+
                     crate::extraction::extract(&local_path, &config.install_dir)?;
                     continue;
                 }
-                
-                
+
                 // Asset name matches component name directly (e.g., "ifa")
                 let asset_name_fragment = component.name.as_str();
 
                 // Fallback to Network with verification
                 if let Some(release) = &release_metadata {
-                    if let Some(asset) = release.assets.iter().find(|a| a.name.contains(asset_name_fragment)) {
+                    if let Some(asset) = release
+                        .assets
+                        .iter()
+                        .find(|a| a.name.contains(asset_name_fragment))
+                    {
                         let target_path = config.install_dir.join(&asset.name);
-                        
+
                         // Register for rollback before download completes
                         txn.track(target_path.clone());
-                        
+
                         println!("Downloading {} to {:?}...", asset.name, target_path);
-                        
+
                         // Download with verification if checksums available
                         if let Some(ref checksums) = checksums {
                             if let Some(expected_hash) = checksums.get(&asset.name) {
@@ -179,25 +198,36 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
                                 )?;
                                 println!("✓ Download verified successfully");
                             } else {
-                                println!("⚠ No checksum found for {}, downloading unverified", asset.name);
+                                println!(
+                                    "⚠ No checksum found for {}, downloading unverified",
+                                    asset.name
+                                );
                                 net.download_asset(&asset.browser_download_url, &target_path)?;
                             }
                         } else {
                             // No checksums available, download without verification
                             net.download_asset(&asset.browser_download_url, &target_path)?;
                         }
-                        
+
                         crate::extraction::extract(&target_path, &config.install_dir)?;
                         // Clean up downloaded archive
                         let _ = fs::remove_file(&target_path);
                         txn.untrack_last(); // Archive successfully extracted and removed
                     } else {
-                         println!("Warning: Could not find asset for component {} (looked for '{}')", component.name, asset_name_fragment);
+                        println!(
+                            "Warning: Could not find asset for component {} (looked for '{}')",
+                            component.name, asset_name_fragment
+                        );
                     }
                 } else {
-                    println!("Error: No local asset found for {} and cannot fetch metadata (offline or network error).", component.name);
+                    println!(
+                        "Error: No local asset found for {} and cannot fetch metadata (offline or network error).",
+                        component.name
+                    );
                     if component.required {
-                         return Err(crate::net::NetError::AssetNotFound(component.name.clone()).into());
+                        return Err(
+                            crate::net::NetError::AssetNotFound(component.name.clone()).into()
+                        );
                     }
                 }
             }
@@ -208,13 +238,15 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
             #[cfg(target_os = "windows")]
             {
                 use crate::windows::add_to_path;
-                add_to_path(&config.install_dir).map_err(|e| InstallError::Platform(e.to_string()))?;
+                add_to_path(&config.install_dir)
+                    .map_err(|e| InstallError::Platform(e.to_string()))?;
             }
-            
+
             #[cfg(unix)]
             {
                 use crate::unix::add_to_path;
-                add_to_path(&config.install_dir).map_err(|e| InstallError::Platform(e.to_string()))?;
+                add_to_path(&config.install_dir)
+                    .map_err(|e| InstallError::Platform(e.to_string()))?;
             }
         }
 

@@ -1,7 +1,6 @@
-
 // infra/mod.rs content
 //! # Infrastructure Layer
-//! 
+//!
 //! The providers of performance.
 
 #[cfg(feature = "parallel")]

@@ -292,7 +292,9 @@ impl<T> SparseSet<T> {
     }
 
     pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        self.sparse.get(&entity).map(|&index| &mut self.dense[index])
+        self.sparse
+            .get(&entity)
+            .map(|&index| &mut self.dense[index])
     }
 
     pub fn contains(&self, entity: Entity) -> bool {
@@ -412,7 +414,8 @@ impl World {
 
     /// Query entities with transform and velocity
     pub fn query_movable(&self) -> Vec<Entity> {
-        self.transforms.entities
+        self.transforms
+            .entities
             .iter()
             .filter(|&e| self.velocities.contains(*e))
             .copied()
@@ -433,7 +436,6 @@ impl World {
             .collect()
     }
 
-
     /// Update physics using parallel CPU orchestration
     #[cfg(feature = "parallel")]
     pub fn update_physics(&mut self, dt: f32) {
@@ -443,12 +445,11 @@ impl World {
         let entities = self.query_movable();
         // Pack data into a Vec for Rayon
         let mut updates: Vec<(Entity, Vec2, f32, Vec2, f32)> = Vec::with_capacity(entities.len());
-        
+
         for &entity in &entities {
-            if let (Some(transform), Some(velocity)) = (
-                self.transforms.get(entity),
-                self.velocities.get(entity),
-            ) {
+            if let (Some(transform), Some(velocity)) =
+                (self.transforms.get(entity), self.velocities.get(entity))
+            {
                 updates.push((
                     entity,
                     transform.position,
@@ -462,10 +463,7 @@ impl World {
         // 2. Compute in Parallel (Work Phase)
         // Returns list of new (Entity, NewPos, NewRot)
         let results = CpuContext::par_map(&updates, |(_e, pos, rot, lin, ang)| {
-            (
-                pos.add(lin.scale(dt)),
-                rot + ang * dt
-            )
+            (pos.add(lin.scale(dt)), rot + ang * dt)
         });
 
         // 3. Apply Updates (Write Phase)
@@ -482,10 +480,9 @@ impl World {
     #[cfg(not(feature = "parallel"))]
     pub fn update_physics(&mut self, dt: f32) {
         for entity in self.query_movable() {
-            if let (Some(transform), Some(velocity)) = (
-                self.transforms.get_mut(entity),
-                self.velocities.get(entity),
-            ) {
+            if let (Some(transform), Some(velocity)) =
+                (self.transforms.get_mut(entity), self.velocities.get(entity))
+            {
                 transform.position = transform.position.add(velocity.linear.scale(dt));
                 transform.rotation += velocity.angular * dt;
             }
@@ -703,86 +700,82 @@ pub struct Audio {
 #[cfg(feature = "audio")]
 impl Audio {
     pub fn new() -> Result<Self, String> {
-        let (stream, handle) = rodio::OutputStream::try_default()
-            .map_err(|e| format!("No audio device: {}", e))?;
+        let (stream, handle) =
+            rodio::OutputStream::try_default().map_err(|e| format!("No audio device: {}", e))?;
         Ok(Audio {
             _stream: Some(stream),
             stream_handle: Some(handle),
             music_sink: None,
         })
     }
-    
+
     /// Play a sound effect (one-shot)
     pub fn play_sound(&self, path: &str, volume: f32) -> Result<(), String> {
         use rodio::{Decoder, Sink};
         use std::fs::File;
         use std::io::BufReader;
-        
-        let handle = self.stream_handle.as_ref()
-            .ok_or("No audio stream")?;
-        
+
+        let handle = self.stream_handle.as_ref().ok_or("No audio stream")?;
+
         let file = File::open(path).map_err(|e| format!("Cannot open: {}", e))?;
-        let source = Decoder::new(BufReader::new(file))
-            .map_err(|e| format!("Cannot decode: {}", e))?;
-        
-        let sink = Sink::try_new(handle)
-            .map_err(|e| format!("Cannot create sink: {}", e))?;
+        let source =
+            Decoder::new(BufReader::new(file)).map_err(|e| format!("Cannot decode: {}", e))?;
+
+        let sink = Sink::try_new(handle).map_err(|e| format!("Cannot create sink: {}", e))?;
         sink.set_volume(volume.clamp(0.0, 1.0));
         sink.append(source);
         sink.detach(); // Let it play to completion
         Ok(())
     }
-    
+
     /// Start looping background music
     pub fn play_music(&mut self, path: &str, looping: bool) -> Result<(), String> {
         use rodio::{Decoder, Sink, Source};
         use std::fs::File;
         use std::io::BufReader;
-        
+
         // Stop existing music
         self.stop_music();
-        
-        let handle = self.stream_handle.as_ref()
-            .ok_or("No audio stream")?;
-        
+
+        let handle = self.stream_handle.as_ref().ok_or("No audio stream")?;
+
         let file = File::open(path).map_err(|e| format!("Cannot open: {}", e))?;
-        let source = Decoder::new(BufReader::new(file))
-            .map_err(|e| format!("Cannot decode: {}", e))?;
-        
-        let sink = Sink::try_new(handle)
-            .map_err(|e| format!("Cannot create sink: {}", e))?;
-        
+        let source =
+            Decoder::new(BufReader::new(file)).map_err(|e| format!("Cannot decode: {}", e))?;
+
+        let sink = Sink::try_new(handle).map_err(|e| format!("Cannot create sink: {}", e))?;
+
         if looping {
             sink.append(source.repeat_infinite());
         } else {
             sink.append(source);
         }
-        
+
         self.music_sink = Some(sink);
         Ok(())
     }
-    
+
     /// Stop background music
     pub fn stop_music(&mut self) {
         if let Some(sink) = self.music_sink.take() {
             sink.stop();
         }
     }
-    
+
     /// Set music volume
     pub fn set_volume(&self, volume: f32) {
         if let Some(sink) = &self.music_sink {
             sink.set_volume(volume.clamp(0.0, 1.0));
         }
     }
-    
+
     /// Pause music
     pub fn pause_music(&self) {
         if let Some(sink) = &self.music_sink {
             sink.pause();
         }
     }
-    
+
     /// Resume music
     pub fn resume_music(&self) {
         if let Some(sink) = &self.music_sink {
@@ -808,13 +801,21 @@ pub struct Audio;
 
 #[cfg(not(feature = "audio"))]
 impl Audio {
-    pub fn new() -> Result<Self, String> { Ok(Audio) }
+    pub fn new() -> Result<Self, String> {
+        Ok(Audio)
+    }
     pub fn play_sound(&self, name: &str, volume: f32) -> Result<(), String> {
-        eprintln!("[AUDIO] Play: {} (vol: {}) - audio feature disabled", name, volume);
+        eprintln!(
+            "[AUDIO] Play: {} (vol: {}) - audio feature disabled",
+            name, volume
+        );
         Ok(())
     }
     pub fn play_music(&mut self, name: &str, looping: bool) -> Result<(), String> {
-        eprintln!("[AUDIO] Music: {} (loop: {}) - audio feature disabled", name, looping);
+        eprintln!(
+            "[AUDIO] Music: {} (loop: {}) - audio feature disabled",
+            name, looping
+        );
         Ok(())
     }
     pub fn stop_music(&mut self) {}
@@ -823,7 +824,9 @@ impl Audio {
 
 #[cfg(not(feature = "audio"))]
 impl Default for Audio {
-    fn default() -> Self { Audio }
+    fn default() -> Self {
+        Audio
+    }
 }
 
 #[cfg(test)]

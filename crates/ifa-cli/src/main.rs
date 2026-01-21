@@ -2,12 +2,12 @@
 //!
 //! Command-line interface for Ifá-Lang - The Yoruba Programming Language.
 
+mod debug_adapter;
+mod deploy;
 mod docgen;
+mod lsp;
 mod oja;
 mod sandbox;
-mod lsp;
-mod deploy;
-mod debug_adapter;
 
 use clap::{Parser, Subcommand};
 use eyre::{Result, WrapErr};
@@ -242,7 +242,7 @@ enum OjaCommands {
         /// Project name (default: current directory name)
         #[arg(default_value = "ifa-project")]
         name: String,
-        
+
         /// Project Domain Template (basic, fullstack, game, ml, iot)
         #[arg(long, default_value = "basic")]
         domain: String,
@@ -361,19 +361,23 @@ fn main() -> Result<()> {
                     caps.grant(Ofun::Random);
                 }
                 if allow_js {
-                    caps.grant(Ofun::Bridge { language: "js".into() });
+                    caps.grant(Ofun::Bridge {
+                        language: "js".into(),
+                    });
                 }
                 if allow_python {
-                    caps.grant(Ofun::Bridge { language: "python".into() });
+                    caps.grant(Ofun::Bridge {
+                        language: "python".into(),
+                    });
                 }
 
                 // Always allow reading the script itself and its directory (for imports)
                 if let Ok(abs_path) = file.canonicalize() {
                     caps.grant(Ofun::ReadFiles { root: abs_path });
-                    if let Some(parent) = file.parent() {
-                        if let Ok(abs_parent) = parent.canonicalize() {
-                            caps.grant(Ofun::ReadFiles { root: abs_parent });
-                        }
+                    if let Some(parent) = file.parent()
+                        && let Ok(abs_parent) = parent.canonicalize()
+                    {
+                        caps.grant(Ofun::ReadFiles { root: abs_parent });
                     }
                 }
             }
@@ -552,20 +556,36 @@ fn main() -> Result<()> {
 
             // Determine features
             let mut features = Vec::new();
-            if frontend { features.push("frontend"); }
-            if game { features.push("game"); }
-            if iot { features.push("iot"); }
-            if crypto { features.push("crypto"); }
-            if ml { features.push("ml"); }
-            if fullstack { 
-                features.push("backend"); 
-                features.push("frontend"); 
+            if frontend {
+                features.push("frontend");
+            }
+            if game {
+                features.push("game");
+            }
+            if iot {
+                features.push("iot");
+            }
+            if crypto {
+                features.push("crypto");
+            }
+            if ml {
+                features.push("ml");
+            }
+            if fullstack {
+                features.push("backend");
+                features.push("frontend");
                 // Fullstack implies both
             }
             // Default to backend if nothing else strictly selected (or if backend explicitly selected)
-            if backend || features.is_empty() { features.push("backend"); }
+            if backend || features.is_empty() {
+                features.push("backend");
+            }
 
-            let features_str = features.iter().map(|f| format!("\"{}\"", f)).collect::<Vec<_>>().join(", ");
+            let features_str = features
+                .iter()
+                .map(|f| format!("\"{}\"", f))
+                .collect::<Vec<_>>()
+                .join(", ");
             let default_features = if iot { "false" } else { "true" };
 
             // Write Cargo.toml
@@ -763,31 +783,31 @@ lto = true
 
         Commands::Fmt { file, check } => {
             let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
-            
+
             // Simple Indentation Formatter logic
             let mut formatted = String::new();
             let mut indent: usize = 0;
-            
+
             for line in source.lines() {
                 let trimmed = line.trim();
                 if trimmed.is_empty() {
                     formatted.push('\n');
                     continue;
                 }
-                
+
                 if trimmed.contains('}') || trimmed.contains("ase") {
                     indent = indent.saturating_sub(1);
                 }
-                
+
                 formatted.push_str(&"    ".repeat(indent));
                 formatted.push_str(trimmed);
                 formatted.push('\n');
-                
+
                 if trimmed.contains('{') || trimmed.contains("ese") || trimmed.contains("odu") {
                     indent += 1;
                 }
             }
-            
+
             if check {
                 if source == formatted {
                     println!("✅ Perfect alignment in {}", file.display());
@@ -806,13 +826,15 @@ lto = true
             if let Some(path) = file {
                 debug_adapter::run_debug_session(path)?;
             } else {
-                // If no file provided (e.g. launch request with no args initially?), 
+                // If no file provided (e.g. launch request with no args initially?),
                 // the adapter might expect to receive 'launch' request with program path.
                 // But our run_debug_session implementation currently requires a file to start interpreter.
                 // DAP Launch request usually comes later.
                 // We'll need to adjust run_debug_session to handle "wait for launch config".
                 // For now, let's require file or error.
-                return Err(color_eyre::eyre::eyre!("Debug command requires --file <PATH>"));
+                return Err(color_eyre::eyre::eyre!(
+                    "Debug command requires --file <PATH>"
+                ));
             }
             Ok(())
         }
@@ -971,7 +993,7 @@ lto = true
             format,
             fast,
         } => {
-            use ifa_babalawo::{check_program_with_config, BabalawoConfig};
+            use ifa_babalawo::{BabalawoConfig, check_program_with_config};
             use ifa_core::parse;
 
             println!("babalawo: {}", path.display());
@@ -1158,7 +1180,6 @@ lto = true
             Ok(())
         }
 
-
         Commands::Deploy { path } => {
             deploy::scan_and_generate(&path)?;
             Ok(())
@@ -1171,15 +1192,15 @@ fn walkdir(dir: &PathBuf) -> Vec<PathBuf> {
     let mut files = Vec::new();
     if dir.is_file() {
         files.push(dir.clone());
-    } else if dir.is_dir() {
-        if let Ok(entries) = std::fs::read_dir(dir) {
-            for entry in entries.filter_map(|e| e.ok()) {
-                let path = entry.path();
-                if path.is_dir() {
-                    files.extend(walkdir(&path));
-                } else {
-                    files.push(path);
-                }
+    } else if dir.is_dir()
+        && let Ok(entries) = std::fs::read_dir(dir)
+    {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_dir() {
+                files.extend(walkdir(&path));
+            } else {
+                files.push(path);
             }
         }
     }

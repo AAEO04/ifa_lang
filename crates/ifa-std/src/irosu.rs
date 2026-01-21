@@ -137,10 +137,18 @@ impl Irosu {
 
     // --- English Aliases ---
 
-    pub fn println(&self, value: &IfaValue) { self.fo(value); }
-    pub fn print(&self, value: &IfaValue) { self.so(value); }
-    pub fn listen(&self, prompt: &str) -> String { self.gbo(prompt) }
-    pub fn error(&self, text: &str) { self.kigbe(text); }
+    pub fn println(&self, value: &IfaValue) {
+        self.fo(value);
+    }
+    pub fn print(&self, value: &IfaValue) {
+        self.so(value);
+    }
+    pub fn listen(&self, prompt: &str) -> String {
+        self.gbo(prompt)
+    }
+    pub fn error(&self, text: &str) {
+        self.kigbe(text);
+    }
 
     /// Print progress bar
     pub fn ilosiwaju(&self, current: usize, total: usize, width: usize) {
@@ -157,42 +165,42 @@ impl Irosu {
             println!();
         }
     }
-    
+
     // =========================================================================
     // AUDIO SECTION (The Voice Speaks)
     // =========================================================================
-    
+
     /// Play audio file (sírò - to sound/ring)
     #[cfg(feature = "audio")]
     pub fn siro(&self, path: &str) -> Result<AudioHandle, String> {
         use rodio::{Decoder, OutputStream, Sink};
         use std::fs::File;
         use std::io::BufReader;
-        
+
         let file = File::open(path).map_err(|e| format!("Cannot open audio: {}", e))?;
         let source = Decoder::new(BufReader::new(file))
             .map_err(|e| format!("Cannot decode audio: {}", e))?;
-        
-        let (stream, stream_handle) = OutputStream::try_default()
-            .map_err(|e| format!("No audio device: {}", e))?;
-        
-        let sink = Sink::try_new(&stream_handle)
-            .map_err(|e| format!("Cannot create sink: {}", e))?;
-        
+
+        let (stream, stream_handle) =
+            OutputStream::try_default().map_err(|e| format!("No audio device: {}", e))?;
+
+        let sink =
+            Sink::try_new(&stream_handle).map_err(|e| format!("Cannot create sink: {}", e))?;
+
         sink.append(source);
-        
+
         Ok(AudioHandle {
             _stream: stream,
             sink,
         })
     }
-    
+
     /// Play audio (English alias)
     #[cfg(feature = "audio")]
     pub fn play(&self, path: &str) -> Result<AudioHandle, String> {
         self.siro(path)
     }
-    
+
     /// Play audio and wait for completion (sírò kí o parí)
     #[cfg(feature = "audio")]
     pub fn siro_duro(&self, path: &str) -> Result<(), String> {
@@ -200,13 +208,13 @@ impl Irosu {
         handle.sink.sleep_until_end();
         Ok(())
     }
-    
+
     /// Play and wait (English alias)
     #[cfg(feature = "audio")]
     pub fn play_blocking(&self, path: &str) -> Result<(), String> {
         self.siro_duro(path)
     }
-    
+
     /// Beep/alert sound (kígbe - to shout)
     #[cfg(feature = "audio")]
     pub fn kigbe_orin(&self) {
@@ -214,7 +222,7 @@ impl Irosu {
         print!("\x07");
         io::stdout().flush().ok();
     }
-    
+
     /// System beep (English alias)
     #[cfg(feature = "audio")]
     pub fn beep(&self) {
@@ -235,47 +243,47 @@ impl AudioHandle {
     pub fn duro(&self) {
         self.sink.stop();
     }
-    
+
     /// Stop playback (English alias)
     pub fn stop(&self) {
         self.duro();
     }
-    
+
     /// Pause playback (dákẹ́)
     pub fn dake(&self) {
         self.sink.pause();
     }
-    
+
     /// Pause (English alias)
     pub fn pause(&self) {
         self.dake();
     }
-    
+
     /// Resume playback (tẹ̀síwájú)
     pub fn tesiwaju(&self) {
         self.sink.play();
     }
-    
+
     /// Resume (English alias)
     pub fn resume(&self) {
         self.tesiwaju();
     }
-    
+
     /// Set volume 0.0-1.0 (ohùn - voice level)
     pub fn ohun(&self, volume: f32) {
         self.sink.set_volume(volume.clamp(0.0, 1.0));
     }
-    
+
     /// Set volume (English alias)
     pub fn volume(&self, level: f32) {
         self.ohun(level);
     }
-    
+
     /// Check if still playing
     pub fn is_playing(&self) -> bool {
         !self.sink.empty() && !self.sink.is_paused()
     }
-    
+
     /// Wait for audio to finish
     pub fn wait(&self) {
         self.sink.sleep_until_end();
@@ -294,4 +302,3 @@ mod tests {
         assert_eq!(irosu.binary(), "1100");
     }
 }
-

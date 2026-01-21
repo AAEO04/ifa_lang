@@ -13,8 +13,8 @@ mod wisdom;
 
 pub use checks::{BabalawoConfig, LintContext, check_program, check_program_with_config};
 pub use diagnose::{Babalawo, Diagnostic, IfaError, Severity};
-pub use infer::infer_capabilities;
 pub use history::{StateHistoryBuffer, StateSnapshot};
+pub use infer::infer_capabilities;
 pub use iwa::{IwaEngine, LIFECYCLE_RULES, ResourceDebt};
 pub use taboo::{Taboo, TabooEnforcer, TabooViolation};
 pub use wisdom::{ERROR_TO_ODU, ODU_WISDOM, OduWisdom};

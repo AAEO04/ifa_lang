@@ -18,12 +18,13 @@ impl OduHandler for OdiHandler {
     fn domain(&self) -> OduDomain {
         OduDomain::Odi
     }
-    
+
     fn call(
-        &self, 
-        method: &str, 
-        args: Vec<IfaValue>, 
-        _env: &mut Environment
+        &self,
+        method: &str,
+        args: Vec<IfaValue>,
+        _env: &mut Environment,
+        _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         match method {
             // Read file
@@ -37,20 +38,22 @@ impl OduHandler for OdiHandler {
                     Err(IfaError::Runtime("read requires file path".into()))
                 }
             }
-            
+
             // Write file
             "kọ" | "write" => {
                 if args.len() >= 2 {
                     if let (IfaValue::Str(path), IfaValue::Str(content)) = (&args[0], &args[1]) {
                         match std::fs::write(path, content) {
                             Ok(_) => return Ok(IfaValue::Bool(true)),
-                            Err(e) => return Err(IfaError::Runtime(format!("Cannot write file: {}", e))),
+                            Err(e) => {
+                                return Err(IfaError::Runtime(format!("Cannot write file: {}", e)));
+                            }
                         }
                     }
                 }
                 Err(IfaError::Runtime("write requires path and content".into()))
             }
-            
+
             // Append to file
             "fikun" | "append" => {
                 if args.len() >= 2 {
@@ -68,7 +71,7 @@ impl OduHandler for OdiHandler {
                 }
                 Err(IfaError::Runtime("append requires path and content".into()))
             }
-            
+
             // Check if file exists
             "wa" | "exists" => {
                 if let Some(IfaValue::Str(path)) = args.first() {
@@ -76,7 +79,7 @@ impl OduHandler for OdiHandler {
                 }
                 Err(IfaError::Runtime("exists requires path".into()))
             }
-            
+
             // Delete file
             "pa" | "delete" | "remove" => {
                 if let Some(IfaValue::Str(path)) = args.first() {
@@ -87,7 +90,7 @@ impl OduHandler for OdiHandler {
                 }
                 Err(IfaError::Runtime("delete requires path".into()))
             }
-            
+
             // List directory
             "ṣe_akojọ" | "list" | "ls" => {
                 if let Some(IfaValue::Str(path)) = args.first() {
@@ -104,7 +107,7 @@ impl OduHandler for OdiHandler {
                 }
                 Err(IfaError::Runtime("list requires directory path".into()))
             }
-            
+
             // Create directory
             "ṣe_folda" | "mkdir" => {
                 if let Some(IfaValue::Str(path)) = args.first() {
@@ -115,17 +118,29 @@ impl OduHandler for OdiHandler {
                 }
                 Err(IfaError::Runtime("mkdir requires path".into()))
             }
-            
-            _ => Err(IfaError::Runtime(format!(
-                "Unknown Òdí method: {}",
-                method
-            ))),
+
+            _ => Err(IfaError::Runtime(format!("Unknown Òdí method: {}", method))),
         }
     }
-    
+
     fn methods(&self) -> &'static [&'static str] {
-        &["ka", "read", "kọ", "write", "fikun", "append", 
-          "wa", "exists", "pa", "delete", "remove",
-          "ṣe_akojọ", "list", "ls", "ṣe_folda", "mkdir"]
+        &[
+            "ka",
+            "read",
+            "kọ",
+            "write",
+            "fikun",
+            "append",
+            "wa",
+            "exists",
+            "pa",
+            "delete",
+            "remove",
+            "ṣe_akojọ",
+            "list",
+            "ls",
+            "ṣe_folda",
+            "mkdir",
+        ]
     }
 }

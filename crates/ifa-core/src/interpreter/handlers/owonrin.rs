@@ -18,12 +18,13 @@ impl OduHandler for OwonrinHandler {
     fn domain(&self) -> OduDomain {
         OduDomain::Owonrin
     }
-    
+
     fn call(
-        &self, 
-        method: &str, 
-        args: Vec<IfaValue>, 
-        _env: &mut Environment
+        &self,
+        method: &str,
+        args: Vec<IfaValue>,
+        _env: &mut Environment,
+        _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         match method {
             // Random integer (0-32767)
@@ -31,9 +32,9 @@ impl OduHandler for OwonrinHandler {
                 let random = self.generate_random();
                 Ok(IfaValue::Int(random as i64))
             }
-            
+
             // Random in range [min, max]
-            "laarin" | "range" => {
+            "pese" | "laarin" | "range" => {
                 if args.len() >= 2 {
                     if let (IfaValue::Int(min), IfaValue::Int(max)) = (&args[0], &args[1]) {
                         let random = self.generate_random();
@@ -41,21 +42,23 @@ impl OduHandler for OwonrinHandler {
                         return Ok(IfaValue::Int(val));
                     }
                 }
-                Err(IfaError::Runtime("range requires min and max integers".into()))
+                Err(IfaError::Runtime(
+                    "range requires min and max integers".into(),
+                ))
             }
-            
+
             // Random float [0.0, 1.0)
             "ida" | "float" => {
                 let random = self.generate_random();
                 Ok(IfaValue::Float(random as f64 / 32768.0))
             }
-            
+
             // Random boolean
             "boolean" | "bool" => {
                 let random = self.generate_random();
                 Ok(IfaValue::Bool(random.is_multiple_of(2)))
             }
-            
+
             // Shuffle a list
             "aruwo" | "shuffle" => {
                 if let Some(IfaValue::List(mut list)) = args.first().cloned() {
@@ -69,7 +72,7 @@ impl OduHandler for OwonrinHandler {
                 }
                 Err(IfaError::Runtime("shuffle requires a list".into()))
             }
-            
+
             // Random choice from list
             "yan" | "choice" => {
                 if let Some(IfaValue::List(list)) = args.first() {
@@ -81,16 +84,19 @@ impl OduHandler for OwonrinHandler {
                 }
                 Err(IfaError::Runtime("choice requires a non-empty list".into()))
             }
-            
+
             _ => Err(IfaError::Runtime(format!(
                 "Unknown Ọ̀wọ́nrín method: {}",
                 method
             ))),
         }
     }
-    
+
     fn methods(&self) -> &'static [&'static str] {
-        &["nọmba", "random", "rand", "laarin", "range", "ida", "float", "boolean", "bool", "aruwo", "shuffle", "yan", "choice"]
+        &[
+            "nọmba", "random", "rand", "laarin", "range", "ida", "float", "boolean", "bool",
+            "aruwo", "shuffle", "yan", "choice",
+        ]
     }
 }
 

@@ -232,25 +232,25 @@ impl Compiler {
                 // 4. Condition: idx < len(col)
                 self.emit(OpCode::LoadLocal);
                 self.emit_byte(idx_slot as u8);
-                
+
                 self.emit(OpCode::LoadLocal);
                 self.emit_byte(col_slot as u8);
                 self.emit(OpCode::Len);
-                
+
                 self.emit(OpCode::Lt);
-                
+
                 let exit_jump = self.emit_jump(OpCode::JumpIfFalse);
                 self.emit(OpCode::Pop); // Pop condition
 
                 // 5. Body Setup: var = col[idx]
                 self.begin_scope();
-                
+
                 self.emit(OpCode::LoadLocal);
                 self.emit_byte(col_slot as u8);
                 self.emit(OpCode::LoadLocal);
                 self.emit_byte(idx_slot as u8);
                 self.emit(OpCode::GetIndex);
-                
+
                 let var_slot = self.declare_local(var);
                 self.emit(OpCode::StoreLocal);
                 self.emit_byte(var_slot as u8);
@@ -298,7 +298,6 @@ impl Compiler {
                 self.emit(OpCode::Pop);
             }
 
-
             Statement::EseDef {
                 name, params, body, ..
             } => {
@@ -311,11 +310,11 @@ impl Compiler {
                     self.emit_byte(slot as u8);
                 } else {
                     // Otherwise Global
-                   self.bytecode.strings.push(name.clone());
-                   let name_idx = (self.bytecode.strings.len() - 1) as u16;
-                   self.emit(OpCode::StoreGlobal);
-                   self.emit_byte((name_idx >> 8) as u8);
-                   self.emit_byte((name_idx & 0xff) as u8);
+                    self.bytecode.strings.push(name.clone());
+                    let name_idx = (self.bytecode.strings.len() - 1) as u16;
+                    self.emit(OpCode::StoreGlobal);
+                    self.emit_byte((name_idx >> 8) as u8);
+                    self.emit_byte((name_idx & 0xff) as u8);
                 }
             }
 
@@ -346,7 +345,7 @@ impl Compiler {
 
                 // Emit DefineClass
                 self.emit(OpCode::DefineClass);
-                
+
                 // Name
                 self.bytecode.strings.push(name.clone());
                 let name_idx = (self.bytecode.strings.len() - 1) as u16;
@@ -364,7 +363,7 @@ impl Compiler {
 
                 // Methods
                 self.emit_byte(method_count as u8);
-                
+
                 // Store class globally
                 self.bytecode.strings.push(name.clone());
                 let name_idx = (self.bytecode.strings.len() - 1) as u16;
@@ -376,11 +375,11 @@ impl Compiler {
             Statement::Import { path, .. } => {
                 // path is Vec<String> e.g. ["std", "io"]
                 let import_path = path.join("/");
-                
+
                 // Add to strings pool
                 self.bytecode.strings.push(import_path);
                 let path_idx = (self.bytecode.strings.len() - 1) as u16;
-                
+
                 self.emit(OpCode::Import);
                 self.emit_byte((path_idx >> 8) as u8);
                 self.emit_byte((path_idx & 0xff) as u8);
@@ -409,7 +408,9 @@ impl Compiler {
             }
 
             Statement::Match { .. } => {
-                return Err(crate::error::IfaError::Runtime("Bytecode compilation for 'match' not yet implemented".to_string()));
+                return Err(crate::error::IfaError::Runtime(
+                    "Bytecode compilation for 'match' not yet implemented".to_string(),
+                ));
             }
 
             Statement::Ebo { .. } => {
@@ -419,33 +420,38 @@ impl Compiler {
         Ok(())
     }
 
-    fn compile_function(&mut self, name: &str, params: &[Param], body: &[Statement]) -> IfaResult<()> {
+    fn compile_function(
+        &mut self,
+        name: &str,
+        params: &[Param],
+        body: &[Statement],
+    ) -> IfaResult<()> {
         // 1. Emit Jump over the body
         let jump = self.emit_jump(OpCode::Jump);
-        
+
         // 2. Record Start IP
         let start_ip = self.current_offset();
-        
+
         // 3. Begin Scope & Bind Params
         self.begin_scope();
         for param in params {
             self.declare_local(&param.name);
         }
-        
+
         // 4. Compile Body
         for stmt in body {
             self.compile_statement(stmt)?;
         }
-        
+
         // 5. Implicit Return (Null)
         self.emit(OpCode::PushNull);
         self.emit(OpCode::Return);
-        
+
         self.end_scope();
-        
+
         // 6. Patch Jump
         self.patch_jump(jump);
-        
+
         // 7. Emit PushFn instruction
         self.emit(OpCode::PushFn);
         // name index
@@ -453,16 +459,16 @@ impl Compiler {
         let name_idx = (self.bytecode.strings.len() - 1) as u16;
         self.emit_byte((name_idx >> 8) as u8);
         self.emit_byte((name_idx & 0xff) as u8);
-        
+
         // start_ip (u32)
         self.emit_byte((start_ip >> 24) as u8);
         self.emit_byte((start_ip >> 16) as u8);
         self.emit_byte(((start_ip >> 8) & 0xff) as u8);
         self.emit_byte((start_ip & 0xff) as u8);
-        
+
         // arity (u8)
         self.emit_byte(params.len() as u8);
-        
+
         Ok(())
     }
 
@@ -641,8 +647,8 @@ fn domain_to_byte(domain: &OduDomain) -> u8 {
         OduDomain::Cpu => 18,
         OduDomain::Gpu => 19,
         OduDomain::Storage => 20,
-        OduDomain::Ohun => 27,    // Audio
-        OduDomain::Fidio => 28,   // Video
+        OduDomain::Ohun => 27,  // Audio
+        OduDomain::Fidio => 28, // Video
         // Application Stacks
         OduDomain::Backend => 21,
         OduDomain::Frontend => 22,

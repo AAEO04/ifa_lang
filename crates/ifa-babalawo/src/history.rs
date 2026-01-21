@@ -84,7 +84,7 @@ impl StateHistoryBuffer {
         }
 
         let steps = steps.min(self.buffer.len() - 1);
-        let idx = if self.index >= steps + 1 {
+        let idx = if self.index > steps {
             self.index - steps - 1
         } else {
             self.buffer.len() - (steps + 1 - self.index)

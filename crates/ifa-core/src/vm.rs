@@ -4,9 +4,9 @@
 
 use crate::bytecode::{Bytecode, OpCode};
 use crate::error::{IfaError, IfaResult};
+use crate::native::OduRegistry;
 use crate::opon::Opon;
 use crate::value::IfaValue;
-use crate::native::OduRegistry;
 
 /// Stack size limit
 const MAX_STACK_SIZE: usize = 65536;
@@ -126,28 +126,28 @@ impl IfaVM {
             OpCode::PushFalse => self.push(IfaValue::Bool(false))?,
             OpCode::PushList => self.push(IfaValue::List(Vec::new()))?,
             OpCode::PushMap => self.push(IfaValue::Map(std::collections::HashMap::new()))?,
-            
+
             OpCode::PushFn => {
                 let name_idx = self.read_u16(bytecode)? as usize;
                 let _start_ip = self.read_u16(bytecode)? as usize; // Wait, IP might be > 65535? Bytecode uses u32 for jumps?
                 // bytecode.rs says Jump uses read_i16 offset. So code limit is small?
-                // Let's check Jump. 
+                // Let's check Jump.
                 // Wait, functions are usually absolute addresses.
-                // Let's assume start_ip is u32 or u64. 
+                // Let's assume start_ip is u32 or u64.
                 // Let's read u32.
                 let start_ip_u32 = {
-                     let mut bytes = [0u8; 4];
-                     bytes[0] = self.read_u8(bytecode)?;
-                     bytes[1] = self.read_u8(bytecode)?;
-                     bytes[2] = self.read_u8(bytecode)?;
-                     bytes[3] = self.read_u8(bytecode)?;
-                     u32::from_be_bytes(bytes)
+                    let mut bytes = [0u8; 4];
+                    bytes[0] = self.read_u8(bytecode)?;
+                    bytes[1] = self.read_u8(bytecode)?;
+                    bytes[2] = self.read_u8(bytecode)?;
+                    bytes[3] = self.read_u8(bytecode)?;
+                    u32::from_be_bytes(bytes)
                 } as usize;
-                
+
                 let arity = self.read_u8(bytecode)?;
-                
+
                 let name = bytecode.strings.get(name_idx).cloned().unwrap_or_default();
-                
+
                 self.push(IfaValue::BytecodeFn {
                     name,
                     start_ip: start_ip_u32,
@@ -357,7 +357,7 @@ impl IfaVM {
             // Functions
             OpCode::Call => {
                 let arg_count = self.read_u8(bytecode)? as usize;
-                
+
                 // 1. Pop arguments
                 let mut args = Vec::with_capacity(arg_count);
                 for _ in 0..arg_count {
@@ -375,31 +375,41 @@ impl IfaVM {
                         let result = f(args);
                         self.push(result)?;
                     }
-                    IfaValue::BytecodeFn { start_ip, arity, .. } => {
-                       // VM Bytecode call
-                       if args.len() != arity as usize {
-                           return Err(IfaError::ArityMismatch { expected: arity as usize, got: args.len() });
-                       }
-                       
-                       // Push CallFrame
-                       self.frames.push(CallFrame {
-                           return_addr: self.ip,
-                           base_ptr: self.stack.len(), // Base of the new frame
-                           local_count: 0, // Will be incremented by StoreLocal or determined by compiler?
-                           // Actually, locals are usually allocated on stack.
-                           // For this simple VM, we can assume locals are just stack slots relative to base_ptr.
-                           // But arguments are locals!
-                       });
+                    IfaValue::BytecodeFn {
+                        start_ip, arity, ..
+                    } => {
+                        // VM Bytecode call
+                        if args.len() != arity as usize {
+                            return Err(IfaError::ArityMismatch {
+                                expected: arity as usize,
+                                got: args.len(),
+                            });
+                        }
 
-                       // Push arguments back onto stack (as locals 0..N)
-                       for arg in args {
-                           self.push(arg)?;
-                       }
-                       
-                       // Jump
-                       self.ip = start_ip;
+                        // Push CallFrame
+                        self.frames.push(CallFrame {
+                            return_addr: self.ip,
+                            base_ptr: self.stack.len(), // Base of the new frame
+                            local_count: 0, // Will be incremented by StoreLocal or determined by compiler?
+                                            // Actually, locals are usually allocated on stack.
+                                            // For this simple VM, we can assume locals are just stack slots relative to base_ptr.
+                                            // But arguments are locals!
+                        });
+
+                        // Push arguments back onto stack (as locals 0..N)
+                        for arg in args {
+                            self.push(arg)?;
+                        }
+
+                        // Jump
+                        self.ip = start_ip;
                     }
-                    _ => return Err(IfaError::TypeError { expected: "Function".into(), got: func.type_name().into() }),
+                    _ => {
+                        return Err(IfaError::TypeError {
+                            expected: "Function".into(),
+                            got: func.type_name().into(),
+                        });
+                    }
                 }
             }
 
@@ -429,10 +439,11 @@ impl IfaVM {
                 for _ in 0..len {
                     method_bytes.push(self.read_u8(bytecode)?);
                 }
-                let method_name = String::from_utf8(method_bytes).unwrap_or_else(|_| "unknown".to_string());
-                
+                let method_name =
+                    String::from_utf8(method_bytes).unwrap_or_else(|_| "unknown".to_string());
+
                 let arity = self.read_u8(bytecode)?;
-                
+
                 let mut args = Vec::with_capacity(arity as usize);
                 for _ in 0..arity {
                     args.push(self.pop()?);
@@ -443,14 +454,16 @@ impl IfaVM {
                     let result = registry.call(domain_id, &method_name, args)?;
                     self.push(result)?;
                 } else {
-                    return Err(IfaError::Custom("No standard library registry attached".into()));
+                    return Err(IfaError::Custom(
+                        "No standard library registry attached".into(),
+                    ));
                 }
             }
 
             OpCode::CallMethod => {
                 let method_idx = self.read_u16(bytecode)?;
                 let arg_count = self.read_u8(bytecode)?;
-                
+
                 let mut args = Vec::with_capacity(arg_count as usize);
                 for _ in 0..arg_count {
                     args.push(self.pop()?);
@@ -458,12 +471,14 @@ impl IfaVM {
                 args.reverse();
 
                 let object = self.pop()?; // Object is below args
-                
+
                 if let Some(registry) = &self.registry {
                     let result = registry.call_method(&object, method_idx, args)?;
                     self.push(result)?;
                 } else {
-                     return Err(IfaError::Custom("No standard library registry attached".into()));
+                    return Err(IfaError::Custom(
+                        "No standard library registry attached".into(),
+                    ));
                 }
             }
 
@@ -545,19 +560,21 @@ impl IfaVM {
             OpCode::Import => {
                 let path_idx = self.read_u16(bytecode)? as usize;
                 let path = bytecode.strings.get(path_idx).cloned().unwrap_or_default();
-                
+
                 if let Some(registry) = &self.registry {
                     let module = registry.import(&path)?;
                     self.push(module)?;
                 } else {
-                    return Err(IfaError::Custom("No standard library registry attached".into()));
+                    return Err(IfaError::Custom(
+                        "No standard library registry attached".into(),
+                    ));
                 }
             }
 
             OpCode::DefineClass => {
                 let name_idx = self.read_u16(bytecode)? as usize;
                 let name = bytecode.strings.get(name_idx).cloned().unwrap_or_default();
-                
+
                 let field_count = self.read_u8(bytecode)? as usize;
                 let mut fields = Vec::with_capacity(field_count);
                 for _ in 0..field_count {
@@ -565,7 +582,7 @@ impl IfaVM {
                     let f_name = bytecode.strings.get(f_idx).cloned().unwrap_or_default();
                     fields.push(f_name);
                 }
-                
+
                 let method_count = self.read_u8(bytecode)? as usize;
                 let mut methods = std::collections::HashMap::new();
                 for _ in 0..method_count {
@@ -576,7 +593,7 @@ impl IfaVM {
                         methods.insert(name.clone(), func);
                     }
                 }
-                
+
                 self.push(IfaValue::Class {
                     name,
                     fields,

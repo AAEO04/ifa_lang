@@ -16,48 +16,48 @@ use crate::value::IfaValue;
 use super::environment::Environment;
 
 // Sub-modules containing domain-specific handlers (16 core Odù)
-mod irosu;    // 1100 - Console I/O
-mod ogbe;     // 1111 - System/Lifecycle
-mod obara;    // 1000 - Math (Add/Mul)
+mod ika; // 0100 - Strings
+mod irete; // 1101 - Crypto/Security
+mod irosu; // 1100 - Console I/O
+mod iwori; // 0110 - Time/DateTime
+mod obara; // 1000 - Math (Add/Mul)
+mod odi; // 1001 - Files/Database
+mod ofun; // 0101 - Permissions/Reflection
+mod ogbe; // 1111 - System/Lifecycle
+mod ogunda; // 1110 - Arrays/Lists
+mod okanran; // 0001 - Errors/Assertions
+mod osa; // 0111 - Concurrency
+mod ose;
+mod otura; // 1011 - Networking
 mod oturupon; // 0010 - Math (Sub/Div)
-mod ika;      // 0100 - Strings
-mod oyeku;    // 0000 - Exit/Sleep
-mod owonrin;  // 0011 - Random
-mod ogunda;   // 1110 - Arrays/Lists
-mod iwori;    // 0110 - Time/DateTime
-mod okanran;  // 0001 - Errors/Assertions
-mod otura;    // 1011 - Networking
-mod odi;      // 1001 - Files/Database
-mod osa;      // 0111 - Concurrency
-mod ofun;     // 0101 - Permissions/Reflection
-mod irete;    // 1101 - Crypto/Security
-mod ose;      // 1010 - Graphics/UI
+mod owonrin; // 0011 - Random
+mod oyeku; // 0000 - Exit/Sleep // 1010 - Graphics/UI
 
 // Infrastructure handlers
-mod ohun;     // Audio I/O
-mod fidio;    // Video I/O
+mod fidio;
+mod ohun; // Audio I/O // Video I/O
 
 // Re-export handlers
-pub use irosu::IrosuHandler;
-pub use ogbe::OgbeHandler;
-pub use obara::ObaraHandler;
-pub use oturupon::OturuponHandler;
 pub use ika::IkaHandler;
-pub use oyeku::OyekuHandler;
-pub use owonrin::OwonrinHandler;
-pub use ogunda::OgundaHandler;
-pub use iwori::IworiHandler;
-pub use okanran::OkanranHandler;
-pub use otura::OturaHandler;
-pub use odi::OdiHandler;
-pub use osa::OsaHandler;
-pub use ofun::OfunHandler;
 pub use irete::IreteHandler;
+pub use irosu::IrosuHandler;
+pub use iwori::IworiHandler;
+pub use obara::ObaraHandler;
+pub use odi::OdiHandler;
+pub use ofun::OfunHandler;
+pub use ogbe::OgbeHandler;
+pub use ogunda::OgundaHandler;
+pub use okanran::OkanranHandler;
+pub use osa::OsaHandler;
 pub use ose::OseHandler;
+pub use otura::OturaHandler;
+pub use oturupon::OturuponHandler;
+pub use owonrin::OwonrinHandler;
+pub use oyeku::OyekuHandler;
 
 // Infrastructure handlers
-pub use ohun::OhunHandler;
 pub use fidio::FidioHandler;
+pub use ohun::OhunHandler;
 
 /// Trait for domain-specific operation handlers.
 ///
@@ -66,15 +66,16 @@ pub use fidio::FidioHandler;
 pub trait OduHandler: Send + Sync {
     /// Returns the domain this handler is responsible for.
     fn domain(&self) -> OduDomain;
-    
+
     /// Execute a method call on this domain.
     fn call(
-        &self, 
-        method: &str, 
-        args: Vec<IfaValue>, 
-        env: &mut Environment
+        &self,
+        method: &str,
+        args: Vec<IfaValue>,
+        env: &mut Environment,
+        output: &mut Vec<String>,
     ) -> IfaResult<IfaValue>;
-    
+
     /// Returns the list of methods this handler supports.
     fn methods(&self) -> &'static [&'static str];
 }
@@ -88,7 +89,7 @@ impl HandlerRegistry {
     /// Create a new registry with all built-in handlers registered.
     pub fn new() -> Self {
         let mut handlers: HashMap<OduDomain, Box<dyn OduHandler>> = HashMap::new();
-        
+
         // Register all 16 core Odù handlers
         handlers.insert(OduDomain::Irosu, Box::new(IrosuHandler));
         handlers.insert(OduDomain::Ogbe, Box::new(OgbeHandler));
@@ -106,19 +107,19 @@ impl HandlerRegistry {
         handlers.insert(OduDomain::Ofun, Box::new(OfunHandler));
         handlers.insert(OduDomain::Irete, Box::new(IreteHandler));
         handlers.insert(OduDomain::Ose, Box::new(OseHandler));
-        
+
         // Infrastructure handlers
         handlers.insert(OduDomain::Ohun, Box::new(OhunHandler));
         handlers.insert(OduDomain::Fidio, Box::new(FidioHandler));
-        
+
         HandlerRegistry { handlers }
     }
-    
+
     /// Get a handler for the given domain.
     pub fn get(&self, domain: &OduDomain) -> Option<&dyn OduHandler> {
         self.handlers.get(domain).map(|b| b.as_ref())
     }
-    
+
     /// Execute an Odù call using the appropriate handler.
     pub fn dispatch(
         &self,
@@ -126,16 +127,17 @@ impl HandlerRegistry {
         method: &str,
         args: Vec<IfaValue>,
         env: &mut Environment,
+        output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         match self.handlers.get(&domain) {
-            Some(handler) => handler.call(method, args, env),
+            Some(handler) => handler.call(method, args, env, output),
             None => Err(IfaError::Runtime(format!(
                 "No handler registered for domain {:?}",
                 domain
             ))),
         }
     }
-    
+
     /// List all registered domains.
     pub fn domains(&self) -> Vec<OduDomain> {
         self.handlers.keys().cloned().collect()

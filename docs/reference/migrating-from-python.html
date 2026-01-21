@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrating from Python - Ifá-Lang</title>
+    <meta name="description" content="A guide for Python developers migrating to Ifá-Lang.">
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Migrating from Python to Ifá-Lang">
+    <meta property="og:description" content="Learn how Python concepts map to Ifá-Lang's 16 Odù domains.">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
+    <script src="../js/common.js" defer></script>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Migrating from Python 🐍</h1>
+        <p class="tagline">From indentation to curly braces — a journey to the Odù.</p>
+
+        <div class="concept">
+            <div class="concept-item">
+                <h4>Similarities</h4>
+                <p>Dynamic typing (optional), high-level abstractions, clean syntax.</p>
+            </div>
+            <div class="concept-item">
+                <h4>Differences</h4>
+                <p>Curly braces vs indentation, keywords (let/ayanmo), Odù-based stdlib.</p>
+            </div>
+        </div>
+
+        <h2>Variables</h2>
+        <p>Python infers variables. Ifá-Lang requires <code>ayanmo</code> (let) or <code>const</code>.</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Defining Variables</span>
+            </div>
+            <pre><code class="language-python"># Python
+name = "Ade"
+age = 25
+is_dev = True</code></pre>
+            <pre><code class="language-ifa">// Ifá-Lang
+ayanmo oruko = "Ade";
+ayanmo ojo_ori = 25;
+ayanmo is_dev = otito; // or 'true'</code></pre>
+        </div>
+
+        <h2>Functions</h2>
+        <p>Python uses <code>def</code>. Ifá-Lang uses <code>iṣẹ</code> (work) or <code>fn</code>.</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Function Syntax</span>
+            </div>
+            <pre><code class="language-python"># Python
+def greet(name):
+    print(f"Hello {name}")</code></pre>
+            <pre><code class="language-ifa">// Ifá-Lang
+iṣẹ ki(oruko) {
+    Irosu.fo("Hello " + oruko);
+}</code></pre>
+        </div>
+
+        <h2>Control Flow</h2>
+        <p>Ifá-Lang uses C-style curly braces <code>{}</code> instead of indentation.</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">If / Else</span>
+            </div>
+            <pre><code class="language-python"># Python
+if x > 10:
+    print("Big")
+else:
+    print("Small")</code></pre>
+            <pre><code class="language-ifa">// Ifá-Lang
+ti (x > 10) {
+    Irosu.fo("Big");
+} bibẹkọ {
+    Irosu.fo("Small");
+}</code></pre>
+        </div>
+
+        <h2>Standard Library Mapping</h2>
+        <p>Python's <code>import</code> modules map directly to the 16 Odù domains.</p>
+
+        <table style="width:100%; text-align:left; border-collapse: collapse; margin: 1rem 0;">
+            <tr style="border-bottom: 2px solid var(--accent);">
+                <th style="padding: 0.5rem; color: var(--gold);">Python Module</th>
+                <th style="padding: 0.5rem; color: var(--gold);">Ifá-Lang Odù</th>
+                <th style="padding: 0.5rem; color: var(--text-dim);">Example</th>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 0.5rem;"><code>print() / input()</code></td>
+                <td style="padding: 0.5rem;"><strong>Ìrosù</strong> (Voice)</td>
+                <td style="padding: 0.5rem;"><code>Irosu.fo()</code></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 0.5rem;"><code>sys / os</code></td>
+                <td style="padding: 0.5rem;"><strong>Ọ̀gbè</strong> (Light/System)</td>
+                <td style="padding: 0.5rem;"><code>Ogbe.env()</code></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 0.5rem;"><code>random</code></td>
+                <td style="padding: 0.5rem;"><strong>Ọ̀wọ́nrín</strong> (Chaos)</td>
+                <td style="padding: 0.5rem;"><code>Owonrin.random()</code></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 0.5rem;"><code>time</code></td>
+                <td style="padding: 0.5rem;"><strong>Ìwòrì</strong> (Observation)</td>
+                <td style="padding: 0.5rem;"><code>Iwori.now()</code></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 0.5rem;"><code>requests</code></td>
+                <td style="padding: 0.5rem;"><strong>Òtúrá</strong> (Messenger)</td>
+                <td style="padding: 0.5rem;"><code>Otura.get()</code></td>
+            </tr>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 0.5rem;"><code>asyncio</code></td>
+                <td style="padding: 0.5rem;"><strong>Ọ̀sá</strong> (Wind/Movement)</td>
+                <td style="padding: 0.5rem;"><code>Osa.spawn()</code></td>
+            </tr>
+        </table>
+
+        <h2>Philosophy Shift</h2>
+        <p>Python says "Batteries Included". Ifá-Lang says "Universally Connected". Instead of memorizing random module
+            names, everything fits into the logical matrix of the 16 Odù. Once you know <strong>Ìrẹtẹ̀</strong> is about
+            pressure/crypto, you know where to look for hashing, compression, and encryption.</p>
+
+        <div class="next-steps">
+            <a href="../getting-started/quickstart.html" class="next-step">
+                <h3>📚 Quick Start</h3>
+                <p>Install Ifá-Lang now</p>
+            </a>
+            <a href="../language/philosophy.html" class="next-step">
+                <h3>🔮 The 16 Odù</h3>
+                <p>Learn the full system</p>
+            </a>
+        </div>
+    </div>
+
+    <footer class="doc-footer">
+        <p>Ifá-Lang — Built with wisdom from the Odù Ifá</p>
+        <p><a href="https://github.com/AAEO04/ifa-lang">GitHub</a> · <a
+                href="../getting-started/install.html">Install</a></p>
+    </footer>
+</body>
+
+</html>

@@ -102,11 +102,11 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     // Use AST visitor to properly count method calls
     use syn::visit::Visit;
-    
+
     struct MethodCallCounter {
         counts: std::collections::HashMap<String, usize>,
     }
-    
+
     impl<'ast> Visit<'ast> for MethodCallCounter {
         fn visit_expr_method_call(&mut self, node: &'ast syn::ExprMethodCall) {
             // Get the method name
@@ -116,7 +116,7 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
             syn::visit::visit_expr_method_call(self, node);
         }
     }
-    
+
     let mut counter = MethodCallCounter {
         counts: std::collections::HashMap::new(),
     };

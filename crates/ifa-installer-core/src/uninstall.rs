@@ -18,28 +18,36 @@ fn validate_uninstall_dir(install_dir: &Path) -> Result<(), UninstallError> {
     if !install_dir.exists() {
         return Ok(());
     }
-    
+
     // Canonicalize to resolve relative paths and symlinks
     let canonical = install_dir.canonicalize().map_err(UninstallError::Io)?;
-    
+
     // Safety checks: refuse to delete critical directories
     let home = dirs::home_dir().ok_or_else(|| {
         UninstallError::InvalidPath("Could not determine home directory".to_string())
     })?;
-    
+
     // 1. Never delete the home directory itself
     if canonical == home {
-        return Err(UninstallError::InvalidPath("Cannot uninstall the entire home directory".to_string()));
+        return Err(UninstallError::InvalidPath(
+            "Cannot uninstall the entire home directory".to_string(),
+        ));
     }
-    
+
     // 2. Never delete root or critical system paths (basic check)
     #[cfg(unix)]
     {
-        if canonical == Path::new("/") || canonical.starts_with("/usr") || canonical.starts_with("/bin") {
-            return Err(UninstallError::InvalidPath(format!("Path {:?} is a protected system directory", canonical)));
+        if canonical == Path::new("/")
+            || canonical.starts_with("/usr")
+            || canonical.starts_with("/bin")
+        {
+            return Err(UninstallError::InvalidPath(format!(
+                "Path {:?} is a protected system directory",
+                canonical
+            )));
         }
     }
-    
+
     #[cfg(windows)]
     {
         use std::path::PathBuf;
@@ -47,18 +55,23 @@ fn validate_uninstall_dir(install_dir: &Path) -> Result<(), UninstallError> {
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("C:\\Windows"));
         if canonical.starts_with(&win_dir) || canonical == Path::new("C:\\") {
-            return Err(UninstallError::InvalidPath(format!("Path {:?} is a protected system directory", canonical)));
+            return Err(UninstallError::InvalidPath(format!(
+                "Path {:?} is a protected system directory",
+                canonical
+            )));
         }
     }
-    
+
     // 3. Must be a directory (not a file)
     if !canonical.is_dir() {
-        return Err(UninstallError::InvalidPath("Uninstall target is not a directory".to_string()));
+        return Err(UninstallError::InvalidPath(
+            "Uninstall target is not a directory".to_string(),
+        ));
     }
-    
-    // 4. Heuristic: ensure it's likely an Ifa-lang directory 
+
+    // 4. Heuristic: ensure it's likely an Ifa-lang directory
     // (e.g., contains 'ifa' in path or a specific marker file - optional but recommended)
-    
+
     Ok(())
 }
 
@@ -74,7 +87,7 @@ pub fn uninstall(install_dir: &Path) -> Result<(), UninstallError> {
         crate::platform::remove_from_path(install_dir)
             .map_err(|e| UninstallError::Platform(e.to_string()))?;
     }
-    
+
     #[cfg(unix)]
     {
         crate::platform::remove_from_path(install_dir)

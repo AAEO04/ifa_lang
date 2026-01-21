@@ -7,6 +7,19 @@
     // Calculate path to docs root based on current page location
     function getBasePath() {
         const path = window.location.pathname;
+        const host = window.location.hostname;
+
+        // GitHub Pages: aaeo04.github.io/ifa_lang/...
+        // The /ifa_lang/ folder IS the docs root
+        if (host.includes('github.io')) {
+            // Count depth from the repo root (first segment after host)
+            const segments = path.split('/').filter(s => s && !s.endsWith('.html'));
+            // segments[0] is 'ifa_lang', so depth = segments.length - 1
+            const depth = Math.max(0, segments.length - 1);
+            return '../'.repeat(depth) || './';
+        }
+
+        // Local development: file:///path/to/ifa_lang/docs/...
         const segments = path.split('/').filter(s => s && !s.endsWith('.html'));
 
         // Find 'docs' in the path and count depth after it
@@ -41,7 +54,9 @@
                 { href: 'language/types-crate.html', label: '🏗️ Types' },
                 { href: 'language/macros.html', label: '⚙️ Macros' },
                 { href: 'language/philosophy.html', label: '🔮 Philosophy' },
-                { href: 'reference/comparison.html', label: '🆚 vs Others' }
+                { href: 'reference/comparison.html', label: '🆚 vs Others' },
+                { href: 'reference/migrating-from-python.html', label: '🐍 Python Migration' },
+                { href: 'reference/migrating-from-javascript.html', label: '🟨 JS Migration' }
             ]
         },
         {
@@ -93,6 +108,7 @@
     // Build navigation HTML
     function buildNav() {
         let html = `
+      <a href="#main-content" class="skip-link">Skip to main content</a>
       <header class="nav-header">
         <div class="nav-container">
           <a href="${ROOT}index.html" class="nav-logo">
@@ -105,15 +121,15 @@
             <div id="search-results" class="search-results"></div>
           </div>
 
-          <button class="nav-toggle" onclick="toggleNav()">☰</button>
-          <nav>
+          <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+          <nav role="navigation" aria-label="Main navigation">
             <ul class="nav-menu" id="nav-menu">
     `;
 
         for (const section of navItems) {
             html += `
               <li class="nav-dropdown">
-                <a href="#">${section.label}</a>
+                <a href="#" onclick="toggleDropdown(event, this)">${section.label}</a>
                 <div class="nav-dropdown-content">
       `;
             for (const item of section.items) {
@@ -137,7 +153,38 @@
     // Toggle mobile nav
     window.toggleNav = function () {
         const menu = document.getElementById('nav-menu');
-        menu.classList.toggle('nav-open');
+        const btn = document.querySelector('.nav-toggle');
+        const isOpen = menu.classList.toggle('nav-open');
+
+        // Update ARIA state
+        if (btn) {
+            btn.setAttribute('aria-expanded', isOpen);
+        }
+
+        // Close all dropdowns when closing menu
+        if (!isOpen) {
+            document.querySelectorAll('.nav-dropdown').forEach(d => d.classList.remove('dropdown-open'));
+        }
+    };
+
+    // Toggle mobile dropdown
+    window.toggleDropdown = function (event, element) {
+        // Only use click behavior on mobile
+        if (window.innerWidth > 768) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const dropdown = element.closest('.nav-dropdown');
+        const isOpen = dropdown.classList.contains('dropdown-open');
+
+        // Close all other dropdowns
+        document.querySelectorAll('.nav-dropdown').forEach(d => d.classList.remove('dropdown-open'));
+
+        // Toggle this one
+        if (!isOpen) {
+            dropdown.classList.add('dropdown-open');
+        }
     };
 
     // Insert navigation

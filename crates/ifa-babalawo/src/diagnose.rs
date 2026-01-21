@@ -122,7 +122,7 @@ impl Babalawo {
         col: usize,
     ) {
         let odu_key = ERROR_TO_ODU.get(code).copied().unwrap_or("OKANRAN");
-        
+
         let wisdom = if self.include_wisdom {
             ODU_WISDOM.get(odu_key).map(|w| w.advice.to_string())
         } else {
@@ -186,10 +186,10 @@ impl Babalawo {
             output.push_str(&format!("  {}\n", diag.error.message));
 
             // Wisdom (only if verbose or it's an error)
-            if self.verbose || diag.severity == Severity::Error {
-                if let Some(wisdom) = &diag.wisdom {
-                    output.push_str(&format!("  Wisdom: {}\n", wisdom));
-                }
+            if (self.verbose || diag.severity == Severity::Error)
+                && let Some(wisdom) = &diag.wisdom
+            {
+                output.push_str(&format!("  Wisdom: {}\n", wisdom));
             }
 
             output.push('\n');
