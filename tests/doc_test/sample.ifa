@@ -1,0 +1,33 @@
+/// Oríkì: The Ancient One
+/// This is a test file to verify the Oríkì documentation generator.
+/// It contains examples of Odù, Ese, and constants.
+
+/// A constant defining the maximum retries
+const MAX_RETRIES = 5;
+
+/// Oríkì: User Profile Domain
+/// This domain manages user authentication and profile data.
+odu Profile {
+    /// Stores the current user name
+    ayanmo name = "Guest";
+
+    /// Logs the user into the system
+    /// Returns true if successful
+    ese login(username, password) {
+        Irosu.so("Logging in: " + username);
+    }
+
+    /// Logs the user out
+    ese logout() {
+        Irosu.so("Logged out");
+    }
+}
+
+/// Oríkì: Utility Functions
+/// Helper functions for general use.
+odu Utils {
+    /// Calculates the sum of two numbers
+    ese sum(a, b) {
+        Obara.ro(a, b)
+    }
+}

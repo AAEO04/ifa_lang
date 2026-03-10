@@ -56,7 +56,7 @@ fn check_domain(lex: &mut Lexer<Token>) -> Option<OduDomain> {
             // Standard programming aliases (max 2 per domain - keep it simple!)
             match lower.as_str() {
                 // Ogbe (1111) - System/Lifecycle
-                "sys" | "os" => Some(OduDomain::Ogbe),
+                "lifecycle" => Some(OduDomain::Ogbe),
 
                 // Oyeku (0000) - Exit/Cleanup
                 "exit" => Some(OduDomain::Oyeku),
@@ -110,6 +110,7 @@ fn check_domain(lex: &mut Lexer<Token>) -> Option<OduDomain> {
                 "ffi" | "bridge" => Some(OduDomain::Coop),
 
                 // Infrastructure Layer
+                "sys" | "system" => Some(OduDomain::Sys),
                 "cpu" | "parallel" => Some(OduDomain::Cpu),
                 "gpu" | "compute" => Some(OduDomain::Gpu),
                 "storage" | "kv" | "db" => Some(OduDomain::Storage),
@@ -130,45 +131,9 @@ fn check_domain(lex: &mut Lexer<Token>) -> Option<OduDomain> {
 }
 
 /// The 16 Odù domains + Infrastructure + Stacks
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum OduDomain {
-    // Core 16 Odù
-    Ogbe,     // 1111 - Lifecycle
-    Oyeku,    // 0000 - Exit/Sleep
-    Iwori,    // 0110 - Time
-    Odi,      // 1001 - Files
-    Irosu,    // 1100 - Console
-    Owonrin,  // 0011 - Random
-    Obara,    // 1000 - Math+
-    Okanran,  // 0001 - Errors
-    Ogunda,   // 1110 - Arrays
-    Osa,      // 0111 - Concurrency
-    Ika,      // 0100 - Strings
-    Oturupon, // 0010 - Math-
-    Otura,    // 1011 - Network
-    Irete,    // 1101 - Crypto
-    Ose,      // 1010 - UI
-    Ofun,     // 0101 - Permissions
-
-    // Pseudo-domains
-    Coop,  // Co-op / Àjọṣe - FFI Bridge
-    Opele, // Ọpẹlẹ - Divination/Compound Odù
-
-    // Infrastructure Layer
-    Cpu,     // Parallel computing (rayon)
-    Gpu,     // GPU compute (wgpu)
-    Storage, // Key-value store (OduStore)
-    Ohun,    // Audio I/O (rodio)
-    Fidio,   // Video I/O (ffmpeg)
-
-    // Application Stacks
-    Backend,  // HTTP server, ORM
-    Frontend, // HTML, CSS generation
-    Crypto,   // Hashing, encryption (extends Irete)
-    Ml,       // Machine learning, tensors
-    GameDev,  // Game engine, ECS
-    Iot,      // Embedded, GPIO
-}
+// The 16 Odù domains + Infrastructure + Stacks
+// Moved to ifa_types::OduDomain
+pub use ifa_types::OduDomain;
 
 /// Token types for Ifá-Lang
 #[derive(Logos, Debug, Clone, PartialEq)]
@@ -217,10 +182,19 @@ pub enum Token {
     #[token("continue")]
     Continue,
 
-    #[token("yàn")]
-    #[token("yán")]
     #[token("match")]
     Match,
+
+    // Error Handling
+    #[token("gbiyanju")]
+    #[token("gbìyànjú")]
+    #[token("try")]
+    Gbiyanju,
+
+    #[token("gba")] // Catch (Yoruba: "accept/take")
+    #[token("gbà")]
+    #[token("catch")]
+    Gba,
 
     // Function/class
     #[token("ese")]

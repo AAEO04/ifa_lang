@@ -1,0 +1,12 @@
+opon: embedded;
+
+ailewu {
+    // 1. Test Ref
+    var p = &0x4000_0000;
+    
+    // 2. Test StoreDeref
+    *p = 42;
+    
+    // 3. Test Deref
+    var x = *p;
+}

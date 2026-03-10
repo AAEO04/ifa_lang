@@ -1,12 +1,19 @@
 //! # Crypto Stack
 //!
-//! **SECURITY-FOCUSED** cryptographic extensions for Ifá-Lang.
+//! **Security-focused** cryptographic extensions for Ifá-Lang.
 //!
-//! Uses: sha2, ring (when available), constant-time operations
+//! ## Implementation status
 //!
-//! WARNING: This module provides placeholder implementations for development.
-//! For production use, enable the `crypto-real` feature which uses proper
-//! cryptographic libraries.
+//! | Component | Status |
+//! |---|---|
+//! | `hash::sha256`, `hash::sha512` | ✅ Production-grade via `ring` |
+//! | `hash::hmac_sha256`, `hash::hmac_verify` | ✅ Production-grade via `ring` |
+//! | `password::hash`, `password::verify` | ✅ Argon2id via `argon2` crate |
+//! | `SecureRng` | ✅ OS entropy via `rand::OsRng` |
+//! | `base64`, `hex` | ✅ Pure-Rust RFC-compliant implementations |
+//! | `hash_password` (free fn) | ⚠️ Simplified PBKDF2-like; use `password::hash` for production |
+//!
+//! For FIPS 140-3 compliance or HSM integration, replace `ring` with a certified provider.
 
 use std::collections::HashMap;
 
@@ -36,10 +43,11 @@ impl std::fmt::Display for CryptoError {
 
 impl std::error::Error for CryptoError {}
 
-/// Secure hash functions
+/// Secure hash functions backed by the `ring` crate.
 ///
-/// PLACEHOLDER: These implementations simulate API for development.
-/// Enable `crypto-real` feature for production-grade implementations.
+/// All functions in this module are production-quality.
+/// `sha256` and `sha512` use FIPS 180-4 compliant implementations.
+/// `hmac_sha256` uses FIPS 198-1.
 pub mod hash {
     use ring::digest::{SHA256, SHA512};
     use ring::hmac;
@@ -56,7 +64,13 @@ pub mod hash {
 
     /// SHA-256 returning hex string
     pub fn sha256_hex(data: &[u8]) -> String {
-        sha256(data).iter().map(|b| format!("{:02x}", b)).collect()
+        let digest = sha256(data);
+        let mut s = String::with_capacity(64);
+        use std::fmt::Write;
+        for b in digest {
+            write!(s, "{:02x}", b).unwrap();
+        }
+        s
     }
 
     /// SHA-512 hash using ring crate
@@ -232,7 +246,12 @@ pub mod hex {
     use super::CryptoError;
 
     pub fn encode(data: &[u8]) -> String {
-        data.iter().map(|b| format!("{:02x}", b)).collect()
+        let mut s = String::with_capacity(data.len() * 2);
+        use std::fmt::Write;
+        for b in data {
+            write!(s, "{:02x}", b).unwrap();
+        }
+        s
     }
 
     pub fn decode(encoded: &str) -> Result<Vec<u8>, CryptoError> {
@@ -358,9 +377,17 @@ impl Secret {
 impl Drop for Secret {
     fn drop(&mut self) {
         // Zero out memory before dropping
-        for byte in self.data.iter_mut() {
-            unsafe {
-                std::ptr::write_volatile(byte, 0);
+        // SAFETY: We use explicit pointer arithmetic with bounds checks to ensure
+        // we never write outside the allocated buffer.
+        let len = self.data.len();
+        if len > 0 {
+            let ptr = self.data.as_mut_ptr();
+            for i in 0..len {
+                unsafe {
+                    // VERIFY: ptr + i is always within [ptr, ptr + len) because i < len
+                    let target_ptr = ptr.add(i);
+                    std::ptr::write_volatile(target_ptr, 0);
+                }
             }
         }
         std::sync::atomic::fence(std::sync::atomic::Ordering::SeqCst);
@@ -408,9 +435,19 @@ impl Drop for SecretStore {
     }
 }
 
-/// Simple password hashing (placeholder - use argon2 in production)
+/// Simplified password hashing using HMAC-SHA256 iterated 1000 times.
+///
+/// # ⚠️ Deprecated
+///
+/// This is NOT Argon2id. It is a simplified PBKDF2-like construction intended
+/// only for internal test fixtures. **Do not use it for storing real passwords.**
+///
+/// Use [`password::hash`] and [`password::verify`] for production password storage.
+/// Those use Argon2id with a random salt via the `argon2` crate.
+#[deprecated(since = "0.1.0", note = "Use password::hash / password::verify (Argon2id) instead")]
 pub fn hash_password(password: &[u8], salt: &[u8]) -> [u8; 32] {
-    // PBKDF2-like construction (placeholder)
+    // Iterating HMAC-SHA256 provides some key-stretching but lacks the
+    // memory-hardness and parallelism resistance of Argon2.
     let mut result = hash::hmac_sha256(password, salt);
     for _ in 0..1000 {
         result = hash::hmac_sha256(password, &result);

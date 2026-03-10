@@ -136,6 +136,40 @@ impl TabooEnforcer {
         self.violations.is_empty()
     }
 
+    /// Check for Thread-Safety violations (Hut vs Market)
+    ///
+    /// Validates if a value type (e.g. "IfaValue", "Rc") is being passed to a Shared Context
+    pub fn check_thread_safety(&mut self, value_type: &str, target_context: &str) -> bool {
+        // "The Hut cannot go to the Market without a ritual (Freeze)"
+        let forbidden_types = ["IfaValue", "Rc", "RefCell", "GcPtr", "Hut"];
+        let shared_contexts = ["Osa", "Thread", "Spawn", "Market"];
+
+        let is_forbidden_type = forbidden_types.iter().any(|t| value_type.contains(t));
+        // Use case-insensitive match for contexts (e.g. tokio::spawn matches Spawn)
+        let is_shared_context = shared_contexts
+            .iter()
+            .any(|c| target_context.to_lowercase().contains(&c.to_lowercase()));
+
+        if is_forbidden_type && is_shared_context {
+            self.violations.push(TabooViolation {
+                taboo: Taboo {
+                    source_domain: "The Hut (Local)".to_string(),
+                    source_context: value_type.to_string(),
+                    target_domain: "The Market (Shared)".to_string(),
+                    target_context: target_context.to_string(),
+                    is_wildcard: false,
+                },
+                caller: "User Code".to_string(),
+                callee: target_context.to_string(),
+                context: self.current_context.clone(),
+                line: 0, // Dynamic check might not have line info
+                column: 0,
+            });
+            return false;
+        }
+        true
+    }
+
     /// Get all violations
     pub fn get_violations(&self) -> &[TabooViolation] {
         &self.violations
@@ -186,6 +220,31 @@ impl TabooEnforcer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_thread_safety_violation() {
+        let mut enforcer = TabooEnforcer {
+            taboos: Vec::new(),
+            violations: Vec::new(),
+            current_context: "main".to_string(),
+        };
+
+        // Allowed: Int -> Osa
+        assert!(enforcer.check_thread_safety("i64", "Osa::spawn"));
+
+        // Allowed: Arc -> Osa
+        assert!(enforcer.check_thread_safety("Arc<Mutex<T>>", "Osa::spawn"));
+
+        // Forbidden: IfaValue -> Osa
+        assert!(!enforcer.check_thread_safety("IfaValue", "Osa::spawn"));
+        assert!(!enforcer.check_thread_safety("Rc<RefCell<T>>", "tokio::spawn"));
+
+        // Forbidden: Hut -> Market
+        assert!(!enforcer.check_thread_safety("The Hut", "The Market"));
+
+        assert_eq!(enforcer.violations.len(), 3);
+        assert_eq!(enforcer.violations[0].taboo.source_context, "IfaValue");
+    }
 
     #[test]
     fn test_wildcard_taboo() {

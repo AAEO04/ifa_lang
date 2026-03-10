@@ -106,11 +106,17 @@ pub enum IfaError {
     #[error("{0}")]
     Custom(String),
 
+    #[error("User error: {0}")]
+    UserError(String),
+
     // =========================================================================
     // PARSER/INTERPRETER ERRORS
     // =========================================================================
     #[error("Parse error: {0}")]
     Parse(String),
+
+    #[error("Compile error: {0}")]
+    Compile(String),
 
     #[error("Runtime error: {0}")]
     Runtime(String),
@@ -136,6 +142,7 @@ impl IfaError {
             IfaError::OponExhausted { .. } => {
                 "Ìgbà méjì kì í wọ inú àwo kan. (Two times cannot fit in one calabash.)"
             }
+            IfaError::UserError(_) => "Ọwọ́ ara ẹni la fí tún ìwà ara ẹni ṣe. (One shapes their own character with their own hands.)",
             _ => "Gbogbo ìṣòro ní ojúùtù. (Every problem has a solution.)",
         }
     }

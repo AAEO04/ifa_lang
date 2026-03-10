@@ -17,6 +17,9 @@ pub fn run_code(source: &str) -> String {
     // Initialize interpreter
     let mut interpreter = Interpreter::new();
 
+    // Register Standard Library System Handler (WASM-compatible mode)
+    interpreter.register_handler(Box::new(ifa_std::handlers::sys::SysHandler::new()));
+
     // Parse source code
     match parse(source) {
         Ok(program) => {

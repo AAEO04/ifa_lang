@@ -283,12 +283,9 @@ mod resource_monitoring_tests {
         monitor.start();
 
         // This would need actual network operations to test
-        // For now, we just verify the monitoring structure
-        let bytes_sent = monitor.bytes_sent();
-        let bytes_received = monitor.bytes_received();
-
-        assert!(bytes_sent >= 0);
-        assert!(bytes_received >= 0);
+        // For now, we just verify the monitoring structure returns without panic
+        let _bytes_sent = monitor.bytes_sent();
+        let _bytes_received = monitor.bytes_received();
 
         monitor.stop();
     }

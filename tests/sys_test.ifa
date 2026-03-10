@@ -1,0 +1,27 @@
+
+# Sys Module Test
+# Verifies system infrastructure access via SysHandler
+
+# 1. Check CPU Core Count
+ayanmo cores = Sys.core_count();
+Irosu.so("CPU Cores: " + cores);
+
+verify (cores > 0);
+
+# 2. Check Memory Stats
+# (Requires sysinfo feature)
+ti (Sys.memory_stats()) {
+    ayanmo stats = Sys.memory_stats();
+    Irosu.so("Total Memory: " + stats["total"]);
+    Irosu.so("Used Memory:  " + stats["used"]);
+    
+    verify (stats["total"] > 0);
+}
+
+# 3. Task Submission (Simulated)
+# Function index 0 is usually the main script or first function
+ayanmo task_id = 0; 
+ayanmo submitted = Sys.submit_task(task_id);
+Irosu.so("Task Submitted: " + submitted);
+
+verify (submitted == otito);

@@ -28,12 +28,12 @@ impl OduHandler for IrosuHandler {
     ) -> IfaResult<IfaValue> {
         match method {
             // Print with newline
-            "fo" | "sọ" | "print" | "println" => {
+            "fo" | "sọ" | "so" | "print" | "println" => {
                 let line_parts: Vec<String> = args.iter().map(|a| a.to_string()).collect();
                 let line = line_parts.join(" ");
                 println!("{}", line);
                 output.push(line); // Capture for WASM
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             // Read input
@@ -43,15 +43,15 @@ impl OduHandler for IrosuHandler {
                 let mut input = String::new();
                 io::stdin()
                     .read_line(&mut input)
-                    .map_err(IfaError::IoError)?;
-                Ok(IfaValue::Str(input.trim().to_string()))
+                    .map_err(|e| IfaError::IoError(e.to_string()))?;
+                Ok(IfaValue::str(input.trim()))
             }
 
             // Error output
             "kigbe" | "error" => {
                 let msg = args.first().map(|a| a.to_string()).unwrap_or_default();
                 eprintln!("[ERROR] {}", msg);
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             _ => Err(IfaError::Runtime(format!(
@@ -63,7 +63,7 @@ impl OduHandler for IrosuHandler {
 
     fn methods(&self) -> &'static [&'static str] {
         &[
-            "fo", "sọ", "print", "println", "ka", "input", "listen", "gbo", "kigbe", "error",
+            "fo", "sọ", "so", "print", "println", "ka", "input", "listen", "gbo", "kigbe", "error",
         ]
     }
 }

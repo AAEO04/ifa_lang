@@ -56,9 +56,12 @@ impl std::error::Error for TensorError {}
 pub type TensorResult<T> = Result<T, TensorError>;
 
 /// Tensor with improved operations
+use std::sync::Arc;
+
+/// Tensor with improved operations and Copy-on-Write (CoW) semantics
 #[derive(Debug, Clone)]
 pub struct Tensor {
-    pub data: Vec<f64>,
+    pub data: Arc<Vec<f64>>,
     pub shape: Vec<usize>,
     strides: Vec<usize>,
 }
@@ -79,8 +82,9 @@ impl Tensor {
         }
 
         let strides = Self::compute_strides(&shape);
+        let strides = Self::compute_strides(&shape);
         Ok(Tensor {
-            data,
+            data: Arc::new(data),
             shape,
             strides,
         })
@@ -90,7 +94,7 @@ impl Tensor {
     fn new_unchecked(data: Vec<f64>, shape: Vec<usize>) -> Self {
         let strides = Self::compute_strides(&shape);
         Tensor {
-            data,
+            data: Arc::new(data),
             shape,
             strides,
         }
@@ -210,7 +214,8 @@ impl Tensor {
     /// Set element at index
     pub fn set(&mut self, indices: &[usize], value: f64) -> TensorResult<()> {
         let flat_idx = self.flat_index(indices)?;
-        self.data[flat_idx] = value;
+        let data = Arc::make_mut(&mut self.data);
+        data[flat_idx] = value;
         Ok(())
     }
 
@@ -308,7 +313,8 @@ impl Tensor {
     /// In-place addition
     pub fn add_mut(&mut self, other: &Tensor) -> TensorResult<()> {
         self.check_shapes(other)?;
-        for (a, b) in self.data.iter_mut().zip(other.data.iter()) {
+        let data = Arc::make_mut(&mut self.data);
+        for (a, b) in data.iter_mut().zip(other.data.iter()) {
             *a += *b;
         }
         Ok(())
@@ -329,7 +335,8 @@ impl Tensor {
     /// In-place subtraction
     pub fn sub_mut(&mut self, other: &Tensor) -> TensorResult<()> {
         self.check_shapes(other)?;
-        for (a, b) in self.data.iter_mut().zip(other.data.iter()) {
+        let data = Arc::make_mut(&mut self.data);
+        for (a, b) in data.iter_mut().zip(other.data.iter()) {
             *a -= *b;
         }
         Ok(())
@@ -350,7 +357,8 @@ impl Tensor {
     /// In-place multiplication
     pub fn mul_mut(&mut self, other: &Tensor) -> TensorResult<()> {
         self.check_shapes(other)?;
-        for (a, b) in self.data.iter_mut().zip(other.data.iter()) {
+        let data = Arc::make_mut(&mut self.data);
+        for (a, b) in data.iter_mut().zip(other.data.iter()) {
             *a *= *b;
         }
         Ok(())
@@ -385,7 +393,8 @@ impl Tensor {
 
     /// In-place scalar multiplication
     pub fn scale_mut(&mut self, scalar: f64) {
-        for x in self.data.iter_mut() {
+        let data = Arc::make_mut(&mut self.data);
+        for x in data.iter_mut() {
             *x *= scalar;
         }
     }
@@ -463,22 +472,31 @@ impl Tensor {
         variance.sqrt()
     }
 
-    /// Maximum value
+    /// Maximum value (ignores NaNs for safety, returns NEG_INFINITY if empty/all-NaN)
     pub fn max(&self) -> f64 {
-        self.data.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
+        self.data
+            .iter()
+            .cloned()
+            .filter(|x| !x.is_nan())
+            .fold(f64::NEG_INFINITY, f64::max)
     }
 
-    /// Minimum value  
+    /// Minimum value (ignores NaNs for safety, returns INFINITY if empty/all-NaN)
     pub fn min(&self) -> f64 {
-        self.data.iter().cloned().fold(f64::INFINITY, f64::min)
+        self.data
+            .iter()
+            .cloned()
+            .filter(|x| !x.is_nan())
+            .fold(f64::INFINITY, f64::min)
     }
 
-    /// Index of maximum value
+    /// Index of maximum value (returns 0 if empty or all NaNs)
     pub fn argmax(&self) -> usize {
         self.data
             .iter()
             .enumerate()
-            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+            .filter(|(_, x)| !x.is_nan())
+            .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(i, _)| i)
             .unwrap_or(0)
     }
@@ -493,7 +511,8 @@ impl Tensor {
 
     /// In-place map
     pub fn map_mut<F: Fn(f64) -> f64>(&mut self, f: F) {
-        for x in self.data.iter_mut() {
+        let data = Arc::make_mut(&mut self.data);
+        for x in data.iter_mut() {
             *x = f(*x);
         }
     }
@@ -608,14 +627,15 @@ impl Linear {
 
     /// Forward pass
     pub fn forward(&self, input: &Tensor) -> TensorResult<Tensor> {
-        let output = input.matmul(&self.weights)?;
+        let mut output = input.matmul(&self.weights)?;
         // Add bias (broadcasting over batch)
-        let mut result = output.data.clone();
+        // Use CoW: output.data is likely unique here, so make_mut is cheap
+        let data = Arc::make_mut(&mut output.data);
         let cols = self.bias.numel();
-        for i in 0..result.len() {
-            result[i] += self.bias.data[i % cols];
+        for i in 0..data.len() {
+            data[i] += self.bias.data[i % cols];
         }
-        Tensor::new(result, output.shape)
+        Ok(output)
     }
 }
 
@@ -690,7 +710,8 @@ impl SGD {
 impl Optimizer for SGD {
     fn step(&mut self, params: &mut [Tensor], grads: &[Tensor]) {
         for (param, grad) in params.iter_mut().zip(grads.iter()) {
-            for (p, g) in param.data.iter_mut().zip(grad.data.iter()) {
+            let data = Arc::make_mut(&mut param.data);
+            for (p, g) in data.iter_mut().zip(grad.data.iter()) {
                 *p -= self.learning_rate * g;
             }
         }

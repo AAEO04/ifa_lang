@@ -9,7 +9,7 @@ use std::process;
 use std::thread;
 use std::time::Duration;
 
-use ifa_sandbox::{CapabilitySet, Ofun};
+use crate::sandbox_shim::{CapabilitySet, Ofun};
 
 /// Ọ̀yẹ̀kú - The Sleeper (Exit/Sleep)
 #[derive(Default)]

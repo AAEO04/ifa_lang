@@ -12,6 +12,9 @@ use ifa_core::{
 use regex::Regex;
 use ropey::Rope;
 
+#[cfg(feature = "html")]
+use tl;
+
 /// Ìká - The Controller (Strings & Serialization)
 pub struct Ika;
 
@@ -125,12 +128,12 @@ impl Ika {
     }
 
     /// Serialize Matrix to CSV (yi_si_csv)
-    /// Expects List<List<String>> or List<List<Int/Float>>
+    /// Expects `List<List<String>>` or `List<List<Int/Float>>`
     pub fn yi_si_csv(&self, rows: &IfaValue) -> IfaResult<String> {
         let mut wtr = csv::Writer::from_writer(vec![]);
 
         if let IfaValue::List(list) = rows {
-            for row in list {
+            for row in list.iter() {
                 if let IfaValue::List(cells) = row {
                     let record: Vec<String> = cells.iter().map(|c| c.to_string()).collect();
                     wtr.write_record(&record)
@@ -157,12 +160,12 @@ impl Ika {
             let record = result.map_err(|e| IfaError::Custom(format!("CSV parse error: {}", e)))?;
             let row: Vec<IfaValue> = record
                 .iter()
-                .map(|s| IfaValue::Str(s.to_string()))
+                .map(|s| IfaValue::Str(s.to_string().into()))
                 .collect();
-            rows.push(IfaValue::List(row));
+            rows.push(IfaValue::List(std::sync::Arc::new(row)));
         }
 
-        Ok(IfaValue::List(rows))
+        Ok(IfaValue::List(std::sync::Arc::new(rows)))
     }
 
     // =========================================================================
@@ -259,6 +262,69 @@ impl Ika {
     pub fn decode(&self, json: &str) -> IfaResult<IfaValue> {
         self.yi_pada_json(json)
     }
+
+    // =========================================================================
+    // HTML OPERATIONS (`html` feature)
+    // =========================================================================
+
+    #[cfg(feature = "html")]
+    /// Attempt to parse HTML into a reusable DOM handle.
+    ///
+    /// **Not yet implemented.** `tl::VDom` has a lifetime tied to the input `&str`,
+    /// making it impossible to store in an opaque `ResourceToken` without unsafe
+    /// self-referential structs. Use the one-shot extraction methods below
+    /// (`mo` / `wa` / `oruko`) which parse and extract in a single pass instead.
+    ///
+    /// Returns `IfaValue::Null` — callers must check for this.
+    pub fn tumo(&self, _html: &str) -> IfaValue {
+        IfaValue::Null
+    }
+
+    #[cfg(feature = "html")]
+    /// Strip all HTML tags and return the plain text content (mọ́ — to clean).
+    pub fn mo(&self, html: &str) -> String {
+        self.tumo_html(html)
+    }
+
+    #[cfg(feature = "html")]
+    /// Parse and sanitize HTML — extract all text nodes (túmọ̀_html).
+    pub fn tumo_html(&self, html: &str) -> String {
+        let dom = tl::parse(html, tl::ParserOptions::default()).unwrap();
+        let parser = dom.parser();
+        let mut text = String::new();
+        for node in dom.nodes() {
+            if let Some(t) = node.as_text() {
+                text.push_str(t.get(parser));
+            }
+        }
+        text
+    }
+
+    #[cfg(feature = "html")]
+    /// Query selector — returns text content of all matching nodes (wáà — to look for).
+    ///
+    /// `ika.wa(html, "p")` → `["Para 1", "Para 2"]`
+    pub fn wa_html(&self, html: &str, selector: &str) -> Vec<String> {
+        let dom = tl::parse(html, tl::ParserOptions::default()).unwrap();
+        let parser = dom.parser();
+        let mut results = Vec::new();
+        if let Some(handle) = dom.query_selector(selector) {
+            for node in handle {
+                let text = node.get(parser).unwrap().inner_text(parser);
+                results.push(text.to_string());
+            }
+        }
+        results
+    }
+
+    #[cfg(feature = "html")]
+    /// Get title of an HTML document (orúkọ).
+    pub fn oruko_html(&self, html: &str) -> String {
+        self.wa_html(html, "title")
+            .into_iter()
+            .next()
+            .unwrap_or_default()
+    }
 }
 
 #[cfg(test)]
@@ -289,8 +355,8 @@ mod tests {
     fn test_json_serialization() {
         let ika = Ika;
         let mut map = HashMap::new();
-        map.insert("key".to_string(), IfaValue::Str("value".to_string()));
-        map.insert("number".to_string(), IfaValue::Int(42));
+        map.insert("key".into(), IfaValue::Str("value".into()));
+        map.insert("number".into(), IfaValue::Int(42));
         let val = IfaValue::Map(map);
 
         let json = ika.yi_si_json(&val).unwrap();
@@ -299,7 +365,7 @@ mod tests {
 
         let deserialized = ika.yi_pada_json(&json).unwrap();
         if let IfaValue::Map(m) = deserialized {
-            assert_eq!(m.get("key"), Some(&IfaValue::Str("value".to_string())));
+            assert_eq!(m.get("key"), Some(&IfaValue::Str("value".into())));
             assert_eq!(m.get("number"), Some(&IfaValue::Int(42)));
         } else {
             panic!("Expected Map");
@@ -311,11 +377,11 @@ mod tests {
         let ika = Ika;
         let rows = IfaValue::List(vec![
             IfaValue::List(vec![
-                IfaValue::Str("Name".to_string()),
-                IfaValue::Str("Age".to_string()),
+                IfaValue::Str("Name".into()),
+                IfaValue::Str("Age".into()),
             ]),
-            IfaValue::List(vec![IfaValue::Str("Alice".to_string()), IfaValue::Int(30)]),
-            IfaValue::List(vec![IfaValue::Str("Bob".to_string()), IfaValue::Int(25)]),
+            IfaValue::List(vec![IfaValue::Str("Alice".into()), IfaValue::Int(30)]),
+            IfaValue::List(vec![IfaValue::Str("Bob".into()), IfaValue::Int(25)]),
         ]);
 
         let csv = ika.yi_si_csv(&rows).unwrap();
@@ -328,7 +394,7 @@ mod tests {
         if let IfaValue::List(l) = parsed {
             assert_eq!(l.len(), 3);
             if let IfaValue::List(r0) = &l[0] {
-                assert_eq!(r0[0], IfaValue::Str("Name".to_string()));
+                assert_eq!(r0[0], IfaValue::Str("Name".into()));
             }
         }
     }

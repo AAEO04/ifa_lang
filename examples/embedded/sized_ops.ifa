@@ -1,0 +1,13 @@
+const ADDR = &0x4000_2000;
+const VAL = 255; // 0xFF
+
+ailewu {
+    // Should print (SIMULATION) MMIO Write8 -> *0x40002000 = 255
+    Store.write8(ADDR, VAL);
+    
+    // Test local const usage
+    const OFFSET = 4;
+    Store.write16(&0x4000_3000, OFFSET); 
+    
+    Store.write8(&0x5000_0000, 10);
+}

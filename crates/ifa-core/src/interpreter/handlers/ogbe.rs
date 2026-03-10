@@ -24,25 +24,34 @@ impl OduHandler for OgbeHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+
+        let arg0 = args.first();
+
         match method {
             // Type introspection
             "type" | "iru" => {
-                let type_name = args.first().map(|v| v.type_name()).unwrap_or("null");
-                Ok(IfaValue::Str(type_name.to_string()))
+                let type_name = arg0.map(|v| v.type_name()).unwrap_or("null");
+                Ok(IfaValue::str(type_name))
             }
 
             // Length
             "len" | "gigun" => {
-                let len = args.first().map(|v| v.len() as i64).unwrap_or(0);
-                Ok(IfaValue::Int(len))
+                let len = arg0.map(|v| match v {
+                    IfaValue::Str(s) => s.len() as i64,
+                    IfaValue::List(l) => l.len() as i64,
+                    #[cfg(feature = "std")]
+                    IfaValue::Map(m) => m.len() as i64,
+                    _ => 0
+                }).unwrap_or(0);
+                Ok(IfaValue::int(len))
             }
 
             // Assertion
             "assert" | "jẹri" => {
-                let cond = args.first().map(|v| v.is_truthy()).unwrap_or(false);
+                let cond = arg0.map(|v| v.is_truthy()).unwrap_or(false);
 
                 if cond {
-                    Ok(IfaValue::Bool(true))
+                    Ok(IfaValue::bool(true))
                 } else {
                     let msg = args
                         .get(1)
@@ -55,35 +64,37 @@ impl OduHandler for OgbeHandler {
             // Format/stringify
             "format" | "ṣẹda" => {
                 let output: Vec<String> = args.iter().map(|a| a.to_string()).collect();
-                Ok(IfaValue::Str(output.join(" ")))
+                Ok(IfaValue::str(output.join(" ")))
             }
 
             // Parse integer
             "parse_int" => {
-                let val = args
-                    .first()
-                    .and_then(|v| match v {
+                let val = if let Some(v) = arg0 {
+                     match v {
                         IfaValue::Str(s) => s.trim().parse::<i64>().ok(),
                         IfaValue::Int(n) => Some(*n),
                         IfaValue::Float(f) => Some(*f as i64),
                         _ => None,
-                    })
-                    .unwrap_or(0);
-                Ok(IfaValue::Int(val))
+                     }
+                } else {
+                    None
+                }.unwrap_or(0);
+                Ok(IfaValue::int(val))
             }
 
             // Parse float
             "parse_float" => {
-                let val = args
-                    .first()
-                    .and_then(|v| match v {
+                let val = if let Some(v) = arg0 {
+                    match v {
                         IfaValue::Str(s) => s.trim().parse::<f64>().ok(),
                         IfaValue::Float(f) => Some(*f),
                         IfaValue::Int(n) => Some(*n as f64),
                         _ => None,
-                    })
-                    .unwrap_or(0.0);
-                Ok(IfaValue::Float(val))
+                    }
+                } else {
+                    None
+                }.unwrap_or(0.0);
+                Ok(IfaValue::float(val))
             }
 
             _ => Err(IfaError::Runtime(format!(

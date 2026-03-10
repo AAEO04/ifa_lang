@@ -7,7 +7,7 @@
 use crate::impl_odu_domain;
 use std::env;
 
-use ifa_sandbox::{CapabilitySet, Ofun};
+use crate::sandbox_shim::{CapabilitySet, Ofun};
 
 /// Ọ̀gbè - The Initiator (System/Lifecycle)
 #[derive(Default)]

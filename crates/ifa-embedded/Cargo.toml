@@ -10,6 +10,27 @@ description = "Embedded/no_std runtime for Ifá-Lang"
 name = "ifa_embedded"
 path = "src/lib.rs"
 
+
+
+[features]
+default = []
+
+# --- Runtime Tiers ---
+# Tier 0 (Micro): default (no_std, no_alloc, stack-only)
+# Tier 1 (IoT): enables heap allocation and rich features
+alloc = [] 
+
+# --- IoT Stack Modules ---
+# Requires 'alloc'
+iot = ["alloc", "dep:serde", "dep:serde_json", "dep:log"] 
+storage = ["alloc", "dep:bincode", "dep:serde"]
+
+# --- Target Support ---
+esp32 = []   
+stm32 = []   
+rp2040 = []
+force_64bit = [] # Evaluate as i64 even on 32-bit (software emulation)
+
 [dependencies]
 # Core without std
 ifa-core = { path = "../ifa-core", default-features = false }
@@ -18,9 +39,8 @@ heapless = "0.8"
 # Interrupt-safe critical sections
 critical-section = "1.1"
 
-[features]
-default = []
-# Target-specific HAL implementations (future embassy/esp-hal integration)
-esp32 = []   # ESP32 (Xtensa) - will integrate with esp-hal
-stm32 = []   # STM32 (Cortex-M) - will integrate with embassy-stm32
-rp2040 = []  # RP2040 (Cortex-M0+) - will integrate with embassy-rp
+# --- Optional Dependencies (Tier 1/IoT) ---
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"], optional = true }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"], optional = true }
+log = { version = "0.4", default-features = false, optional = true }
+bincode = { version = "1.3", default-features = false, optional = true }

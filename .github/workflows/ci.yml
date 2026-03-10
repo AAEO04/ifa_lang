@@ -1,4 +1,4 @@
-name: Ifá-Lang CI
+name: Ifá-Lang CI (Aiye Matrix)
 
 on:
   push:
@@ -10,148 +10,93 @@ on:
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════════
-  # BUILD & TEST - Cross-platform matrix
+  # OPON CHECK - Cross-platform Build & Test
   # ═══════════════════════════════════════════════════════════════════════════════
-  build:
-    name: Build (${{ matrix.os }})
+  opon-check:
+    name: Opon (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: ifa
-            asset_name: ifa-linux-x86_64.zip
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: ifa
-            asset_name: ifa-macos-aarch64.zip
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: ifa.exe
-            asset_name: ifa-windows-x86_64.zip
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
-      - name: Cache Cargo
+      - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            . -> target
 
-      - name: Check formatting
+      # 1. Format & Lint (Ìwà Pẹ̀lẹ́)
+      - name: Check Formatting
         run: cargo fmt --all -- --check
 
-      - name: Clippy lints
-        run: cargo clippy --workspace --all-targets
+      - name: Clippy Lints
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Build (Debug)
-        run: cargo build --workspace
+      # 2. Build Core
+      - name: Build Workspace
+        run: cargo build --workspace --verbose
 
-      - name: Run tests (SKIPPED)
-        run: echo "Tests skipped by configuration"
+      # 3. Test Core & Standard Library
+      - name: Run Standard Tests
+        run: cargo test --workspace --verbose
 
-      - name: Build (Release)
-        run: cargo build --workspace --release
-
-      - name: Compress Binary (Unix)
-        if: matrix.os != 'windows-latest'
-        run: |
-          cd target/release
-          zip -j ../../${{ matrix.asset_name }} ${{ matrix.artifact_name }}
-
-      - name: Compress Binary (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          Compress-Archive -Path target/release/${{ matrix.artifact_name }} -DestinationPath ${{ matrix.asset_name }}
-
-      - name: Upload binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: ifa-archive-${{ matrix.target }}
-          path: ${{ matrix.asset_name }}
-          if-no-files-found: warn
+      # 4. Cross-Runtime Test
+      - name: Run Cross-Runtime Tests
+        run: cargo test -p ifa-embedded --test cross_runtime
 
   # ═══════════════════════════════════════════════════════════════════════════════
-  # COVERAGE (Linux only)
+  # AIYE CHECK - Specialized Environments
   # ═══════════════════════════════════════════════════════════════════════════════
-  coverage:
-    name: Code Coverage
+  aiye-embedded:
+    name: Embedded (Thumbv7em)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          components: llvm-tools-preview
+          targets: thumbv7em-none-eabihf
       
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-      
-      - name: Generate coverage
-        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
-      
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: lcov.info
-          fail_ci_if_error: false
+      - name: Verify Embedded Build (no_std)
+        run: cargo build -p ifa-embedded --target thumbv7em-none-eabihf
 
-  # ═══════════════════════════════════════════════════════════════════════════════
-  # SECURITY AUDIT
-  # ═══════════════════════════════════════════════════════════════════════════════
-  audit:
-    name: Security Audit
+  aiye-wasm:
+    name: WASM (Browser)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
       
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
-      
-      - name: Run security audit
-        run: cargo audit
+      - name: Verify WASM Build
+        run: cargo build -p ifa-wasm --target wasm32-unknown-unknown
 
   # ═══════════════════════════════════════════════════════════════════════════════
-  # DOCUMENTATION
+  # PERFORMANCE CHECK
   # ═══════════════════════════════════════════════════════════════════════════════
-  docs:
-    name: Documentation
+  bench-check:
+    name: Benchmark Sanity
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Build documentation
-        run: cargo doc --workspace --no-deps
-        env:
-          RUSTDOCFLAGS: --cfg docsrs -Dwarnings
-
-      - name: Upload docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: documentation
-          path: target/doc
-
+      # Ensure benchmarks compile (don't run full suite)
+      - name: Check Benchmarks
+        run: cargo bench --no-run

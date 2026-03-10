@@ -8,7 +8,7 @@ use crate::impl_odu_domain;
 use rand::{Rng, SeedableRng, seq::SliceRandom};
 use rand_chacha::ChaCha20Rng;
 
-use ifa_sandbox::{CapabilitySet, Ofun};
+use crate::sandbox_shim::{CapabilitySet, Ofun};
 
 /// Ọ̀wọ́nrín - The Shuffler (Random)
 pub struct Owonrin {

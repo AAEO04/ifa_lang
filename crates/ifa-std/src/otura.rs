@@ -20,7 +20,7 @@ const BLOCKED_HOSTS: &[&str] = &[
     "169.254.169.254", // AWS/Cloud metadata
 ];
 
-use ifa_sandbox::{CapabilitySet, Ofun};
+use crate::sandbox_shim::{CapabilitySet, Ofun};
 
 /// Òtúrá - The Messenger (Networking)
 #[derive(Default)]

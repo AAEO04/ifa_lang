@@ -10,6 +10,7 @@
 //! - `mo` - Clear screen
 
 use crate::impl_odu_domain;
+#[cfg(feature = "crossterm")]
 use crossterm::{
     cursor, execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
@@ -18,7 +19,7 @@ use crossterm::{
 use ifa_core::IfaValue;
 use std::io::{self, BufRead, Write};
 
-use ifa_sandbox::{CapabilitySet, Ofun};
+use crate::sandbox_shim::{CapabilitySet, Ofun};
 
 /// Ìrosù - The Voice (Console I/O)
 #[derive(Default)]
@@ -83,26 +84,33 @@ impl Irosu {
             return;
         }
 
-        let color_code = match color.to_lowercase().as_str() {
-            "red" | "pupa" => Color::Red,
-            "green" | "ewe" => Color::Green,
-            "blue" | "bulu" => Color::Blue,
-            "yellow" | "ofeefe" => Color::Yellow,
-            "magenta" => Color::Magenta,
-            "cyan" => Color::Cyan,
-            "white" | "funfun" => Color::White,
-            _ => Color::Reset,
-        };
+        #[cfg(feature = "crossterm")]
+        {
+            let color_code = match color.to_lowercase().as_str() {
+                "red" | "pupa" => Color::Red,
+                "green" | "ewe" => Color::Green,
+                "blue" | "bulu" => Color::Blue,
+                "yellow" | "ofeefe" => Color::Yellow,
+                "magenta" => Color::Magenta,
+                "cyan" => Color::Cyan,
+                "white" | "funfun" => Color::White,
+                _ => Color::Reset,
+            };
 
-        let mut stdout = io::stdout();
-        execute!(
-            stdout,
-            SetForegroundColor(color_code),
-            Print(text),
-            Print("\n"),
-            ResetColor
-        )
-        .ok();
+            let mut stdout = io::stdout();
+            execute!(
+                stdout,
+                SetForegroundColor(color_code),
+                Print(text),
+                Print("\n"),
+                ResetColor
+            )
+            .ok();
+        }
+        #[cfg(not(feature = "crossterm"))]
+        {
+            println!("{}", text);
+        }
     }
 
     /// Clear screen (mọ́)
@@ -111,13 +119,21 @@ impl Irosu {
             return;
         }
 
-        let mut stdout = io::stdout();
-        execute!(
-            stdout,
-            terminal::Clear(terminal::ClearType::All),
-            cursor::MoveTo(0, 0)
-        )
-        .ok();
+        #[cfg(feature = "crossterm")]
+        {
+            let mut stdout = io::stdout();
+            execute!(
+                stdout,
+                terminal::Clear(terminal::ClearType::All),
+                cursor::MoveTo(0, 0)
+            )
+            .ok();
+        }
+        #[cfg(not(feature = "crossterm"))]
+        {
+            // Just print newlines for poor man's clear
+            println!("\n\n\n\n\n");
+        }
     }
 
     /// Flush stdout (sàn)

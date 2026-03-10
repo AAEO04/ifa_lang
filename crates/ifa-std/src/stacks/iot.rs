@@ -207,9 +207,13 @@ impl EmbeddedGpio {
     }
 
     /// Read digital value
+    ///
+    /// This type has no connection to real hardware.
+    /// In simulation (backend feature), always returns `Err(NotInitialized)`
+    /// so callers know the value is not hardware-sourced.
+    /// On real targets, replace this with a platform HAL call.
     pub fn read(&self, _pin: u8) -> EmbeddedResult<bool> {
-        // Placeholder
-        Ok(false)
+        Err(EmbeddedError::NotInitialized)
     }
 
     /// PWM output (duty cycle 0-255)
@@ -219,9 +223,12 @@ impl EmbeddedGpio {
     }
 
     /// Analog read (ADC)
+    ///
+    /// This type has no connection to real hardware.
+    /// Returns `Err(NotInitialized)` in simulation so callers
+    /// know the value is not hardware-sourced.
     pub fn analog_read(&self, _pin: u8) -> EmbeddedResult<u16> {
-        // Placeholder
-        Ok(0)
+        Err(EmbeddedError::NotInitialized)
     }
 }
 

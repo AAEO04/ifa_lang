@@ -18,6 +18,8 @@ pub struct GpuContext {
     pub queue: Arc<Queue>,
     /// Cached compute pipelines by shader name
     pipeline_cache: Arc<RwLock<HashMap<String, Arc<wgpu::ComputePipeline>>>>,
+    /// Reusable staging buffer for readback (Linus optimization)
+    staging_buffer: Arc<RwLock<Option<wgpu::Buffer>>>,
 }
 
 #[cfg(feature = "gpu")]
@@ -27,6 +29,7 @@ impl Clone for GpuContext {
             device: self.device.clone(),
             queue: self.queue.clone(),
             pipeline_cache: self.pipeline_cache.clone(),
+            staging_buffer: self.staging_buffer.clone(),
         }
     }
 }
@@ -62,10 +65,12 @@ impl GpuContext {
             device: Arc::new(device),
             queue: Arc::new(queue),
             pipeline_cache: Arc::new(RwLock::new(HashMap::new())),
+            staging_buffer: Arc::new(RwLock::new(None)),
         })
     }
 
     /// Blocking initialization (for synchronous CLI)
+    #[cfg(any(feature = "pollster", feature = "gpu_native"))]
     pub fn new_blocking() -> Result<Self, String> {
         pollster::block_on(Self::new())
     }
@@ -113,6 +118,33 @@ impl GpuContext {
         let mut cache = self.pipeline_cache.write().unwrap();
         cache.insert(name.to_string(), pipeline.clone());
         pipeline
+    }
+
+    /// Dispatch a cached pipeline by name
+    pub fn dispatch_pipeline(&self, name: &str, x: u32, y: u32, z: u32) -> Result<(), String> {
+        let cache = self.pipeline_cache.read().unwrap();
+        let pipeline = cache
+            .get(name)
+            .ok_or_else(|| format!("Pipeline '{}' not found", name))?;
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("dispatch_encoder"),
+            });
+
+        {
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("dispatch_pass"),
+                timestamp_writes: None,
+            });
+            pass.set_pipeline(pipeline);
+            // No bind groups for now (simple dispatch)
+            pass.dispatch_workgroups(x, y, z);
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+        Ok(())
     }
 
     /// Create a Compute Pipeline from WGSL source (for backwards compatibility)
@@ -408,6 +440,63 @@ impl GpuContext {
     pub fn sync(&self) {
         self.device.poll(wgpu::Maintain::Wait);
     }
+
+    /// Read buffer content back to CPU
+    /// Handles staging buffer creation and copy
+    /// Read buffer content back to CPU
+    /// Handles staging buffer reuse and copy
+    pub fn read_buffer(&self, buffer: &wgpu::Buffer) -> Result<Vec<u8>, String> {
+        let size = buffer.size();
+        let mut staging_guard = self.staging_buffer.write().unwrap();
+
+        // Check if existing buffer is sufficient
+        let need_recreate = match &*staging_guard {
+            Some(b) => b.size() < size,
+            None => true,
+        };
+
+        if need_recreate {
+            let new_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("reusable_staging_buffer"),
+                size: size.max(1024), // Min size 1KB
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            *staging_guard = Some(new_buffer);
+        }
+
+        let staging_buffer = staging_guard.as_ref().unwrap();
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("readback_encoder"),
+            });
+
+        encoder.copy_buffer_to_buffer(buffer, 0, staging_buffer, 0, size);
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        let slice = staging_buffer.slice(..size);
+        let (tx, rx) = std::sync::mpsc::channel();
+
+        slice.map_async(wgpu::MapMode::Read, move |v| {
+            tx.send(v).unwrap();
+        });
+
+        self.device.poll(wgpu::Maintain::Wait);
+
+        match rx.recv() {
+            Ok(Ok(_)) => {
+                let data = slice.get_mapped_range();
+                let result = data.to_vec();
+                drop(data);
+                staging_buffer.unmap();
+                Ok(result)
+            }
+            Ok(Err(e)) => Err(format!("Map failed: {}", e)),
+            Err(_) => Err("Device dropped".into()),
+        }
+    }
 }
 
 /// GPU Buffer Wrapper (GpuVec)
@@ -480,6 +569,9 @@ impl MemoryPool {
         const ALIGNMENT: u64 = 256;
         let aligned_size = (size + ALIGNMENT - 1) & !(ALIGNMENT - 1);
 
+        const MAX_RETRIES: u32 = 1000;
+        let mut retries = 0;
+
         loop {
             let current = self.next_offset.load(Ordering::Relaxed);
             let new_offset = current + aligned_size;
@@ -501,7 +593,22 @@ impl MemoryPool {
                         slab_index: None,
                     });
                 }
-                Err(_) => continue,
+                Err(_) => {
+                    retries += 1;
+                    if retries > MAX_RETRIES {
+                        // Yield to reduce contention before retrying or failing?
+                        // For now, simple yield and retry, but if we want to avoid infinite loop strictly, we should maybe error out?
+                        // But allocation failure is Option::None.
+                        // Let's yield and continue for a bit more?
+                        // "Linus says: Do not hang the thread."
+                        // If we fail 1000 times to increment an atomic, something is very wrong or highly contended.
+                        // Let's return None to signal "Busy/Failed".
+                        std::thread::yield_now();
+                        if retries > MAX_RETRIES * 10 {
+                            return None;
+                        }
+                    }
+                }
             }
         }
     }
@@ -609,6 +716,7 @@ impl Slab {
 
     fn allocate(&self) -> Option<usize> {
         for (word_idx, word) in self.free_bitmap.iter().enumerate() {
+            let mut retries = 0;
             loop {
                 let current = word.load(Ordering::Relaxed);
                 if current == 0 {
@@ -633,7 +741,16 @@ impl Slab {
                     Ordering::Relaxed,
                 ) {
                     Ok(_) => return Some(slot_idx),
-                    Err(_) => continue, // Retry
+                    Err(_) => {
+                        retries += 1;
+                        if retries > 100 {
+                            std::thread::yield_now();
+                            if retries > 200 {
+                                break; // Contention too high, try next word
+                            }
+                        }
+                        continue;
+                    }
                 }
             }
         }

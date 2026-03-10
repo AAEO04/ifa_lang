@@ -11,7 +11,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
-use ifa_sandbox::{CapabilitySet, Ofun};
+use crate::sandbox_shim::{CapabilitySet, Ofun};
 
 /// Òdí - The Seal (Files/DB)
 #[derive(Default)]
@@ -63,33 +63,33 @@ impl Odi {
     pub fn ka(&self, path: &str) -> IfaResult<String> {
         let path = PathBuf::from(path);
         self.check_read(&path)?;
-        fs::read_to_string(&path).map_err(IfaError::IoError)
+        fs::read_to_string(&path).map_err(|e| IfaError::IoError(e.to_string()))
     }
 
     /// Read file as bytes
     pub fn ka_bytes(&self, path: &str) -> IfaResult<Vec<u8>> {
         let path = PathBuf::from(path);
         self.check_read(&path)?;
-        fs::read(&path).map_err(IfaError::IoError)
+        fs::read(&path).map_err(|e| IfaError::IoError(e.to_string()))
     }
 
     /// Read file lines
     pub fn ka_ila(&self, path: &str) -> IfaResult<Vec<String>> {
         let path = PathBuf::from(path);
         self.check_read(&path)?;
-        let file = File::open(&path).map_err(IfaError::IoError)?;
+        let file = File::open(&path).map_err(|e| IfaError::IoError(e.to_string()))?;
         let reader = BufReader::new(file);
         reader
             .lines()
             .collect::<Result<Vec<_>, _>>()
-            .map_err(IfaError::IoError)
+            .map_err(|e| IfaError::IoError(e.to_string()))
     }
 
     /// Write file (kọ)
     pub fn ko(&self, path: &str, content: &str) -> IfaResult<()> {
         let path = PathBuf::from(path);
         self.check_write(&path)?;
-        fs::write(&path, content).map_err(IfaError::IoError)
+        fs::write(&path, content).map_err(|e| IfaError::IoError(e.to_string()))
     }
 
     /// Append to file (fí)
@@ -100,9 +100,9 @@ impl Odi {
             .create(true)
             .append(true)
             .open(&path)
-            .map_err(IfaError::IoError)?;
+            .map_err(|e| IfaError::IoError(e.to_string()))?;
         file.write_all(content.as_bytes())
-            .map_err(IfaError::IoError)
+            .map_err(|e| IfaError::IoError(e.to_string()))
     }
 
     /// Check if file exists (wà)
@@ -119,21 +119,21 @@ impl Odi {
     pub fn pa_faili(&self, path: &str) -> IfaResult<()> {
         let path = PathBuf::from(path);
         self.check_write(&path)?;
-        fs::remove_file(&path).map_err(IfaError::IoError)
+        fs::remove_file(&path).map_err(|e| IfaError::IoError(e.to_string()))
     }
 
     /// Create directory (ṣẹ̀dá àpótí)
     pub fn seda_apoti(&self, path: &str) -> IfaResult<()> {
         let path = PathBuf::from(path);
         self.check_write(&path)?;
-        fs::create_dir_all(&path).map_err(IfaError::IoError)
+        fs::create_dir_all(&path).map_err(|e| IfaError::IoError(e.to_string()))
     }
 
     /// List directory (àkójọ)
     pub fn akojo(&self, path: &str) -> IfaResult<Vec<String>> {
         let path = PathBuf::from(path);
         self.check_read(&path)?;
-        let entries = fs::read_dir(&path).map_err(IfaError::IoError)?;
+        let entries = fs::read_dir(&path).map_err(|e| IfaError::IoError(e.to_string()))?;
 
         Ok(entries
             .filter_map(|e| e.ok())
@@ -145,7 +145,7 @@ impl Odi {
     pub fn iwon(&self, path: &str) -> IfaResult<u64> {
         let path = PathBuf::from(path);
         self.check_read(&path)?;
-        let meta = fs::metadata(&path).map_err(IfaError::IoError)?;
+        let meta = fs::metadata(&path).map_err(|e| IfaError::IoError(e.to_string()))?;
         Ok(meta.len())
     }
 

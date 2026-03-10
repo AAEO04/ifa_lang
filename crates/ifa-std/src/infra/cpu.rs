@@ -196,7 +196,7 @@ impl CpuContext {
         a.par_iter().zip(b.par_iter()).map(|(x, y)| x * y).collect()
     }
 
-    /// Parallel scale and bias: output[i] = input[i] * scale + bias
+    /// Parallel scale and bias: output\[i\] = input\[i\] * scale + bias
     pub fn scale_bias(data: &[f32], scale: f32, bias: f32) -> Vec<f32> {
         use rayon::prelude::*;
         data.par_iter().map(|x| x * scale + bias).collect()

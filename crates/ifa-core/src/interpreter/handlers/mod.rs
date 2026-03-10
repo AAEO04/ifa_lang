@@ -59,11 +59,22 @@ pub use oyeku::OyekuHandler;
 pub use fidio::FidioHandler;
 pub use ohun::OhunHandler;
 
+/// Helper trait to relax Send+Sync bound on WASM
+#[cfg(not(target_arch = "wasm32"))]
+pub trait OduHandlerSendSync {}
+#[cfg(not(target_arch = "wasm32"))]
+impl<T> OduHandlerSendSync for T {}
+
+#[cfg(target_arch = "wasm32")]
+pub trait OduHandlerSendSync {}
+#[cfg(target_arch = "wasm32")]
+impl<T> OduHandlerSendSync for T {}
+
 /// Trait for domain-specific operation handlers.
 ///
 /// Each Odù domain implements this trait to handle its methods.
 /// The interpreter dispatches to the appropriate handler based on the domain.
-pub trait OduHandler: Send + Sync {
+pub trait OduHandler: OduHandlerSendSync {
     /// Returns the domain this handler is responsible for.
     fn domain(&self) -> OduDomain;
 
@@ -110,6 +121,7 @@ impl HandlerRegistry {
 
         // Infrastructure handlers
         handlers.insert(OduDomain::Ohun, Box::new(OhunHandler));
+        handlers.insert(OduDomain::Ohun, Box::new(OhunHandler));
         handlers.insert(OduDomain::Fidio, Box::new(FidioHandler));
 
         HandlerRegistry { handlers }
@@ -117,7 +129,9 @@ impl HandlerRegistry {
 
     /// Get a handler for the given domain.
     pub fn get(&self, domain: &OduDomain) -> Option<&dyn OduHandler> {
-        self.handlers.get(domain).map(|b| b.as_ref())
+        self.handlers
+            .get(domain)
+            .map(|b: &Box<dyn OduHandler>| b.as_ref())
     }
 
     /// Execute an Odù call using the appropriate handler.
@@ -141,6 +155,11 @@ impl HandlerRegistry {
     /// List all registered domains.
     pub fn domains(&self) -> Vec<OduDomain> {
         self.handlers.keys().cloned().collect()
+    }
+
+    /// Register a new handler (Dependency Injection)
+    pub fn register(&mut self, handler: Box<dyn OduHandler>) {
+        self.handlers.insert(handler.domain(), handler);
     }
 }
 

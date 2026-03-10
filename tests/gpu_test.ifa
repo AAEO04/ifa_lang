@@ -1,0 +1,38 @@
+# GPU Compute Test
+# Verifies WebGPU Compute Shader Execution via Sys Facade
+
+# 1. Initialize GPU
+ayanmo init_ok = Sys.gpu_init();
+Irosu.so("GPU Init: " + init_ok);
+
+verify (init_ok == otito);
+
+# 2. Matrix Multiplication (Sys.gpu_matmul)
+# A[2,2] * B[2,2]
+ayanmo result = Sys.gpu_matmul(
+    [[1.0, 2.0], [3.0, 4.0]], 
+    [[0.0, 1.0], [1.0, 0.0]]
+);
+Irosu.so("MatMul Result: " + result);
+
+# 3. Custom Shader Dispatch
+# Load a simple compute shader
+ayanmo shader_code = "
+@compute @workgroup_size(1)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+    // No-op for test, just checking compilation pipeline
+}
+";
+
+ayanmo shader_ok = Sys.gpu_load_shader("noop_shader", shader_code);
+Irosu.so("Shader Load: " + shader_ok);
+verify (shader_ok == otito);
+
+# Dispatch (1,1,1)
+ayanmo dispatch_ok = Sys.gpu_dispatch("noop_shader", 1, 1, 1);
+Irosu.so("Dispatch: " + dispatch_ok);
+verify (dispatch_ok == otito);
+
+# Sync
+Sys.gpu_sync();
+

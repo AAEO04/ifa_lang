@@ -1,0 +1,13 @@
+# Security audit configuration
+# https://rustsec.org/
+
+[advisories]
+# Ignore advisories that have no fix available
+
+# fast-float 0.2.0 - Segmentation fault (RUSTSEC-2025-0003)
+# This is a transitive dependency from boa_engine with no fix available.
+# Tracked upstream: once boa_engine updates, we can remove this ignore.
+ignore = [
+    "RUSTSEC-2025-0003",  # fast-float - no fix available (via boa_engine)
+    "RUSTSEC-2024-0379",  # fast-float - unsound (same crate, same reason)
+]

@@ -6,6 +6,8 @@
 //! When `network` feature is enabled, uses `ureq` for real HTTP requests.
 //! Otherwise, returns simulated responses for development.
 
+
+
 use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
@@ -70,104 +72,108 @@ impl OduHandler for OturaHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+
+        let arg0 = args.first();
+        let arg1 = args.get(1);
+
         match method {
-            // HTTP GET - real or simulated based on feature
+            // HTTP GET
             "http_get" | "gba" | "get" => {
-                if let Some(IfaValue::Str(url)) = args.first() {
-                    let response = http_get(url)?;
-                    Ok(IfaValue::Str(response))
-                } else {
-                    Err(IfaError::Runtime("http_get requires URL".into()))
-                }
+                if let Some(IfaValue::Str(url)) = arg0 {
+                        let response = http_get(url)?;
+                        Ok(IfaValue::str(response))
+                    } else {
+                        Err(IfaError::Runtime("http_get requires URL".into()))
+                    }
             }
 
-            // HTTP POST - real or simulated based on feature
+            // HTTP POST
             "http_post" | "fi" | "post" => {
-                if args.len() >= 2 {
-                    if let (IfaValue::Str(url), body) = (&args[0], &args[1]) {
-                        let body_str = match body {
-                            IfaValue::Str(s) => s.clone(),
-                            _ => serde_json::to_string(body)
-                                .map_err(|e| IfaError::Runtime(e.to_string()))?,
-                        };
+                if let (Some(IfaValue::Str(url)), Some(body_val)) = (arg0, arg1) {
+                         let body_str = match body_val {
+                             IfaValue::Str(s) => s.to_string(),
+                             // Use serde_json to stringify other types
+                             _ => serde_json::to_string(body_val)
+                                 .map_err(|e| IfaError::Runtime(e.to_string()))?,
+                         };
                         let response = http_post(url, &body_str)?;
-                        return Ok(IfaValue::Str(response));
-                    }
+                        return Ok(IfaValue::str(response));
                 }
                 Err(IfaError::Runtime("http_post requires URL and body".into()))
             }
 
-            // Fetch JSON - parse response as JSON
+            // Fetch JSON
             "fetch_json" | "gba_json" => {
-                if let Some(IfaValue::Str(url)) = args.first() {
-                    let response = http_get(url)?;
-                    // Parse JSON response
-                    let json: serde_json::Value = serde_json::from_str(&response)
-                        .map_err(|e| IfaError::Runtime(format!("JSON parse error: {}", e)))?;
-                    // Convert to IfaValue::Map
-                    fn json_to_ifa(v: serde_json::Value) -> IfaValue {
-                        match v {
-                            serde_json::Value::Null => IfaValue::Null,
-                            serde_json::Value::Bool(b) => IfaValue::Bool(b),
-                            serde_json::Value::Number(n) => {
-                                if let Some(i) = n.as_i64() {
-                                    IfaValue::Int(i)
-                                } else {
-                                    IfaValue::Float(n.as_f64().unwrap_or(0.0))
+                 if let Some(IfaValue::Str(url)) = arg0 {
+                         let response = http_get(url)?;
+                        // Parse JSON response
+                        let json: serde_json::Value = serde_json::from_str(&response)
+                            .map_err(|e| IfaError::Runtime(format!("JSON parse error: {}", e)))?;
+                        
+                        fn json_to_ifa(v: serde_json::Value) -> IfaValue {
+                            match v {
+                                serde_json::Value::Null => IfaValue::null(),
+                                serde_json::Value::Bool(b) => IfaValue::bool(b),
+                                serde_json::Value::Number(n) => {
+                                    if let Some(i) = n.as_i64() {
+                                        IfaValue::int(i)
+                                    } else {
+                                        IfaValue::float(n.as_f64().unwrap_or(0.0))
+                                    }
                                 }
+                                serde_json::Value::String(s) => IfaValue::str(s),
+                                serde_json::Value::Array(arr) => {
+                                    IfaValue::list(arr.into_iter().map(json_to_ifa).collect())
+                                }
+                                serde_json::Value::Object(obj) => IfaValue::map(
+                                    obj.into_iter()
+                                        .map(|(k, v)| (k, json_to_ifa(v)))
+                                        .collect(),
+                                ),
                             }
-                            serde_json::Value::String(s) => IfaValue::Str(s),
-                            serde_json::Value::Array(arr) => {
-                                IfaValue::List(arr.into_iter().map(json_to_ifa).collect())
-                            }
-                            serde_json::Value::Object(obj) => IfaValue::Map(
-                                obj.into_iter().map(|(k, v)| (k, json_to_ifa(v))).collect(),
-                            ),
                         }
+                        return Ok(json_to_ifa(json));
                     }
-                    return Ok(json_to_ifa(json));
-                }
-                Err(IfaError::Runtime("fetch_json requires URL".into()))
+                 Err(IfaError::Runtime("fetch_json requires URL".into()))
             }
 
-            // Start HTTP server (placeholder - would need tokio/axum)
+            // Start HTTP server
             "serve" | "sin" | "listen" => {
-                if let Some(IfaValue::Int(port)) = args.first() {
-                    // Server functionality requires async runtime
-                    return Err(IfaError::Runtime(format!(
-                        "HTTP server on port {} requires async runtime. Use ifa-std backend stack.",
-                        port
-                    )));
-                }
+                 if let Some(IfaValue::Int(port)) = arg0 {
+                         return Err(IfaError::Runtime(format!(
+                            "HTTP server on port {} requires async runtime. Use ifa-std backend stack.",
+                            port
+                        )));
+                    }
                 Err(IfaError::Runtime("serve requires port number".into()))
             }
 
-            // WebSocket connect (placeholder - would need tungstenite)
+            // WebSocket connect
             "ws_connect" | "asopọ_ws" => {
-                if let Some(IfaValue::Str(url)) = args.first() {
-                    return Err(IfaError::Runtime(format!(
-                        "WebSocket to {} requires websocket library. Use ifa-std backend stack.",
-                        url
-                    )));
-                }
+                 if let Some(IfaValue::Str(url)) = arg0 {
+                         return Err(IfaError::Runtime(format!(
+                            "WebSocket to {} requires websocket library. Use ifa-std backend stack.",
+                            url
+                        )));
+                    }
                 Err(IfaError::Runtime("ws_connect requires URL".into()))
             }
 
             // URL encode
             "url_encode" | "koodu_url" => {
-                if let Some(IfaValue::Str(text)) = args.first() {
-                    let encoded: String = text
-                        .chars()
-                        .map(|c| {
-                            if c.is_ascii_alphanumeric() || "-_.~".contains(c) {
-                                c.to_string()
-                            } else {
-                                format!("%{:02X}", c as u32)
-                            }
-                        })
-                        .collect();
-                    return Ok(IfaValue::Str(encoded));
-                }
+                 if let Some(IfaValue::Str(text)) = arg0 {
+                        let encoded: String = text
+                            .chars()
+                            .map(|c: char| {
+                                if c.is_ascii_alphanumeric() || "-_.~".contains(c) {
+                                    c.to_string()
+                                } else {
+                                    format!("%{:02X}", c as u32)
+                                }
+                            })
+                            .collect();
+                        return Ok(IfaValue::str(encoded));
+                    }
                 Err(IfaError::Runtime("url_encode requires string".into()))
             }
 

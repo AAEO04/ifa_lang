@@ -24,11 +24,12 @@ impl OduHandler for OkanranHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+        let arg0 = args.first();
+
         match method {
             // Throw error
             "ta" | "throw" | "error" => {
-                let msg = args
-                    .first()
+                let msg = arg0
                     .map(|v| v.to_string())
                     .unwrap_or_else(|| "Unknown error".to_string());
                 Err(IfaError::Runtime(msg))
@@ -36,8 +37,7 @@ impl OduHandler for OkanranHandler {
 
             // Panic (fatal error)
             "jagun" | "panic" => {
-                let msg = args
-                    .first()
+                let msg = arg0
                     .map(|v| v.to_string())
                     .unwrap_or_else(|| "Panic!".to_string());
                 panic!("{}", msg);
@@ -45,10 +45,10 @@ impl OduHandler for OkanranHandler {
 
             // Assert condition
             "jẹri" | "assert" => {
-                let cond = args.first().map(|v| v.is_truthy()).unwrap_or(false);
+                let cond = arg0.map(|v| v.is_truthy()).unwrap_or(false);
 
                 if cond {
-                    Ok(IfaValue::Bool(true))
+                    Ok(IfaValue::bool(true))
                 } else {
                     let msg = args
                         .get(1)
@@ -60,12 +60,13 @@ impl OduHandler for OkanranHandler {
 
             // Assert with message (explicit)
             "jẹri_asọ" | "assert_msg" => {
-                if args.len() >= 2 {
-                    let cond = args[0].is_truthy();
+                if let Some(cond_val) = arg0 {
+                    let cond = cond_val.is_truthy();
                     if !cond {
-                        return Err(IfaError::Runtime(format!("[assert] {}", args[1])));
+                         let msg = args.get(1).map(|v| v.to_string()).unwrap_or_default();
+                        return Err(IfaError::Runtime(format!("[assert] {}", msg)));
                     }
-                    return Ok(IfaValue::Bool(true));
+                    return Ok(IfaValue::bool(true));
                 }
                 Err(IfaError::Runtime(
                     "assert_msg requires condition and message".into(),
@@ -74,14 +75,14 @@ impl OduHandler for OkanranHandler {
 
             // Assert equal
             "jẹri_bakan" | "assert_eq" => {
-                if args.len() >= 2 {
-                    if args[0] == args[1] {
-                        return Ok(IfaValue::Bool(true));
+                if let (Some(left), Some(right)) = (arg0, args.get(1)) {
+                    if left.is_equal(right) {
+                        return Ok(IfaValue::bool(true));
                     }
                     let msg = args
                         .get(2)
                         .map(|v| v.to_string())
-                        .unwrap_or_else(|| format!("Expected {:?} == {:?}", args[0], args[1]));
+                        .unwrap_or_else(|| format!("Expected {:?} == {:?}", left, right));
                     return Err(IfaError::Runtime(format!("[assert_eq] {}", msg)));
                 }
                 Err(IfaError::Runtime("assert_eq requires two values".into()))
@@ -89,14 +90,14 @@ impl OduHandler for OkanranHandler {
 
             // Assert not equal
             "jẹri_yato" | "assert_ne" => {
-                if args.len() >= 2 {
-                    if args[0] != args[1] {
-                        return Ok(IfaValue::Bool(true));
+                if let (Some(left), Some(right)) = (arg0, args.get(1)) {
+                   if !left.is_equal(right) {
+                        return Ok(IfaValue::bool(true));
                     }
                     let msg = args
                         .get(2)
                         .map(|v| v.to_string())
-                        .unwrap_or_else(|| format!("Expected {:?} != {:?}", args[0], args[1]));
+                        .unwrap_or_else(|| format!("Expected {:?} != {:?}", left, right));
                     return Err(IfaError::Runtime(format!("[assert_ne] {}", msg)));
                 }
                 Err(IfaError::Runtime("assert_ne requires two values".into()))

@@ -6,7 +6,47 @@ use chrono::Local;
 use color_eyre::eyre::Result;
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+// User Documentation Structures
+#[derive(Debug, Clone, Default)]
+pub struct UserDoc {
+    pub odus: Vec<UserOdu>,
+    pub orphans: Vec<DocItem>, // Functions/Constants not in an Odù
+}
+
+#[derive(Debug, Clone)]
+pub struct UserOdu {
+    pub name: String,
+    pub description: String,
+    pub items: Vec<DocItem>,
+    pub slug: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct DocItem {
+    pub name: String,
+    pub kind: String, // "ese", "ayanmo", "const"
+    pub signature: String,
+    pub description: String,
+}
+
+impl UserDoc {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn add_odu(&mut self, name: String, description: String) -> &mut UserOdu {
+        let slug = name.to_lowercase();
+        self.odus.push(UserOdu {
+            name,
+            description,
+            items: Vec::new(),
+            slug,
+        });
+        self.odus.last_mut().unwrap()
+    }
+}
 
 /// Odù domain metadata with ASCII slug for filenames
 pub struct OduInfo {
@@ -306,10 +346,12 @@ footer {
 "#;
 
 /// Generate the main index.html page
-pub fn generate_index_html() -> String {
+pub fn generate_index_html(user_doc: &UserDoc) -> String {
     let timestamp = Local::now().format("%Y-%m-%d %H:%M").to_string();
 
     let mut odu_cards = String::new();
+    
+    // Standard Odù
     for odu in ODU_DOMAINS {
         odu_cards.push_str(&format!(r#"
             <a href="{slug}.html" class="odu-card">
@@ -326,6 +368,52 @@ pub fn generate_index_html() -> String {
             desc = odu.description
         ));
     }
+
+    // User Odù
+    let mut user_odu_cards = String::new();
+    if !user_doc.odus.is_empty() {
+        for odu in &user_doc.odus {
+             user_odu_cards.push_str(&format!(r#"
+            <a href="user_{slug}.html" class="odu-card" style="border-color: var(--gold);">
+                <h3>📘 {name}</h3>
+                <p class="meaning">User Domain</p>
+                <p>{desc}</p>
+            </a>
+        "#,
+            slug = odu.slug,
+            name = odu.name,
+            desc = odu.description
+        ));
+        }
+    }
+    
+    // User Orphans (Globals)
+    let mut orphan_html = String::new();
+    if !user_doc.orphans.is_empty() {
+        orphan_html.push_str("<h2>Global Verses & Constants</h2><div class=\"odu-grid\">");
+        for item in &user_doc.orphans {
+            let icon = match item.kind.as_str() {
+                "ese" => "📜",
+                "const" => "💎", 
+                "ayanmo" => "📦",
+                _ => "📄"
+            };
+            orphan_html.push_str(&format!(r#"
+                <div class="odu-card">
+                    <h3>{icon} {name}</h3>
+                    <p><code>{sig}</code></p>
+                    <p class="meaning">{desc}</p>
+                </div>
+            "#,
+                icon = icon,
+                name = item.name,
+                sig = item.signature,
+                desc = item.description
+            ));
+        }
+        orphan_html.push_str("</div>");
+    }
+
 
     format!(
         r#"<!DOCTYPE html>
@@ -344,7 +432,11 @@ pub fn generate_index_html() -> String {
             <p style="color: var(--text-dim);">Generated {timestamp}</p>
         </header>
         
-        <h2>The 16 Odù Domains</h2>
+        {user_section}
+        
+        {orphan_section}
+
+        <h2>The 16 Standard Odù Domains</h2>
         <div class="odu-grid">
             {odu_cards}
         </div>
@@ -659,7 +751,11 @@ pub fn generate_index_html() -> String {
 </html>"#,
         css = CSS,
         timestamp = timestamp,
-        odu_cards = odu_cards
+        odu_cards = odu_cards,
+        user_section = if !user_odu_cards.is_empty() {
+            format!("<h2>Your Project Odù</h2><div class=\"odu-grid\">{}</div>", user_odu_cards)
+        } else { String::new() },
+        orphan_section = orphan_html
     )
 }
 
@@ -910,27 +1006,254 @@ pub fn get_stdlib_methods() -> HashMap<&'static str, Vec<(&'static str, &'static
     map
 }
 
+/// Generate a page for a User Odù
+pub fn generate_user_odu_page(odu: &UserOdu) -> String {
+    let mut methods_html = String::new();
+    
+    for item in &odu.items {
+        let icon = match item.kind.as_str() {
+            "ese" => "📜",
+            "const" => "💎", 
+            "ayanmo" => "📦",
+             _ => "📄"
+        };
+        
+        methods_html.push_str(&format!(
+            r#"
+            <div class="verse">
+                <div class="verse-name">{icon} {name}</div>
+                <div class="verse-desc"><code>{sig}</code></div>
+                <p style="margin-top:0.5rem">{desc}</p>
+            </div>
+        "#,
+            icon = icon,
+            name = item.name,
+            sig = item.signature,
+            desc = item.description
+        ));
+    }
+
+    format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{name} - Ifá Corpus</title>
+    <style>{css}</style>
+</head>
+<body>
+    <nav class="nav">
+        <h3><a href="index.html">🔮 Ifá Corpus</a></h3>
+        <hr style="border-color: var(--accent); margin: 1rem 0;">
+        <a href="index.html">← Back to Index</a>
+    </nav>
+    
+    <div class="main-content">
+        <div class="container">
+            <header>
+                <h1>📘 {name}</h1>
+                <p class="meaning">User Domain</p>
+                <p>{desc}</p>
+            </header>
+            
+            <h2>Verses & Items</h2>
+            {methods_html}
+            
+            <footer>
+                <p>Generated from source code Oríkì</p>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>"#,
+        css = CSS,
+        name = odu.name,
+        desc = odu.description,
+        methods_html = if methods_html.is_empty() {
+            "<p class=\"meaning\">No documentation found.</p>".to_string()
+        } else {
+            methods_html
+        }
+    )
+}
+
+/// Recursively scan directory for .ifa files
+fn walk_dir(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                walk_dir(&path, files)?;
+            } else if let Some(ext) = path.extension() {
+                if ext == "ifa" {
+                    files.push(path);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Parse a single file for Oríkì
+fn parse_file(path: &Path, doc: &mut UserDoc) -> Result<()> {
+    let content = fs::read_to_string(path)?;
+    let mut current_docs = String::new();
+    
+    // Simple state machine
+    for line in content.lines() {
+        let trimmed = line.trim();
+        
+        if trimmed.starts_with("///") {
+            let doc_line = trimmed[3..].trim();
+            if !current_docs.is_empty() {
+                current_docs.push(' '); // join lines with space
+            }
+            current_docs.push_str(doc_line);
+            continue;
+        }
+        
+        // Ignore empty lines between docs and definition? 
+        // For now, strict adjacency or single empty line.
+        if trimmed.is_empty() {
+            // Keep docs for one empty line? No, let's reset to avoid wrong attribution
+            // Actually, usually doc comments must immediately precede.
+            if !current_docs.is_empty() {
+               // allow one blank line? Let's strictly require adjacency for V1
+               // current_docs.clear();
+            }
+            continue;
+        }
+        
+        // Check for definitions
+        if !current_docs.is_empty() {
+            // ODÙ Definition
+            // odu Calculator {
+            if trimmed.starts_with("odu ") || trimmed.starts_with("odù ") || trimmed.starts_with("class ") {
+                 let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                 if parts.len() >= 2 {
+                     let name = parts[1].trim_matches('{');
+                     doc.add_odu(name.to_string(), current_docs.clone());
+                 }
+                 current_docs.clear();
+                 continue;
+            }
+            
+            // ESE Definition
+            // ese add(a, b) {
+            if trimmed.starts_with("ese ") || trimmed.starts_with("ẹsẹ ") || trimmed.starts_with("fn ") {
+                // Extract name and signature
+                 let open_paren = trimmed.find('(');
+                 let name_end = open_paren.unwrap_or(trimmed.len());
+                 // "ese add"
+                 let decl_part = &trimmed[0..name_end];
+                 let parts: Vec<&str> = decl_part.split_whitespace().collect();
+                 let name = if parts.len() >= 2 { parts[1] } else { "unknown" };
+                 
+                 let signature = if let Some(idx) = open_paren {
+                     let close_paren = trimmed.find(')').unwrap_or(trimmed.len());
+                     if close_paren > idx {
+                         let params = &trimmed[idx..=close_paren]; 
+                         format!("{}{}", name, params)
+                     } else {
+                         name.to_string()
+                     }
+                 } else {
+                     name.to_string()
+                 };
+                 
+                 let item = DocItem {
+                     name: name.to_string(),
+                     kind: "ese".to_string(),
+                     signature,
+                     description: current_docs.clone(),
+                 };
+                 
+                 // If we have a current Odù (from context), we should add to it.
+                 // But we are parsing line-by-line without full context stack here (simple parser).
+                 // For V1, let's just add to last added Odù if exists, or orphans.
+                 if let Some(last_odu) = doc.odus.last_mut() {
+                     last_odu.items.push(item);
+                 } else {
+                     doc.orphans.push(item);
+                 }
+                 
+                 current_docs.clear();
+                 continue;
+            }
+            
+            // CONST/AYANMO Definition
+            // const PI = 3.14; or loruko PI = 3.14; or ka PI = ...
+            let is_const = trimmed.starts_with("const ") || trimmed.starts_with("loruko ") || trimmed.starts_with("ka ");
+            if is_const || trimmed.starts_with("ayanmo ") || trimmed.starts_with("let ") {
+                 let kind = if is_const { "const" } else { "ayanmo" };
+                 let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                 // const Name = ...
+                 if parts.len() >= 2 {
+                     let name = parts[1];
+                     // signature is the whole line up to semicolon
+                     let signature = trimmed.trim_matches(';').to_string();
+                     
+                     let item = DocItem {
+                         name: name.to_string(),
+                         kind: kind.to_string(),
+                         signature,
+                         description: current_docs.clone(),
+                     };
+                     
+                     if let Some(last_odu) = doc.odus.last_mut() {
+                         last_odu.items.push(item);
+                     } else {
+                         doc.orphans.push(item);
+                     }
+                 }
+                 current_docs.clear();
+                 continue;
+            }
+            
+            // If unrelated line, clear docs
+            current_docs.clear();
+        }
+    }
+    
+    Ok(())
+}
+
 /// Generate all documentation files to the output directory
-pub fn generate_docs(output_dir: &Path) -> Result<()> {
+pub fn generate_docs(input_path: &Path, output_dir: &Path) -> Result<()> {
     fs::create_dir_all(output_dir)?;
+    
+    // 1. Scan User Code
+    let mut user_doc = UserDoc::new();
+    let mut files = Vec::new();
+    
+    if input_path.is_file() {
+        files.push(input_path.to_path_buf());
+    } else {
+        walk_dir(input_path, &mut files)?;
+    }
+    
+    for file in files {
+        if let Err(e) = parse_file(&file, &mut user_doc) {
+             eprintln!("Warning: Failed to parse {}: {}", file.display(), e);
+        }
+    }
 
-    // Always regenerate index.html
-    let index_html = generate_index_html();
+    // 2. Generate Index
+    let index_html = generate_index_html(&user_doc);
     fs::write(output_dir.join("index.html"), index_html)?;
-    println!("  Generated: index.html");
+    println!("  Generated: index.html (with {} User Odùs, {} Global verses)", user_doc.odus.len(), user_doc.orphans.len());
 
-    // Get stdlib methods
+    // 3. Generate StdLib Pages
     let stdlib = get_stdlib_methods();
-
-    // Generate individual Odù pages with ASCII filenames
-    // Skip if file already exists (preserve legacy Python-generated docs)
     for odu in ODU_DOMAINS {
         let filename = format!("{}.html", odu.slug);
         let filepath = output_dir.join(&filename);
 
         if filepath.exists() {
-            println!("  Skipped:   {} (exists)", filename);
-            continue;
+             // For standard libs, we might skip to preserve overrides, or always overwrite
+             // Let's overwrite for consistency if version changed
         }
 
         let methods: Vec<(String, String)> = stdlib
@@ -943,6 +1266,14 @@ pub fn generate_docs(output_dir: &Path) -> Result<()> {
             .unwrap_or_default();
 
         let page_html = generate_odu_page(odu, &methods);
+        fs::write(&filepath, page_html)?;
+    }
+    
+    // 4. Generate User Odù Pages
+    for odu in &user_doc.odus {
+        let filename = format!("user_{}.html", odu.slug);
+        let filepath = output_dir.join(&filename);
+        let page_html = generate_user_odu_page(odu);
         fs::write(&filepath, page_html)?;
         println!("  Generated: {}", filename);
     }

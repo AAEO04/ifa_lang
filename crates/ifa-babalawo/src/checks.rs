@@ -6,7 +6,7 @@
 use crate::diagnose::Babalawo;
 use crate::iwa::IwaEngine;
 use crate::taboo::TabooEnforcer;
-use ifa_core::ast::{Expression, Program, Statement};
+use ifa_core::ast::{Expression, Program, Statement, TypeHint};
 use std::collections::{HashMap, HashSet};
 
 /// Context for linting - tracks state as we walk the AST
@@ -16,6 +16,9 @@ pub struct LintContext {
     pub defined_vars: HashSet<String>,
     /// Variables that have been used
     pub used_vars: HashSet<String>,
+    /// Variable types (for static type checking)
+    /// Key: variable name, Value: declared type
+    pub var_types: HashMap<String, TypeHint>,
     /// Imports
     pub imports: HashSet<String>,
     /// Current function name (if inside one)
@@ -28,6 +31,8 @@ pub struct LintContext {
     pub iwa_engine: IwaEngine,
     /// Èèwọ̀ Enforcer - architectural constraints
     pub taboo_enforcer: TabooEnforcer,
+    /// Whether we're inside an ailewu (unsafe) block
+    pub in_ailewu: bool,
 }
 
 impl Default for LintContext {
@@ -41,12 +46,14 @@ impl LintContext {
         Self {
             defined_vars: HashSet::new(),
             used_vars: HashSet::new(),
+            var_types: HashMap::new(),
             imports: HashSet::new(),
             current_function: None,
             has_return: false,
             open_resources: HashMap::new(),
             iwa_engine: IwaEngine::new(true),
             taboo_enforcer: TabooEnforcer::new(),
+            in_ailewu: false,
         }
     }
 
@@ -54,8 +61,19 @@ impl LintContext {
         self.defined_vars.insert(name.to_string());
     }
 
+    /// Define a variable with a type hint
+    pub fn define_var_typed(&mut self, name: &str, type_hint: TypeHint) {
+        self.defined_vars.insert(name.to_string());
+        self.var_types.insert(name.to_string(), type_hint);
+    }
+
     pub fn use_var(&mut self, name: &str) {
         self.used_vars.insert(name.to_string());
+    }
+
+    /// Get the declared type of a variable (if statically typed)
+    pub fn get_var_type(&self, name: &str) -> Option<&TypeHint> {
+        self.var_types.get(name)
     }
 
     pub fn enter_function(&mut self, name: &str) {
@@ -89,12 +107,22 @@ pub fn check_program(program: &Program, filename: &str) -> Babalawo {
     check_program_with_config(program, filename, BabalawoConfig::default())
 }
 
-/// Check a program with custom configuration
+/// Check a program with custom configuration (returns diagnostics only)
 pub fn check_program_with_config(
     program: &Program,
     filename: &str,
     config: BabalawoConfig,
 ) -> Babalawo {
+    let (babalawo, _) = analyze_program(program, filename, config);
+    babalawo
+}
+
+/// Analyze a program returning both diagnostics and symbol context
+pub fn analyze_program(
+    program: &Program,
+    filename: &str,
+    config: BabalawoConfig,
+) -> (Babalawo, LintContext) {
     let mut babalawo = Babalawo::new();
     if !config.include_wisdom {
         babalawo = babalawo.fast();
@@ -147,7 +175,7 @@ pub fn check_program_with_config(
         }
     }
 
-    babalawo
+    (babalawo, ctx)
 }
 
 /// Check a program with custom taboos
@@ -219,8 +247,14 @@ fn check_taboo_violations(ctx: &LintContext, baba: &mut Babalawo, file: &str) {
 /// Collect variable and function definitions + Taboos and Opon directives
 fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
     match stmt {
-        Statement::VarDecl { name, .. } => {
-            ctx.define_var(name);
+        Statement::VarDecl {
+            name, type_hint, ..
+        } => {
+            if let Some(th) = type_hint {
+                ctx.define_var_typed(name, th.clone());
+            } else {
+                ctx.define_var(name);
+            }
         }
         Statement::EseDef {
             name, params, body, ..
@@ -228,7 +262,11 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
             ctx.define_var(name);
             // Parameters are also definitions within the function
             for param in params {
-                ctx.define_var(&param.name);
+                if let Some(th) = &param.type_hint {
+                    ctx.define_var_typed(&param.name, th.clone());
+                } else {
+                    ctx.define_var(&param.name);
+                }
             }
             for s in body {
                 collect_definitions(s, ctx);
@@ -282,7 +320,11 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
 fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo, file: &str) {
     match stmt {
         Statement::VarDecl {
-            name, value, span, ..
+            name,
+            value,
+            span,
+            type_hint,
+            ..
         } => {
             check_expression(value, ctx, baba, file, span);
 
@@ -296,6 +338,36 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                     span.column,
                 );
             }
+
+            // Type checking for statically typed variables
+            if let Some(th) = type_hint {
+                // Check if low-level type requires ailewu context
+                if th.requires_ailewu() && !ctx.in_ailewu {
+                    baba.error(
+                        "UNSAFE_OUTSIDE_AILEWU",
+                        &format!("Pointer type '{:?}' requires 'ailewu' (unsafe) block", th),
+                        file,
+                        span.line,
+                        span.column,
+                    );
+                }
+
+                // Check expression type matches declared type (basic check)
+                if let Some(inferred) = infer_expression_type(value, ctx) {
+                    if !types_compatible(th, &inferred) {
+                        baba.error(
+                            "TYPE_MISMATCH",
+                            &format!(
+                                "Type mismatch: variable '{}' declared as '{:?}' but assigned '{:?}'",
+                                name, th, inferred
+                            ),
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
+                }
+            }
         }
 
         Statement::Assignment {
@@ -306,16 +378,34 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             check_expression(value, ctx, baba, file, span);
 
             // Check if target variable is defined
-            if let ifa_core::ast::AssignTarget::Variable(name) = target
-                && !ctx.defined_vars.contains(name)
-            {
-                baba.error(
-                    "UNDEFINED_VARIABLE",
-                    &format!("Variable '{}' assigned before declaration", name),
-                    file,
-                    span.line,
-                    span.column,
-                );
+            if let ifa_core::ast::AssignTarget::Variable(name) = target {
+                if !ctx.defined_vars.contains(name) {
+                    baba.error(
+                        "UNDEFINED_VARIABLE",
+                        &format!("Variable '{}' assigned before declaration", name),
+                        file,
+                        span.line,
+                        span.column,
+                    );
+                }
+
+                // Check type compatibility for static types
+                if let Some(declared_type) = ctx.get_var_type(name) {
+                    if let Some(inferred_type) = infer_expression_type(value, ctx) {
+                        if !types_compatible(declared_type, &inferred_type) {
+                            baba.error(
+                                "TYPE_MISMATCH",
+                                &format!(
+                                    "Type mismatch: variable '{}' is type '{:?}' but assigned '{:?}'",
+                                    name, declared_type, inferred_type
+                                ),
+                                file,
+                                span.line,
+                                span.column,
+                            );
+                        }
+                    }
+                }
             }
         }
 
@@ -447,6 +537,29 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             if let Some(v) = value {
                 check_expression(v, ctx, baba, file, span);
             }
+        }
+
+        Statement::Ailewu { body, span } => {
+            // Enter ailewu (unsafe) context
+            let was_in_ailewu = ctx.in_ailewu;
+            ctx.in_ailewu = true;
+
+            // Warn about entering unsafe code
+            baba.warning(
+                "AILEWU_BLOCK",
+                "Entering ailewu (unsafe) block - low-level operations enabled",
+                file,
+                span.line,
+                span.column,
+            );
+
+            // Check body
+            for s in body {
+                check_statement(s, ctx, baba, file);
+            }
+
+            // Restore previous context
+            ctx.in_ailewu = was_in_ailewu;
         }
 
         _ => {}
@@ -588,6 +701,92 @@ fn function_should_return(body: &[Statement]) -> bool {
         }
     }
     false
+}
+
+/// Infer the type of an expression (returns None for dynamic/unknown types)
+fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<TypeHint> {
+    match expr {
+        Expression::Int(_) => Some(TypeHint::Int),
+        Expression::Float(_) => Some(TypeHint::Float),
+        Expression::String(_) => Some(TypeHint::Str),
+        Expression::Bool(_) => Some(TypeHint::Bool),
+        Expression::Nil => None, // Nil is compatible with any type
+        Expression::List(_) => Some(TypeHint::List),
+        Expression::Map(_) => Some(TypeHint::Map),
+
+        Expression::Identifier(name) => {
+            // Look up variable type in context
+            ctx.get_var_type(name).cloned()
+        }
+
+        Expression::BinaryOp {
+            left, right, op: _, ..
+        } => {
+            let left_type = infer_expression_type(left, ctx)?;
+            let right_type = infer_expression_type(right, ctx)?;
+
+            // Basic inference rules
+            if types_compatible(&left_type, &right_type)
+                || types_compatible(&right_type, &left_type)
+            {
+                // If one is float and other is int, result is float (usually)
+                // If both same, result is same.
+                // Simplified:
+                if matches!(left_type, TypeHint::Float | TypeHint::F32 | TypeHint::F64)
+                    || matches!(right_type, TypeHint::Float | TypeHint::F32 | TypeHint::F64)
+                {
+                    // Return the float one
+                    if matches!(left_type, TypeHint::Float | TypeHint::F32 | TypeHint::F64) {
+                        Some(left_type)
+                    } else {
+                        Some(right_type)
+                    }
+                } else {
+                    // Assume left type dominates (e.g. i32 + i32 -> i32)
+                    Some(left_type)
+                }
+            } else {
+                None // Incompatible types in binary op
+            }
+        }
+
+        _ => None, // Cannot infer type for complex expressions
+    }
+}
+
+/// Check if two types are compatible for assignment
+fn types_compatible(declared: &TypeHint, inferred: &TypeHint) -> bool {
+    // Dynamic types are compatible with each other
+    if matches!(declared, TypeHint::Any) {
+        return true;
+    }
+
+    // Exact match
+    if declared == inferred {
+        return true;
+    }
+
+    // Int/Float compatibility with sized versions
+    match (declared, inferred) {
+        // Dynamic Int is compatible with any integer literal
+        (TypeHint::Int, TypeHint::Int) => true,
+        (TypeHint::I64, TypeHint::Int) => true,
+        (TypeHint::I32, TypeHint::Int) => true,
+        (TypeHint::I16, TypeHint::Int) => true,
+        (TypeHint::I8, TypeHint::Int) => true,
+
+        // Dynamic Float is compatible with float literal
+        (TypeHint::Float, TypeHint::Float) => true,
+        (TypeHint::F64, TypeHint::Float) => true,
+        (TypeHint::F32, TypeHint::Float) => true,
+
+        // Allow Int -> Float promotion
+        (TypeHint::Float, TypeHint::Int) => true,
+        (TypeHint::F64, TypeHint::Int) => true,
+        (TypeHint::F32, TypeHint::Int) => true,
+
+        _ => false,
+    }
 }
 
 /// Check if a name is a builtin

@@ -1,0 +1,22 @@
+
+# Storage Module Test
+# Verifies Persistence access via StorageHandler
+
+# Storage Module Test
+# Verifies Persistence access via Sys Facade
+
+# 1. Open Store
+ayanmo open_ok = Sys.store_open("data.db");
+Irosu.so("Storage Open: " + open_ok);
+
+verify (open_ok == otito);
+
+# 2. Set Key (Interface Check)
+Sys.store_set("test_key", "test_value");
+Irosu.so("Set key 'test_key'");
+
+# 3. Get Key (Interface Check)
+ayanmo val = Sys.store_get("test_key");
+Irosu.so("Got value: " + val);
+
+verify (val == "test_value");

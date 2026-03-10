@@ -1,0 +1,48 @@
+
+/// Blinky Example for ESP32/STM32/RP2040
+/// 
+/// This is a bare-metal example that blinks an LED directly using memory-mapped I/O (MMIO).
+/// 
+/// WARNING: The addresses below are examples. 
+/// You MUST change them to match your specific board's datasheet.
+/// 
+/// Common Base Addresses:
+/// - ESP32 GPIO: 0x3FF44000
+/// - STM32 GPIO: 0x40020000 (GPIOA)
+/// - RP2040 SIO: 0xD0000000
+
+// Configure memory layout for embedded target
+opon: embedded; 
+
+// Ailewu block allows raw pointer access
+ailewu {
+    // 1. Define Hardware Registers (Consult Datasheet!)
+    // Example: GPIO Output Enable & Output Value registers
+    
+    // NOTE: These are FAKE addresses for demonstration.
+    // Replace with: 0x3FF... (ESP32) or 0x400... (STM32)
+    var GPIO_ENABLE = &0x4000_1000;
+    var GPIO_OUT    = &0x4000_1004;
+
+    // 2. Setup: Enable LED Pin as Output
+    // Writing '1' to the enable register bit
+    *GPIO_ENABLE = 1;
+
+    // 3. Main Loop
+    nigba true {
+        // LED ON (High)
+        // Store8 uses 8-bit write to prevent bus faults on some chips
+        *GPIO_OUT = 1;
+        
+        // Sleep for 1 second (1,000,000 microseconds)
+        // Sleep for 1 second (1,000,000 microseconds)
+        // This yields control to the host MCU to power save
+        yield 1000000;
+
+        // LED OFF (Low)
+        *GPIO_OUT = 0;
+        
+        // Sleep again
+        yield 1000000;
+    }
+}

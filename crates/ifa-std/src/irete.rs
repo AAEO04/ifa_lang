@@ -107,14 +107,30 @@ impl Irete {
     // =========================================================================
 
     /// Compress data with zstd (fún pọ̀)
+    #[cfg(feature = "zstd")]
     pub fn funpo(&self, data: &[u8], level: i32) -> IfaResult<Vec<u8>> {
         zstd::encode_all(data, level)
             .map_err(|e| IfaError::Custom(format!("Compression error: {}", e)))
     }
 
+    #[cfg(not(feature = "zstd"))]
+    pub fn funpo(&self, _data: &[u8], _level: i32) -> IfaResult<Vec<u8>> {
+        Err(IfaError::Runtime(
+            "Compression disabled (zstd feature missing)".into(),
+        ))
+    }
+
     /// Decompress zstd data (tú)
+    #[cfg(feature = "zstd")]
     pub fn tu(&self, data: &[u8]) -> IfaResult<Vec<u8>> {
         zstd::decode_all(data).map_err(|e| IfaError::Custom(format!("Decompression error: {}", e)))
+    }
+
+    #[cfg(not(feature = "zstd"))]
+    pub fn tu(&self, _data: &[u8]) -> IfaResult<Vec<u8>> {
+        Err(IfaError::Runtime(
+            "Decompression disabled (zstd feature missing)".into(),
+        ))
     }
 
     /// Get compression ratio

@@ -11,14 +11,20 @@ name = "ifa_core"
 path = "src/lib.rs"
 
 [features]
-default = ["native"]
+default = ["native", "parallel", "sysinfo"]
 native = ["ifa-sandbox"]
+std = []
 network = ["ureq"]
 audio = ["rodio"]
+parallel = ["rayon"]
+sysinfo = ["dep:sysinfo"]
+gpu = ["dep:wgpu"]
+persistence = []
 
 [dependencies]
+
 # Shared types (IfaValue, IfaError, OduDomain)
-ifa-types = { path = "../ifa-types" }
+ifa-types = { path = "../ifa-types", features = ["vm"] }
 
 # For CPU thread count (lightweight, no cycle)
 num_cpus = "1.16"
@@ -55,13 +61,21 @@ uuid = { version = "1.8", features = ["v4", "js"] }
 ureq = { version = "3", optional = true }
 
 # Parallel operations (used internally on primitives)
-rayon = "1.10"
+rayon = { version = "1.10", optional = true }
 
 # Audio for ohun handler (optional)
 rodio = { version = "0.17", optional = true }
 
+# System info
+sysinfo = { version = "0.30", optional = true }
+
+# GPU (optional, for GpuHandler data types)
+wgpu = { version = "0.19", optional = true }
+
 [dev-dependencies]
 proptest = "1.4"
+criterion = { version = "0.5", features = ["html_reports"] }
 
-
-
+[[bench]]
+name = "opcode_dispatch"
+harness = false

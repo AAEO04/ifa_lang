@@ -1,16 +1,3 @@
-#![allow(clippy::collapsible_if)]
-#![allow(clippy::manual_clamp)]
-#![allow(clippy::manual_div_ceil)]
-#![allow(clippy::type_complexity)]
-#![allow(clippy::manual_is_multiple_of)]
-#![allow(clippy::manual_repeat_n)]
-#![allow(clippy::redundant_closure)]
-#![allow(clippy::should_implement_trait)]
-#![allow(clippy::manual_contains)]
-#![allow(clippy::needless_range_loop)]
-#![allow(clippy::unnecessary_lazy_evaluations)]
-#![allow(clippy::get_first)]
-
 //! # Ifá-Std - The 16 Odù Domains
 //!
 //! Standard library implementing the 16 principal Odù as Rust modules.
@@ -36,6 +23,8 @@
 //! | 1010 | Ọ̀ṣẹ́ | Graphics, UI |
 //! | 0101 | Òfún | Permissions, Reflection |
 
+pub mod handlers;
+pub mod sandbox_shim;
 pub mod traits;
 
 // Core domains (always available)
@@ -55,7 +44,6 @@ pub mod owonrin; // 0011 - Random
 pub mod oyeku; // 0000 - Exit/Sleep // 0101 - Permissions
 
 // Optional domains (feature-gated)
-// Optional domains (feature-gated)
 #[cfg(feature = "backend")]
 pub mod osa; // 0111 - Concurrency
 
@@ -73,8 +61,13 @@ pub mod stacks;
 
 // Infrastructure Layer (Hardware/OS)
 pub mod infra;
+#[cfg(feature = "kernel")]
+pub mod sys {
+    pub use super::infra::*;
+}
 
 // FFI - Foreign Function Interface
+#[cfg(feature = "native_ffi")]
 pub mod ffi;
 
 // Opele - Divination chain and Odu patterns

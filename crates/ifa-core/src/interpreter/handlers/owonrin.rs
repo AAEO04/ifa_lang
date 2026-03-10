@@ -26,20 +26,24 @@ impl OduHandler for OwonrinHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+
+        let arg0 = args.first();
+        let arg1 = args.get(1);
+
         match method {
             // Random integer (0-32767)
             "nọmba" | "random" | "rand" => {
                 let random = self.generate_random();
-                Ok(IfaValue::Int(random as i64))
+                Ok(IfaValue::int(random as i64))
             }
 
             // Random in range [min, max]
             "pese" | "laarin" | "range" => {
-                if args.len() >= 2 {
-                    if let (IfaValue::Int(min), IfaValue::Int(max)) = (&args[0], &args[1]) {
+                if let (Some(min_val), Some(max_val)) = (arg0, arg1) {
+                    if let (IfaValue::Int(min), IfaValue::Int(max)) = (min_val, max_val) {
                         let random = self.generate_random();
-                        let val = min + (random as i64 % (max - min + 1));
-                        return Ok(IfaValue::Int(val));
+                        let val = *min + (random as i64 % (*max - *min + 1));
+                        return Ok(IfaValue::int(val));
                     }
                 }
                 Err(IfaError::Runtime(
@@ -50,39 +54,42 @@ impl OduHandler for OwonrinHandler {
             // Random float [0.0, 1.0)
             "ida" | "float" => {
                 let random = self.generate_random();
-                Ok(IfaValue::Float(random as f64 / 32768.0))
+                Ok(IfaValue::float(random as f64 / 32768.0))
             }
 
             // Random boolean
             "boolean" | "bool" => {
                 let random = self.generate_random();
-                Ok(IfaValue::Bool(random.is_multiple_of(2)))
+                Ok(IfaValue::bool(random.is_multiple_of(2)))
             }
 
             // Shuffle a list
             "aruwo" | "shuffle" => {
-                if let Some(IfaValue::List(mut list)) = args.first().cloned() {
-                    // Fisher-Yates shuffle
-                    let len = list.len();
-                    for i in (1..len).rev() {
-                        let j = (self.generate_random() as usize) % (i + 1);
-                        list.swap(i, j);
+                if let Some(IfaValue::List(l)) = arg0 {
+                        let mut list = (**l).clone();
+                        // Fisher-Yates shuffle
+                        let len = list.len();
+                        if len > 1 {
+                             for i in (1..len).rev() {
+                                 let j = (self.generate_random() as usize) % (i + 1);
+                                 list.swap(i, j);
+                             }
+                        }
+                        return Ok(IfaValue::list(list));
                     }
-                    return Ok(IfaValue::List(list));
-                }
                 Err(IfaError::Runtime("shuffle requires a list".into()))
             }
 
             // Random choice from list
             "yan" | "choice" => {
-                if let Some(IfaValue::List(list)) = args.first() {
-                    if list.is_empty() {
-                        return Ok(IfaValue::Null);
+                 if let Some(IfaValue::List(list)) = arg0 {
+                        if list.is_empty() {
+                            return Ok(IfaValue::null());
+                        }
+                        let idx = (self.generate_random() as usize) % list.len();
+                        return Ok(list[idx].clone());
                     }
-                    let idx = (self.generate_random() as usize) % list.len();
-                    return Ok(list[idx].clone());
-                }
-                Err(IfaError::Runtime("choice requires a non-empty list".into()))
+                 Err(IfaError::Runtime("choice requires a non-empty list".into()))
             }
 
             _ => Err(IfaError::Runtime(format!(

@@ -36,9 +36,15 @@ pub mod lexer;
 pub mod native;
 pub mod opon;
 pub mod parser;
+pub mod parser_utils;
+pub mod project_generator;
 pub mod transpiler;
 pub mod value;
 pub mod vm;
+
+// Enhanced VM modules with Ikin & Iroke optimizations
+pub mod vm_ikin;
+pub mod vm_iroke;
 
 #[cfg(test)]
 pub mod oracle;
@@ -55,6 +61,7 @@ pub use iwa_pele::{IwaPele, IwaPeleError, IwaPeleErrorKind};
 pub use lexer::{OduDomain, Token, tokenize};
 pub use opon::{Opon, OponError, OponErrorKind, OponResult, OponSize};
 pub use parser::parse;
+pub use project_generator::generate_project;
 pub use transpiler::transpile_to_rust;
 pub use value::IfaValue;
 pub use vm::IfaVM;

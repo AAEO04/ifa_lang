@@ -1,0 +1,162 @@
+// Kiri Browser (The Wanderer) - Network Enabled
+// Uses std.otura for network, std.ose for TUI
+
+// State "Struct" (Map)
+ayanmo state = {
+    "url": "https://example.com",
+    "status": "Ready",
+    "content": "Loading...",
+    "mode": "normal", // normal, input
+    "scroll": 0,
+    "input_buffer": ""
+};
+
+// Main Loop
+ese main() {
+    // Initialize TUI
+    ayanmo term = Ose.bere();
+    
+    // Check if network is allowed (naive check)
+    // In real app we rely on Error handling
+    
+    // Initial Fetch
+    // We use app.fetch_page() since Ifá-Lang grammar requires method calls or Odu calls
+    ayanmo _ = app.fetch_page(state["url"]);
+    
+    // Event Loop
+    gbiyanju {
+        ayanmo running = true;
+        
+        nigba (running) {
+            ayanmo _ = app.render(term);
+            
+            // Block until input (Efficient)
+            // std.ose.gbile() blocks until a key is pressed.
+            // This removes the need for std.oyeku.sun(16) polling.
+            ayanmo key = Ose.gbile(); 
+            
+            // Handle valid input
+            if (key != "?") {
+                 ayanmo action = app.handle_input(key); 
+                 if (action == "quit") { running = false; }
+            }
+        }
+    } gba(e) {
+        // Crash Recovery
+        Ose.pari(term);
+        Irosu.fo("Browser Crashed: " + e);
+        Irosu.fo("Stack Trace: " + e["ipe_itopanpa"]);
+    }
+    
+    // Cleanup
+    Ose.pari(term);
+}
+
+// Returns "quit" or null
+ese handle_input(key) {
+    if (state["mode"] == "normal") {
+        if (key == "q") { return "quit"; }
+        if (key == "r") { ayanmo _ = app.fetch_page(state["url"]); }
+        if (key == "j") { state["scroll"] = state["scroll"] + 1; }
+        if (key == "k") { 
+            if (state["scroll"] > 0) { state["scroll"] = state["scroll"] - 1; }
+        }
+        if (key == "Enter") {
+             // Switch to input mode to type URL
+             state["mode"] = "input";
+             state["input_buffer"] = state["url"];
+        }
+    } else {
+        if (state["mode"] == "input") {
+            if (key == "Enter") {
+                state["url"] = state["input_buffer"];
+                state["mode"] = "normal";
+                ayanmo _ = app.fetch_page(state["url"]);
+            } else {
+                if (key == "Esc") {
+                    state["mode"] = "normal";
+                } else {
+                    if (key == "Backspace") {
+                        // Remove last char
+                        ayanmo len = Ika.gigun(state["input_buffer"]);
+                        if (len > 0) {
+                            state["input_buffer"] = Ika.ge(state["input_buffer"], 0, len - 1);
+                        }
+                    } else {
+                        // Append char
+                        state["input_buffer"] = state["input_buffer"] + key;
+                    }
+                }
+            }
+        }
+    }
+    return null;
+}
+
+ese parse_html(raw) {
+    // Attempt semantic parsing using std.ika (Strings/Parsing) - formerly std.iko
+    gbiyanju {
+        ayanmo title = Ika.oruko_html(raw);
+        ayanmo clean_text = Ika.tumo_html(raw); 
+            
+        // Basic Formatting
+        return "TITLE: " + title + "\n" +
+               "==========================================\n" + 
+               clean_text;
+    } gba(e) {
+        // Fallback or error report
+        return "HTML Parsing Failed: " + e + "\n\nRAW CONTENT:\n" + raw;
+    }
+}
+
+ese fetch_page(url) {
+    state["status"] = "Loading " + url + "...";
+    
+    // NETWORK CALL (std.otura.gba)
+    // This blocks in this simple version. 
+    // In advanced version, we spawn a task.
+    gbiyanju {
+        ayanmo html = Otura.gba(url);
+        state["content"] = html; // In real app, parse this!
+        state["status"] = "Loaded (200 OK)";
+    } gba(e) {
+        state["status"] = "Error: " + e;
+        state["content"] = "Failed to load " + url + "\n\nReason: " + e;
+    }
+}
+
+ese render(term) {
+    // 1. Header
+    ayanmo header_txt = "Kiri Browser - " + state["url"] + " [" + state["status"] + "]";
+    if (state["mode"] == "input") {
+        header_txt = "GOTO: " + state["input_buffer"] + "_";
+    }
+    ayanmo header = Ose.apoti(header_txt);
+    
+    // 2. Content (naive slice for scroll)
+    // Real impl needs proper line breaking and viewport
+    // Taking raw content for now.
+    ayanmo body = Ose.ipinro(state["content"]);
+    
+    // 3. Status
+    ayanmo footer_txt = "[q] Quit [r] Reload [j/k] Scroll [Enter] Edit URL";
+    ayanmo footer = Ose.ipinro(footer_txt);
+    
+    // DRAW 
+    // std.ose.ya(widgets) - Hypothetical method to draw multiple widgets
+    // For now we assume 'apoti' and 'ipinro' calls updated some internal buffer
+    // or we add a 'ya' (draw) method to Ose.
+    // std.ose.ya(header, body, footer); 
+}
+
+// In Ifa-Lang, we must call functions as methods on an object
+// since bare function calls `fetch_page()` are not in the grammar.
+ayanmo app = {
+    "handle_input": handle_input,
+    "parse_html": parse_html,
+    "fetch_page": fetch_page,
+    "render": render,
+    "main": main
+};
+
+ayanmo _ = app.main();

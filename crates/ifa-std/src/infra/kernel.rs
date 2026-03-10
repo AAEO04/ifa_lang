@@ -11,17 +11,20 @@ pub fn num_cores() -> usize {
 
 /// Cached system info for expensive sysinfo calls
 #[cfg(feature = "sysinfo")]
-static SYSTEM_INFO: std::sync::OnceLock<sysinfo::System> = std::sync::OnceLock::new();
+/// Cached system info with thread-safe mutation
+#[cfg(feature = "sysinfo")]
+static SYSTEM_INFO: std::sync::OnceLock<std::sync::RwLock<sysinfo::System>> =
+    std::sync::OnceLock::new();
 
 #[cfg(feature = "sysinfo")]
-fn get_system() -> &'static sysinfo::System {
+fn get_system() -> &'static std::sync::RwLock<sysinfo::System> {
     SYSTEM_INFO.get_or_init(|| {
         use sysinfo::System;
-        System::new_all()
+        std::sync::RwLock::new(System::new_all())
     })
 }
 
-/// Get system uptime in seconds (cross-platform via sysinfo crate)
+/// Get system uptime in seconds
 #[cfg(feature = "sysinfo")]
 pub fn uptime() -> u64 {
     sysinfo::System::uptime()
@@ -30,30 +33,39 @@ pub fn uptime() -> u64 {
 /// Get total system memory in bytes (cached)
 #[cfg(feature = "sysinfo")]
 pub fn total_memory() -> u64 {
-    get_system().total_memory()
+    get_system().read().unwrap().total_memory()
 }
 
-/// Get available system memory in bytes (refreshes on each call)
+/// Get available system memory in bytes (refreshes memory stats only)
 #[cfg(feature = "sysinfo")]
 pub fn available_memory() -> u64 {
-    // Note: For truly fresh data, we refresh. For the cached static,
-    // we'd need RefCell/Mutex. For now, create a fresh System for this call.
-    use sysinfo::System;
-    let mut sys = System::new_all();
-    sys.refresh_memory();
-    sys.available_memory()
+    let sys_lock = get_system();
+    // Write lock to refresh
+    if let Ok(mut sys) = sys_lock.write() {
+        sys.refresh_memory();
+        sys.available_memory()
+    } else {
+        0 // Fallback on lock poisoning
+    }
 }
 
-/// Refresh and get memory stats (for when you need fresh values)
+/// Refresh and get memory stats
 #[cfg(feature = "sysinfo")]
 pub fn memory_stats() -> MemoryStats {
-    use sysinfo::System;
-    let mut sys = System::new_all();
-    sys.refresh_memory();
-    MemoryStats {
-        total: sys.total_memory(),
-        available: sys.available_memory(),
-        used: sys.used_memory(),
+    let sys_lock = get_system();
+    if let Ok(mut sys) = sys_lock.write() {
+        sys.refresh_memory();
+        MemoryStats {
+            total: sys.total_memory(),
+            available: sys.available_memory(),
+            used: sys.used_memory(),
+        }
+    } else {
+        MemoryStats {
+            total: 0,
+            available: 0,
+            used: 0,
+        }
     }
 }
 

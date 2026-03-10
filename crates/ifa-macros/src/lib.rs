@@ -195,14 +195,31 @@ pub fn ebo_block(input: TokenStream) -> TokenStream {
 struct AjoseBinding {
     source: Expr,
     target: Expr,
+    should_freeze: bool,
 }
 
 impl Parse for AjoseBinding {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let source: Expr = input.parse()?;
         input.parse::<Token![=>]>()?;
+
+        let should_freeze = if input.peek(Token![#]) {
+            input.parse::<Token![#]>()?;
+            let ident: syn::Ident = input.parse()?;
+            if ident != "freeze" {
+                return Err(syn::Error::new(ident.span(), "Expected 'freeze' modifier"));
+            }
+            true
+        } else {
+            false
+        };
+
         let target: Expr = input.parse()?;
-        Ok(AjoseBinding { source, target })
+        Ok(AjoseBinding {
+            source,
+            target,
+            should_freeze,
+        })
     }
 }
 
@@ -212,14 +229,19 @@ impl Parse for AjoseBinding {
 ///
 /// ## Usage
 /// ```rust,ignore
-/// ajose!(counter.value => label.text);
-/// // When counter.value changes, label.text updates
+/// ajose!(counter.value => label.text);          // Standard binding
+/// ajose!(counter.value => #freeze shared.data); // Auto-freeze binding (Cross-thread)
 /// ```
 #[proc_macro]
 pub fn ajose(input: TokenStream) -> TokenStream {
     let binding = parse_macro_input!(input as AjoseBinding);
     let source = &binding.source;
     let target = &binding.target;
+    let freeze_logic = if binding.should_freeze {
+        quote! { .freeze().expect("Failed to freeze value") }
+    } else {
+        quote! { .clone() }
+    };
 
     TokenStream::from(quote! {
         {
@@ -228,11 +250,12 @@ pub fn ajose(input: TokenStream) -> TokenStream {
             let _subscription = {
                 let target_clone = #target.clone();
                 move |new_value| {
-                    *target_clone.borrow_mut() = new_value;
+                    // Apply freeze or clone based on syntax
+                    *target_clone.borrow_mut() = new_value #freeze_logic;
                 }
             };
             // Initial sync
-            #target = #source.clone();
+            #target = #source #freeze_logic;
             _subscription
         }
     })

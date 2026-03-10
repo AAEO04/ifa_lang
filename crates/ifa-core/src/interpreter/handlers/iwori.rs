@@ -26,6 +26,10 @@ impl OduHandler for IworiHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+
+        let arg0 = args.get(0);
+        let arg1 = args.get(1);
+
         match method {
             // Current Unix timestamp (seconds)
             "akoko" | "bayi" | "now" | "timestamp" => {
@@ -33,7 +37,7 @@ impl OduHandler for IworiHandler {
                     .duration_since(UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_secs();
-                Ok(IfaValue::Int(now as i64))
+                Ok(IfaValue::int(now as i64))
             }
 
             // Current Unix timestamp (milliseconds)
@@ -42,46 +46,52 @@ impl OduHandler for IworiHandler {
                     .duration_since(UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_millis();
-                Ok(IfaValue::Int(now as i64))
+                Ok(IfaValue::int(now as i64))
             }
 
             // Elapsed time measurement
             "aago" | "elapsed" => {
-                if let Some(IfaValue::Int(start)) = args.first() {
-                    let now = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_millis() as i64;
-                    return Ok(IfaValue::Int(now - start));
+                if let Some(val) = arg0 {
+                    if let IfaValue::Int(start) = val {
+                        let now = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_millis() as i64;
+                        return Ok(IfaValue::int(now - *start));
+                    }
                 }
                 Err(IfaError::Runtime("elapsed requires start timestamp".into()))
             }
 
             // Format timestamp to ISO string
             "ojo" | "ṣe_ọjọ" | "format" | "iso" => {
-                if let Some(IfaValue::Int(ts)) = args.first() {
-                    // Simple ISO-like format: just return the timestamp string
-                    return Ok(IfaValue::Str(format!("{}", ts)));
+                if let Some(val) = arg0 {
+                    if let IfaValue::Int(ts) = val {
+                        // Simple ISO-like format: just return the timestamp string
+                        return Ok(IfaValue::str(format!("{}", ts)));
+                    }
                 }
                 Err(IfaError::Runtime("format requires timestamp".into()))
             }
 
             // Parse date string to timestamp
             "ka_ọjọ" | "parse" => {
-                if let Some(IfaValue::Str(s)) = args.first() {
-                    // Simple parsing - just try to parse as integer
-                    let ts = s.parse::<i64>().unwrap_or(0);
-                    return Ok(IfaValue::Int(ts));
+                if let Some(val) = arg0 {
+                    if let IfaValue::Str(s) = val {
+                         // Simple parsing - just try to parse as integer
+                         let ts = s.parse::<i64>().unwrap_or(0);
+                         return Ok(IfaValue::int(ts));
+                    }
                 }
                 Err(IfaError::Runtime("parse requires date string".into()))
             }
 
             // Create range for iteration
             "laarin" | "range" => {
-                if args.len() >= 2 {
-                    if let (IfaValue::Int(start), IfaValue::Int(end)) = (&args[0], &args[1]) {
-                        let list: Vec<IfaValue> = (*start..*end).map(IfaValue::Int).collect();
-                        return Ok(IfaValue::List(list));
+                if let (Some(start_val), Some(end_val)) = (arg0, arg1) {
+                    if let (IfaValue::Int(start), IfaValue::Int(end)) = (start_val, end_val) {
+                        let list: Vec<IfaValue> = (*start..*end).map(IfaValue::int).collect();
+                        return Ok(IfaValue::list(list));
                     }
                 }
                 Err(IfaError::Runtime(

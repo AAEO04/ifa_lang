@@ -17,6 +17,8 @@ pub struct Compiler {
     scope_depth: usize,
     /// Label counter for jumps
     _label_counter: usize,
+    /// Compile-time constants
+    constants: HashMap<String, Expression>,
 }
 
 impl Compiler {
@@ -26,6 +28,7 @@ impl Compiler {
             locals: vec![HashMap::new()],
             scope_depth: 0,
             _label_counter: 0,
+            constants: HashMap::new(),
         }
     }
 
@@ -50,14 +53,19 @@ impl Compiler {
         self.bytecode.code.extend_from_slice(&value.to_le_bytes());
     }
 
+    fn emit_u32(&mut self, value: u32) {
+        self.bytecode.code.extend_from_slice(&value.to_le_bytes());
+    }
+
     fn emit_f64(&mut self, value: f64) {
         self.bytecode.code.extend_from_slice(&value.to_le_bytes());
     }
 
     fn emit_string(&mut self, s: &str) {
-        let bytes = s.as_bytes();
-        self.emit_byte(bytes.len() as u8);
-        self.bytecode.code.extend_from_slice(bytes);
+        self.bytecode.strings.push(s.to_string());
+        let idx = (self.bytecode.strings.len() - 1) as u16;
+        self.emit_byte((idx >> 8) as u8);
+        self.emit_byte((idx & 0xff) as u8);
     }
 
     fn current_offset(&self) -> usize {
@@ -86,7 +94,12 @@ impl Compiler {
 
     fn end_scope(&mut self) {
         self.scope_depth -= 1;
-        self.locals.pop();
+        if let Some(scope) = self.locals.pop() {
+            let count = scope.len();
+            for _ in 0..count {
+                self.emit(OpCode::Pop);
+            }
+        }
     }
 
     fn declare_local(&mut self, name: &str) -> usize {
@@ -110,9 +123,23 @@ impl Compiler {
         match stmt {
             Statement::VarDecl { name, value, .. } => {
                 self.compile_expression(value)?;
-                let slot = self.declare_local(name);
-                self.emit(OpCode::StoreLocal);
-                self.emit_byte(slot as u8);
+                self.declare_local(name);
+                // Value remains on stack as the local variable
+            }
+
+            Statement::Const { name, value, .. } => {
+                // Store constant expression for inlining
+                // Optimization: If expression is complex, we might want to pre-calculate?
+                // But AST Expression is simpler to just store.
+                // Note: Binary Ops in constants not yet fully folded by this pass,
+                // but if they are trees of literals, compile_expression handles them fine (at runtime of VM... wait).
+                // "Const" usually implies COMPILE TIME evaluation.
+                // If I store `1+1` as expression.
+                // And I inline it. `x = CONST`. `compile_expr(1+1)`.
+                // Emits `Push 1, Push 1, Add`.
+                // This is fine. It acts like a macro.
+                // For literals, it's just `Push 3`.
+                self.constants.insert(name.clone(), value.clone());
             }
 
             Statement::Assignment { target, value, .. } => {
@@ -121,7 +148,9 @@ impl Compiler {
                     AssignTarget::Variable(name) => {
                         if let Some(slot) = self.resolve_local(name) {
                             self.emit(OpCode::StoreLocal);
-                            self.emit_byte(slot as u8);
+                            let s = slot as u16;
+                            self.emit_byte((s & 0xff) as u8);
+                            self.emit_byte((s >> 8) as u8);
                         } else {
                             self.emit(OpCode::StoreGlobal);
                             self.emit_string(name);
@@ -131,7 +160,9 @@ impl Compiler {
                         // Push container, index, value
                         if let Some(slot) = self.resolve_local(name) {
                             self.emit(OpCode::LoadLocal);
-                            self.emit_byte(slot as u8);
+                            let s = slot as u16;
+                            self.emit_byte((s & 0xff) as u8);
+                            self.emit_byte((s >> 8) as u8);
                         } else {
                             self.emit(OpCode::LoadGlobal);
                             self.emit_string(name);
@@ -140,6 +171,13 @@ impl Compiler {
                         // Swap so stack is: value, container, index
                         // Then call SetIndex
                         self.emit(OpCode::SetIndex);
+                    }
+                    AssignTarget::Dereference(expr) => {
+                        // *p = val is handled by Store8 (generic store to address)
+                        // Note: If type is larger than 8 bytes, compiler should emit Store16/32 etc.
+                        // For now we default to Store8 as our primitive "Store to Address" until type tracking is improved.
+                        self.compile_expression(expr)?;
+                        self.emit(OpCode::Store8);
                     }
                 }
             }
@@ -157,7 +195,6 @@ impl Compiler {
             } => {
                 self.compile_expression(condition)?;
                 let else_jump = self.emit_jump(OpCode::JumpIfFalse);
-                self.emit(OpCode::Pop); // Pop condition
 
                 self.begin_scope();
                 for s in then_body {
@@ -168,7 +205,6 @@ impl Compiler {
                 if let Some(else_stmts) = else_body {
                     let end_jump = self.emit_jump(OpCode::Jump);
                     self.patch_jump(else_jump);
-                    self.emit(OpCode::Pop); // Pop condition
 
                     self.begin_scope();
                     for s in else_stmts {
@@ -186,9 +222,11 @@ impl Compiler {
             } => {
                 let loop_start = self.current_offset();
 
+                // Debug to confirm new compiler version
+                println!("COMPILER: Compiling While Loop");
+
                 self.compile_expression(condition)?;
                 let exit_jump = self.emit_jump(OpCode::JumpIfFalse);
-                self.emit(OpCode::Pop); // Pop condition
 
                 self.begin_scope();
                 for s in body {
@@ -203,7 +241,6 @@ impl Compiler {
                 self.emit_byte(((-back_offset as u16 >> 8) & 0xff) as u8);
 
                 self.patch_jump(exit_jump);
-                self.emit(OpCode::Pop); // Pop condition
             }
 
             Statement::For {
@@ -217,43 +254,55 @@ impl Compiler {
                 // Store in hidden local ".iter_col"
                 let col_slot = self.declare_local(".iter_col");
                 self.emit(OpCode::StoreLocal);
-                self.emit_byte(col_slot as u8);
+                let s = col_slot as u16;
+                self.emit_byte((s & 0xff) as u8);
+                self.emit_byte((s >> 8) as u8);
 
                 // 2. Init Index = 0
                 self.emit(OpCode::PushInt);
                 self.emit_i64(0);
                 let idx_slot = self.declare_local(".iter_idx");
                 self.emit(OpCode::StoreLocal);
-                self.emit_byte(idx_slot as u8);
+                let s = idx_slot as u16;
+                self.emit_byte((s & 0xff) as u8);
+                self.emit_byte((s >> 8) as u8);
 
                 // 3. Loop Start
                 let loop_start = self.current_offset();
 
                 // 4. Condition: idx < len(col)
                 self.emit(OpCode::LoadLocal);
-                self.emit_byte(idx_slot as u8);
+                let s = idx_slot as u16;
+                self.emit_byte((s & 0xff) as u8);
+                self.emit_byte((s >> 8) as u8);
 
                 self.emit(OpCode::LoadLocal);
-                self.emit_byte(col_slot as u8);
+                let s = col_slot as u16;
+                self.emit_byte((s & 0xff) as u8);
+                self.emit_byte((s >> 8) as u8);
                 self.emit(OpCode::Len);
 
                 self.emit(OpCode::Lt);
 
                 let exit_jump = self.emit_jump(OpCode::JumpIfFalse);
-                self.emit(OpCode::Pop); // Pop condition
 
                 // 5. Body Setup: var = col[idx]
                 self.begin_scope();
 
                 self.emit(OpCode::LoadLocal);
-                self.emit_byte(col_slot as u8);
+                let s1 = col_slot as u16;
+                self.emit_byte((s1 & 0xff) as u8);
+                self.emit_byte((s1 >> 8) as u8);
+
                 self.emit(OpCode::LoadLocal);
-                self.emit_byte(idx_slot as u8);
+                let s2 = idx_slot as u16;
+                self.emit_byte((s2 & 0xff) as u8);
+                self.emit_byte((s2 >> 8) as u8);
+
                 self.emit(OpCode::GetIndex);
 
-                let var_slot = self.declare_local(var);
-                self.emit(OpCode::StoreLocal);
-                self.emit_byte(var_slot as u8);
+                self.declare_local(var);
+                // Value from GetIndex is now the local variable 'var'
 
                 // Compile Body
                 for s in body {
@@ -263,12 +312,17 @@ impl Compiler {
 
                 // 6. Increment Index
                 self.emit(OpCode::LoadLocal);
-                self.emit_byte(idx_slot as u8);
+                let s = idx_slot as u16;
+                self.emit_byte((s & 0xff) as u8);
+                self.emit_byte((s >> 8) as u8);
+
                 self.emit(OpCode::PushInt);
                 self.emit_i64(1);
                 self.emit(OpCode::Add);
                 self.emit(OpCode::StoreLocal);
-                self.emit_byte(idx_slot as u8);
+                let s = idx_slot as u16;
+                self.emit_byte((s & 0xff) as u8);
+                self.emit_byte((s >> 8) as u8);
 
                 // 7. Jump Back
                 self.emit(OpCode::Jump);
@@ -277,7 +331,6 @@ impl Compiler {
                 self.emit_byte(((-back_offset as u16 >> 8) & 0xff) as u8);
 
                 self.patch_jump(exit_jump);
-                self.emit(OpCode::Pop); // Pop condition
             }
 
             Statement::Return { value, .. } => {
@@ -307,7 +360,9 @@ impl Compiler {
                 // If name is found in local scope...
                 if let Some(slot) = self.resolve_local(name) {
                     self.emit(OpCode::StoreLocal);
-                    self.emit_byte(slot as u8);
+                    let s = slot as u16;
+                    self.emit_byte((s & 0xff) as u8);
+                    self.emit_byte((s >> 8) as u8);
                 } else {
                     // Otherwise Global
                     self.bytecode.strings.push(name.clone());
@@ -416,6 +471,72 @@ impl Compiler {
             Statement::Ebo { .. } => {
                 // Ebo (sacrifice) is a semantic directive, no bytecode emitted
             }
+
+            Statement::Ailewu { body, .. } => {
+                // Ailewu (unsafe) block - just compile the body
+                // Safety checks are done at static analysis time
+                self.begin_scope();
+                for s in body {
+                    self.compile_statement(s)?;
+                }
+                self.end_scope();
+            }
+
+            Statement::Yield { duration, .. } => {
+                // Compile the duration expression
+                self.compile_expression(duration)?;
+                // Emit Yield opcode
+                self.emit(OpCode::Yield);
+            }
+
+            Statement::Try { try_body, catch_var, catch_body, .. } => {
+                // 1. Emit TryBegin with placeholder offset
+                // TryBegin requires u32 offset to catch handler
+                self.emit(OpCode::TryBegin);
+                let try_begin_offset = self.current_offset();
+                self.emit_u32(0); // Placeholder
+                
+                // 2. Compile Try Body
+                self.begin_scope();
+                for s in try_body {
+                    self.compile_statement(s)?;
+                }
+                self.end_scope();
+                
+                // 3. Emit TryEnd (Happy Path)
+                self.emit(OpCode::TryEnd);
+                
+                // 4. Jump over catch block
+                let skip_catch_jump = self.emit_jump(OpCode::Jump);
+                
+                // 5. Patch TryBegin offset
+                // Current offset is where catch handler starts
+                let catch_start_offset = self.current_offset();
+                let jump_distance = (catch_start_offset - try_begin_offset - 4) as u32;
+                // Patch the u32 at try_begin_offset
+                let bytes = jump_distance.to_le_bytes();
+                self.bytecode.code[try_begin_offset] = bytes[0];
+                self.bytecode.code[try_begin_offset + 1] = bytes[1];
+                self.bytecode.code[try_begin_offset + 2] = bytes[2];
+                self.bytecode.code[try_begin_offset + 3] = bytes[3];
+                
+                // 6. Compile Catch Block
+                self.begin_scope();
+                // Error value is on stack. Bind it to catch_var.
+                // Since attempts_recovery restores stack and pushes error, 
+                // the error IS the new local at the top of the stack.
+                // So we just declare it (mapping name -> slot index).
+                // We DO NOT emit StoreLocal, because StoreLocal pops and would underflow/overwrite.
+                self.declare_local(catch_var);
+                
+                for s in catch_body {
+                    self.compile_statement(s)?;
+                }
+                self.end_scope();
+                
+                // 7. Patch Jump over catch
+                self.patch_jump(skip_catch_jump);
+            }
         }
         Ok(())
     }
@@ -502,9 +623,17 @@ impl Compiler {
             }
 
             Expression::Identifier(name) => {
+                // Check constants first (Inlining)
+                if let Some(expr) = self.constants.get(name).cloned() {
+                    self.compile_expression(&expr)?;
+                    return Ok(());
+                }
+
                 if let Some(slot) = self.resolve_local(name) {
                     self.emit(OpCode::LoadLocal);
-                    self.emit_byte(slot as u8);
+                    let s = slot as u16;
+                    self.emit_byte((s & 0xff) as u8);
+                    self.emit_byte((s >> 8) as u8);
                 } else {
                     self.emit(OpCode::LoadGlobal);
                     self.emit_string(name);
@@ -534,10 +663,26 @@ impl Compiler {
             }
 
             Expression::UnaryOp { op, expr } => {
-                self.compile_expression(expr)?;
                 match op {
                     UnaryOperator::Neg => self.emit(OpCode::Neg),
                     UnaryOperator::Not => self.emit(OpCode::Not),
+                    UnaryOperator::AddressOf => {
+                        // Only support literal addresses for now: &0x4000
+                        if let Expression::Int(addr) = *expr.clone() {
+                            self.emit(OpCode::Ref);
+                            self.emit_u32(addr as u32);
+                        } else {
+                            return Err(crate::error::IfaError::Compile(
+                                "Only literal addresses supported for AddressOf (&) currently"
+                                    .to_string(),
+                            ));
+                        }
+                    }
+                    UnaryOperator::Dereference => {
+                        self.compile_expression(expr)?;
+                        // Default to Load8 (generic Load from Address)
+                        self.emit(OpCode::Load8);
+                    }
                 }
             }
 
@@ -605,6 +750,33 @@ impl Compiler {
     }
 
     fn compile_odu_call(&mut self, call: &OduCall) -> IfaResult<()> {
+        // Intrinsic: Store.write8/16
+        if call.domain == OduDomain::Storage {
+            if call.method == "write8" && call.args.len() == 2 {
+                // write8(ptr, val). Expected stack: [Val, Ptr]
+                self.compile_expression(&call.args[1])?; // Val
+                self.compile_expression(&call.args[0])?; // Ptr
+                self.emit(OpCode::Store8);
+                return Ok(());
+            }
+            if call.method == "write16" && call.args.len() == 2 {
+                self.compile_expression(&call.args[1])?;
+                self.compile_expression(&call.args[0])?;
+                self.emit(OpCode::Store16);
+                return Ok(());
+            }
+            if call.method == "read8" && call.args.len() == 1 {
+                self.compile_expression(&call.args[0])?;
+                self.emit(OpCode::Load8);
+                return Ok(());
+            }
+            if call.method == "read16" && call.args.len() == 1 {
+                self.compile_expression(&call.args[0])?;
+                self.emit(OpCode::Load16);
+                return Ok(());
+            }
+        }
+
         // Push arguments
         for arg in &call.args {
             self.compile_expression(arg)?;
@@ -656,6 +828,7 @@ fn domain_to_byte(domain: &OduDomain) -> u8 {
         OduDomain::Ml => 24,
         OduDomain::GameDev => 25,
         OduDomain::Iot => 26,
+        OduDomain::Sys => 29,
     }
 }
 

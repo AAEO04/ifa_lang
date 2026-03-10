@@ -155,9 +155,7 @@ fn extract_zip(archive_path: &Path, target_dir: &Path) -> Result<(), ExtractionE
     }
 
     for i in 0..file_count {
-        let mut file = archive
-            .by_index(i)
-            .map_err(io::Error::other)?;
+        let mut file = archive.by_index(i).map_err(io::Error::other)?;
 
         // Use enclosed_name for basic path traversal protection
         let entry_path = match file.enclosed_name() {

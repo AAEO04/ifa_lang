@@ -24,23 +24,26 @@ impl OduHandler for IkaHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+
+        let arg0 = args.get(0);
+        
         match method {
             // Concatenate strings
             "so" | "concat" => {
                 let result: String = args.iter().map(|a| a.to_string()).collect();
-                Ok(IfaValue::Str(result))
+                Ok(IfaValue::str(result))
             }
 
             // Join list with delimiter
             "dapo" | "join" => {
-                if args.len() >= 2 {
-                    if let (IfaValue::List(parts), IfaValue::Str(delim)) = (&args[0], &args[1]) {
+                if let (Some(list_val), Some(delim_val)) = (arg0, args.get(1)) {
+                    if let (IfaValue::List(parts), IfaValue::Str(delim)) = (list_val, delim_val) {
                         let result: String = parts
                             .iter()
                             .map(|a| a.to_string())
                             .collect::<Vec<String>>()
-                            .join(delim.as_str());
-                        return Ok(IfaValue::Str(result));
+                            .join(delim);
+                        return Ok(IfaValue::str(result));
                     }
                 }
                 Err(IfaError::Runtime("join requires list and delimiter".into()))
@@ -48,8 +51,12 @@ impl OduHandler for IkaHandler {
 
             // String length (Unicode-aware)
             "gigun" | "len" => {
-                if let Some(IfaValue::Str(s)) = args.first() {
-                    Ok(IfaValue::Int(s.chars().count() as i64))
+                if let Some(val) = arg0 {
+                    if let IfaValue::Str(s) = val {
+                        Ok(IfaValue::int(s.chars().count() as i64))
+                    } else {
+                        Err(IfaError::Runtime("len requires a string argument".into()))
+                    }
                 } else {
                     Err(IfaError::Runtime("len requires a string argument".into()))
                 }
@@ -57,15 +64,13 @@ impl OduHandler for IkaHandler {
 
             // Split string
             "pin" | "split" => {
-                if args.len() >= 2 {
-                    if let (IfaValue::Str(s), IfaValue::Str(delim)) = (&args[0], &args[1]) {
-                        let parts: Vec<IfaValue> = s
-                            .split(delim.as_str())
-                            .map(|p| IfaValue::Str(p.to_string()))
-                            .collect();
-                        return Ok(IfaValue::List(parts));
+                 if let (Some(str_val), Some(delim_val)) = (arg0, args.get(1)) {
+                    if let (IfaValue::Str(s), IfaValue::Str(delim)) = (str_val, delim_val) {
+                        let parts: Vec<IfaValue> =
+                            s.split(delim.as_ref()).map(IfaValue::str).collect();
+                        return Ok(IfaValue::list(parts));
                     }
-                }
+                 }
                 Err(IfaError::Runtime(
                     "split requires string and delimiter".into(),
                 ))
@@ -73,8 +78,12 @@ impl OduHandler for IkaHandler {
 
             // Trim whitespace
             "trim" => {
-                if let Some(IfaValue::Str(s)) = args.first() {
-                    Ok(IfaValue::Str(s.trim().to_string()))
+                if let Some(val) = arg0 {
+                    if let IfaValue::Str(s) = val {
+                        Ok(IfaValue::str(s.trim()))
+                    } else {
+                        Err(IfaError::Runtime("trim requires a string argument".into()))
+                    }
                 } else {
                     Err(IfaError::Runtime("trim requires a string argument".into()))
                 }
@@ -82,8 +91,12 @@ impl OduHandler for IkaHandler {
 
             // Uppercase
             "nla" | "uppercase" | "upper" => {
-                if let Some(IfaValue::Str(s)) = args.first() {
-                    Ok(IfaValue::Str(s.to_uppercase()))
+                if let Some(val) = arg0 {
+                    if let IfaValue::Str(s) = val {
+                        Ok(IfaValue::str(s.to_uppercase()))
+                    } else {
+                         Err(IfaError::Runtime("uppercase requires a string".into()))
+                    }
                 } else {
                     Err(IfaError::Runtime("uppercase requires a string".into()))
                 }
@@ -91,8 +104,12 @@ impl OduHandler for IkaHandler {
 
             // Lowercase
             "kekere" | "lowercase" | "lower" => {
-                if let Some(IfaValue::Str(s)) = args.first() {
-                    Ok(IfaValue::Str(s.to_lowercase()))
+                  if let Some(val) = arg0 {
+                    if let IfaValue::Str(s) = val {
+                        Ok(IfaValue::str(s.to_lowercase()))
+                    } else {
+                         Err(IfaError::Runtime("lowercase requires a string".into()))
+                    }
                 } else {
                     Err(IfaError::Runtime("lowercase requires a string".into()))
                 }
@@ -100,21 +117,19 @@ impl OduHandler for IkaHandler {
 
             // Contains check
             "ni" | "contains" | "has" => {
-                if args.len() >= 2 {
-                    if let (IfaValue::Str(haystack), IfaValue::Str(needle)) = (&args[0], &args[1]) {
-                        return Ok(IfaValue::Bool(haystack.contains(needle.as_str())));
-                    }
-                }
+                 if let (Some(haystack_val), Some(needle_val)) = (arg0, args.get(1)) {
+                     if let (IfaValue::Str(haystack), IfaValue::Str(needle)) = (haystack_val, needle_val) {
+                         return Ok(IfaValue::bool(haystack.contains(&**needle)));
+                     }
+                 }
                 Err(IfaError::Runtime("contains requires two strings".into()))
             }
 
             // Replace
             "ropo" | "replace" => {
-                if args.len() >= 3 {
-                    if let (IfaValue::Str(s), IfaValue::Str(from), IfaValue::Str(to)) =
-                        (&args[0], &args[1], &args[2])
-                    {
-                        return Ok(IfaValue::Str(s.replace(from.as_str(), to.as_str())));
+                if let (Some(s_val), Some(from_val), Some(to_val)) = (arg0, args.get(1), args.get(2)) {
+                    if let (IfaValue::Str(s), IfaValue::Str(from), IfaValue::Str(to)) = (s_val, from_val, to_val) {
+                        return Ok(IfaValue::str(s.replace(&**from, &**to)));
                     }
                 }
                 Err(IfaError::Runtime(
@@ -124,8 +139,8 @@ impl OduHandler for IkaHandler {
 
             // Substring
             "sub" | "substring" | "slice" => {
-                if args.len() >= 2 {
-                    if let (IfaValue::Str(s), IfaValue::Int(start)) = (&args[0], &args[1]) {
+                 if let (Some(s_val), Some(start_val)) = (arg0, args.get(1)) {
+                    if let (IfaValue::Str(s), IfaValue::Int(start)) = (s_val, start_val) {
                         let start = *start as usize;
                         let len = args
                             .get(2)
@@ -136,11 +151,13 @@ impl OduHandler for IkaHandler {
                                     None
                                 }
                             })
-                            .unwrap_or(s.len() - start);
+                            .unwrap_or_else(|| s.len().saturating_sub(start));
+                        
+                        // Safe substring via chars
                         let result: String = s.chars().skip(start).take(len).collect();
-                        return Ok(IfaValue::Str(result));
+                        return Ok(IfaValue::str(result));
                     }
-                }
+                 }
                 Err(IfaError::Runtime(
                     "substring requires string and start index".into(),
                 ))

@@ -120,7 +120,7 @@ pub fn range_step(start: i64, end: i64, step: i64) -> impl Iterator<Item = i64> 
 
 /// Repeat value iterator
 pub fn repeat<T: Clone>(value: T, count: usize) -> impl Iterator<Item = T> {
-    std::iter::repeat(value).take(count)
+    std::iter::repeat_n(value, count)
 }
 
 /// Enumerate iterator

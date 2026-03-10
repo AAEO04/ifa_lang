@@ -6,8 +6,6 @@
 pub mod oracle {
     use crate::{Interpreter, parse, transpile_to_rust};
     use std::fs;
-    use std::io::Write;
-    use std::path::PathBuf;
     use std::process::Command;
 
     pub struct OracleResult {

@@ -24,36 +24,38 @@ impl OduHandler for OyekuHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+
+        let arg0 = args.first();
+
         match method {
             // Exit program
             "ku" | "jade" | "exit" => {
-                let code = args
-                    .first()
-                    .and_then(|v| {
-                        if let IfaValue::Int(n) = v {
-                            Some(*n as i32)
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or(0);
+                let code = if let Some(IfaValue::Int(n)) = arg0 {
+                    *n as i32
+                } else {
+                    0
+                };
                 std::process::exit(code);
             }
 
-            // Wait/sleep
+            // Wait/sleep (milliseconds)
             "duro" | "sun" | "sleep" => {
-                if let Some(IfaValue::Int(ms)) = args.first() {
-                    std::thread::sleep(std::time::Duration::from_millis(*ms as u64));
+                if let Some(val) = arg0 {
+                    if let IfaValue::Int(ms) = val {
+                        std::thread::sleep(std::time::Duration::from_millis(*ms as u64));
+                    }
                 }
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             // Sleep for seconds
             "sun_sẹkọndi" | "sleep_sec" => {
-                if let Some(IfaValue::Int(sec)) = args.first() {
-                    std::thread::sleep(std::time::Duration::from_secs(*sec as u64));
+                if let Some(val) = arg0 {
+                    if let IfaValue::Int(sec) = val {
+                        std::thread::sleep(std::time::Duration::from_secs(*sec as u64));
+                    }
                 }
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             _ => Err(IfaError::Runtime(format!(

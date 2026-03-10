@@ -6,7 +6,7 @@ use crate::bytecode::{Bytecode, OpCode};
 use crate::error::{IfaError, IfaResult};
 use crate::native::OduRegistry;
 use crate::opon::Opon;
-use crate::value::IfaValue;
+use ifa_types::value_union::IfaValue;
 
 /// Stack size limit
 const MAX_STACK_SIZE: usize = 65536;
@@ -22,6 +22,20 @@ pub struct CallFrame {
     pub local_count: usize,
 }
 
+/// Recovery frame for exception handling (The Shield of Ọ̀kànràn)
+#[derive(Debug, Clone, Copy)]
+pub struct RecoveryFrame {
+    /// Stack depth to restore to
+    pub stack_depth: usize,
+    /// Call frame depth to restore to
+    pub call_depth: usize,
+    /// Instruction pointer to jump to (Catch Handler)
+    pub catch_ip: usize,
+}
+
+use crate::vm_ikin::Ikin;
+use crate::vm_iroke;
+
 /// The Ifá Virtual Machine
 pub struct IfaVM {
     /// Value stack
@@ -29,7 +43,7 @@ pub struct IfaVM {
     /// Call stack
     frames: Vec<CallFrame>,
     /// Instruction pointer
-    ip: usize,
+    pub ip: usize,
 
     /// Global variables
     globals: std::collections::HashMap<String, IfaValue>,
@@ -39,6 +53,14 @@ pub struct IfaVM {
     pub registry: Option<Box<dyn OduRegistry>>,
     /// Halt flag
     halted: bool,
+    /// Execution ticks (for GC/Interrupts)
+    pub ticks: usize,
+    
+    /// Recovery stack (for Try/Catch)
+    recovery_stack: Vec<RecoveryFrame>,
+
+    /// The Sacred Nuts - Runtime Constant Pool
+    pub ikin: Ikin,
 }
 
 impl IfaVM {
@@ -52,6 +74,9 @@ impl IfaVM {
             opon: Opon::create_default(),
             registry: None,
             halted: false,
+            ticks: 0,
+            recovery_stack: Vec::with_capacity(32),
+            ikin: Ikin::new(),
         }
     }
 
@@ -71,6 +96,9 @@ impl IfaVM {
             opon,
             registry: None,
             halted: false,
+            ticks: 0,
+            recovery_stack: Vec::with_capacity(32),
+            ikin: Ikin::new(),
         }
     }
 
@@ -97,6 +125,9 @@ impl IfaVM {
         self.stack.last().ok_or(IfaError::StackUnderflow)
     }
 
+    /// Pop an integer from the stack
+
+
     // =========================================================================
     // BYTECODE EXECUTION
     // =========================================================================
@@ -105,70 +136,91 @@ impl IfaVM {
     pub fn execute(&mut self, bytecode: &Bytecode) -> IfaResult<IfaValue> {
         self.ip = 0;
         self.halted = false;
+        
+        // Phase 1: Consult the Nuts (Load Constants)
+        self.ikin.load_from_bytecode(bytecode);
 
         while !self.halted && self.ip < bytecode.code.len() {
-            self.step(bytecode)?;
+            if let Err(e) = self.step(bytecode) {
+                // The Shield of Ọ̀kànràn: Attempt recovery before crashing
+                // Pass reference to avoid cloning unless we actually recover
+                if self.attempt_recovery(&e)? {
+                     continue;
+                }
+                return Err(e);
+            }
         }
 
         // Return top of stack or Null
-        Ok(self.stack.pop().unwrap_or(IfaValue::Null))
+        Ok(self.stack.pop().unwrap_or(IfaValue::null()))
     }
 
-    /// Execute single instruction
+    /// Attempt to recover from a runtime error using the Shield of Ọ̀kànràn
+    fn attempt_recovery(&mut self, error: &IfaError) -> IfaResult<bool> {
+        if let Some(frame) = self.recovery_stack.pop() {
+            // 1. Restore stacks
+            if self.stack.len() > frame.stack_depth {
+                self.stack.truncate(frame.stack_depth); // Drop triggers Ebo cleanup
+            }
+            if self.frames.len() > frame.call_depth {
+                self.frames.truncate(frame.call_depth);
+            }
+
+            // 2. Convert Error to Value (Result::Err)
+            // For now, convert error string to IfaValue::Str
+            let err_val = IfaValue::str(error.to_string());
+            let result = IfaValue::Result(false, Box::new(err_val));
+
+            // 3. Push Result and Jump
+            self.push(result)?;
+            self.ip = frame.catch_ip;
+            
+            Ok(true) // Recovered
+        } else {
+            Ok(false) // No shield found, crash
+        }
+    }
+    /// Execute single instruction (The Step of Iroke)
     fn step(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
-        let opcode = OpCode::from_byte(bytecode.code[self.ip])?;
-        self.ip += 1;
+        let opcode = vm_iroke::tap(self, bytecode)?;
 
         match opcode {
             // Stack operations
-            OpCode::PushNull => self.push(IfaValue::Null)?,
-            OpCode::PushTrue => self.push(IfaValue::Bool(true))?,
-            OpCode::PushFalse => self.push(IfaValue::Bool(false))?,
-            OpCode::PushList => self.push(IfaValue::List(Vec::new()))?,
-            OpCode::PushMap => self.push(IfaValue::Map(std::collections::HashMap::new()))?,
+            OpCode::PushNull => self.push(IfaValue::null())?,
+            OpCode::PushTrue => self.push(IfaValue::bool(true))?,
+            OpCode::PushFalse => self.push(IfaValue::bool(false))?,
+            OpCode::PushList => {
+                self.push(IfaValue::list(Vec::new()))? 
+            },
+            OpCode::PushMap => {
+                self.push(IfaValue::map(std::collections::HashMap::new()))?
+            },
 
             OpCode::PushFn => {
-                let name_idx = self.read_u16(bytecode)? as usize;
-                let _start_ip = self.read_u16(bytecode)? as usize; // Wait, IP might be > 65535? Bytecode uses u32 for jumps?
-                // bytecode.rs says Jump uses read_i16 offset. So code limit is small?
-                // Let's check Jump.
-                // Wait, functions are usually absolute addresses.
-                // Let's assume start_ip is u32 or u64.
-                // Let's read u32.
-                let start_ip_u32 = {
-                    let mut bytes = [0u8; 4];
-                    bytes[0] = self.read_u8(bytecode)?;
-                    bytes[1] = self.read_u8(bytecode)?;
-                    bytes[2] = self.read_u8(bytecode)?;
-                    bytes[3] = self.read_u8(bytecode)?;
-                    u32::from_be_bytes(bytes)
-                } as usize;
-
-                let arity = self.read_u8(bytecode)?;
-
-                let name = bytecode.strings.get(name_idx).cloned().unwrap_or_default();
-
-                self.push(IfaValue::BytecodeFn {
-                    name,
-                    start_ip: start_ip_u32,
-                    arity,
-                })?;
+                // AST-mode function values are not supported in the bytecode VM.
+                // Functions are compiled to bytecode chunks and called via OpCode::Call.
+                // Pushing a raw function literal as a value is not yet implemented.
+                return Err(IfaError::Runtime(
+                    "OpCode::PushFn: function-as-value is not yet supported in the bytecode VM".into()
+                ));
             }
 
             OpCode::PushInt => {
                 let value = self.read_i64(bytecode)?;
-                self.push(IfaValue::Int(value))?;
+                self.push(IfaValue::int(value))?;
             }
 
             OpCode::PushFloat => {
                 let value = self.read_f64(bytecode)?;
-                self.push(IfaValue::Float(value))?;
+                self.push(IfaValue::float(value))?;
             }
 
             OpCode::PushStr => {
                 let idx = self.read_u16(bytecode)? as usize;
-                let s = bytecode.strings.get(idx).cloned().unwrap_or_default();
-                self.push(IfaValue::Str(s))?;
+                // Use Ikin for O(1) Arc access
+                let arc = self.ikin.consult_string(idx)
+                    .ok_or_else(|| IfaError::Custom("Invalid string constant index in Ikin".into()))?;
+                self.push(IfaValue::Str(arc.clone()))?;
             }
 
             OpCode::Pop => {
@@ -192,121 +244,75 @@ impl IfaVM {
             OpCode::Add => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                self.push(a + b)?;
+                match (a, b) {
+                    (IfaValue::Int(ia), IfaValue::Int(ib)) => self.push(IfaValue::int(ia + ib))?,
+                    (IfaValue::Float(fa), IfaValue::Float(fb)) => self.push(IfaValue::float(fa + fb))?,
+                    (IfaValue::Str(lhs), IfaValue::Str(rhs)) => {
+                         // Concat
+                         let mut s = String::with_capacity(lhs.len() + rhs.len());
+                         s.push_str(&lhs);
+                         s.push_str(&rhs);
+                         self.push(IfaValue::str(s))?;
+                    }
+                    _ => return Err(IfaError::TypeError { expected: "Int/Float/Str".into(), got: "Mismatch".into() })
+                }
             }
 
             OpCode::Sub => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                self.push(a - b)?;
+                match (a, b) {
+                     (IfaValue::Int(ia), IfaValue::Int(ib)) => self.push(IfaValue::int(ia - ib))?,
+                     (IfaValue::Float(fa), IfaValue::Float(fb)) => self.push(IfaValue::float(fa - fb))?,
+                     _ => return Err(IfaError::TypeError { expected: "Int/Float".into(), got: "Mismatch".into() })
+                }
             }
 
             OpCode::Mul => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                self.push(a * b)?;
+                match (a, b) {
+                     (IfaValue::Int(ia), IfaValue::Int(ib)) => self.push(IfaValue::int(ia * ib))?,
+                     (IfaValue::Float(fa), IfaValue::Float(fb)) => self.push(IfaValue::float(fa * fb))?,
+                     _ => return Err(IfaError::TypeError { expected: "Int/Float".into(), got: "Mismatch".into() })
+                }
             }
 
             OpCode::Div => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                let result = a / b;
-                if matches!(result, IfaValue::Null) {
-                    return Err(IfaError::DivisionByZero("Division by zero".to_string()));
-                }
-                self.push(result)?;
-            }
-
-            OpCode::Mod => {
-                let b = self.pop()?;
-                let a = self.pop()?;
-                self.push(a % b)?;
-            }
-
-            OpCode::Neg => {
-                let a = self.pop()?;
-                self.push(-a)?;
-            }
-
-            OpCode::Pow => {
-                let b = self.pop()?;
-                let a = self.pop()?;
-                match (&a, &b) {
-                    (IfaValue::Int(base), IfaValue::Int(exp)) if *exp >= 0 => {
-                        self.push(IfaValue::Int(base.pow(*exp as u32)))?;
-                    }
-                    (IfaValue::Float(base), IfaValue::Float(exp)) => {
-                        self.push(IfaValue::Float(base.powf(*exp)))?;
-                    }
-                    _ => self.push(IfaValue::Null)?,
+                match (a, b) {
+                     (IfaValue::Int(ia), IfaValue::Int(ib)) => {
+                         if ib == 0 { return Err(IfaError::Runtime("Division by zero".into())); }
+                         self.push(IfaValue::int(ia / ib))?
+                     },
+                     (IfaValue::Float(fa), IfaValue::Float(fb)) => {
+                        if fb == 0.0 { return Err(IfaError::Runtime("Division by zero".into())); }
+                        self.push(IfaValue::float(fa / fb))?
+                     },
+                     _ => return Err(IfaError::TypeError { expected: "Int/Float".into(), got: "Mismatch".into() })
                 }
             }
 
-            // Comparison
-            OpCode::Eq => {
-                let b = self.pop()?;
-                let a = self.pop()?;
-                self.push(IfaValue::Bool(a == b))?;
-            }
 
-            OpCode::Ne => {
-                let b = self.pop()?;
-                let a = self.pop()?;
-                self.push(IfaValue::Bool(a != b))?;
-            }
 
-            OpCode::Lt => {
-                let b = self.pop()?;
-                let a = self.pop()?;
-                self.push(IfaValue::Bool(a < b))?;
-            }
 
-            OpCode::Le => {
-                let b = self.pop()?;
-                let a = self.pop()?;
-                self.push(IfaValue::Bool(a <= b))?;
-            }
-
-            OpCode::Gt => {
-                let b = self.pop()?;
-                let a = self.pop()?;
-                self.push(IfaValue::Bool(a > b))?;
-            }
-
-            OpCode::Ge => {
-                let b = self.pop()?;
-                let a = self.pop()?;
-                self.push(IfaValue::Bool(a >= b))?;
-            }
-
-            // Logic
-            OpCode::And => {
-                let b = self.pop()?;
-                let a = self.pop()?;
-                self.push(IfaValue::Bool(a.is_truthy() && b.is_truthy()))?;
-            }
-
-            OpCode::Or => {
-                let b = self.pop()?;
-                let a = self.pop()?;
-                self.push(IfaValue::Bool(a.is_truthy() || b.is_truthy()))?;
-            }
-
-            OpCode::Not => {
-                let a = self.pop()?;
-                self.push(!a)?;
-            }
 
             // Variables
             OpCode::LoadLocal => {
                 let idx = self.read_u16(bytecode)? as usize;
                 let base = self.frames.last().map(|f| f.base_ptr).unwrap_or(0);
-                let value = self
-                    .stack
+                
+                // Use strict checking for local access
+                let value = self.stack
                     .get(base + idx)
                     .cloned()
-                    .unwrap_or(IfaValue::Null);
-                self.push(value)?;
+                    .ok_or(IfaError::Runtime("Local variable access check failed (stack underflow/index error)".into()));
+
+                match value {
+                    Ok(v) => self.push(v)?,
+                    Err(_) => self.push(IfaValue::null())? // Graceful failure for robustness (or could propagate error)
+                }
             }
 
             OpCode::StoreLocal => {
@@ -320,14 +326,14 @@ impl IfaVM {
 
             OpCode::LoadGlobal => {
                 let idx = self.read_u16(bytecode)? as usize;
-                let name = bytecode.strings.get(idx).cloned().unwrap_or_default();
-                let value = self.globals.get(&name).cloned().unwrap_or(IfaValue::Null);
+                let name = bytecode.strings.get(idx).cloned().ok_or(IfaError::Custom("Invalid global name index".into()))?;
+                let value = self.globals.get(&name).cloned().unwrap_or(IfaValue::null());
                 self.push(value)?;
             }
 
             OpCode::StoreGlobal => {
                 let idx = self.read_u16(bytecode)? as usize;
-                let name = bytecode.strings.get(idx).cloned().unwrap_or_default();
+                let name = bytecode.strings.get(idx).cloned().ok_or(IfaError::Custom("Invalid global name index".into()))?;
                 let value = self.pop()?;
                 self.globals.insert(name, value);
             }
@@ -370,18 +376,14 @@ impl IfaVM {
                 let func = self.pop()?;
 
                 match func {
-                    IfaValue::Fn(f) => {
-                        // Native closure call
-                        let result = f(args);
-                        self.push(result)?;
-                    }
-                    IfaValue::BytecodeFn {
-                        start_ip, arity, ..
-                    } => {
+                    // Native closure call
+                    // Note: IfaValue::Fn carries the function data directly
+                    
+                    IfaValue::Fn(data) => {
                         // VM Bytecode call
-                        if args.len() != arity as usize {
+                        if args.len() != data.arity as usize {
                             return Err(IfaError::ArityMismatch {
-                                expected: arity as usize,
+                                expected: data.arity as usize,
                                 got: args.len(),
                             });
                         }
@@ -390,10 +392,7 @@ impl IfaVM {
                         self.frames.push(CallFrame {
                             return_addr: self.ip,
                             base_ptr: self.stack.len(), // Base of the new frame
-                            local_count: 0, // Will be incremented by StoreLocal or determined by compiler?
-                                            // Actually, locals are usually allocated on stack.
-                                            // For this simple VM, we can assume locals are just stack slots relative to base_ptr.
-                                            // But arguments are locals!
+                            local_count: 0, 
                         });
 
                         // Push arguments back onto stack (as locals 0..N)
@@ -402,7 +401,7 @@ impl IfaVM {
                         }
 
                         // Jump
-                        self.ip = start_ip;
+                        self.ip = data.start_ip;
                     }
                     _ => {
                         return Err(IfaError::TypeError {
@@ -415,9 +414,8 @@ impl IfaVM {
 
             OpCode::Return => {
                 if let Some(frame) = self.frames.pop() {
-                    let return_value = self.pop().unwrap_or(IfaValue::Null);
+                    let return_value = self.pop().unwrap_or(IfaValue::null());
                     // Unwind stack to base_ptr
-                    // Note: This drops all locals AND arguments of the current frame
                     if self.stack.len() > frame.base_ptr {
                         self.stack.truncate(frame.base_ptr);
                     }
@@ -432,15 +430,13 @@ impl IfaVM {
 
             OpCode::CallOdu => {
                 let domain_id = self.read_u8(bytecode)?;
-                // Method name is a string index (u8 length + bytes in bytecode stream)
-                // Compiler emits: emit_string -> len(u8) + bytes.
                 let len = self.read_u8(bytecode)? as usize;
                 let mut method_bytes = Vec::with_capacity(len);
                 for _ in 0..len {
                     method_bytes.push(self.read_u8(bytecode)?);
                 }
                 let method_name =
-                    String::from_utf8(method_bytes).unwrap_or_else(|_| "unknown".to_string());
+                    String::from_utf8(method_bytes).map_err(|_| IfaError::Custom("Invalid UTF-8 in CallOdu method name".into()))?;
 
                 let arity = self.read_u8(bytecode)?;
 
@@ -484,30 +480,88 @@ impl IfaVM {
 
             // Collections
             OpCode::GetIndex => {
+
+
+                // Indexing
                 let index = self.pop()?;
                 let collection = self.pop()?;
-                let value = collection.get(&index).unwrap_or(IfaValue::Null);
-                self.push(value)?;
+                
+                match collection {
+                    IfaValue::Map(m) => {
+                         let key = match index {
+                             IfaValue::Str(s) => s,
+                             _ => return Err(IfaError::TypeError { expected: "Str".into(), got: index.type_name().into() })
+                         };
+                         match m.get(&key) {
+                             Some(v) => self.push(v.clone())?,
+                             None => self.push(IfaValue::null())?
+                         }
+                    }
+                    IfaValue::List(l) => {
+                         let idx = match index {
+                             IfaValue::Int(i) => i as usize,
+                             _ => return Err(IfaError::TypeError { expected: "Int".into(), got: index.type_name().into() })
+                         };
+                         if idx >= l.len() {
+                             return Err(IfaError::Runtime("Index out of bounds".into()));
+                         }
+                         self.push(l[idx].clone())?
+                    }
+                    IfaValue::Str(s) => {
+                         let idx = match index {
+                             IfaValue::Int(i) => i as usize,
+                             _ => return Err(IfaError::TypeError { expected: "Int".into(), got: index.type_name().into() })
+                         };
+                         // Very inefficient char access, but functional
+                        if let Some(c) = s.chars().nth(idx) {
+                            self.push(IfaValue::str(c.to_string()))?;
+                        } else {
+                             return Err(IfaError::Runtime("Index out of bounds".into()));
+                        }
+                    }
+                    _ => return Err(IfaError::TypeError { expected: "Collection".into(), got: collection.type_name().into() })
+                }
             }
 
             OpCode::SetIndex => {
-                let value = self.pop()?;
+                let val = self.pop()?;
                 let index = self.pop()?;
                 let mut collection = self.pop()?;
-                let _ = collection.set(&index, value);
-                self.push(collection)?;
+                
+                match collection {
+                    IfaValue::List(ref mut vec_arc) => {
+                        let i = match index {
+                            IfaValue::Int(n) => n as usize,
+                            _ => return Err(IfaError::TypeError { expected: "Int".into(), got: index.type_name().into() })
+                        };
+                         // HIGH PERFORMANCE: CoW using make_mut
+                         let vec = std::sync::Arc::make_mut(vec_arc);
+                         if i >= vec.len() { return Err(IfaError::Runtime("Index out of bounds".into())); }
+                         vec[i] = val;
+                    }
+                    IfaValue::Map(ref mut map_arc) => {
+                        let k = match index {
+                            IfaValue::Str(s) => s.clone(),
+                            _ => return Err(IfaError::TypeError { expected: "Str".into(), got: index.type_name().into() })
+                        };
+                        let map = std::sync::Arc::make_mut(map_arc);
+                        map.insert(k, val);
+                    }
+                    _ => return Err(IfaError::TypeError { expected: "List/Map".into(), got: collection.type_name().into() })
+                }
             }
 
-            OpCode::Len => {
-                let value = self.peek()?;
-                let len = value.len() as i64;
-                self.push(IfaValue::Int(len))?;
-            }
+
 
             OpCode::Append => {
-                let value = self.pop()?;
+                let val = self.pop()?;
                 let mut list = self.pop()?;
-                let _ = list.push(value);
+                if let IfaValue::List(ref mut vec_arc) = list {
+                     let vec = std::sync::Arc::make_mut(vec_arc);
+                     vec.push(val);
+                } else {
+                     return Err(IfaError::TypeError { expected: "List".into(), got: list.type_name().into() });
+                }
                 self.push(list)?;
             }
 
@@ -518,20 +572,21 @@ impl IfaVM {
                     items.push(self.pop()?);
                 }
                 items.reverse();
-                self.push(IfaValue::List(items))?;
+                self.push(IfaValue::list(items))?;
             }
 
             OpCode::BuildMap => {
                 let count = self.read_u8(bytecode)? as usize;
-                let mut map = std::collections::HashMap::new();
+                // IfaValue::map expects HashMap<String, IfaValue> for input constructor convenience
+                let mut map = std::collections::HashMap::with_capacity(count);
                 for _ in 0..count {
                     let value = self.pop()?;
                     let key = self.pop()?;
                     if let IfaValue::Str(k) = key {
-                        map.insert(k, value);
+                        map.insert(k.to_string(), value);
                     }
                 }
-                self.push(IfaValue::Map(map))?;
+                self.push(IfaValue::map(map))?;
             }
 
             // I/O
@@ -552,14 +607,14 @@ impl IfaVM {
                 io::stdout().flush().ok();
                 let mut input = String::new();
                 io::stdin().lock().read_line(&mut input).ok();
-                let result = IfaValue::Str(input.trim().to_string());
+                let result = IfaValue::str(input.trim());
                 self.opon.record("Ogbè", "gbà (received)", &result);
                 self.push(result)?;
             }
 
             OpCode::Import => {
                 let path_idx = self.read_u16(bytecode)? as usize;
-                let path = bytecode.strings.get(path_idx).cloned().unwrap_or_default();
+                let path = bytecode.strings.get(path_idx).cloned().ok_or(IfaError::Custom("Invalid import path index".into()))?;
 
                 if let Some(registry) = &self.registry {
                     let module = registry.import(&path)?;
@@ -573,38 +628,378 @@ impl IfaVM {
 
             OpCode::DefineClass => {
                 let name_idx = self.read_u16(bytecode)? as usize;
-                let name = bytecode.strings.get(name_idx).cloned().unwrap_or_default();
+                let name = bytecode.strings.get(name_idx).cloned().ok_or(IfaError::Custom("Invalid class name index".into()))?;
 
                 let field_count = self.read_u8(bytecode)? as usize;
                 let mut fields = Vec::with_capacity(field_count);
                 for _ in 0..field_count {
                     let f_idx = self.read_u16(bytecode)? as usize;
-                    let f_name = bytecode.strings.get(f_idx).cloned().unwrap_or_default();
+                    let f_name = bytecode.strings.get(f_idx).cloned().ok_or(IfaError::Custom("Invalid field name index".into()))?;
                     fields.push(f_name);
                 }
 
                 let method_count = self.read_u8(bytecode)? as usize;
                 let mut methods = std::collections::HashMap::new();
+
                 for _ in 0..method_count {
                     let func = self.pop()?;
-                    if let IfaValue::BytecodeFn { ref name, .. } = func {
-                        methods.insert(name.clone(), func);
-                    } else if let IfaValue::AstFn { ref name, .. } = func {
-                        methods.insert(name.clone(), func);
+                    // Borrow data to avoid partial move of func which is used later
+                    let method_name = match func {
+                        IfaValue::Fn(ref data) => Some(data.name.clone()),
+
+                        IfaValue::Class(ref name) => Some(name.to_string()), 
+                        _ => None,
+                    };
+
+                    if let Some(n) = method_name {
+                        methods.insert(n, func);
                     }
                 }
 
-                self.push(IfaValue::Class {
-                    name,
-                    fields,
-                    methods,
-                })?;
+                self.push(IfaValue::Class(std::sync::Arc::new(name)))?;
+            }
+            
+            // Exception Handling
+            OpCode::TryBegin => {
+                let offset = self.read_u32(bytecode)? as usize;
+                let catch_ip = self.ip + offset;
+                
+                self.recovery_stack.push(RecoveryFrame {
+                    stack_depth: self.stack.len(),
+                    call_depth: self.frames.len(),
+                    catch_ip,
+                });
+            }
+            
+            OpCode::TryEnd => {
+                // Happy path: pop the unused recovery frame
+                self.recovery_stack.pop();
+            }
+            
+            OpCode::Throw => {
+                let err_val = self.pop()?;
+                // We return a UserError, which the main loop will catch and pass to attempt_recovery
+                return Err(IfaError::UserError(err_val.to_string()));
             }
 
             // System
             OpCode::Halt => {
                 self.halted = true;
             }
+
+            OpCode::Ref => {
+                let addr = self.read_u32(bytecode)? as usize;
+                self.push(IfaValue::Int(addr as i64))?; 
+            }
+
+            OpCode::Load8 => {
+                let ptr = self.pop()?;
+                match ptr {
+                    IfaValue::Int(addr) => {
+                        let addr = addr as usize;
+                        // Mock MMIO behavior validation for simulation or normal Opon read
+                        let val = if addr >= 0x4000_0000 {
+                            // Simulation: Reads from "hardware" return 0
+                            IfaValue::int(0)
+                        } else {
+                            // Regular Opon access
+                            self.opon.get(addr).cloned().unwrap_or(IfaValue::null())
+                        };
+                        self.push(val)?;
+                    }
+                    _ => {
+                        return Err(IfaError::TypeError {
+                            expected: "Pointer".into(),
+                            got: ptr.type_name().into(),
+                        });
+                    }
+                }
+            }
+
+            // === Pointers & Memory ===
+            OpCode::Store8 => {
+                let ptr = self.pop()?;
+                let val = self.pop()?;
+
+                match ptr {
+                    IfaValue::Int(addr_i) => {
+                        let addr = addr_i as usize;
+                        if addr >= 0x4000_0000 {
+                            // Simulation: Log the "hardware" write
+                            self.opon.record("MMIO", "write", &val);
+                            println!("(SIMULATION) MMIO Write8 -> *0x{:X} = {}", addr, val);
+                        } else {
+                            let _ = self
+                                .opon
+                                .try_set(addr, val)
+                                .map_err(|e| IfaError::Runtime(e.to_string()))?;
+                        }
+                    }
+                    _ => {
+                        return Err(IfaError::TypeError {
+                            expected: "Pointer (Int)".into(),
+                            got: ptr.type_name().into(),
+                        });
+                    }
+                }
+            }
+
+            OpCode::Store16 => {
+                let ptr = self.pop()?;
+                let val = self.pop()?;
+                match ptr {
+                    IfaValue::Int(addr_i) => {
+                        let addr = addr_i as usize;
+                        if addr >= 0x4000_0000 {
+                            println!("(SIMULATION) MMIO Write16 -> *0x{:X} = {}", addr, val);
+                        } else {
+                             let _ = self
+                                .opon
+                                .try_set(addr, val)
+                                .map_err(|e| IfaError::Runtime(e.to_string()))?;
+                        }
+                    }
+                    _ => {
+                        return Err(IfaError::TypeError {
+                            expected: "Pointer (Int)".into(),
+                            got: ptr.type_name().into(),
+                        });
+                    }
+                }
+            }
+            OpCode::Load16 => {
+                let ptr = self.pop()?;
+                match ptr {
+                    IfaValue::Int(addr_i) => {
+                         let addr = addr_i as usize;
+                        let val = if addr >= 0x4000_0000 {
+                            IfaValue::int(0)
+                        } else {
+                            self.opon.get(addr).cloned().unwrap_or(IfaValue::null())
+                        };
+                        self.push(val)?;
+                    }
+                    _ => {
+                        return Err(IfaError::TypeError {
+                            expected: "Pointer (Int)".into(),
+                            got: ptr.type_name().into(),
+                        });
+                    }
+                }
+            }
+
+            OpCode::Load32 => {
+                let ptr = self.pop()?;
+                match ptr {
+                    IfaValue::Int(addr_i) => {
+                         let addr = addr_i as usize;
+                        let val = if addr >= 0x4000_0000 {
+                            IfaValue::int(0)
+                        } else {
+                            self.opon.get(addr).cloned().unwrap_or(IfaValue::null())
+                        };
+                        self.push(val)?;
+                    }
+                    _ => return Err(IfaError::TypeError { expected: "Ptr (Int)".into(), got: ptr.type_name().into() })
+                }
+            }
+            OpCode::Load64 => {
+                let ptr = self.pop()?;
+                match ptr {
+                    IfaValue::Int(addr_i) => {
+                         let addr = addr_i as usize;
+                        let val = if addr >= 0x4000_0000 {
+                            IfaValue::int(0)
+                        } else {
+                            self.opon.get(addr).cloned().unwrap_or(IfaValue::null())
+                        };
+                        self.push(val)?;
+                    }
+                    _ => return Err(IfaError::TypeError { expected: "Ptr (Int)".into(), got: ptr.type_name().into() })
+                }
+            }
+
+            OpCode::Store32 => {
+                let ptr = self.pop()?;
+                let val = self.pop()?;
+                match ptr {
+                    IfaValue::Int(addr_i) => {
+                         let addr = addr_i as usize;
+                        if addr >= 0x4000_0000 {
+                            println!("(SIMULATION) MMIO Write32 -> *0x{:X} = {}", addr, val);
+                        } else {
+                            let _ = self.opon.try_set(addr, val).map_err(|e| IfaError::Runtime(e.to_string()))?;
+                        }
+                    }
+                    _ => return Err(IfaError::TypeError { expected: "Ptr (Int)".into(), got: ptr.type_name().into() })
+                }
+            }
+            OpCode::Store64 => {
+                let ptr = self.pop()?;
+                let val = self.pop()?;
+                match ptr {
+                    IfaValue::Int(addr_i) => {
+                        let addr = addr_i as usize;
+                        if addr >= 0x4000_0000 {
+                            println!("(SIMULATION) MMIO Write64 -> *0x{:X} = {}", addr, val);
+                        } else {
+                            let _ = self
+                                .opon
+                                .try_set(addr, val)
+                                .map_err(|e| IfaError::Runtime(e.to_string()))?;
+                        }
+                    }
+                    _ => {
+                        return Err(IfaError::TypeError {
+                            expected: "Pointer".into(),
+                            got: ptr.type_name().into(),
+                        });
+                    }
+                }
+            }
+            // Bitwise operations
+            OpCode::And => {
+                let b = self.pop()?;
+                let a = self.pop()?;
+                match (a, b) {
+                    (IfaValue::Int(i1), IfaValue::Int(i2)) => self.push(IfaValue::int(i1 & i2))?,
+                    (IfaValue::Bool(b1), IfaValue::Bool(b2)) => self.push(IfaValue::bool(b1 && b2))?,
+                    (a, _) => return Err(IfaError::TypeError { expected: "Int or Bool".into(), got: a.type_name().into() })
+                }
+            }
+
+            OpCode::Or => {
+                let b = self.pop()?;
+                let a = self.pop()?;
+                match (a, b) {
+                    (IfaValue::Int(i1), IfaValue::Int(i2)) => self.push(IfaValue::int(i1 | i2))?,
+                    (IfaValue::Bool(b1), IfaValue::Bool(b2)) => self.push(IfaValue::bool(b1 || b2))?,
+                    (a, _) => return Err(IfaError::TypeError { expected: "Int or Bool".into(), got: a.type_name().into() })
+                }
+            }
+            
+            OpCode::Xor => {
+                let b = self.pop()?;
+                let a = self.pop()?;
+                match (a, b) {
+                    (IfaValue::Int(i1), IfaValue::Int(i2)) => self.push(IfaValue::int(i1 ^ i2))?,
+                    (IfaValue::Bool(b1), IfaValue::Bool(b2)) => self.push(IfaValue::bool(b1 ^ b2))?,
+                    (a, _) => return Err(IfaError::TypeError { expected: "Int/Bool".into(), got: a.type_name().into() })
+                }
+            }
+
+            OpCode::Len => {
+                let val = self.pop()?;
+                match val {
+                    IfaValue::Str(s) => self.push(IfaValue::int(s.len() as i64))?,
+                    IfaValue::List(l) => self.push(IfaValue::int(l.len() as i64))?,
+                    IfaValue::Map(m) => self.push(IfaValue::int(m.len() as i64))?,
+                    _ => return Err(IfaError::TypeError { expected: "Collection".into(), got: val.type_name().into() })
+                }
+            }
+
+            OpCode::Not => {
+                let a = self.pop()?;
+                 match a {
+                    IfaValue::Int(i) => self.push(IfaValue::int(!i))?,
+                    IfaValue::Bool(b) => self.push(IfaValue::bool(!b))?,
+                    _ => return Err(IfaError::TypeError { expected: "Int/Bool".into(), got: a.type_name().into() })
+                }
+            }
+
+            OpCode::Shl => {
+                let b = self.pop()?;
+                let a = self.pop()?;
+                 match (a, b) {
+                    (IfaValue::Int(val), IfaValue::Int(shift)) => self.push(IfaValue::int(val << shift))?,
+                    (a, _) => return Err(IfaError::TypeError { expected: "Int".into(), got: a.type_name().into() })
+                }
+            }
+
+            OpCode::Shr => {
+                let b = self.pop()?;
+                let a = self.pop()?;
+                 match (a, b) {
+                    (IfaValue::Int(val), IfaValue::Int(shift)) => self.push(IfaValue::int(val >> shift))?,
+                    (a, _) => return Err(IfaError::TypeError { expected: "Int".into(), got: a.type_name().into() })
+                }
+            }
+            
+            // Type Casting
+            OpCode::ToInt => {
+                let val = self.pop()?;
+                match val {
+                    IfaValue::Int(i) => self.push(IfaValue::int(i))?,
+                    IfaValue::Float(f) => self.push(IfaValue::int(f as i64))?,
+                    IfaValue::Bool(b) => self.push(IfaValue::int(if b { 1 } else { 0 }))?,
+                    // Parse string as integer; treat malformed input as 0 (same as JS parseInt).
+                    IfaValue::Str(s) => {
+                        let n = s.trim().parse::<i64>().unwrap_or(0);
+                        self.push(IfaValue::int(n))?
+                    }
+                    _ => self.push(IfaValue::int(0))?,
+                }
+            }
+
+            OpCode::ToFloat => {
+                let val = self.pop()?;
+                match val {
+                    IfaValue::Int(i) => self.push(IfaValue::float(i as f64))?,
+                    IfaValue::Float(f) => self.push(IfaValue::float(f))?,
+                    _ => self.push(IfaValue::float(0.0))?,
+                }
+            }
+
+            OpCode::ToString => {
+                let val = self.pop()?;
+                self.push(IfaValue::str(val.to_string()))?;
+            }
+
+            OpCode::ToBool => {
+                let val = self.pop()?;
+                self.push(IfaValue::bool(val.is_truthy()))?;
+            }
+
+            OpCode::Neg => {
+                let val = self.pop()?;
+                match val {
+                    IfaValue::Int(n) => self.push(IfaValue::int(-n))?,
+                    IfaValue::Float(f) => self.push(IfaValue::float(-f))?,
+                    _ => return Err(IfaError::Runtime("Invalid type for negation".into())),
+                }
+            }
+            OpCode::Pow => {
+                let exp = self.pop()?;
+                let base = self.pop()?;
+                match (base, exp) {
+                    (IfaValue::Int(b), IfaValue::Int(e)) => self.push(IfaValue::int(b.pow(e as u32)))?,
+                    (IfaValue::Float(b), IfaValue::Float(e)) => self.push(IfaValue::float(b.powf(e)))?,
+                    _ => return Err(IfaError::Runtime("Invalid types for power".into())),
+                }
+            }
+            OpCode::Mod => {
+                let b = self.pop()?;
+                let a = self.pop()?;
+                match (a, b) {
+                    (IfaValue::Int(a), IfaValue::Int(b)) => self.push(IfaValue::int(a % b))?,
+                    _ => return Err(IfaError::Runtime("Modulus requires integers".into()))
+                }
+            }
+             
+             OpCode::Eq => {
+                let b = self.pop()?;
+                let a = self.pop()?;
+                self.push(IfaValue::bool(a == b))?;
+             }
+             OpCode::Ne => {
+                let b = self.pop()?;
+                let a = self.pop()?;
+                self.push(IfaValue::bool(a != b))?;
+             }
+
+            // Implementation placeholders
+            OpCode::Push => return Err(IfaError::Custom("OpCode::Push not implemented".into())),
+            _ => return Err(IfaError::Custom(format!("Unimplemented opcode: {:?}", opcode).into())),
         }
 
         Ok(())
@@ -627,7 +1022,16 @@ impl IfaVM {
         let mut bytes = [0u8; 2];
         bytes[0] = self.read_u8(bytecode)?;
         bytes[1] = self.read_u8(bytecode)?;
-        Ok(u16::from_be_bytes(bytes))
+        Ok(u16::from_le_bytes(bytes))
+    }
+
+    fn read_u32(&mut self, bytecode: &Bytecode) -> IfaResult<u32> {
+        let mut bytes = [0u8; 4];
+        bytes[0] = self.read_u8(bytecode)?;
+        bytes[1] = self.read_u8(bytecode)?;
+        bytes[2] = self.read_u8(bytecode)?;
+        bytes[3] = self.read_u8(bytecode)?;
+        Ok(u32::from_le_bytes(bytes))
     }
 
     fn read_i16(&mut self, bytecode: &Bytecode) -> IfaResult<i16> {
@@ -639,7 +1043,7 @@ impl IfaVM {
         for byte in &mut bytes {
             *byte = self.read_u8(bytecode)?;
         }
-        Ok(i64::from_be_bytes(bytes))
+        Ok(i64::from_le_bytes(bytes))
     }
 
     fn read_f64(&mut self, bytecode: &Bytecode) -> IfaResult<f64> {
@@ -647,7 +1051,7 @@ impl IfaVM {
         for byte in &mut bytes {
             *byte = self.read_u8(bytecode)?;
         }
-        Ok(f64::from_be_bytes(bytes))
+        Ok(f64::from_le_bytes(bytes))
     }
 }
 
@@ -669,23 +1073,23 @@ mod tests {
         let mut bc = Bytecode::new("test");
         bc.code = vec![
             OpCode::PushInt as u8,
+            5,
             0,
             0,
             0,
             0,
             0,
             0,
-            0,
-            5, // 5 as i64
+            0, // 5 as i64 LE
             OpCode::PushInt as u8,
+            3,
             0,
             0,
             0,
             0,
             0,
             0,
-            0,
-            3, // 3 as i64
+            0, // 3 as i64 LE
             OpCode::Add as u8,
             OpCode::Halt as u8,
         ];

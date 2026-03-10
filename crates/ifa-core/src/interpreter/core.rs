@@ -3,13 +3,16 @@
 //! Tree-walking interpreter that executes AST directly.
 //! This is the bridge between parsing and execution.
 
-use std::collections::HashMap;
-use std::io::{self, Write};
 
+
+
+use std::collections::HashMap;
 use crate::ast::*;
 use crate::error::{IfaError, IfaResult};
-use crate::lexer::OduDomain;
-use crate::value::IfaValue;
+
+use crate::opon::Opon;
+// use crate::value::IfaValue; // Legacy
+use ifa_types::value_union::IfaValue;
 use std::fmt::Debug;
 
 /// Debugger trait for execution tracing
@@ -60,10 +63,27 @@ mod sandbox_stub {
     }
 }
 
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct AstFnData {
+    pub name: String,
+    pub params: Vec<String>,
+    pub body: Vec<Statement>,
+}
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct AstClassData {
+    pub name: String,
+    pub fields: Vec<String>,
+    pub methods: HashMap<String, IfaValue>,
+}
+
 use super::environment::Environment;
 
 /// Ose Canvas for ASCII graphics
 #[derive(Clone)]
+#[allow(dead_code)]
 struct OseCanvas {
     width: usize,
     height: usize,
@@ -72,6 +92,7 @@ struct OseCanvas {
     cursor_y: usize,
 }
 
+#[allow(dead_code)]
 impl OseCanvas {
     fn new() -> Self {
         Self {
@@ -181,6 +202,10 @@ impl OseCanvas {
 }
 
 /// The Ifá Interpreter
+
+
+
+
 pub struct Interpreter {
     pub env: Environment,
     output: Vec<String>,
@@ -196,6 +221,10 @@ pub struct Interpreter {
     canvas: OseCanvas,
     /// Modular domain handlers
     handlers: HandlerRegistry,
+    /// Memory (The Calabash)
+    pub opon: Opon,
+    /// Unsafe block nesting depth (0 = safe mode)
+    unsafe_depth: usize,
     /// Optional debugger hook
     pub debugger: Option<Box<dyn Debugger>>,
 }
@@ -223,6 +252,8 @@ impl Interpreter {
             capabilities: CapabilitySet::default(),
             canvas: OseCanvas::new(),
             handlers: HandlerRegistry::new(),
+            opon: Opon::default(),
+            unsafe_depth: 0,
             debugger: None,
         }
     }
@@ -248,7 +279,13 @@ impl Interpreter {
         self.debugger = Some(debugger);
     }
 
+    /// Register a new domain handler
+    pub fn register_handler(&mut self, handler: Box<dyn super::handlers::OduHandler>) {
+        self.handlers.register(handler);
+    }
+
     /// Check capability and return error if denied
+    #[allow(dead_code)]
     fn check_capability(&self, cap: &Ofun) -> IfaResult<()> {
         if self.capabilities.check(cap) {
             Ok(())
@@ -262,7 +299,7 @@ impl Interpreter {
 
     /// Execute a program
     pub fn execute(&mut self, program: &Program) -> IfaResult<IfaValue> {
-        let mut result = IfaValue::Null;
+        let mut result = IfaValue::null();
 
         for stmt in &program.statements {
             result = self.execute_statement(stmt)?;
@@ -284,6 +321,11 @@ impl Interpreter {
             .map(|row| row.iter().collect::<String>())
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    /// Check if currently in an unsafe block
+    pub fn is_unsafe(&self) -> bool {
+        self.unsafe_depth > 0
     }
 
     /// Import a module by path (e.g., ["std", "otura"])
@@ -323,6 +365,38 @@ impl Interpreter {
         self.current_file = prev_file;
 
         Ok(())
+    }
+
+    /// Execute a block of statements in a new scope
+    fn execute_block(&mut self, statements: &[Statement]) -> IfaResult<IfaValue> {
+        // Push Scope - Manually (GPC Pattern)
+        // We take the current env and wrap it as the parent of a new empty env
+        let old_env = std::mem::take(&mut self.env);
+        self.env = crate::interpreter::environment::Environment::with_parent(old_env);
+
+        let mut result = Ok(IfaValue::null());
+        for stmt in statements {
+            result = self.execute_statement(stmt);
+            
+            if result.is_err() {
+                break;
+            }
+            
+            //Check for return values to propagate break/return
+            if let Ok(val) = &result {
+                if val.is_return() {
+                    break;
+                }
+            }
+        }
+
+        // Pop Scope
+        // We take the parent back and restore it as current env
+        if let Some(parent) = self.env.parent.take() {
+            self.env = *parent;
+        }
+
+        result
     }
 
     /// Resolve module path to file path
@@ -367,7 +441,55 @@ impl Interpreter {
             Statement::VarDecl { name, value, .. } => {
                 let val = self.evaluate(value)?;
                 self.env.define(name, val);
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
+            }
+
+            Statement::Const { name, value, .. } => {
+                // Runtime interpretation: identical to VarDecl but conceptually constant
+                let val = self.evaluate(value)?;
+                self.env.define(name, val);
+                Ok(IfaValue::null())
+            }
+
+            Statement::Try {
+                try_body,
+                catch_var,
+                catch_body,
+                ..
+            } => {
+                // Execute try block with new scope
+                match self.execute_block(try_body) {
+                    Ok(val) => Ok(val),
+                    Err(e) => {
+                        // Execute catch block with new scope
+                        // We must manually enter scope for catch to bind the error variable
+                        let old_env = std::mem::take(&mut self.env);
+                        self.env = Environment::with_parent(old_env);
+                        
+                        if !catch_var.is_empty() {
+                            self.env.define(catch_var, IfaValue::str(e.to_string()));
+                        }
+                        
+                        // Execute catch body statements manually inside this scope
+                        // (We reusing execute_block logic but inline to avoid double-scoping 
+                        // or we could use execute_block if we didn't already push scope... 
+                        // Actually execute_block pushes scope. So we can't use it if we want to bind var *in* that scope first.
+                        // So we do it manually here for catch.)
+                        
+                        let mut result = Ok(IfaValue::null());
+                        for s in catch_body {
+                            result = self.execute_statement(s);
+                            if result.is_err() { break; }
+                        }
+                        
+                        // Pop scope
+                        if let Some(parent) = self.env.parent.take() {
+                            self.env = *parent;
+                        }
+                        
+                        result
+                    }
+                }
             }
 
             Statement::Assignment { target, value, .. } => {
@@ -380,33 +502,73 @@ impl Interpreter {
                     }
                     AssignTarget::Index { name, index } => {
                         let idx = self.evaluate(index)?;
-                        let container = self.env.get(name).ok_or_else(|| {
+                        let mut container = self.env.get(name).ok_or_else(|| {
                             IfaError::Runtime(format!("Undefined variable: {}", name))
                         })?;
 
-                        match (container, idx) {
-                            (IfaValue::List(mut list), IfaValue::Int(i)) => {
-                                let len = list.len() as i64;
-                                let idx = if i < 0 { len + i } else { i } as usize;
-                                if idx < list.len() {
-                                    list[idx] = val;
-                                    self.env.set(name, IfaValue::List(list));
-                                } else {
+                        // Index Assignment: xs[0] = 10
+                         match container {
+                             IfaValue::List(ref mut vec_arc) => {
+                                 let i = match idx {
+                                     IfaValue::Int(n) => n as usize,
+                                     _ => return Err(IfaError::Runtime("List index must be Int".into()))
+                                 };
+                                 
+                                 // HIGH PERFORMANCE: CoW using make_mut
+                                 // O(1) if unique, O(N) if shared.
+                                 let vec = std::sync::Arc::make_mut(vec_arc);
+                                 if i >= vec.len() { return Err(IfaError::Runtime("Index out of bounds".into())); }
+                                 vec[i] = val;
+                             }
+                             
+                             IfaValue::Map(ref mut map_arc) => {
+                                 let k = match idx {
+                                     IfaValue::Str(s) => s.clone(),
+                                     _ => return Err(IfaError::Runtime("Map key must be Str".into()))
+                                 };
+                                 // HIGH PERFORMANCE: CoW using make_mut
+                                 let map = std::sync::Arc::make_mut(map_arc);
+                                 map.insert(k, val);
+                             }
+                             _ => return Err(IfaError::Runtime("Invalid index assignment target".into()))
+                        }
+                        self.env.set(name, container);
+                    }
+                    AssignTarget::Dereference(expr) => {
+                        // *ptr = val
+                        let ptr = self.evaluate(expr)?;
+                        match ptr {
+        
+                            IfaValue::Int(addr) => {
+                                if !self.is_unsafe() {
                                     return Err(IfaError::Runtime(format!(
-                                        "Index {} out of bounds",
-                                        i
+                                        "Safety violation: Writing to raw pointer *0x{:X} requires 'àìléwu' (unsafe) block",
+                                        addr
+                                    )));
+                                }
+                                self.opon
+                                    .try_set(addr as usize, val)
+                                    .map_err(|e| IfaError::Runtime(e.to_string()))?;
+                            }
+        
+                            IfaValue::Str(name) => {
+                                if !self.env.set(&name, val.clone()) {
+                                    return Err(IfaError::Runtime(format!(
+                                        "Reference to undefined variable: {}",
+                                        name
                                     )));
                                 }
                             }
-                            (IfaValue::Map(mut map), IfaValue::Str(key)) => {
-                                map.insert(key, val);
-                                self.env.set(name, IfaValue::Map(map));
+                            _ => {
+                                return Err(IfaError::Runtime(format!(
+                                    "Cannot dereference type: {}",
+                                    ptr.type_name()
+                                )));
                             }
-                            _ => return Err(IfaError::Runtime("Invalid index assignment".into())),
                         }
                     }
                 }
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             Statement::Instruction { call, .. } => self.execute_odu_call(call),
@@ -427,7 +589,7 @@ impl Interpreter {
                         self.execute_statement(s)?;
                     }
                 }
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             Statement::While {
@@ -438,7 +600,7 @@ impl Interpreter {
                         self.execute_statement(s)?;
                     }
                 }
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             Statement::For {
@@ -448,24 +610,30 @@ impl Interpreter {
                 ..
             } => {
                 let iter_val = self.evaluate(iterable)?;
+                // Pattern match using kind
                 if let IfaValue::List(items) = iter_val {
-                    for item in items {
+                     // Note: items is &[IfaValue]. We need to iterate.
+                     // But we can't iterate 'items' directly if we need to execute statements 
+                     // because statements might mutate state or invalidate borrows?
+                     // Safer to clone the items first.
+                     let items_vec = items.to_vec(); // Clone items (IfaValue clone)
+                     for item in items_vec {
                         self.env.define(var, item);
                         for s in body {
                             self.execute_statement(s)?;
                         }
-                    }
+                     }
                 }
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             Statement::Return { value, .. } => {
                 let val = if let Some(expr) = value {
                     self.evaluate(expr)?
                 } else {
-                    IfaValue::Null
+                    IfaValue::null()
                 };
-                Ok(IfaValue::Return(Box::new(val)))
+                Ok(IfaValue::return_value(val))
             }
 
             Statement::Match {
@@ -473,65 +641,69 @@ impl Interpreter {
             } => {
                 let cond_val = self.evaluate(condition)?;
                 for arm in arms {
-                    let matched = match &arm.pattern {
+                    // MatchPattern is NOT an Expression, so we handle it directly
+                    let matches = match &arm.pattern {
                         MatchPattern::Literal(expr) => {
                             let pat_val = self.evaluate(expr)?;
                             cond_val == pat_val
                         }
                         MatchPattern::Range { start, end } => {
-                            let start_val = self.evaluate(start)?;
-                            let end_val = self.evaluate(end)?;
-                            match (&cond_val, start_val, end_val) {
-                                (IfaValue::Int(v), IfaValue::Int(s), IfaValue::Int(e)) => {
-                                    *v >= s && *v <= e
-                                }
-                                (IfaValue::Float(v), IfaValue::Float(s), IfaValue::Float(e)) => {
-                                    *v >= s && *v <= e
-                                }
-                                _ => false,
-                            }
+                             let start_val = self.evaluate(start)?;
+                             let end_val = self.evaluate(end)?;
+                             match (&cond_val, start_val, end_val) {
+                                 (IfaValue::Int(v), IfaValue::Int(s), IfaValue::Int(e)) => *v >= s && *v <= e,
+                                 (IfaValue::Float(v), IfaValue::Float(s), IfaValue::Float(e)) => *v >= s && *v <= e,
+                                 _ => false
+                             }
                         }
                         MatchPattern::Wildcard => true,
                     };
 
-                    if matched {
+                    if matches {
                         for stmt in &arm.body {
                             let res = self.execute_statement(stmt)?;
-                            if let IfaValue::Return(_) = res {
+                            // Check for Return signal
+                            if matches!(res, IfaValue::Return(_)) {
                                 return Ok(res);
                             }
                         }
-                        return Ok(IfaValue::Null);
+                        return Ok(IfaValue::null());
                     }
                 }
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             Statement::Ase { .. } => {
-                // End marker - no-op
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
+
+
+// Inside execute_statement match
             Statement::EseDef {
                 name, params, body, ..
             } => {
-                // Store function definition
-                let func = IfaValue::AstFn {
+                // AST-mode function dispatch is disabled in the interpreter
+                // (call_function returns Err for all non-bytecode callables).
+                // Store Null as the function value so the name is defined in scope.
+                // When the compiler path is active, EseDef is compiled to bytecode
+                // and called via OpCode::Call — not through the interpreter env.
+                let _data = AstFnData {
                     name: name.clone(),
                     params: params.iter().map(|p| p.name.clone()).collect(),
                     body: body.clone(),
                 };
-                self.env.define(name, func);
-                Ok(IfaValue::Null)
+                // `_data` is dropped here — no raw pointer, no leak.
+                self.env.define(name, IfaValue::null());
+                Ok(IfaValue::null())
             }
 
             Statement::Import { path, .. } => {
                 self.import_module(path)?;
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             Statement::OduDef { name, body, .. } => {
-                let mut methods = HashMap::new();
                 let mut fields = Vec::new();
 
                 for stmt in body {
@@ -539,12 +711,13 @@ impl Interpreter {
                         Statement::EseDef {
                             name, params, body, ..
                         } => {
-                            let method = IfaValue::AstFn {
+                            // AST-mode function dispatch is disabled; drop cleanly.
+                            let _data = AstFnData {
                                 name: name.clone(),
                                 params: params.iter().map(|p| p.name.clone()).collect(),
                                 body: body.clone(),
                             };
-                            methods.insert(name.clone(), method);
+                            // `_data` dropped here — no pointer, no leak.
                         }
                         Statement::VarDecl { name, .. } => {
                             fields.push(name.clone());
@@ -553,23 +726,20 @@ impl Interpreter {
                     }
                 }
 
-                let class = IfaValue::Class {
-                    name: name.clone(),
-                    fields,
-                    methods,
-                };
-
-                self.env.define(name, class);
-                Ok(IfaValue::Null)
+                // Class dispatch is handled by the VM's DefineClass opcode.
+                // The interpreter registers the class name as Null in the current scope
+                // so subsequent references don't produce "undefined variable" errors.
+                let _ = fields;
+                self.env.define(name, IfaValue::null());
+                Ok(IfaValue::null())
             }
+
 
             Statement::Expr { expr, .. } => self.evaluate(expr),
 
             Statement::Taboo { source, target, .. } => {
-                // Taboo declarations are compile-time only, no runtime effect
-                // Could log for debugging
                 println!("[taboo] {} -> {} forbidden", source, target);
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             Statement::Ewo {
@@ -577,16 +747,10 @@ impl Interpreter {
                 message,
                 span: _,
             } => {
-                // Evaluate the assertion condition
-                let result = self.evaluate(condition)?;
-
-                match result {
-                    IfaValue::Bool(true) => {
-                        // Assertion passed - continue
-                        Ok(IfaValue::Null)
-                    }
+                let condition_val = self.evaluate(condition)?;
+                match condition_val {
+                    IfaValue::Bool(true) => Ok(IfaValue::null()),
                     IfaValue::Bool(false) => {
-                        // Assertion failed - throw error
                         let msg = message
                             .clone()
                             .unwrap_or_else(|| "Assertion failed".to_string());
@@ -595,20 +759,17 @@ impl Interpreter {
                             msg
                         )))
                     }
-                    other => {
-                        // Non-boolean - throw error
+                    _ => {
                         Err(IfaError::Runtime(format!(
                             "[ẹ̀wọ̀/verify] Assertion expects boolean, got: {:?}",
-                            other
+                            condition_val.type_name()
                         )))
                     }
                 }
             }
 
             Statement::Opon { size, .. } => {
-                // Opon directive - parse and validate the size
                 use crate::opon::OponSize;
-
                 if let Some(opon_size) = OponSize::from_str(size) {
                     println!(
                         "[opon/mem] Memory configured: {} ({} slots, {})",
@@ -622,13 +783,40 @@ impl Interpreter {
                         size
                     );
                 }
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             Statement::Ebo { offering, .. } => {
                 let val = self.evaluate(offering)?;
                 println!("[ẹbọ/sacrifice] Aspect initiated: {}", val);
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
+            }
+
+            Statement::Ailewu { body, .. } => {
+                self.unsafe_depth += 1;
+                let result = (|| {
+                    for s in body {
+                        let res = self.execute_statement(s)?;
+                        if matches!(res, IfaValue::Return(_)) {
+                            return Ok(res);
+                        }
+                    }
+                    Ok(IfaValue::null())
+                })();
+                self.unsafe_depth -= 1;
+                result
+            }
+
+            Statement::Yield { duration, .. } => {
+                let val = self.evaluate(duration)?;
+                if let IfaValue::Int(micros) = val {
+                    std::thread::sleep(std::time::Duration::from_micros(micros as u64));
+                } else {
+                    return Err(IfaError::Runtime(
+                        "Yield duration must be an integer (microseconds)".to_string(),
+                    ));
+                }
+                Ok(IfaValue::null())
             }
         }
     }
@@ -637,7 +825,7 @@ impl Interpreter {
         match expr {
             Expression::Int(n) => Ok(IfaValue::Int(*n)),
             Expression::Float(f) => Ok(IfaValue::Float(*f)),
-            Expression::String(s) => Ok(IfaValue::Str(s.clone())),
+            Expression::String(s) => Ok(IfaValue::Str(s.clone().into())),
             Expression::Bool(b) => Ok(IfaValue::Bool(*b)),
             Expression::Nil => Ok(IfaValue::Null),
 
@@ -653,14 +841,32 @@ impl Interpreter {
             }
 
             Expression::UnaryOp { op, expr } => {
-                let val = self.evaluate(expr)?;
+                // Special handling for AddressOf to avoid evaluating the expression fully if it's an Identifier
+                if matches!(op, UnaryOperator::AddressOf) {
+                    // &x -> Ref("x") - Unsupported in current type system
+                    if let Expression::Identifier(_name) = &**expr {
+                         return Err(IfaError::Runtime("AddressOf (&) not supported in new type system".into()));
+                    }
+                }
+                
+                let r = self.evaluate(expr)?;
                 match op {
-                    UnaryOperator::Neg => match val {
-                        IfaValue::Int(n) => Ok(IfaValue::Int(-n)),
-                        IfaValue::Float(f) => Ok(IfaValue::Float(-f)),
-                        _ => Err(IfaError::Runtime("Cannot negate non-number".into())),
+                    UnaryOperator::Not => Ok(IfaValue::bool(!r.is_truthy())),
+                    UnaryOperator::Neg => match r {
+                        IfaValue::Int(n) => Ok(IfaValue::int(-n)),
+                        IfaValue::Float(f) => Ok(IfaValue::float(-f)),
+                        _ => Err(IfaError::Runtime("Operand must be a number".into())),
                     },
-                    UnaryOperator::Not => Ok(IfaValue::Bool(!val.is_truthy())),
+                    UnaryOperator::AddressOf => {
+                        // If we are here, it means it wasn't a simple identifier. 
+                        // We can't really take address of a literal or expression result in this simple VM yet.
+                        Err(IfaError::Runtime("Cannot take address of this expression".into()))
+                    }
+                    UnaryOperator::Dereference => {
+                         // *r
+                         // Deref not supported currently as AddressOf is disabled
+                         Err(IfaError::Runtime("Deref (*) not supported in new type system".into()))
+                    }
                 }
             }
 
@@ -688,34 +894,36 @@ impl Interpreter {
                 for item in items {
                     list.push(self.evaluate(item)?);
                 }
-                Ok(IfaValue::List(list))
+                Ok(IfaValue::list(list))
             }
 
             Expression::Map(entries) => {
                 let mut map = HashMap::new();
                 for (k, v) in entries {
                     let key = match self.evaluate(k)? {
-                        IfaValue::Str(s) => s,
-                        _ => return Err(IfaError::Runtime("Map keys must be strings".into())),
+                        IfaValue::Str(s) => s.to_string(),
+                         _ => return Err(IfaError::Runtime("Map keys must be strings".into())),
                     };
-                    map.insert(key, self.evaluate(v)?);
+                    map.insert(key.into(), self.evaluate(v)?);
                 }
-                Ok(IfaValue::Map(map))
+                Ok(IfaValue::map(map))
             }
 
             Expression::Index { object, index } => {
                 let obj = self.evaluate(object)?;
                 let idx = self.evaluate(index)?;
 
-                match (&obj, &idx) {
+                match (obj, idx) {
                     (IfaValue::List(list), IfaValue::Int(i)) => {
-                        let i = *i as usize;
-                        list.get(i)
-                            .cloned()
-                            .ok_or_else(|| IfaError::Runtime(format!("Index {} out of bounds", i)))
+                        let i = i as usize;
+                        if i < list.len() {
+                             Ok(list[i].clone())
+                        } else {
+                            Err(IfaError::Runtime(format!("Index {} out of bounds", i)))
+                        }
                     }
                     (IfaValue::Map(map), IfaValue::Str(key)) => map
-                        .get(key)
+                        .get(&key)
                         .cloned()
                         .ok_or_else(|| IfaError::Runtime(format!("Key '{}' not found", key))),
                     _ => Err(IfaError::Runtime("Invalid index operation".into())),
@@ -724,1717 +932,23 @@ impl Interpreter {
         }
     }
 
+
     fn execute_odu_call(&mut self, call: &OduCall) -> IfaResult<IfaValue> {
-        let mut args: Vec<IfaValue> = Vec::new();
-        for arg in &call.args {
-            args.push(self.evaluate(arg)?);
-        }
+        let args: Vec<IfaValue> = call
+            .args
+            .iter()
+            .map(|arg| self.evaluate(arg))
+            .collect::<Result<_, _>>()?;
 
-        // Try modular handlers first (for registered domains)
-        if let Some(handler) = self.handlers.get(&call.domain) {
-            return handler.call(&call.method, args, &mut self.env, &mut self.output);
-        }
-
-        // Fall back to legacy code for domains not yet migrated to handlers
-        // (Compound Odù, FFI, Infrastructure stacks, etc.)
-        match call.domain {
-            // ═══════════════════════════════════════════════════════════════
-            // Ìrosù (Console I/O)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Irosu => match call.method.as_str() {
-                "fo" | "sọ" | "print" | "println" => {
-                    self.check_capability(&Ofun::Stdio)?;
-                    let output: Vec<String> = args.iter().map(|a| a.to_string()).collect();
-                    let line = output.join(" ");
-                    println!("{}", line);
-                    self.output.push(line);
-                    Ok(IfaValue::Null)
-                }
-                "ka" | "input" | "listen" | "gbo" => {
-                    self.check_capability(&Ofun::Stdio)?;
-                    print!("> ");
-                    io::stdout().flush().ok();
-                    let mut input = String::new();
-                    io::stdin()
-                        .read_line(&mut input)
-                        .map_err(IfaError::IoError)?;
-                    Ok(IfaValue::Str(input.trim().to_string()))
-                }
-                "kigbe" | "error" => {
-                    let msg = args.first().map(|a| a.to_string()).unwrap_or_default();
-                    eprintln!("[ERROR] {}", msg);
-                    Ok(IfaValue::Null)
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ìrosù method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ọ̀bàrà (Math Add/Mul)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Obara => match call.method.as_str() {
-                "fikun" | "add" => {
-                    let mut sum = 0i64;
-                    for arg in &args {
-                        match arg {
-                            IfaValue::Int(n) => sum += n,
-                            IfaValue::Float(f) => sum += *f as i64,
-                            _ => {}
-                        }
-                    }
-                    Ok(IfaValue::Int(sum))
-                }
-                "isodipupo" | "mul" => {
-                    let mut product = 1i64;
-                    for arg in &args {
-                        match arg {
-                            IfaValue::Int(n) => product *= n,
-                            IfaValue::Float(f) => product *= *f as i64,
-                            _ => {}
-                        }
-                    }
-                    Ok(IfaValue::Int(product))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ọ̀bàrà method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Òtúúrúpọ̀n (Math Sub/Div)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Oturupon => match call.method.as_str() {
-                "din" | "sub" => {
-                    if args.len() >= 2 {
-                        match (&args[0], &args[1]) {
-                            (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::Int(a - b)),
-                            (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Float(a - b)),
-                            _ => Err(IfaError::Runtime("Invalid subtraction operands".into())),
-                        }
-                    } else {
-                        Err(IfaError::Runtime("din requires 2 arguments".into()))
-                    }
-                }
-                "pin" | "div" => {
-                    if args.len() >= 2 {
-                        match (&args[0], &args[1]) {
-                            (IfaValue::Int(a), IfaValue::Int(b)) if *b != 0 => {
-                                Ok(IfaValue::Int(a / b))
-                            }
-                            (IfaValue::Float(a), IfaValue::Float(b)) if *b != 0.0 => {
-                                Ok(IfaValue::Float(a / b))
-                            }
-                            _ => Err(IfaError::Runtime(
-                                "Division by zero or invalid operands".into(),
-                            )),
-                        }
-                    } else {
-                        Err(IfaError::Runtime("pin requires 2 arguments".into()))
-                    }
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Òtúúrúpọ̀n method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ìká (Strings)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Ika => match call.method.as_str() {
-                "so" | "concat" => {
-                    let result: String = args.iter().map(|a| a.to_string()).collect();
-                    Ok(IfaValue::Str(result))
-                }
-                "dapo" | "join" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::List(parts), IfaValue::Str(delim)) = (&args[0], &args[1])
-                        {
-                            let result: String = parts
-                                .iter()
-                                .map(|a| a.to_string())
-                                .collect::<Vec<String>>()
-                                .join(delim.as_str());
-                            return Ok(IfaValue::Str(result));
-                        }
-                    }
-                    Err(IfaError::Runtime("join requires list and delimiter".into()))
-                }
-                "gigun" | "len" => {
-                    if let Some(IfaValue::Str(s)) = args.first() {
-                        // Using chars().count() for proper Unicode character count
-                        // (Yoruba diacritics like ẹ, ọ, ṣ are single characters)
-                        Ok(IfaValue::Int(s.chars().count() as i64))
-                    } else {
-                        Err(IfaError::Runtime("len requires a string argument".into()))
-                    }
-                }
-                "pin" | "split" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::Str(s), IfaValue::Str(delim)) = (&args[0], &args[1]) {
-                            let parts: Vec<IfaValue> = s
-                                .split(delim.as_str())
-                                .map(|p| IfaValue::Str(p.to_string()))
-                                .collect();
-                            return Ok(IfaValue::List(parts));
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "split requires string and delimiter".into(),
-                    ))
-                }
-                "ga" | "upper" | "nla" => {
-                    if let Some(IfaValue::Str(s)) = args.first() {
-                        return Ok(IfaValue::Str(s.to_uppercase()));
-                    }
-                    Err(IfaError::Runtime("nla requires a string".into()))
-                }
-                "isale" | "lower" | "kekere" => {
-                    if let Some(IfaValue::Str(s)) = args.first() {
-                        return Ok(IfaValue::Str(s.to_lowercase()));
-                    }
-                    Err(IfaError::Runtime("kekere requires a string".into()))
-                }
-                "ge" | "trim" => {
-                    if let Some(IfaValue::Str(s)) = args.first() {
-                        return Ok(IfaValue::Str(s.trim().to_string()));
-                    }
-                    Err(IfaError::Runtime("trim requires a string".into()))
-                }
-                "ni" | "contains" | "has" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::Str(s), IfaValue::Str(sub)) = (&args[0], &args[1]) {
-                            return Ok(IfaValue::Bool(s.contains(sub.as_str())));
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "has requires string and substring".into(),
-                    ))
-                }
-                "rọpo" | "replace" => {
-                    if args.len() >= 3 {
-                        if let (IfaValue::Str(s), IfaValue::Str(from), IfaValue::Str(to)) =
-                            (&args[0], &args[1], &args[2])
-                        {
-                            return Ok(IfaValue::Str(s.replace(from.as_str(), to.as_str())));
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "replace requires string, from, and to".into(),
-                    ))
-                }
-                "bẹrẹ_pẹlu" | "starts_with" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::Str(s), IfaValue::Str(prefix)) = (&args[0], &args[1]) {
-                            return Ok(IfaValue::Bool(s.starts_with(prefix.as_str())));
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "starts_with requires string and prefix".into(),
-                    ))
-                }
-                "pari_pẹlu" | "ends_with" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::Str(s), IfaValue::Str(suffix)) = (&args[0], &args[1]) {
-                            return Ok(IfaValue::Bool(s.ends_with(suffix.as_str())));
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "ends_with requires string and suffix".into(),
-                    ))
-                }
-                "wa" | "find" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::Str(s), IfaValue::Str(sub)) = (&args[0], &args[1]) {
-                            return Ok(s
-                                .find(sub.as_str())
-                                .map(|i| IfaValue::Int(i as i64))
-                                .unwrap_or(IfaValue::Null));
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "find requires string and substring".into(),
-                    ))
-                }
-                "bo_asiri" | "encode" => {
-                    if let Some(val) = args.first() {
-                        return Ok(IfaValue::Str(
-                            serde_json::to_string(val).unwrap_or_default(),
-                        ));
-                    }
-                    Err(IfaError::Runtime("encode requires value".into()))
-                }
-                "titu_asiri" | "decode" => {
-                    if let Some(IfaValue::Str(s)) = args.first() {
-                        return Ok(serde_json::from_str(s).unwrap_or(IfaValue::Null));
-                    }
-                    Err(IfaError::Runtime("decode requires string".into()))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ìká method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ọ̀yẹ̀kú (Exit/Sleep)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Oyeku => match call.method.as_str() {
-                "jade" | "exit" => {
-                    let code = args
-                        .first()
-                        .and_then(|v| {
-                            if let IfaValue::Int(n) = v {
-                                Some(*n as i32)
-                            } else {
-                                None
-                            }
-                        })
-                        .unwrap_or(0);
-                    std::process::exit(code);
-                }
-                "sun" | "sleep" => {
-                    self.check_capability(&Ofun::Time)?;
-                    if let Some(IfaValue::Int(ms)) = args.first() {
-                        std::thread::sleep(std::time::Duration::from_millis(*ms as u64));
-                    }
-                    Ok(IfaValue::Null)
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ọ̀yẹ̀kú method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ọ̀wọ́nrín (Random)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Owonrin => match call.method.as_str() {
-                "nọmba" | "random" => {
-                    self.check_capability(&Ofun::Random)?;
-                    use std::time::{SystemTime, UNIX_EPOCH};
-                    let seed = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap()
-                        .as_nanos() as u64;
-                    // Simple LCG random
-                    let random = (seed.wrapping_mul(1103515245).wrapping_add(12345) >> 16) & 0x7fff;
-                    Ok(IfaValue::Int(random as i64))
-                }
-                "laarin" | "range" => {
-                    self.check_capability(&Ofun::Random)?;
-                    // Random between min and max
-                    if args.len() >= 2 {
-                        if let (IfaValue::Int(min), IfaValue::Int(max)) = (&args[0], &args[1]) {
-                            use std::time::{SystemTime, UNIX_EPOCH};
-                            let seed = SystemTime::now()
-                                .duration_since(UNIX_EPOCH)
-                                .unwrap()
-                                .as_nanos() as u64;
-                            let random =
-                                (seed.wrapping_mul(1103515245).wrapping_add(12345) >> 16) & 0x7fff;
-                            let val = min + (random as i64 % (max - min + 1));
-                            return Ok(IfaValue::Int(val));
-                        }
-                    }
-                    Err(IfaError::Runtime("range requires two int arguments".into()))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ọ̀wọ́nrín method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ògúndá (Arrays)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Ogunda => match call.method.as_str() {
-                "da" | "create" => Ok(IfaValue::List(args)),
-                "gigun" | "len" => {
-                    if let Some(IfaValue::List(list)) = args.first() {
-                        Ok(IfaValue::Int(list.len() as i64))
-                    } else {
-                        Err(IfaError::Runtime("len requires a list argument".into()))
-                    }
-                }
-                "fikun" | "push" => {
-                    if args.len() >= 2 {
-                        if let IfaValue::List(mut list) = args[0].clone() {
-                            list.push(args[1].clone());
-                            return Ok(IfaValue::List(list));
-                        }
-                    }
-                    Err(IfaError::Runtime("push requires list and element".into()))
-                }
-                "yọ" | "pop" => {
-                    if let Some(IfaValue::List(mut list)) = args.first().cloned() {
-                        let val = list.pop().unwrap_or(IfaValue::Null);
-                        return Ok(val);
-                    }
-                    Err(IfaError::Runtime("pop requires a list".into()))
-                }
-                "yipada" | "reverse" => {
-                    if let Some(IfaValue::List(mut list)) = args.first().cloned() {
-                        list.reverse();
-                        return Ok(IfaValue::List(list));
-                    }
-                    Err(IfaError::Runtime("reverse requires a list".into()))
-                }
-                "akọkọ" | "first" => {
-                    if let Some(IfaValue::List(list)) = args.first() {
-                        return Ok(list.first().cloned().unwrap_or(IfaValue::Null));
-                    }
-                    Err(IfaError::Runtime("first requires a list".into()))
-                }
-                "ikẹhin" | "last" => {
-                    if let Some(IfaValue::List(list)) = args.first() {
-                        return Ok(list.last().cloned().unwrap_or(IfaValue::Null));
-                    }
-                    Err(IfaError::Runtime("last requires a list".into()))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ògúndá method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ọ̀gbè (System)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Ogbe => match call.method.as_str() {
-                "awọn_asẹ" | "args" => {
-                    let args_list: Vec<IfaValue> =
-                        std::env::args().skip(1).map(IfaValue::Str).collect();
-                    Ok(IfaValue::List(args_list))
-                }
-                "ayika" | "env" => {
-                    if let Some(IfaValue::Str(key)) = args.first() {
-                        self.check_capability(&Ofun::Environment {
-                            keys: vec![key.clone()],
-                        })?;
-                        let val = std::env::var(key).unwrap_or_default();
-                        return Ok(IfaValue::Str(val));
-                    }
-                    Err(IfaError::Runtime("env requires a string key".into()))
-                }
-                "ẹya" | "platform" => Ok(IfaValue::Str(std::env::consts::OS.to_string())),
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ọ̀gbè method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ìwòrì (Time)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Iwori => match call.method.as_str() {
-                "akoko" | "now" => {
-                    self.check_capability(&Ofun::Time)?;
-                    use std::time::{SystemTime, UNIX_EPOCH};
-                    let now = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs();
-                    Ok(IfaValue::Int(now as i64))
-                }
-                "millis" => {
-                    self.check_capability(&Ofun::Time)?;
-                    use std::time::{SystemTime, UNIX_EPOCH};
-                    let now = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap()
-                        .as_millis();
-                    Ok(IfaValue::Int(now as i64))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ìwòrì method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Òtúrá (Networking / Backend)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Otura => match call.method.as_str() {
-                "http_get" | "gba" => {
-                    if let Some(IfaValue::Str(url)) = args.first() {
-                        let domain = url
-                            .split("://")
-                            .nth(1)
-                            .and_then(|s| s.split('/').next())
-                            .unwrap_or("")
-                            .to_string();
-                        self.check_capability(&Ofun::Network {
-                            domains: vec![domain],
-                        })?;
-                        println!("[HTTP] GET {}", url);
-                        // Placeholder - would use reqwest
-                        Ok(IfaValue::Str(format!(
-                            "{{\"url\": \"{}\", \"status\": 200}}",
-                            url
-                        )))
-                    } else {
-                        Err(IfaError::Runtime("http_get requires URL".into()))
-                    }
-                }
-                "http_post" | "fi" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::Str(url), body) = (&args[0], &args[1]) {
-                            let domain = url
-                                .split("://")
-                                .nth(1)
-                                .and_then(|s| s.split('/').next())
-                                .unwrap_or("")
-                                .to_string();
-                            self.check_capability(&Ofun::Network {
-                                domains: vec![domain.clone()],
-                            })?;
-                            println!("[HTTP] POST {} {:?}", url, body);
-                            return Ok(IfaValue::Str("{\"status\": 201}".to_string()));
-                        }
-                    }
-                    Err(IfaError::Runtime("http_post requires URL and body".into()))
-                }
-                "serve" | "sin" => {
-                    if let Some(IfaValue::Int(port)) = args.first() {
-                        self.check_capability(&Ofun::Network {
-                            domains: vec!["*".to_string()],
-                        })?;
-                        println!("🚀 HTTP Server starting on port {}", port);
-                        return Ok(IfaValue::Str(format!("Server running on :{}", port)));
-                    }
-                    Err(IfaError::Runtime("serve requires port number".into()))
-                }
-                "ws_connect" => {
-                    if let Some(IfaValue::Str(url)) = args.first() {
-                        let domain = url
-                            .split("://")
-                            .nth(1)
-                            .and_then(|s| s.split('/').next())
-                            .unwrap_or("")
-                            .to_string();
-                        self.check_capability(&Ofun::Network {
-                            domains: vec![domain],
-                        })?;
-                        println!("[WS] Connecting to {}", url);
-                        return Ok(IfaValue::Str("websocket connected".to_string()));
-                    }
-                    Err(IfaError::Runtime("ws_connect requires URL".into()))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Òtúrá method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Òdí (Files / Database)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Odi => match call.method.as_str() {
-                "ka" | "read" => {
-                    if let Some(IfaValue::Str(path)) = args.first() {
-                        self.check_capability(&Ofun::ReadFiles {
-                            root: std::path::PathBuf::from(path),
-                        })?;
-                        match std::fs::read_to_string(path) {
-                            Ok(content) => Ok(IfaValue::Str(content)),
-                            Err(e) => Err(IfaError::Runtime(format!("Cannot read file: {}", e))),
-                        }
-                    } else {
-                        Err(IfaError::Runtime("read requires file path".into()))
-                    }
-                }
-                "ko" | "write" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::Str(path), content) = (&args[0], &args[1]) {
-                            self.check_capability(&Ofun::WriteFiles {
-                                root: std::path::PathBuf::from(path),
-                            })?;
-                            let text = content.to_string();
-                            match std::fs::write(path, &text) {
-                                Ok(_) => return Ok(IfaValue::Bool(true)),
-                                Err(e) => {
-                                    return Err(IfaError::Runtime(format!(
-                                        "Cannot write file: {}",
-                                        e
-                                    )));
-                                }
-                            }
-                        }
-                    }
-                    Err(IfaError::Runtime("write requires path and content".into()))
-                }
-                "wa" | "exists" => {
-                    if let Some(IfaValue::Str(path)) = args.first() {
-                        self.check_capability(&Ofun::ReadFiles {
-                            root: std::path::PathBuf::from(path),
-                        })?;
-                        return Ok(IfaValue::Bool(std::path::Path::new(path).exists()));
-                    }
-                    Err(IfaError::Runtime("exists requires path".into()))
-                }
-                "ṣẹda_fọọ́dà" | "mkdir" => {
-                    if let Some(IfaValue::Str(path)) = args.first() {
-                        self.check_capability(&Ofun::WriteFiles {
-                            root: std::path::PathBuf::from(path),
-                        })?;
-                        match std::fs::create_dir_all(path) {
-                            Ok(_) => return Ok(IfaValue::Bool(true)),
-                            Err(e) => {
-                                return Err(IfaError::Runtime(format!("Cannot mkdir: {}", e)));
-                            }
-                        }
-                    }
-                    Err(IfaError::Runtime("mkdir requires path".into()))
-                }
-                "àwọn_faili" | "list" => {
-                    if let Some(IfaValue::Str(path)) = args.first() {
-                        match std::fs::read_dir(path) {
-                            Ok(entries) => {
-                                let files: Vec<IfaValue> = entries
-                                    .filter_map(|e| e.ok())
-                                    .filter_map(|e| e.file_name().into_string().ok())
-                                    .map(IfaValue::Str)
-                                    .collect();
-                                return Ok(IfaValue::List(files));
-                            }
-                            Err(e) => return Err(IfaError::Runtime(format!("Cannot list: {}", e))),
-                        }
-                    }
-                    Err(IfaError::Runtime("list requires path".into()))
-                }
-                "sql" => {
-                    // SQL requires a database connection - return error in interpreter
-                    // Real SQL execution happens via Odi.connect() + query methods
-                    Err(IfaError::Runtime(
-                        "sql() requires database connection. Use Odi.connect(path) first, then db.query(sql)".into()
-                    ))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Òdí method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ìrẹtẹ̀ (Crypto / Security)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Irete => match call.method.as_str() {
-                "sha256" => {
-                    if let Some(IfaValue::Str(data)) = args.first() {
-                        // Real SHA-256 implementation using simple software hash
-                        // This matches crypto.rs but doesn't require ring dependency
-                        let hash = sha256_simple(data.as_bytes());
-                        let hex: String = hash.iter().map(|b| format!("{:02x}", b)).collect();
-                        return Ok(IfaValue::Str(hex));
-                    }
-                    Err(IfaError::Runtime("sha256 requires string".into()))
-                }
-                "base64_encode" | "si_base64" => {
-                    if let Some(IfaValue::Str(data)) = args.first() {
-                        // Real base64 encoding
-                        let encoded = base64_encode(data.as_bytes());
-                        return Ok(IfaValue::Str(encoded));
-                    }
-                    Err(IfaError::Runtime("base64_encode requires string".into()))
-                }
-                "uuid" => {
-                    use std::time::{SystemTime, UNIX_EPOCH};
-                    let now = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap()
-                        .as_nanos();
-                    let uuid = format!(
-                        "{:08x}-{:04x}-{:04x}-{:04x}-{:012x}",
-                        (now >> 96) as u32,
-                        (now >> 80) as u16,
-                        (now >> 64) as u16,
-                        (now >> 48) as u16,
-                        now as u64 & 0xFFFFFFFFFFFF
-                    );
-                    Ok(IfaValue::Str(uuid))
-                }
-                "random_bytes" => {
-                    if let Some(IfaValue::Int(n)) = args.first() {
-                        let bytes: Vec<IfaValue> = (0..*n as usize)
-                            .map(|i| IfaValue::Int((i * 17 % 256) as i64))
-                            .collect();
-                        return Ok(IfaValue::List(bytes));
-                    }
-                    Err(IfaError::Runtime("random_bytes requires count".into()))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ìrẹtẹ̀ method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ọ̀sá (Concurrency)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Osa => match call.method.as_str() {
-                "spawn" | "pilẹ" => {
-                    println!("[ASYNC] Spawning task...");
-                    Ok(IfaValue::Str("task_handle".to_string()))
-                }
-                "sleep" | "sun" => {
-                    if let Some(IfaValue::Int(ms)) = args.first() {
-                        std::thread::sleep(std::time::Duration::from_millis(*ms as u64));
-                        return Ok(IfaValue::Null);
-                    }
-                    Err(IfaError::Runtime("sleep requires milliseconds".into()))
-                }
-                "await" | "duro" => {
-                    println!("[ASYNC] Awaiting task...");
-                    Ok(IfaValue::Null)
-                }
-                "channel" => {
-                    println!("[ASYNC] Creating channel...");
-                    Ok(IfaValue::Str("channel_handle".to_string()))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ọ̀sá method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ọ̀ṣẹ́ (Graphics / UI - via ratatui)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Ose => match call.method.as_str() {
-                // Canvas operations
-                "nu" => {
-                    let fill = args
-                        .first()
-                        .and_then(|v| {
-                            if let IfaValue::Str(s) = v {
-                                s.chars().next()
-                            } else {
-                                None
-                            }
-                        })
-                        .unwrap_or(' ');
-                    self.canvas.clear(fill);
-                    Ok(IfaValue::Null)
-                }
-                "ya" => {
-                    if args.len() >= 3 {
-                        if let (IfaValue::Int(x), IfaValue::Int(y), IfaValue::Str(ch_str)) =
-                            (&args[0], &args[1], &args[2])
-                        {
-                            let ch = ch_str.chars().next().unwrap_or('#');
-                            self.canvas.set_pixel(*x, *y, ch);
-                            return Ok(IfaValue::Null);
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "ya requires (x: int, y: int, char: str)".into(),
-                    ))
-                }
-                "han" | "kunle" | "fihan" => {
-                    // Render canvas - just return null, canvas will be captured by get_canvas()
-                    Ok(IfaValue::Null)
-                }
-                "tobi" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::Int(w), IfaValue::Int(h)) = (&args[0], &args[1]) {
-                            self.canvas.resize(*w as usize, *h as usize);
-                            return Ok(IfaValue::Null);
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "tobi requires (width: int, height: int)".into(),
-                    ))
-                }
-                "ila" => {
-                    if args.len() >= 5 {
-                        if let (
-                            IfaValue::Int(x1),
-                            IfaValue::Int(y1),
-                            IfaValue::Int(x2),
-                            IfaValue::Int(y2),
-                            IfaValue::Str(ch_str),
-                        ) = (&args[0], &args[1], &args[2], &args[3], &args[4])
-                        {
-                            let ch = ch_str.chars().next().unwrap_or('#');
-                            self.canvas.draw_line(*x1, *y1, *x2, *y2, ch);
-                            return Ok(IfaValue::Null);
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "ila requires (x1, y1, x2, y2: int, char: str)".into(),
-                    ))
-                }
-                "onigun" => {
-                    if args.len() >= 5 {
-                        if let (
-                            IfaValue::Int(x),
-                            IfaValue::Int(y),
-                            IfaValue::Int(w),
-                            IfaValue::Int(h),
-                            IfaValue::Str(ch_str),
-                        ) = (&args[0], &args[1], &args[2], &args[3], &args[4])
-                        {
-                            let ch = ch_str.chars().next().unwrap_or('#');
-                            self.canvas.draw_rect(*x, *y, *w, *h, ch);
-                            return Ok(IfaValue::Null);
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "onigun requires (x, y, w, h: int, char: str)".into(),
-                    ))
-                }
-                "onigun_kun" => {
-                    if args.len() >= 5 {
-                        if let (
-                            IfaValue::Int(x),
-                            IfaValue::Int(y),
-                            IfaValue::Int(w),
-                            IfaValue::Int(h),
-                            IfaValue::Str(ch_str),
-                        ) = (&args[0], &args[1], &args[2], &args[3], &args[4])
-                        {
-                            let ch = ch_str.chars().next().unwrap_or('#');
-                            self.canvas.fill_rect(*x, *y, *w, *h, ch);
-                            return Ok(IfaValue::Null);
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "onigun_kun requires (x, y, w, h: int, char: str)".into(),
-                    ))
-                }
-                "iyokoto" => {
-                    if args.len() >= 4 {
-                        if let (
-                            IfaValue::Int(xc),
-                            IfaValue::Int(yc),
-                            IfaValue::Int(r),
-                            IfaValue::Str(ch_str),
-                        ) = (&args[0], &args[1], &args[2], &args[3])
-                        {
-                            let ch = ch_str.chars().next().unwrap_or('O');
-                            self.canvas.draw_circle(*xc, *yc, *r, ch);
-                            return Ok(IfaValue::Null);
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "iyokoto requires (xc, yc, r: int, char: str)".into(),
-                    ))
-                }
-                "ko" => {
-                    if args.len() >= 3 {
-                        if let (IfaValue::Int(x), IfaValue::Int(y), IfaValue::Str(text)) =
-                            (&args[0], &args[1], &args[2])
-                        {
-                            self.canvas.write_text(*x, *y, text);
-                            return Ok(IfaValue::Null);
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "ko requires (x, y: int, text: str)".into(),
-                    ))
-                }
-                "fi_x" => {
-                    if let Some(IfaValue::Int(x)) = args.first() {
-                        self.canvas.cursor_x = *x as usize;
-                        return Ok(IfaValue::Null);
-                    }
-                    Err(IfaError::Runtime("fi_x requires (x: int)".into()))
-                }
-                "fi_y" => {
-                    if let Some(IfaValue::Int(y)) = args.first() {
-                        self.canvas.cursor_y = *y as usize;
-                        return Ok(IfaValue::Null);
-                    }
-                    Err(IfaError::Runtime("fi_y requires (y: int)".into()))
-                }
-                "ya_nibi" => {
-                    let ch = args
-                        .first()
-                        .and_then(|v| {
-                            if let IfaValue::Str(s) = v {
-                                s.chars().next()
-                            } else {
-                                None
-                            }
-                        })
-                        .unwrap_or('#');
-                    self.canvas.set_pixel(
-                        self.canvas.cursor_x as i64,
-                        self.canvas.cursor_y as i64,
-                        ch,
-                    );
-                    Ok(IfaValue::Null)
-                }
-                // Legacy terminal methods (kept for compatibility)
-                "clear" | "mọ́" => {
-                    print!("\x1B[2J\x1B[H");
-                    Ok(IfaValue::Null)
-                }
-                "color" | "àwọ̀" | "awo" => {
-                    if let Some(IfaValue::Str(color)) = args.first() {
-                        let code = match color.as_str() {
-                            "red" | "pupa" => "\x1B[31m",
-                            "green" | "ewé" => "\x1B[32m",
-                            "blue" | "búlù" => "\x1B[34m",
-                            "yellow" | "iyẹlé" => "\x1B[33m",
-                            "reset" | "pada" => "\x1B[0m",
-                            _ => "\x1B[0m",
-                        };
-                        print!("{}", code);
-                        return Ok(IfaValue::Null);
-                    }
-                    Ok(IfaValue::Null) // Stub for canvas mode
-                }
-                "cursor" | "atọka" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::Int(x), IfaValue::Int(y)) = (&args[0], &args[1]) {
-                            print!("\x1B[{};{}H", y, x);
-                            return Ok(IfaValue::Null);
-                        }
-                    }
-                    Err(IfaError::Runtime("cursor requires x and y".into()))
-                }
-                "box" | "apoti" | "botini" => {
-                    if args.len() >= 3 {
-                        if let (IfaValue::Int(x), IfaValue::Int(y)) = (&args[0], &args[1]) {
-                            // For botini (button), third arg is label
-                            if let Some(IfaValue::Str(label)) = args.get(2) {
-                                let w = label.len() as i64 + 2;
-                                self.canvas.draw_rect(*x, *y, w, 3, '#');
-                                self.canvas.write_text(*x + 1, *y + 1, label);
-                                return Ok(IfaValue::Null);
-                            }
-                            // For box, need width and height
-                            if args.len() >= 4 {
-                                if let (IfaValue::Int(w), IfaValue::Int(h)) = (&args[2], &args[3]) {
-                                    self.canvas.draw_rect(*x, *y, *w, *h, '#');
-                                    return Ok(IfaValue::Null);
-                                }
-                            }
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "box requires x, y, width, height OR botini requires x, y, label".into(),
-                    ))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ọ̀ṣẹ́ method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Òfún (Permissions / Sandbox)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Ofun => match call.method.as_str() {
-                "allow" | "gba_laaye" => {
-                    if let Some(IfaValue::Str(perm)) = args.first() {
-                        println!("[PERM] Requesting permission: {}", perm);
-                        return Ok(IfaValue::Bool(true));
-                    }
-                    Err(IfaError::Runtime("allow requires permission name".into()))
-                }
-                "deny" | "kọ" => {
-                    if let Some(IfaValue::Str(perm)) = args.first() {
-                        println!("[PERM] Denying permission: {}", perm);
-                        return Ok(IfaValue::Bool(true));
-                    }
-                    Err(IfaError::Runtime("deny requires permission name".into()))
-                }
-                "check" | "ṣayẹwo" => {
-                    if let Some(IfaValue::Str(perm)) = args.first() {
-                        println!("[PERM] Checking permission: {}", perm);
-                        return Ok(IfaValue::Bool(true)); // Default allow
-                    }
-                    Err(IfaError::Runtime("check requires permission name".into()))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Òfún method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Coop / Àjọṣe (FFI Bridge)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Coop => match call.method.as_str() {
-                "py" => {
-                    // Call Python function via subprocess: Coop.py("math", "sqrt", 16)
-                    if args.len() >= 2 {
-                        let module = args[0].to_string();
-                        let func = args[1].to_string();
-                        let func_args: Vec<String> = args[2..]
-                            .iter()
-                            .map(|a| {
-                                let s = a.to_string();
-                                // Quote strings for Python
-                                if matches!(a, IfaValue::Str(_)) {
-                                    format!("\"{}\"", s)
-                                } else {
-                                    s
-                                }
-                            })
-                            .collect();
-
-                        // Build Python script: import module; print(module.func(args))
-                        let py_args = func_args.join(", ");
-                        let script =
-                            format!("import {}; print({}.{}({}))", module, module, func, py_args);
-
-                        // Security: Clear environment to prevent side-loading
-                        // and add a timeout mechanism
-                        let mut command = std::process::Command::new("python3");
-                        command
-                            .args(["-c", &script])
-                            .env_clear() // 🛡️ Prevent env-based injection
-                            .env("PATH", std::env::var("PATH").unwrap_or_default()); // Keep basic path
-
-                        let output = command.output().or_else(|_| {
-                            std::process::Command::new("python")
-                                .args(["-c", &script])
-                                .env_clear()
-                                .env("PATH", std::env::var("PATH").unwrap_or_default())
-                                .output()
-                        });
-
-                        match output {
-                            Ok(o) if o.status.success() => {
-                                let result = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                                return Ok(IfaValue::Str(result));
-                            }
-                            Ok(o) => {
-                                let err = String::from_utf8_lossy(&o.stderr).trim().to_string();
-                                return Err(IfaError::Runtime(format!("Python error: {}", err)));
-                            }
-                            Err(e) => {
-                                return Err(IfaError::Runtime(format!(
-                                    "Failed to run Python: {}. Is Python installed?",
-                                    e
-                                )));
-                            }
-                        }
-                    }
-                    Err(IfaError::Runtime(
-                        "py requires module and function name".into(),
-                    ))
-                }
-                "sh" | "shell" => {
-                    // Execute shell command: Coop.sh("echo hello")
-                    if let Some(IfaValue::Str(cmd)) = args.first() {
-                        // Block dangerous commands
-                        let blocked = ["rm", "del", "format", "mkfs", "dd", "sudo"];
-                        for b in blocked {
-                            if cmd.contains(b) {
-                                return Err(IfaError::Runtime(format!("Blocked command: {}", b)));
-                            }
-                        }
-
-                        #[cfg(windows)]
-                        let output = std::process::Command::new("cmd").args(["/C", cmd]).output();
-                        #[cfg(not(windows))]
-                        let output = std::process::Command::new("sh").args(["-c", cmd]).output();
-
-                        match output {
-                            Ok(o) => Ok(IfaValue::Str(
-                                String::from_utf8_lossy(&o.stdout).to_string(),
-                            )),
-                            Err(e) => Err(IfaError::Runtime(format!("Shell error: {}", e))),
-                        }
-                    } else {
-                        Err(IfaError::Runtime("sh requires command string".into()))
-                    }
-                }
-                "eval" => {
-                    // SECURITY: Dynamic code execution is blocked
-                    // This prevents code injection attacks
-                    Err(IfaError::Runtime(
-                        "eval() is disabled for security. Use pattern matching or closures instead.".into()
-                    ))
-                }
-                "ffi" => {
-                    // Generic FFI call: Coop.ffi("lib", "func", arg1, arg2)
-                    if args.len() >= 2 {
-                        let lib = args[0].to_string();
-                        let func = args[1].to_string();
-                        println!("[FFI] {}.{}({:?})", lib, func, &args[2..]);
-                        return Ok(IfaValue::Null);
-                    }
-                    Err(IfaError::Runtime("ffi requires lib and func".into()))
-                }
-                "js" | "node" => {
-                    // Call JavaScript via Node.js: Coop.js("console.log(Math.sqrt(16))")
-                    if let Some(IfaValue::Str(code)) = args.first() {
-                        let output = std::process::Command::new("node")
-                            .args(["-e", code])
-                            .output();
-
-                        match output {
-                            Ok(o) if o.status.success() => {
-                                let result = String::from_utf8_lossy(&o.stdout).trim().to_string();
-                                return Ok(IfaValue::Str(result));
-                            }
-                            Ok(o) => {
-                                let err = String::from_utf8_lossy(&o.stderr).trim().to_string();
-                                return Err(IfaError::Runtime(format!(
-                                    "JavaScript error: {}",
-                                    err
-                                )));
-                            }
-                            Err(e) => {
-                                return Err(IfaError::Runtime(format!(
-                                    "Failed to run Node.js: {}. Is Node installed?",
-                                    e
-                                )));
-                            }
-                        }
-                    }
-                    Err(IfaError::Runtime("js requires code string".into()))
-                }
-                "c" | "gcc" => {
-                    // Compile and run C code: Coop.c("#include <stdio.h>\nint main(){printf(\"hi\");return 0;}")
-                    if let Some(IfaValue::Str(code)) = args.first() {
-                        use std::io::Write;
-
-                        // Create temp files
-                        let temp_dir = std::env::temp_dir();
-                        let src_file = temp_dir.join("ifa_temp.c");
-                        let exe_file = temp_dir.join(if cfg!(windows) {
-                            "ifa_temp.exe"
-                        } else {
-                            "ifa_temp"
-                        });
-
-                        // Write C source
-                        if let Ok(mut f) = std::fs::File::create(&src_file) {
-                            let _ = f.write_all(code.as_bytes());
-                        } else {
-                            return Err(IfaError::Runtime("Failed to create temp C file".into()));
-                        }
-
-                        // Compile with gcc/clang
-                        let compiler = if cfg!(windows) { "gcc" } else { "cc" };
-                        let compile = std::process::Command::new(compiler)
-                            .args(["-o", exe_file.to_str().unwrap(), src_file.to_str().unwrap()])
-                            .output();
-
-                        match compile {
-                            Ok(o) if o.status.success() => {
-                                // Run the compiled executable
-                                let run = std::process::Command::new(&exe_file).output();
-                                let _ = std::fs::remove_file(&src_file);
-                                let _ = std::fs::remove_file(&exe_file);
-
-                                match run {
-                                    Ok(o) => {
-                                        let result = String::from_utf8_lossy(&o.stdout).to_string();
-                                        return Ok(IfaValue::Str(result));
-                                    }
-                                    Err(e) => {
-                                        return Err(IfaError::Runtime(format!(
-                                            "Failed to run C program: {}",
-                                            e
-                                        )));
-                                    }
-                                }
-                            }
-                            Ok(o) => {
-                                let _ = std::fs::remove_file(&src_file);
-                                let err = String::from_utf8_lossy(&o.stderr).to_string();
-                                return Err(IfaError::Runtime(format!("C compile error: {}", err)));
-                            }
-                            Err(e) => {
-                                let _ = std::fs::remove_file(&src_file);
-                                return Err(IfaError::Runtime(format!(
-                                    "Failed to run compiler: {}. Is GCC installed?",
-                                    e
-                                )));
-                            }
-                        }
-                    }
-                    Err(IfaError::Runtime("c requires code string".into()))
-                }
-                "itumo" | "summon" | "bridge" => {
-                    if let Some(IfaValue::Str(lang)) = args.first() {
-                        // Check capability
-                        self.check_capability(&Ofun::Bridge {
-                            language: lang.clone(),
-                        })?;
-
-                        // In a real implementation, we'd initialize the bridge here
-                        // For now, we'll log it and return success
-                        println!("[ffi] Summoned {} bridge successfully", lang);
-                        return Ok(IfaValue::Bool(true));
-                    }
-                    Err(IfaError::Runtime(
-                        "itumo requires language name (e.g. 'js', 'python')".into(),
-                    ))
-                }
-                "version" => Ok(IfaValue::Str("AjoseBridge v1.2".to_string())),
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Coop method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // Ọpẹlẹ (Divination / Compound Odù)
-            // ═══════════════════════════════════════════════════════════════
-            OduDomain::Opele => match call.method.as_str() {
-                "cast" | "ju" => {
-                    // Cast a simple 2-level Odu
-                    use std::time::{SystemTime, UNIX_EPOCH};
-                    let seed = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .map(|d| d.as_nanos() as u64)
-                        .unwrap_or(0);
-                    let random = seed
-                        .wrapping_mul(6364136223846793005)
-                        .wrapping_add(1442695040888963407);
-                    let byte = (random >> 32) as u8;
-                    let right = byte & 0x0F;
-                    let left = (byte >> 4) & 0x0F;
-
-                    let names = [
-                        "Ogbe", "Oyeku", "Iwori", "Odi", "Irosu", "Owonrin", "Obara", "Okanran",
-                        "Ogunda", "Osa", "Ika", "Oturupon", "Otura", "Irete", "Ose", "Ofun",
-                    ];
-
-                    if right == left {
-                        Ok(IfaValue::Str(format!("{} Meji", names[right as usize])))
-                    } else {
-                        Ok(IfaValue::Str(format!(
-                            "{}_{}",
-                            names[right as usize], names[left as usize]
-                        )))
-                    }
-                }
-                "cast_compound" | "ju_apapo" => {
-                    // Cast compound with specified depth: Opele.cast_compound(3)
-                    let depth = match args.first() {
-                        Some(IfaValue::Int(d)) if *d >= 1 => *d as usize,
-                        _ => 2, // Default to 2-level
-                    };
-
-                    use std::time::{SystemTime, UNIX_EPOCH};
-                    let mut seed = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .map(|d| d.as_nanos() as u64)
-                        .unwrap_or(0);
-
-                    let names = [
-                        "Ogbe", "Oyeku", "Iwori", "Odi", "Irosu", "Owonrin", "Obara", "Okanran",
-                        "Ogunda", "Osa", "Ika", "Oturupon", "Otura", "Irete", "Ose", "Ofun",
-                    ];
-
-                    let mut ancestors = Vec::with_capacity(depth);
-                    for _ in 0..depth {
-                        let random = seed
-                            .wrapping_mul(6364136223846793005)
-                            .wrapping_add(1442695040888963407);
-                        let odu_idx = ((random >> 32) as u8) % 16;
-                        ancestors.push(names[odu_idx as usize]);
-                        seed = random;
-                    }
-
-                    Ok(IfaValue::Str(ancestors.join("_")))
-                }
-                "lineage" | "iran" => {
-                    // Get lineage description: Opele.lineage("Ogbe_Otura_Ika")
-                    if let Some(IfaValue::Str(compound)) = args.first() {
-                        let parts: Vec<&str> = compound.split('_').collect();
-                        let depth = parts.len();
-
-                        let roles = match depth {
-                            1 => vec!["Self"],
-                            2 => vec!["Parent", "Child"],
-                            3 => vec!["Grandparent", "Parent", "Child"],
-                            4 => vec!["Great-Grandparent", "Grandparent", "Parent", "Child"],
-                            5 => vec![
-                                "Great²-Grandparent",
-                                "Great-Grandparent",
-                                "Grandparent",
-                                "Parent",
-                                "Child",
-                            ],
-                            _ => (0..depth)
-                                .map(|i| {
-                                    if i == depth - 1 {
-                                        "Current"
-                                    } else {
-                                        "Ancestor"
-                                    }
-                                })
-                                .collect(),
-                        };
-
-                        let lineage: Vec<String> = parts
-                            .iter()
-                            .zip(roles.iter())
-                            .map(|(odu, role)| format!("  {}: {}", role, odu))
-                            .collect();
-
-                        return Ok(IfaValue::Str(lineage.join("\n")));
-                    }
-                    Err(IfaError::Runtime(
-                        "lineage requires compound name string".into(),
-                    ))
-                }
-                "depth" | "ijinle" => {
-                    // Get depth of compound: Opele.depth("Ogbe_Otura_Ika") -> 3
-                    if let Some(IfaValue::Str(compound)) = args.first() {
-                        let parts: Vec<&str> = compound.split('_').collect();
-                        return Ok(IfaValue::Int(parts.len() as i64));
-                    }
-                    Err(IfaError::Runtime(
-                        "depth requires compound name string".into(),
-                    ))
-                }
-                "divine" | "dawole" => {
-                    // Divination with question: Opele.divine("Should I proceed?")
-                    use std::time::{SystemTime, UNIX_EPOCH};
-                    let seed = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .map(|d| d.as_nanos() as u64)
-                        .unwrap_or(0);
-                    let random = seed
-                        .wrapping_mul(6364136223846793005)
-                        .wrapping_add(1442695040888963407);
-                    let byte = (random >> 32) as u8;
-                    let right_idx = (byte & 0x0F) as usize;
-
-                    let proverbs = [
-                        "The path is clear, move forward with confidence.",
-                        "In darkness, wisdom prepares for dawn.",
-                        "Look within before seeking without.",
-                        "Close one door, and another opens.",
-                        "Speak truth, for lies have no legs to stand.",
-                        "Change is the only constant; embrace it.",
-                        "What you give, returns to you multiplied.",
-                        "The tongue is sharper than the sword.",
-                        "Clear the path with patience, not force.",
-                        "Let go of what no longer serves you.",
-                        "Words bind; choose them carefully.",
-                        "Balance is the key to health.",
-                        "The journey teaches more than the destination.",
-                        "Secrets revealed bring freedom.",
-                        "Beauty flows from inner peace.",
-                        "The ancestors watch; honor their wisdom.",
-                    ];
-
-                    let question = args
-                        .first()
-                        .map(|v| v.to_string())
-                        .unwrap_or_else(|| "...".to_string());
-
-                    let result =
-                        format!("Question: {}\nGuidance: {}", question, proverbs[right_idx]);
-
-                    Ok(IfaValue::Str(result))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ọpẹlẹ method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // INFRASTRUCTURE LAYER
-            // ═══════════════════════════════════════════════════════════════
-
-            // CPU (Parallel Computing)
-            OduDomain::Cpu => match call.method.as_str() {
-                "num_threads" | "iye_threads" => Ok(IfaValue::Int(num_cpus::get() as i64)),
-                "par_sum" | "apapọ" => {
-                    if let Some(IfaValue::List(items)) = args.first() {
-                        let sum: i64 = items
-                            .iter()
-                            .filter_map(|v| match v {
-                                IfaValue::Int(n) => Some(*n),
-                                IfaValue::Float(f) => Some(*f as i64),
-                                _ => None,
-                            })
-                            .sum();
-                        Ok(IfaValue::Int(sum))
-                    } else {
-                        Err(IfaError::Runtime("par_sum requires a list".into()))
-                    }
-                }
-                "configure" | "ṣètò" => {
-                    if let Some(IfaValue::Int(n)) = args.first() {
-                        println!("[Cpu] Configured {} threads", n);
-                        Ok(IfaValue::Bool(true))
-                    } else {
-                        Err(IfaError::Runtime("configure requires thread count".into()))
-                    }
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Cpu method: {}",
-                    call.method
-                ))),
-            },
-
-            // GPU (Compute Shaders)
-            OduDomain::Gpu => match call.method.as_str() {
-                "available" | "wà" => {
-                    // Check if GPU is available (placeholder)
-                    Ok(IfaValue::Bool(false)) // Default: no GPU
-                }
-                "info" | "àlàyé" => Ok(IfaValue::Str(
-                    "GPU: Not available (use native build)".into(),
-                )),
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Gpu method: {}",
-                    call.method
-                ))),
-            },
-
-            // Storage (Key-Value Store)
-            OduDomain::Storage => match call.method.as_str() {
-                "get" | "gba" => {
-                    if let Some(IfaValue::Str(key)) = args.first() {
-                        // Placeholder - would use OduStore
-                        println!("[Storage] GET {}", key);
-                        Ok(IfaValue::Null)
-                    } else {
-                        Err(IfaError::Runtime("get requires key".into()))
-                    }
-                }
-                "set" | "fi" => {
-                    if args.len() >= 2 {
-                        if let (IfaValue::Str(key), value) = (&args[0], &args[1]) {
-                            println!("[Storage] SET {} = {:?}", key, value);
-                            Ok(IfaValue::Bool(true))
-                        } else {
-                            Err(IfaError::Runtime("set requires string key".into()))
-                        }
-                    } else {
-                        Err(IfaError::Runtime("set requires key and value".into()))
-                    }
-                }
-                "delete" | "pa" => {
-                    if let Some(IfaValue::Str(key)) = args.first() {
-                        println!("[Storage] DELETE {}", key);
-                        Ok(IfaValue::Bool(true))
-                    } else {
-                        Err(IfaError::Runtime("delete requires key".into()))
-                    }
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Storage method: {}",
-                    call.method
-                ))),
-            },
-
-            // ═══════════════════════════════════════════════════════════════
-            // APPLICATION STACKS
-            // ═══════════════════════════════════════════════════════════════
-
-            // Backend (HTTP Server, ORM)
-            OduDomain::Backend => match call.method.as_str() {
-                "serve" | "sìn" => {
-                    let port = args
-                        .first()
-                        .and_then(|v| {
-                            if let IfaValue::Int(n) = v {
-                                Some(*n)
-                            } else {
-                                None
-                            }
-                        })
-                        .unwrap_or(8080);
-                    println!("[Backend] Server would start on port {}", port);
-                    Ok(IfaValue::Bool(true))
-                }
-                "route" | "ọ̀nà" => {
-                    if args.len() >= 2 {
-                        let method = args.first().map(|v| v.to_string()).unwrap_or_default();
-                        let path = args.get(1).map(|v| v.to_string()).unwrap_or_default();
-                        println!("[Backend] Route: {} {}", method, path);
-                        Ok(IfaValue::Bool(true))
-                    } else {
-                        Err(IfaError::Runtime("route requires method and path".into()))
-                    }
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Backend method: {}",
-                    call.method
-                ))),
-            },
-
-            // Frontend (HTML/CSS Generation)
-            OduDomain::Frontend => match call.method.as_str() {
-                "html" => {
-                    if let Some(IfaValue::Str(content)) = args.first() {
-                        // Escape HTML to prevent XSS
-                        let escaped = content
-                            .replace('&', "&amp;")
-                            .replace('<', "&lt;")
-                            .replace('>', "&gt;")
-                            .replace('"', "&quot;");
-                        Ok(IfaValue::Str(escaped))
-                    } else {
-                        Err(IfaError::Runtime("html requires content".into()))
-                    }
-                }
-                "element" | "ẹya" => {
-                    if args.len() >= 2 {
-                        let tag = args.first().map(|v| v.to_string()).unwrap_or_default();
-                        let content = args.get(1).map(|v| v.to_string()).unwrap_or_default();
-                        Ok(IfaValue::Str(format!("<{}>{}</{}>", tag, content, tag)))
-                    } else {
-                        Err(IfaError::Runtime("element requires tag and content".into()))
-                    }
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Frontend method: {}",
-                    call.method
-                ))),
-            },
-
-            // Crypto (extends Irete with more functions)
-            OduDomain::Crypto => match call.method.as_str() {
-                "sha256" => {
-                    if let Some(IfaValue::Str(input)) = args.first() {
-                        // Simple hash placeholder
-                        use std::collections::hash_map::DefaultHasher;
-                        use std::hash::{Hash, Hasher};
-                        let mut hasher = DefaultHasher::new();
-                        input.hash(&mut hasher);
-                        let hash = format!("{:016x}", hasher.finish());
-                        Ok(IfaValue::Str(hash))
-                    } else {
-                        Err(IfaError::Runtime("sha256 requires string input".into()))
-                    }
-                }
-                "random_bytes" | "nọmba_aṣírí" => {
-                    let count = args
-                        .first()
-                        .and_then(|v| {
-                            if let IfaValue::Int(n) = v {
-                                Some(*n as usize)
-                            } else {
-                                None
-                            }
-                        })
-                        .unwrap_or(16);
-                    // Simple random bytes (not cryptographically secure - placeholder)
-                    use std::time::{SystemTime, UNIX_EPOCH};
-                    let seed = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap()
-                        .as_nanos() as u64;
-                    let bytes: Vec<IfaValue> = (0..count)
-                        .map(|i| {
-                            IfaValue::Int(
-                                ((seed.wrapping_mul(1103515245 + i as u64)) >> 24) as i64 & 0xFF,
-                            )
-                        })
-                        .collect();
-                    Ok(IfaValue::List(bytes))
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Crypto method: {}",
-                    call.method
-                ))),
-            },
-
-            // ML (Machine Learning)
-            OduDomain::Ml => match call.method.as_str() {
-                "tensor" => {
-                    // Create tensor from list
-                    if let Some(IfaValue::List(data)) = args.first() {
-                        Ok(IfaValue::List(data.clone()))
-                    } else {
-                        Err(IfaError::Runtime("tensor requires list data".into()))
-                    }
-                }
-                "relu" => {
-                    // ReLU activation
-                    if let Some(IfaValue::List(data)) = args.first() {
-                        let result: Vec<IfaValue> = data
-                            .iter()
-                            .map(|v| match v {
-                                IfaValue::Float(f) => IfaValue::Float(f.max(0.0)),
-                                IfaValue::Int(n) => IfaValue::Int((*n).max(0)),
-                                other => other.clone(),
-                            })
-                            .collect();
-                        Ok(IfaValue::List(result))
-                    } else {
-                        Err(IfaError::Runtime("relu requires tensor".into()))
-                    }
-                }
-                "dot" => {
-                    // Dot product
-                    if args.len() >= 2 {
-                        if let (IfaValue::List(a), IfaValue::List(b)) = (&args[0], &args[1]) {
-                            let sum: f64 = a
-                                .iter()
-                                .zip(b.iter())
-                                .filter_map(|(x, y)| match (x, y) {
-                                    (IfaValue::Float(a), IfaValue::Float(b)) => Some(a * b),
-                                    (IfaValue::Int(a), IfaValue::Int(b)) => {
-                                        Some((*a as f64) * (*b as f64))
-                                    }
-                                    _ => None,
-                                })
-                                .sum();
-                            Ok(IfaValue::Float(sum))
-                        } else {
-                            Err(IfaError::Runtime("dot requires two tensors".into()))
-                        }
-                    } else {
-                        Err(IfaError::Runtime("dot requires two tensors".into()))
-                    }
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Ml method: {}",
-                    call.method
-                ))),
-            },
-
-            // GameDev (Game Engine)
-            OduDomain::GameDev => match call.method.as_str() {
-                "vec2" => {
-                    let x = args
-                        .first()
-                        .and_then(|v| match v {
-                            IfaValue::Float(f) => Some(*f),
-                            IfaValue::Int(n) => Some(*n as f64),
-                            _ => None,
-                        })
-                        .unwrap_or(0.0);
-                    let y = args
-                        .get(1)
-                        .and_then(|v| match v {
-                            IfaValue::Float(f) => Some(*f),
-                            IfaValue::Int(n) => Some(*n as f64),
-                            _ => None,
-                        })
-                        .unwrap_or(0.0);
-                    let mut map = HashMap::new();
-                    map.insert("x".to_string(), IfaValue::Float(x));
-                    map.insert("y".to_string(), IfaValue::Float(y));
-                    Ok(IfaValue::Map(map))
-                }
-                "distance" | "jìnnà" => {
-                    // Distance between two Vec2
-                    if args.len() >= 2 {
-                        if let (IfaValue::Map(a), IfaValue::Map(b)) = (&args[0], &args[1]) {
-                            let ax = a
-                                .get("x")
-                                .and_then(|v| {
-                                    if let IfaValue::Float(f) = v {
-                                        Some(*f)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .unwrap_or(0.0);
-                            let ay = a
-                                .get("y")
-                                .and_then(|v| {
-                                    if let IfaValue::Float(f) = v {
-                                        Some(*f)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .unwrap_or(0.0);
-                            let bx = b
-                                .get("x")
-                                .and_then(|v| {
-                                    if let IfaValue::Float(f) = v {
-                                        Some(*f)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .unwrap_or(0.0);
-                            let by = b
-                                .get("y")
-                                .and_then(|v| {
-                                    if let IfaValue::Float(f) = v {
-                                        Some(*f)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .unwrap_or(0.0);
-                            let dist = ((bx - ax).powi(2) + (by - ay).powi(2)).sqrt();
-                            Ok(IfaValue::Float(dist))
-                        } else {
-                            Err(IfaError::Runtime("distance requires two vec2".into()))
-                        }
-                    } else {
-                        Err(IfaError::Runtime("distance requires two vec2".into()))
-                    }
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown GameDev method: {}",
-                    call.method
-                ))),
-            },
-
-            // IoT (Embedded/GPIO)
-            OduDomain::Iot => match call.method.as_str() {
-                "pin_mode" | "ipo_pin" => {
-                    if args.len() >= 2 {
-                        let pin = args.first().map(|v| v.to_string()).unwrap_or_default();
-                        let mode = args.get(1).map(|v| v.to_string()).unwrap_or_default();
-                        println!("[IoT] Pin {} set to {}", pin, mode);
-                        Ok(IfaValue::Bool(true))
-                    } else {
-                        Err(IfaError::Runtime("pin_mode requires pin and mode".into()))
-                    }
-                }
-                "digital_write" | "kọ_pin" => {
-                    if args.len() >= 2 {
-                        let pin = args.first().map(|v| v.to_string()).unwrap_or_default();
-                        let value = args
-                            .get(1)
-                            .and_then(|v| match v {
-                                IfaValue::Bool(b) => Some(*b),
-                                IfaValue::Int(n) => Some(*n != 0),
-                                _ => None,
-                            })
-                            .unwrap_or(false);
-                        println!("[IoT] Digital write pin {} = {}", pin, value);
-                        Ok(IfaValue::Bool(true))
-                    } else {
-                        Err(IfaError::Runtime(
-                            "digital_write requires pin and value".into(),
-                        ))
-                    }
-                }
-                "digital_read" | "ka_pin" => {
-                    if let Some(IfaValue::Int(pin)) = args.first() {
-                        println!("[IoT] Digital read pin {}", pin);
-                        Ok(IfaValue::Bool(false)) // Placeholder
-                    } else {
-                        Err(IfaError::Runtime("digital_read requires pin".into()))
-                    }
-                }
-                _ => Err(IfaError::Runtime(format!(
-                    "Unknown Iot method: {}",
-                    call.method
-                ))),
-            },
-
-            // Default for other domains
-            _ => {
-                println!(
-                    "Warning: {:?}.{}() not yet implemented",
-                    call.domain, call.method
-                );
-                Ok(IfaValue::Null)
-            }
-        }
+        self.handlers.dispatch(
+            call.domain.clone(),
+            &call.method,
+            args,
+            &mut self.env,
+            &mut self.output,
+        )
     }
+
 
     fn apply_binary_op(
         &self,
@@ -2444,59 +958,96 @@ impl Interpreter {
     ) -> IfaResult<IfaValue> {
         match op {
             BinaryOperator::Add => match (left, right) {
-                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::Int(a + b)),
-                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Float(a + b)),
-                (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::Float(*a as f64 + b)),
-                (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::Float(a + *b as f64)),
-                (IfaValue::Str(a), IfaValue::Str(b)) => Ok(IfaValue::Str(format!("{}{}", a, b))),
-                // String coercion: convert other types to string for concatenation
-                (IfaValue::Str(a), other) => Ok(IfaValue::Str(format!("{}{}", a, other))),
-                (other, IfaValue::Str(b)) => Ok(IfaValue::Str(format!("{}{}", other, b))),
+                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::int(a + b)),
+                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::float(a + b)),
+                (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::float(*a as f64 + b)),
+                (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::float(a + *b as f64)),
+                (IfaValue::Str(a), IfaValue::Str(b)) => {
+                    Ok(IfaValue::str(format!("{}{}", a, b)))
+                }
+                (IfaValue::Str(a), _) => Ok(IfaValue::str(format!("{}{}", a, right))),
+                (_, IfaValue::Str(b)) => Ok(IfaValue::str(format!("{}{}", left, b))),
                 _ => Err(IfaError::Runtime("Invalid operands for +".into())),
             },
             BinaryOperator::Sub => match (left, right) {
-                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::Int(a - b)),
-                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Float(a - b)),
-                _ => Err(IfaError::Runtime("Invalid operands for -".into())),
+                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::int(a - b)),
+                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::float(a - b)),
+                (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::float(*a as f64 - b)),
+                (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::float(a - *b as f64)),
+                 _ => Err(IfaError::Runtime("Invalid operands for -".into())),
             },
             BinaryOperator::Mul => match (left, right) {
-                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::Int(a * b)),
-                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Float(a * b)),
-                _ => Err(IfaError::Runtime("Invalid operands for *".into())),
+                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::int(a * b)),
+                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::float(a * b)),
+                (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::float(*a as f64 * b)),
+                (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::float(a * *b as f64)),
+                 _ => Err(IfaError::Runtime("Invalid operands for *".into())),
             },
             BinaryOperator::Div => match (left, right) {
-                (IfaValue::Int(a), IfaValue::Int(b)) if *b != 0 => Ok(IfaValue::Int(a / b)),
-                (IfaValue::Float(a), IfaValue::Float(b)) if *b != 0.0 => Ok(IfaValue::Float(a / b)),
-                _ => Err(IfaError::Runtime("Division by zero".into())),
+                (IfaValue::Int(a), IfaValue::Int(b)) if *b != 0 => Ok(IfaValue::int(a / b)),
+                (IfaValue::Float(a), IfaValue::Float(b)) if *b != 0.0 => Ok(IfaValue::float(a / b)),
+                 // Mixed
+                (IfaValue::Int(a), IfaValue::Float(b)) if *b != 0.0 => Ok(IfaValue::float(*a as f64 / b)),
+                (IfaValue::Float(a), IfaValue::Int(b)) if *b != 0 => Ok(IfaValue::float(a / *b as f64)),
+                
+                _ => Err(IfaError::Runtime("Division by zero or invalid operands".into())),
             },
             BinaryOperator::Mod => match (left, right) {
-                (IfaValue::Int(a), IfaValue::Int(b)) if *b != 0 => Ok(IfaValue::Int(a % b)),
+                (IfaValue::Int(a), IfaValue::Int(b)) if *b != 0 => Ok(IfaValue::int(a % b)),
                 _ => Err(IfaError::Runtime("Invalid operands for %".into())),
             },
-            BinaryOperator::Eq => Ok(IfaValue::Bool(left == right)),
-            BinaryOperator::NotEq => Ok(IfaValue::Bool(left != right)),
+            BinaryOperator::Eq => {
+                let eq = match (left, right) {
+                    (IfaValue::Int(a), IfaValue::Int(b)) => a == b,
+                    (IfaValue::Float(a), IfaValue::Float(b)) => (a - b).abs() < f64::EPSILON,
+                    (IfaValue::Str(a), IfaValue::Str(b)) => a == b,
+                    (IfaValue::Bool(a), IfaValue::Bool(b)) => a == b,
+                    (IfaValue::Null, IfaValue::Null) => true,
+                    _ => false // Default to false for mismatched types
+                };
+                Ok(IfaValue::bool(eq))
+            },
+            BinaryOperator::NotEq => {
+                 let eq = match (left, right) {
+                    (IfaValue::Int(a), IfaValue::Int(b)) => a == b,
+                    (IfaValue::Float(a), IfaValue::Float(b)) => (a - b).abs() < f64::EPSILON,
+                    (IfaValue::Str(a), IfaValue::Str(b)) => a == b,
+                    (IfaValue::Bool(a), IfaValue::Bool(b)) => a == b,
+                    (IfaValue::Null, IfaValue::Null) => true,
+                    _ => false
+                };
+                Ok(IfaValue::bool(!eq))
+            },
             BinaryOperator::Lt => match (left, right) {
-                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::Bool(a < b)),
-                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Bool(a < b)),
-                _ => Err(IfaError::Runtime("Invalid operands for <".into())),
+                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::bool(a < b)),
+                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::bool(a < b)),
+                (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) < *b)),
+                (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a < (*b as f64))),
+                 _ => Ok(IfaValue::bool(false)),
             },
             BinaryOperator::LtEq => match (left, right) {
-                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::Bool(a <= b)),
-                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Bool(a <= b)),
-                _ => Err(IfaError::Runtime("Invalid operands for <=".into())),
+                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::bool(a <= b)),
+                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::bool(a <= b)),
+                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) <= *b)),
+                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a <= (*b as f64))),
+                 _ => Ok(IfaValue::bool(false)),
             },
             BinaryOperator::Gt => match (left, right) {
-                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::Bool(a > b)),
-                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Bool(a > b)),
-                _ => Err(IfaError::Runtime("Invalid operands for >".into())),
+                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::bool(a > b)),
+                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::bool(a > b)),
+                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) > *b)),
+                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a > (*b as f64))),
+                 _ => Ok(IfaValue::bool(false)),
             },
             BinaryOperator::GtEq => match (left, right) {
-                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::Bool(a >= b)),
-                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Bool(a >= b)),
-                _ => Err(IfaError::Runtime("Invalid operands for >=".into())),
+                (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::bool(a >= b)),
+                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::bool(a >= b)),
+                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) >= *b)),
+                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a >= (*b as f64))),
+                 _ => Ok(IfaValue::bool(false)),
             },
-            BinaryOperator::And => Ok(IfaValue::Bool(left.is_truthy() && right.is_truthy())),
-            BinaryOperator::Or => Ok(IfaValue::Bool(left.is_truthy() || right.is_truthy())),
+            BinaryOperator::And => Ok(IfaValue::bool(left.is_truthy() && right.is_truthy())),
+            BinaryOperator::Or => Ok(IfaValue::bool(left.is_truthy() || right.is_truthy())),
         }
     }
 
@@ -2512,32 +1063,20 @@ impl Interpreter {
         )))
     }
 
-    fn call_function(&mut self, func: &IfaValue, args: &[Expression]) -> IfaResult<IfaValue> {
-        if let IfaValue::AstFn { params, body, .. } = func {
-            // Create new scope
-            let parent_env = std::mem::take(&mut self.env);
-            self.env = Environment::with_parent(parent_env);
+    fn call_function(&mut self, func: &IfaValue, _args: &[Expression]) -> IfaResult<IfaValue> {
+        match func {
 
-            // Bind arguments to parameters
-            for (param, arg) in params.iter().zip(args.iter()) {
-                let val = self.evaluate(arg)?;
-                self.env.define(param, val);
-            }
+             IfaValue::Fn(_) => {
+                 Err(IfaError::Runtime("Bytecode function cannot be called in Interpreter (AST mode)".into()))
+             }
+             // AstFn removed/disabled
 
-            // Execute body
-            let mut result = IfaValue::Null;
-            for stmt in body {
-                result = self.execute_statement(stmt)?;
-            }
+             IfaValue::Int(_) => { return Err(IfaError::Runtime("AstFn disabled/removed".into())); }
+                 // Unsafe cast to access AstFnData
+                 // We know we created it as Box<AstFnData>
 
-            // Restore parent scope
-            if let Some(parent) = self.env.parent.take() {
-                self.env = *parent;
-            }
 
-            Ok(result)
-        } else {
-            Err(IfaError::Runtime("Not a callable".into()))
+             _ => Err(IfaError::Runtime("Not a callable function".into()))
         }
     }
 }
@@ -2555,11 +1094,11 @@ mod tests {
 
     #[test]
     fn test_var_decl_and_use() {
-        let program = parse("ayanmo x = 42;").unwrap();
+        let program = parse("ayanmo x = 42;").expect("Parse failed");
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("x"), Some(IfaValue::Int(42)));
+        assert_eq!(interp.env.get("x"), Some(IfaValue::int(42)));
     }
 
     #[test]
@@ -2570,7 +1109,7 @@ mod tests {
         interp.execute(&program).unwrap();
 
         // Should be 2 + (3 * 4) = 14
-        assert_eq!(interp.env.get("x"), Some(IfaValue::Int(14)));
+        assert_eq!(interp.env.get("x"), Some(IfaValue::int(14)));
     }
 
     #[test]
@@ -2595,7 +1134,7 @@ mod tests {
 
         assert_eq!(
             interp.env.get("s"),
-            Some(IfaValue::Str("Hello World".to_string()))
+            Some(IfaValue::str("Hello World"))
         );
     }
 
@@ -2613,7 +1152,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("x"), Some(IfaValue::Int(1)));
+        assert_eq!(interp.env.get("x"), Some(IfaValue::int(1)));
     }
 
     #[test]
@@ -2630,7 +1169,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("x"), Some(IfaValue::Int(5)));
+        assert_eq!(interp.env.get("x"), Some(IfaValue::int(5)));
     }
 
     #[test]
@@ -2645,7 +1184,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("len"), Some(IfaValue::Int(3)));
+        assert_eq!(interp.env.get("len"), Some(IfaValue::int(3)));
     }
 
     #[test]
@@ -2656,7 +1195,7 @@ mod tests {
 
         assert_eq!(
             interp.env.get("s"),
-            Some(IfaValue::Str("HELLO".to_string()))
+            Some(IfaValue::str("HELLO"))
         );
     }
 
@@ -2666,7 +1205,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("x"), Some(IfaValue::Int(10)));
+        assert_eq!(interp.env.get("x"), Some(IfaValue::int(10)));
     }
 
     #[test]
@@ -2677,16 +1216,18 @@ mod tests {
             ayanmo b = 5 != 3;
             ayanmo c = 5 > 3;
             ayanmo d = 3 < 5;
+            ayanmo d2 = 3 <= 5;
+            ayanmo d3 = 5 >= 3;
         "#,
         )
         .unwrap();
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("a"), Some(IfaValue::Bool(true)));
-        assert_eq!(interp.env.get("b"), Some(IfaValue::Bool(true)));
-        assert_eq!(interp.env.get("c"), Some(IfaValue::Bool(true)));
-        assert_eq!(interp.env.get("d"), Some(IfaValue::Bool(true)));
+        assert_eq!(interp.env.get("a"), Some(IfaValue::bool(true)));
+        assert_eq!(interp.env.get("b"), Some(IfaValue::bool(true)));
+        assert_eq!(interp.env.get("c"), Some(IfaValue::bool(true)));
+        assert_eq!(interp.env.get("d"), Some(IfaValue::bool(true)));
     }
 }
 
@@ -2695,6 +1236,7 @@ mod tests {
 // =============================================================================
 
 /// SHA-256 implementation (FIPS 180-4 compliant)
+#[allow(dead_code)]
 fn sha256_simple(data: &[u8]) -> [u8; 32] {
     const K: [u32; 64] = [
         0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
@@ -2781,6 +1323,7 @@ fn sha256_simple(data: &[u8]) -> [u8; 32] {
 }
 
 /// Base64 encoding (RFC 4648)
+#[allow(dead_code)]
 fn base64_encode(data: &[u8]) -> String {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut result = String::with_capacity(data.len().div_ceil(3) * 4);

@@ -412,15 +412,23 @@ impl FetchBuilder {
         self
     }
 
+    /// Send the HTTP request.
+    ///
+    /// **This is a non-WASM simulation stub.** No real network connection is made.
+    /// When compiled for WASM, replace this body with a `web_sys::fetch` call.
+    /// Returns status 0 and an error body so callers can detect the non-functional path.
     pub fn send(&self) -> FetchResponse {
-        println!("[FETCH] {} {}", self.method, self.url);
+        // Log the outbound intent for debugging.
+        println!("[FETCH] {} {} (simulation — no real HTTP sent)", self.method, self.url);
         if let Some(ref body) = self.body {
             println!("[FETCH] Body: {}", body);
         }
-        // Placeholder response
         FetchResponse {
-            status: 200,
-            body: "{}".to_string(),
+            status: 0, // 0 is not a valid HTTP status — callers can detect this
+            body: format!(
+                "{{\"error\":\"FetchBuilder.send() is a simulation stub. \\\\\
+                 Compile for WASM and use web_sys::fetch for real HTTP.\"}}"
+            ),
         }
     }
 }
@@ -436,9 +444,14 @@ pub struct FetchResponse {
 pub struct LocalStorage;
 
 impl LocalStorage {
+    /// Retrieve a value from local storage.
+    ///
+    /// This is a **non-WASM stub**. Local storage only exists in browser environments.
+    /// When compiled for WASM, replace with a `web_sys::window()?.local_storage()?` call.
+    /// Always returns `None` outside of a browser context.
     pub fn get(key: &str) -> Option<String> {
-        println!("[STORAGE] Get: {}", key);
-        None // Placeholder
+        println!("[STORAGE] Get: {} (simulation — no browser storage available)", key);
+        None
     }
 
     pub fn set(key: &str, value: &str) {

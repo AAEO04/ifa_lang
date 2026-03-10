@@ -12,17 +12,21 @@ path = "src/lib.rs"
 
 [dependencies]
 # Shared types (IfaValue, IfaError, OduDomain)
-ifa-types = { path = "../ifa-types" }
+ifa-types = { path = "../ifa-types", features = ["dashmap"] }
 
-ifa-sandbox = { path = "../ifa-sandbox" }
-ifa-core = { path = "../ifa-core" }
+ifa-sandbox = { path = "../ifa-sandbox", optional = true }
+ifa-core = { path = "../ifa-core", default-features = false }
 
 # Error handling
 thiserror.workspace = true
 eyre.workspace = true
 
+# Concurrent HashMap (DashMap for performance)
+dashmap = { version = "6.1", optional = true }
+once_cell = "1.19"
+
 # Console I/O (Ìrosù)
-crossterm.workspace = true
+crossterm = { workspace = true, optional = true }
 
 # Date/Time (Ìwòrì)
 chrono.workspace = true
@@ -39,17 +43,17 @@ csv = "1.3"
 urlencoding = "2.1"
 
 # Random (Ọ̀wọ́nrín)
-rand.workspace = true
+rand = { workspace = true, optional = true }
 rand_chacha.workspace = true
 
 # Crypto (Ìrẹtẹ̀)
-ring.workspace = true
-argon2.workspace = true  # Password hashing
-zstd.workspace = true
+ring = { workspace = true, optional = true }
+argon2 = { workspace = true, optional = true }  # Password hashing
+zstd = { workspace = true, optional = true }
 base64.workspace = true
 
 # Math/ML (Ògúndá)
-ndarray = "0.15"
+ndarray = { version = "0.15", optional = true }
 
 # Database (Òdí)
 rusqlite = { workspace = true, optional = true }
@@ -59,16 +63,18 @@ tokio = { workspace = true, optional = true }
 
 # Networking (Òtúrá)
 reqwest = { workspace = true, optional = true }
+
 tokio-rustls = { workspace = true, optional = true }
+tl = { version = "0.7.7", optional = true } # HTML Parser (Ìkọ́)
 
 # Terminal UI (Ọ̀ṣẹ́)
 ratatui = { workspace = true, optional = true }
 
 # Polyglot FFI (Ìrẹtẹ̀/Òfún)
-libloading = "0.8"
+libloading = { version = "0.8", optional = true }
 libffi = { version = "3.2", optional = true }  # Native dynamic calls
-boa_engine = { version = "0.17", optional = true }
-pyo3 = { version = "0.20", features = ["auto-initialize"], optional = true }
+boa_engine = { version = "0.19", optional = true }
+pyo3 = { version = "0.27", features = ["auto-initialize"], optional = true }
 
 # Kernel / System info
 sysinfo = { version = "0.30", optional = true }
@@ -106,32 +112,53 @@ version = "1.3"
 optional = true
 
 [features]
-default = ["backend", "parallel"]
+default = ["backend", "parallel", "dashmap"]
 
 # Language Features
 js = ["boa_engine"]
 python = ["pyo3"]
-native_ffi = ["libffi"]  # Dynamic C calls via libffi (not WASM-compatible)
+native_ffi = ["libffi", "libloading"]  # Dynamic C calls via libffi (not WASM-compatible)
+
+# Performance Features
+dashmap = ["ifa-types/dashmap", "dep:dashmap"]
 
 # Domain Features
-backend = ["tokio", "reqwest", "tokio-rustls", "rusqlite"]
+backend = ["tokio", "reqwest", "tokio-rustls", "rusqlite", "rsa_math", "ifa-sandbox", "crossterm"]
 frontend = [] # Placeholder for web-sys
 game = ["ratatui", "gpu"] 
 iot = ["heapless"] # Bounded buffers for embedded
-crypto = ["ring/std", "argon2/std"]
+crypto = ["ring", "argon2"]
 ml = ["parallel"] # ML needs rayon
 fusion = ["backend", "frontend"] # Hybrid Runtime
 fullstack = ["fusion"] # Alias
 
 
 # Infrastructure Features
-parallel = ["rayon"]
-gpu = ["wgpu", "pollster", "tokio", "bytemuck"]
+parallel = ["rayon", "ifa-core/parallel"]
+gpu = ["wgpu", "bytemuck"]
+gpu_native = ["gpu", "tokio", "pollster"]
 persistence = ["bincode", "tokio/fs", "tokio/io-util"]
 profiling = []
-kernel = ["sysinfo"]
-audio = ["rodio"]
+# Kernel / System info
+kernel = ["dep:sysinfo"]
+sysinfo = ["dep:sysinfo"]
+
+audio = ["dep:rodio"]
+html = ["dep:tl"]
 
 # Legacy Alias
-full = ["backend", "game", "crypto", "ml", "parallel", "gpu", "persistence"]
+full = ["backend", "game", "crypto", "ml", "parallel", "gpu", "persistence", "html"]
 minimal = ["iot"]
+
+# WASM Feature (Optimized for Playground)
+wasm = [
+    # Core logic
+    "rsa_math", 
+    # Disable native IO/Concurrency
+    # We can keep 'gpu' if we handle wgpu correctly, but 'backend' pulls tokio.
+    # So we must be selective.
+]
+
+# Aliases
+rsa_math = ["ndarray", "rand"]
+

@@ -81,7 +81,7 @@ impl DapAdapter {
     }
 
     fn next_seq(&self) -> i64 {
-        let mut seq = self.seq.lock().unwrap();
+        let mut seq = self.seq.lock().unwrap_or_else(|p| p.into_inner());
         *seq += 1;
         *seq
     }
@@ -104,13 +104,13 @@ impl DapAdapter {
         // eprintln!("[DAP-OUT] {}", json);
     }
 
-    fn wait_for_command(&self) {
+    fn wait_for_command(&self, env: Option<&Environment>) {
         let stdin = io::stdin();
         let mut handle = stdin.lock();
 
         loop {
             // Check if we should unpause
-            if !*self.paused.lock().unwrap() {
+            if !*self.paused.lock().unwrap_or_else(|p| p.into_inner()) {
                 break;
             }
 
@@ -119,8 +119,6 @@ impl DapAdapter {
             if handle.read_line(&mut header).unwrap() == 0 {
                 break; // EOF
             }
-
-            // eprintln!("[DAP-IN-HEADER] {}", header.trim());
 
             if header.starts_with("Content-Length: ") {
                 let len_str = header.trim().trim_start_matches("Content-Length: ");
@@ -135,16 +133,16 @@ impl DapAdapter {
                 handle.read_exact(&mut buffer).unwrap();
                 let body = String::from_utf8(buffer).unwrap();
 
-                // eprintln!("[DAP-IN-BODY] {}", body);
-
-                if let Ok(ProtocolMessage::Request(req)) = serde_json::from_str::<ProtocolMessage>(&body) {
-                    self.handle_request(req);
+                if let Ok(ProtocolMessage::Request(req)) =
+                    serde_json::from_str::<ProtocolMessage>(&body)
+                {
+                    self.handle_request(req, env);
                 }
             }
         }
     }
 
-    fn handle_request(&self, req: Request) {
+    fn handle_request(&self, req: Request, env: Option<&Environment>) {
         let success = true;
         let message = None;
         let mut body = None;
@@ -178,7 +176,8 @@ impl DapAdapter {
 
                 if let Some(list) = bps {
                     for bp in list {
-                        let line = bp["line"].as_u64().unwrap() as usize;
+                        let line = bp.get("line").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
+                        if line == 0 { continue; }
                         final_bps.push(Breakpoint { line });
                         confirmed_bps.push(serde_json::json!({
                             "verified": true,
@@ -187,12 +186,11 @@ impl DapAdapter {
                     }
                 }
 
-                self.breakpoints.lock().unwrap().insert(path, final_bps);
+                self.breakpoints.lock().unwrap_or_else(|p| p.into_inner()).insert(path, final_bps);
                 body = Some(serde_json::json!({ "breakpoints": confirmed_bps }));
             }
             "configurationDone" => {
-                // Ready to start
-                *self.paused.lock().unwrap() = false;
+                *self.paused.lock().unwrap_or_else(|p| p.into_inner()) = false;
             }
             "threads" => {
                 body = Some(serde_json::json!({
@@ -202,18 +200,28 @@ impl DapAdapter {
                 }));
             }
             "stackTrace" => {
-                // Minimal stack trace (just current location if available?)
-                // Since we don't have easy access to the Interpreter stack here without deeper changes,
-                // we'll return a stub or empty frame.
-                // NOTE: Real implementation needs Interpreter state exposure.
-                // For now, on_statement will likely need to store current stack info in the adapter
-                // before pausing.
+                // The interpreter does not yet maintain a call-frame stack.
+                // Return a single synthetic frame so DAP clients (VS Code, Zed) render
+                // *something* instead of crashing or showing an empty panel.
+                // Once Interpreter gains a call_stack field, replace this with real frames.
+                let args = req.arguments.as_ref();
+                let source_path = args
+                    .and_then(|a| a.get("source"))
+                    .and_then(|s| s.get("path"))
+                    .and_then(|p| p.as_str())
+                    .unwrap_or("unknown.ifa");
 
-                // We'll rely on the "Stopped" event details for location, but VS Code calls this for the list.
-                // We will implement a simple "Current Statement" frame.
                 body = Some(serde_json::json!({
-                    "stackFrames": [],
-                    "totalFrames": 0
+                    "stackFrames": [
+                        {
+                            "id": 1,
+                            "name": "main",
+                            "source": { "path": source_path, "name": source_path },
+                            "line": 1,
+                            "column": 0
+                        }
+                    ],
+                    "totalFrames": 1
                 }));
             }
             "scopes" => {
@@ -225,25 +233,53 @@ impl DapAdapter {
                 }));
             }
             "variables" => {
-                // TODO: Implement variable inspection
-                // Requires capturing env.
-                body = Some(serde_json::json!({ "variables": [] }));
+                let args = req.arguments.as_ref().unwrap();
+                let var_ref = args["variablesReference"].as_i64().unwrap_or(0);
+                
+                let mut vars = Vec::new();
+
+                if let Some(env) = env {
+                    if var_ref == 1 {
+                        // Locals (current scope)
+                        for (k, v) in &env.values {
+                            vars.push(serde_json::json!({
+                                "name": k,
+                                "value": format!("{}", v), // Use Display trait
+                                "type": v.type_name(),
+                                "variablesReference": 0 // Nested not supported yet
+                            }));
+                        }
+                    } else if var_ref == 2 {
+                        // Globals (walk up to root)
+                        // Simplified: just show parent's values if exists
+                        if let Some(parent) = &env.parent {
+                            for (k, v) in &parent.values {
+                                 vars.push(serde_json::json!({
+                                    "name": k,
+                                    "value": format!("{}", v),
+                                    "type": v.type_name(),
+                                    "variablesReference": 0
+                                }));
+                            }
+                        }
+                    }
+                }
+
+                body = Some(serde_json::json!({ "variables": vars }));
             }
             "continue" => {
-                *self.paused.lock().unwrap() = false;
-                *self.stop_reason.lock().unwrap() = None;
+                *self.paused.lock().unwrap_or_else(|p| p.into_inner()) = false;
+                *self.stop_reason.lock().unwrap_or_else(|p| p.into_inner()) = None;
             }
             "next" => {
-                // Step Over
-                *self.paused.lock().unwrap() = false;
-                *self.stop_reason.lock().unwrap() = Some(StopReason::Step);
+                *self.paused.lock().unwrap_or_else(|p| p.into_inner()) = false;
+                *self.stop_reason.lock().unwrap_or_else(|p| p.into_inner()) = Some(StopReason::Step);
             }
             "disconnect" => {
                 std::process::exit(0);
             }
             _ => {
-                // success = false;
-                // message = Some("Not implemented".to_string());
+                // Ignored
             }
         }
 
@@ -260,7 +296,7 @@ impl DapAdapter {
 }
 
 impl Debugger for DapAdapter {
-    fn on_statement(&mut self, stmt: &Statement, _env: &Environment) {
+    fn on_statement(&mut self, stmt: &Statement, env: &Environment) {
         // extract location
         let (line, _file) = match stmt {
             Statement::VarDecl { span, .. }
@@ -277,31 +313,21 @@ impl Debugger for DapAdapter {
             | Statement::Opon { span, .. }
             | Statement::Taboo { span, .. }
             | Statement::Match { span, .. }
-            | Statement::Ase { span } => (span.line, "unknown.ifa"), // TODO: Span needs file path? Or assume single file for simple case
+            | Statement::Ase { span } => (span.line, "unknown.ifa"),
             _ => (0, ""),
         };
 
         // Check breakpoints
-        // Note: Filename matching is tricky if we don't have full paths in Span.
-        // We'll trust file name if span has it, or valid breakpoint globally if line matches?
-        // Let's assume naive line match for now.
-
-        // Logic:
-        // 1. Check if we should stop (breakpoints or step mode)
-        // 2. If yes, send Stopped event and enter wait_for_command loop
-
         let should_break = {
-            let bps = self.breakpoints.lock().unwrap();
-            // Iterate all files for now or assume active debug file
+            let bps = self.breakpoints.lock().unwrap_or_else(|p| p.into_inner());
             bps.values().flatten().any(|bp| bp.line == line)
         };
 
-        let stop_reason = self.stop_reason.lock().unwrap().clone();
-
+        let stop_reason = self.stop_reason.lock().unwrap_or_else(|p| p.into_inner()).clone();
         let should_stop = should_break || matches!(stop_reason, Some(StopReason::Step));
 
         if should_stop {
-            *self.paused.lock().unwrap() = true;
+            *self.paused.lock().unwrap_or_else(|p| p.into_inner()) = true;
 
             // Send Stopped Event
             self.send_event(
@@ -313,8 +339,8 @@ impl Debugger for DapAdapter {
                 })),
             );
 
-            // Wait
-            self.wait_for_command();
+            // Wait, passing environment for inspection
+            self.wait_for_command(Some(env));
         }
     }
 }
@@ -345,7 +371,7 @@ pub fn run_debug_session(file: std::path::PathBuf) -> color_eyre::Result<()> {
     let adapter = DapAdapter::new();
 
     // Validating handshake
-    adapter.wait_for_command(); // Will wait until configurationDone (paused = false)
+    adapter.wait_for_command(None); // Will wait until configurationDone (paused = false)
 
     // Setup Interpreter
     let source = std::fs::read_to_string(&file)?;

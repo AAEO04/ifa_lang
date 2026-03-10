@@ -24,18 +24,22 @@ impl OduHandler for ObaraHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+
+        let arg0 = args.get(0);
+        let arg1 = args.get(1);
+
         match method {
             // Addition
             "fikun" | "add" => {
                 let mut sum = 0i64;
                 for arg in &args {
                     match arg {
-                        IfaValue::Int(n) => sum += n,
+                        IfaValue::Int(n) => sum += *n,
                         IfaValue::Float(_) => return Ok(self.float_sum(&args)),
                         _ => {}
                     }
                 }
-                Ok(IfaValue::Int(sum))
+                Ok(IfaValue::int(sum))
             }
 
             // Multiplication
@@ -43,50 +47,64 @@ impl OduHandler for ObaraHandler {
                 let mut product = 1i64;
                 for arg in &args {
                     match arg {
-                        IfaValue::Int(n) => product *= n,
+                        IfaValue::Int(n) => product *= *n,
                         IfaValue::Float(_) => return Ok(self.float_product(&args)),
                         _ => {}
                     }
                 }
-                Ok(IfaValue::Int(product))
+                Ok(IfaValue::int(product))
             }
 
             // Power
-            "agbara" | "pow" | "power" => match (args.first(), args.get(1)) {
-                (Some(IfaValue::Int(base)), Some(IfaValue::Int(exp))) => {
-                    Ok(IfaValue::Int(base.pow(*exp as u32)))
-                }
-                (Some(IfaValue::Float(base)), Some(IfaValue::Int(exp))) => {
-                    Ok(IfaValue::Float(base.powi(*exp as i32)))
-                }
-                (Some(IfaValue::Float(base)), Some(IfaValue::Float(exp))) => {
-                    Ok(IfaValue::Float(base.powf(*exp)))
-                }
-                _ => Ok(IfaValue::Int(0)),
+            "agbara" | "pow" | "power" => {
+                 if let (Some(base_val), Some(exp_val)) = (arg0, arg1) {
+                    match (base_val, exp_val) {
+                        (IfaValue::Int(base), IfaValue::Int(exp)) => Ok(IfaValue::int(base.pow(*exp as u32))),
+                        (IfaValue::Float(base), IfaValue::Int(exp)) => Ok(IfaValue::float(base.powi(*exp as i32))),
+                        (IfaValue::Float(base), IfaValue::Float(exp)) => Ok(IfaValue::float(base.powf(*exp))),
+                        _ => Ok(IfaValue::int(0)),
+                    }
+                 } else {
+                     Ok(IfaValue::int(0))
+                 }
             },
 
             // Absolute value
-            "abs" => match args.first() {
-                Some(IfaValue::Int(n)) => Ok(IfaValue::Int(n.abs())),
-                Some(IfaValue::Float(f)) => Ok(IfaValue::Float(f.abs())),
-                _ => Ok(IfaValue::Int(0)),
+            "abs" => {
+                if let Some(val) = arg0 {
+                    match val {
+                        IfaValue::Int(n) => Ok(IfaValue::int(n.abs())),
+                        IfaValue::Float(f) => Ok(IfaValue::float(f.abs())),
+                        _ => Ok(IfaValue::int(0)),
+                    }
+                } else {
+                    Ok(IfaValue::int(0))
+                }
             },
 
             // Maximum
             "max" => {
-                let first = args.first().cloned().unwrap_or(IfaValue::Int(0));
-                let max = args
-                    .iter()
-                    .fold(first, |acc, v| if v > &acc { v.clone() } else { acc });
+                let first = args.first().cloned().unwrap_or(IfaValue::int(0));
+                let max = args.iter().fold(first, |acc, v| {
+                    match (&acc, v) {
+                        (IfaValue::Int(a), IfaValue::Int(b)) if *b > *a => v.clone(),
+                        (IfaValue::Float(a), IfaValue::Float(b)) if *b > *a => v.clone(),
+                        _ => acc
+                    }
+                });
                 Ok(max)
             }
 
             // Minimum
             "min" => {
-                let first = args.first().cloned().unwrap_or(IfaValue::Int(0));
-                let min = args
-                    .iter()
-                    .fold(first, |acc, v| if v < &acc { v.clone() } else { acc });
+                let first = args.first().cloned().unwrap_or(IfaValue::int(0));
+                let min = args.iter().fold(first, |acc, v| {
+                    match (&acc, v) {
+                        (IfaValue::Int(a), IfaValue::Int(b)) if b < a => v.clone(),
+                        (IfaValue::Float(a), IfaValue::Float(b)) if b < a => v.clone(),
+                        _ => acc
+                    }
+                });
                 Ok(min)
             }
 
@@ -96,6 +114,8 @@ impl OduHandler for ObaraHandler {
             ))),
         }
     }
+    
+    // ... skipping methods ...
 
     fn methods(&self) -> &'static [&'static str] {
         &[
@@ -120,11 +140,11 @@ impl ObaraHandler {
         for arg in args {
             match arg {
                 IfaValue::Int(n) => sum += *n as f64,
-                IfaValue::Float(f) => sum += f,
+                IfaValue::Float(f) => sum += *f,
                 _ => {}
             }
         }
-        IfaValue::Float(sum)
+        IfaValue::float(sum)
     }
 
     fn float_product(&self, args: &[IfaValue]) -> IfaValue {
@@ -132,10 +152,10 @@ impl ObaraHandler {
         for arg in args {
             match arg {
                 IfaValue::Int(n) => product *= *n as f64,
-                IfaValue::Float(f) => product *= f,
+                IfaValue::Float(f) => product *= *f,
                 _ => {}
             }
         }
-        IfaValue::Float(product)
+        IfaValue::float(product)
     }
 }

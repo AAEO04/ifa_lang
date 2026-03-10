@@ -4,7 +4,7 @@
 //! These traits can be implemented by ifa-std and called from ifa-core.
 
 use crate::error::IfaResult;
-use crate::value::IfaValue;
+use crate::value_union::IfaValue;
 
 // =============================================================================
 // INFRASTRUCTURE TRAITS

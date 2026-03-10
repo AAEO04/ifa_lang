@@ -9,7 +9,7 @@
 
 mod canvas;
 mod core;
-mod environment;
+pub mod environment;
 pub mod handlers;
 
 // Re-export main types from core

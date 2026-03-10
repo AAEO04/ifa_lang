@@ -55,11 +55,44 @@ pub struct ResourceDebt {
     pub column: usize,
 }
 
+/// A borrow debt - a reference that must be released before reborrow
+/// Implements simplified Rust-like borrow checking rules
+#[derive(Debug, Clone)]
+pub struct BorrowDebt {
+    /// Variable being borrowed
+    pub var_name: String,
+    /// True if mutable borrow (&mut), false if immutable (&)
+    pub is_mutable: bool,
+    /// Line where borrow occurred
+    pub line: usize,
+    /// Column where borrow occurred
+    pub column: usize,
+    /// Scope depth when borrow started
+    pub scope_depth: usize,
+}
+
+/// Borrow checking result
+#[derive(Debug, Clone, PartialEq)]
+pub enum BorrowError {
+    /// Already mutably borrowed
+    AlreadyMutablyBorrowed { var: String, existing_line: usize },
+    /// Already immutably borrowed, cannot mutably borrow
+    ImmutableBorrowExists { var: String, existing_line: usize },
+    /// Cannot use value while borrowed
+    ValueBorrowed { var: String, borrow_line: usize },
+}
+
 /// The Ìwà Engine - ensures resource lifecycle balance
+/// Also tracks borrow lifetimes for Ref/RefMut types
 #[derive(Debug)]
 pub struct IwaEngine {
     pub strict_mode: bool,
+    /// Resource lifecycle debts (open -> close)
     pub debt_ledger: Vec<ResourceDebt>,
+    /// Active borrows (references)
+    pub borrow_ledger: Vec<BorrowDebt>,
+    /// Current scope depth for borrow tracking
+    pub scope_depth: usize,
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
 }
@@ -75,9 +108,113 @@ impl IwaEngine {
         Self {
             strict_mode,
             debt_ledger: Vec::new(),
+            borrow_ledger: Vec::new(),
+            scope_depth: 0,
             errors: Vec::new(),
             warnings: Vec::new(),
         }
+    }
+
+    /// Enter a new scope (function, block, ailewu)
+    pub fn enter_scope(&mut self) {
+        self.scope_depth += 1;
+    }
+
+    /// Exit current scope - releases all borrows in this scope
+    pub fn exit_scope(&mut self) {
+        self.borrow_ledger
+            .retain(|b| b.scope_depth < self.scope_depth);
+        self.scope_depth = self.scope_depth.saturating_sub(1);
+    }
+
+    /// Try to create an immutable borrow (&T)
+    /// Returns error if there's an existing mutable borrow
+    pub fn borrow(&mut self, var_name: &str, line: usize, col: usize) -> Result<(), BorrowError> {
+        // Check for existing mutable borrow
+        if let Some(existing) = self
+            .borrow_ledger
+            .iter()
+            .find(|b| b.var_name == var_name && b.is_mutable)
+        {
+            return Err(BorrowError::AlreadyMutablyBorrowed {
+                var: var_name.to_string(),
+                existing_line: existing.line,
+            });
+        }
+
+        // OK to add immutable borrow
+        self.borrow_ledger.push(BorrowDebt {
+            var_name: var_name.to_string(),
+            is_mutable: false,
+            line,
+            column: col,
+            scope_depth: self.scope_depth,
+        });
+
+        Ok(())
+    }
+
+    /// Try to create a mutable borrow (&mut T)
+    /// Returns error if there's ANY existing borrow (mutable or immutable)
+    pub fn borrow_mut(
+        &mut self,
+        var_name: &str,
+        line: usize,
+        col: usize,
+    ) -> Result<(), BorrowError> {
+        // Check for existing borrows
+        if let Some(existing) = self.borrow_ledger.iter().find(|b| b.var_name == var_name) {
+            if existing.is_mutable {
+                return Err(BorrowError::AlreadyMutablyBorrowed {
+                    var: var_name.to_string(),
+                    existing_line: existing.line,
+                });
+            } else {
+                return Err(BorrowError::ImmutableBorrowExists {
+                    var: var_name.to_string(),
+                    existing_line: existing.line,
+                });
+            }
+        }
+
+        // OK to add mutable borrow
+        self.borrow_ledger.push(BorrowDebt {
+            var_name: var_name.to_string(),
+            is_mutable: true,
+            line,
+            column: col,
+            scope_depth: self.scope_depth,
+        });
+
+        Ok(())
+    }
+
+    /// Release a borrow (reference goes out of scope)
+    pub fn release_borrow(&mut self, var_name: &str) {
+        if let Some(pos) = self
+            .borrow_ledger
+            .iter()
+            .position(|b| b.var_name == var_name)
+        {
+            self.borrow_ledger.remove(pos);
+        }
+    }
+
+    /// Check if a variable is currently borrowed
+    pub fn is_borrowed(&self, var_name: &str) -> bool {
+        self.borrow_ledger.iter().any(|b| b.var_name == var_name)
+    }
+
+    /// Check if a variable is mutably borrowed
+    pub fn is_mutably_borrowed(&self, var_name: &str) -> bool {
+        self.borrow_ledger
+            .iter()
+            .any(|b| b.var_name == var_name && b.is_mutable)
+    }
+
+    /// Get all active borrows
+    pub fn active_borrows(&self) -> &[BorrowDebt] {
+        &self.borrow_ledger
     }
 
     /// Normalize Yoruba text to ASCII for matching
@@ -188,5 +325,95 @@ mod tests {
         engine.close_resource("Otura", "pa");
 
         assert!(engine.is_balanced());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Borrow Checking Tests
+    // ═══════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_immutable_borrow() {
+        let mut engine = IwaEngine::new(true);
+
+        // Can create immutable borrow
+        assert!(engine.borrow("x", 1, 1).is_ok());
+        assert!(engine.is_borrowed("x"));
+        assert!(!engine.is_mutably_borrowed("x"));
+    }
+
+    #[test]
+    fn test_multiple_immutable_borrows() {
+        let mut engine = IwaEngine::new(true);
+
+        // Can have multiple immutable borrows of same variable
+        assert!(engine.borrow("x", 1, 1).is_ok());
+        assert!(engine.borrow("x", 2, 1).is_ok());
+        assert_eq!(engine.borrow_ledger.len(), 2);
+    }
+
+    #[test]
+    fn test_mutable_borrow() {
+        let mut engine = IwaEngine::new(true);
+
+        // Can create mutable borrow
+        assert!(engine.borrow_mut("x", 1, 1).is_ok());
+        assert!(engine.is_borrowed("x"));
+        assert!(engine.is_mutably_borrowed("x"));
+    }
+
+    #[test]
+    fn test_cannot_borrow_mut_while_borrowed() {
+        let mut engine = IwaEngine::new(true);
+
+        // Create immutable borrow
+        engine.borrow("x", 1, 1).unwrap();
+
+        // Cannot create mutable borrow
+        let result = engine.borrow_mut("x", 2, 1);
+        assert!(matches!(
+            result,
+            Err(BorrowError::ImmutableBorrowExists { .. })
+        ));
+    }
+
+    #[test]
+    fn test_cannot_borrow_while_mutably_borrowed() {
+        let mut engine = IwaEngine::new(true);
+
+        // Create mutable borrow
+        engine.borrow_mut("x", 1, 1).unwrap();
+
+        // Cannot create another borrow (mutable or immutable)
+        let result = engine.borrow("x", 2, 1);
+        assert!(matches!(
+            result,
+            Err(BorrowError::AlreadyMutablyBorrowed { .. })
+        ));
+    }
+
+    #[test]
+    fn test_scope_releases_borrows() {
+        let mut engine = IwaEngine::new(true);
+
+        engine.enter_scope();
+        engine.borrow("x", 1, 1).unwrap();
+        assert!(engine.is_borrowed("x"));
+
+        engine.exit_scope();
+        assert!(!engine.is_borrowed("x"));
+    }
+
+    #[test]
+    fn test_release_borrow() {
+        let mut engine = IwaEngine::new(true);
+
+        engine.borrow("x", 1, 1).unwrap();
+        assert!(engine.is_borrowed("x"));
+
+        engine.release_borrow("x");
+        assert!(!engine.is_borrowed("x"));
+
+        // Now can mutably borrow
+        assert!(engine.borrow_mut("x", 2, 1).is_ok());
     }
 }

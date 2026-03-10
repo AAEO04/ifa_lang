@@ -123,6 +123,9 @@ enum Commands {
         /// Build as Fullstack Hybrid Executable (Backend + Frontend)
         #[arg(long)]
         fullstack: bool,
+        /// Output as reusable Cargo project (instead of building executable)
+        #[arg(long)]
+        project: bool,
     },
 
     /// Flash to embedded device
@@ -398,6 +401,10 @@ fn main() -> Result<()> {
 
             // Interpret (with_file enables imports relative to script location)
             let mut interpreter = Interpreter::with_file(&file);
+
+            // Register Standard Library Handlers (Breaking the Cycle)
+            interpreter.register_handler(Box::new(ifa_std::handlers::sys::SysHandler::new()));
+
             interpreter.set_capabilities(caps.clone());
 
             // Handle sandbox modes
@@ -512,6 +519,7 @@ fn main() -> Result<()> {
             crypto,
             ml,
             fullstack,
+            project,
         } => {
             use std::process::Command;
 
@@ -542,6 +550,52 @@ fn main() -> Result<()> {
                 .map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
 
             println!("   🔄 Transpiling to Rust...");
+
+            // If --project flag, use generate_project to create reusable Cargo project
+            if project {
+                let project_name = out
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
+                let project_dir = if out.extension().is_some() {
+                    out.with_extension("")
+                } else {
+                    out.clone()
+                };
+
+                println!("   📁 Generating Cargo project: {}", project_dir.display());
+
+                let config = ifa_core::generate_project(&program, &project_name, &project_dir)
+                    .map_err(|e| color_eyre::eyre::eyre!("Failed to generate project: {}", e))?;
+
+                println!();
+                println!("✅ Created Cargo project at: {}", project_dir.display());
+                println!();
+                println!("Detected dependencies:");
+                if config.needs_tokio {
+                    println!("   • tokio (async runtime)");
+                }
+                if config.needs_reqwest {
+                    println!("   • reqwest (HTTP client)");
+                }
+                if config.needs_rand {
+                    println!("   • rand (random number generation)");
+                }
+                if !config.needs_tokio && !config.needs_reqwest && !config.needs_rand {
+                    println!("   • (none - pure Rust)");
+                }
+                println!();
+                println!("To build:");
+                println!("   cd {}", project_dir.display());
+                println!("   cargo build --release");
+                println!();
+                println!("To run:");
+                println!("   cargo run --release");
+
+                return Ok(());
+            }
+
             let rust_code = ifa_core::transpile_to_rust(&program);
 
             // Create temp Cargo project
@@ -781,32 +835,13 @@ lto = true
             Ok(())
         }
 
+
         Commands::Fmt { file, check } => {
             let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
-
-            // Simple Indentation Formatter logic
-            let mut formatted = String::new();
-            let mut indent: usize = 0;
-
-            for line in source.lines() {
-                let trimmed = line.trim();
-                if trimmed.is_empty() {
-                    formatted.push('\n');
-                    continue;
-                }
-
-                if trimmed.contains('}') || trimmed.contains("ase") {
-                    indent = indent.saturating_sub(1);
-                }
-
-                formatted.push_str(&"    ".repeat(indent));
-                formatted.push_str(trimmed);
-                formatted.push('\n');
-
-                if trimmed.contains('{') || trimmed.contains("ese") || trimmed.contains("odu") {
-                    indent += 1;
-                }
-            }
+            
+            use ifa_fmt::{format, FormatterConfig};
+            let config = FormatterConfig::default();
+            let formatted = format(&source, config);
 
             if check {
                 if source == formatted {
@@ -816,8 +851,12 @@ lto = true
                     std::process::exit(1);
                 }
             } else {
-                std::fs::write(&file, formatted).wrap_err("Failed to write formatted file")?;
-                println!("✨ Syntactic harmony restored in {}", file.display());
+                if source != formatted {
+                    std::fs::write(&file, formatted).wrap_err("Failed to write formatted file")?;
+                    println!("✨ Syntactic harmony restored in {}", file.display());
+                } else {
+                    println!("✨ Already formatted.");
+                }
             }
             Ok(())
         }
@@ -1075,7 +1114,7 @@ lto = true
             println!("   Output: {}", output.display());
             println!();
 
-            docgen::generate_docs(&output)?;
+            docgen::generate_docs(&input, &output)?;
 
             println!();
             println!("Documentation generated successfully!");

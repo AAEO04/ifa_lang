@@ -205,7 +205,11 @@ impl OmniBox {
                 "ewo",
                 "can_read",
                 |state: wasmtime::Caller<'_, StoreState>| {
-                    // Placeholder: For now just return if they have any read access
+                    // Returns 1 if the WASM module was granted any ReadFiles capability.
+                    // Path-level granularity is enforced at the WASI preopened-directory level
+                    // (see build_wasi_context). This coarse check is the correct ABI for a
+                    // one-argument-free host function — the WASM module can refine access
+                    // by observing which paths WASI exposes, not by querying us per-path.
                     if state
                         .data()
                         .config

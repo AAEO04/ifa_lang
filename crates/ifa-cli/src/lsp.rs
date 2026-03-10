@@ -1,4 +1,4 @@
-use ifa_babalawo::{Severity as IfaSeverity, check_program};
+use ifa_babalawo::{Severity as IfaSeverity, analyze_program, LintContext, BabalawoConfig};
 use ifa_core::parse;
 use lsp_server::{Connection, Message, Notification, RequestId, Response};
 use lsp_types::{
@@ -47,6 +47,9 @@ fn main_loop(
     let _params: InitializeParams = serde_json::from_value(params)
         .map_err(|e| format!("Failed to parse InitializeParams: {}", e))?;
     eprintln!("Client connected!");
+    
+    // Track the latest valid analysis context
+    let mut context: Option<LintContext> = None;
 
     for msg in &connection.receiver {
         match msg {
@@ -60,7 +63,7 @@ fn main_loop(
                             "Got completion request for: {}",
                             params.text_document_position.text_document.uri
                         );
-                        let result = Some(lsp_types::CompletionResponse::Array(get_completions()));
+                        let result = Some(lsp_types::CompletionResponse::Array(get_completions(&context)));
                         let result = serde_json::to_value(&result)
                             .map_err(|e| format!("Failed to serialize completion: {}", e))?;
                         let resp = Response {
@@ -85,11 +88,13 @@ fn main_loop(
                 ) {
                     Ok(params) => {
                         eprintln!("DidOpen: {}", params.text_document.uri);
-                        publish_diagnostics(
+                        if let Ok(Some(new_ctx)) = publish_diagnostics(
                             &connection,
                             params.text_document.uri,
                             &params.text_document.text,
-                        )?;
+                        ) {
+                            context = Some(new_ctx);
+                        }
                     }
                     Err(Message::Notification(not)) => {
                         match cast_not::<lsp_types::notification::DidChangeTextDocument>(
@@ -98,11 +103,13 @@ fn main_loop(
                             Ok(params) => {
                                 eprintln!("DidChange: {}", params.text_document.uri);
                                 if let Some(change) = params.content_changes.into_iter().next() {
-                                    publish_diagnostics(
+                                    if let Ok(Some(new_ctx)) = publish_diagnostics(
                                         &connection,
                                         params.text_document.uri,
                                         &change.text,
-                                    )?;
+                                    ) {
+                                        context = Some(new_ctx);
+                                    }
                                 }
                             }
                             Err(Message::Notification(not)) => {
@@ -123,14 +130,16 @@ fn publish_diagnostics(
     connection: &Connection,
     uri: Url,
     text: &str,
-) -> Result<(), Box<dyn Error + Send + Sync>> {
+) -> Result<Option<LintContext>, Box<dyn Error + Send + Sync>> {
     let mut diagnostics = Vec::new();
+    let mut context = None;
 
     // 1. Parse Syntax
     match parse(text) {
         Ok(program) => {
-            // 2. Run Babalawo Linter
-            let baba = check_program(&program, uri.path());
+            // 2. Run Babalawo Analyzer (get diagnostics + symbols)
+            let (baba, ctx) = analyze_program(&program, uri.path(), BabalawoConfig::default());
+            context = Some(ctx);
 
             for diag in baba.diagnostics {
                 let severity = match diag.severity {
@@ -206,12 +215,12 @@ fn publish_diagnostics(
         params: serde_json::to_value(&params).unwrap_or(serde_json::Value::Null),
     };
     connection.sender.send(Message::Notification(not))?;
-    Ok(())
+    Ok(context)
 }
 
-fn get_completions() -> Vec<CompletionItem> {
-    vec![
-        // Keywords
+fn get_completions(context: &Option<LintContext>) -> Vec<CompletionItem> {
+    let mut items = vec![
+        // Keywords (Static)
         ci(
             "fun",
             "Function definition (fn)",
@@ -229,7 +238,7 @@ fn get_completions() -> Vec<CompletionItem> {
         ci("pada", "Return values", CompletionItemKind::KEYWORD),
         ci("nla", "Large / True", CompletionItemKind::KEYWORD),
         ci("kekere", "Small / False", CompletionItemKind::KEYWORD),
-        // Modules (Odu)
+        // Modules (Odu) (Static)
         ci(
             "Ogbe",
             "The Supporter (Lifecycle)",
@@ -282,7 +291,7 @@ fn get_completions() -> Vec<CompletionItem> {
             "The Giver (Permissions)",
             CompletionItemKind::MODULE,
         ),
-        // Std Functions
+        // Std Functions (Static)
         ci("ka", "Read (read)", CompletionItemKind::FUNCTION),
         ci("ko", "Write (write)", CompletionItemKind::FUNCTION),
         ci("so", "Speak/Print (print)", CompletionItemKind::FUNCTION),
@@ -294,7 +303,22 @@ fn get_completions() -> Vec<CompletionItem> {
         ci("roi", "Report/Log", CompletionItemKind::FUNCTION),
         ci("pin", "Divide/Split", CompletionItemKind::FUNCTION),
         ci("dapo", "Join/Merge", CompletionItemKind::FUNCTION),
-    ]
+    ];
+
+    // Dynamic Completions from Context
+    if let Some(ctx) = context {
+        for var in &ctx.defined_vars {
+            let detail = if let Some(type_hint) = ctx.get_var_type(var) {
+                format!("Variable: {:?}", type_hint)
+            } else {
+                "Variable".to_string()
+            };
+            
+            items.push(ci(var, &detail, CompletionItemKind::VARIABLE));
+        }
+    }
+    
+    items
 }
 
 fn ci(label: &str, detail: &str, kind: CompletionItemKind) -> CompletionItem {

@@ -11,7 +11,9 @@ mod iwa;
 mod taboo;
 mod wisdom;
 
-pub use checks::{BabalawoConfig, LintContext, check_program, check_program_with_config};
+pub use checks::{
+    check_program, check_program_with_config, analyze_program, BabalawoConfig, LintContext,
+};
 pub use diagnose::{Babalawo, Diagnostic, IfaError, Severity};
 pub use history::{StateHistoryBuffer, StateSnapshot};
 pub use infer::infer_capabilities;

@@ -30,9 +30,10 @@ impl OduHandler for FidioHandler {
         match method {
             // Play video file
             "ṣe" | "play" => {
+                // Check if first arg is string using Pattern Matching on Kind
                 if let Some(IfaValue::Str(path)) = args.first() {
-                    println!("[VIDEO] Playing: {}", path);
-                    return Ok(IfaValue::Bool(true));
+                         println!("[VIDEO] Playing: {}", path);
+                         return Ok(IfaValue::bool(true));
                 }
                 Err(IfaError::Runtime("play requires video file path".into()))
             }
@@ -40,22 +41,26 @@ impl OduHandler for FidioHandler {
             // Stop playback
             "duro" | "stop" => {
                 println!("[VIDEO] Stopping playback");
-                Ok(IfaValue::Bool(true))
+                Ok(IfaValue::bool(true))
             }
 
             // Get current frame as image data
             "aworan" | "frame" => {
                 println!("[VIDEO] Getting current frame");
                 // Would return image data/path
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             // Get video duration in seconds
             "akoko" | "duration" => {
                 if let Some(IfaValue::Str(path)) = args.first() {
-                    println!("[VIDEO] Getting duration of: {}", path);
-                    // Placeholder - would use ffprobe
-                    return Ok(IfaValue::Float(0.0));
+                        println!("[VIDEO] Getting duration of: {}", path);
+                        // ffprobe / ffmpeg-next not yet linked.
+                        // Return Err so callers know the duration is unavailable,
+                        // not that the file is zero-length.
+                        return Err(IfaError::Runtime(
+                            "duration: ffprobe not available (ffmpeg-next feature not enabled)".into()
+                        ));
                 }
                 Err(IfaError::Runtime("duration requires video path".into()))
             }
@@ -63,8 +68,8 @@ impl OduHandler for FidioHandler {
             // Seek to position (seconds)
             "lọ_si" | "seek" => {
                 if let Some(IfaValue::Float(pos)) = args.first() {
-                    println!("[VIDEO] Seeking to: {:.2}s", pos);
-                    return Ok(IfaValue::Bool(true));
+                         println!("[VIDEO] Seeking to: {:.2}s", *pos);
+                         return Ok(IfaValue::bool(true));
                 }
                 Err(IfaError::Runtime(
                     "seek requires position in seconds".into(),
@@ -84,19 +89,24 @@ impl OduHandler for FidioHandler {
                     })
                     .unwrap_or(5000);
 
-                println!("[VIDEO] Recording for {}ms...", duration);
-                Ok(IfaValue::Str("recording_placeholder.mp4".to_string()))
+                // Camera capture requires ffmpeg-next (or a platform camera API).
+                // Return Err so callers know nothing was recorded rather than
+                // receiving a filename that does not exist on disk.
+                let _ = duration;
+                Err(IfaError::Runtime(
+                    "record: camera capture not available (ffmpeg-next feature not enabled)".into()
+                ))
             }
 
             // Get video info (width, height, fps)
             "alaye" | "info" => {
                 if let Some(IfaValue::Str(path)) = args.first() {
-                    println!("[VIDEO] Getting info for: {}", path);
-                    return Ok(IfaValue::Map(std::collections::HashMap::from([
-                        ("width".to_string(), IfaValue::Int(1920)),
-                        ("height".to_string(), IfaValue::Int(1080)),
-                        ("fps".to_string(), IfaValue::Float(30.0)),
-                    ])));
+                        println!("[VIDEO] Getting info for: {}", path);
+                        return Ok(IfaValue::map(std::collections::HashMap::from([
+                            ("width".into(), IfaValue::int(1920)),
+                            ("height".into(), IfaValue::int(1080)),
+                            ("fps".into(), IfaValue::float(30.0)),
+                        ])));
                 }
                 Err(IfaError::Runtime("info requires video path".into()))
             }

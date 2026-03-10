@@ -52,7 +52,7 @@ fn get_domain_methods(domain: &str) -> Vec<IfaValue> {
     };
     methods
         .iter()
-        .map(|m| IfaValue::Str(m.to_string()))
+        .map(|m| IfaValue::str(m.to_string()))
         .collect()
 }
 
@@ -68,62 +68,64 @@ impl OduHandler for OfunHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+
+        let arg0 = args.first();
+
         match method {
             // Check if capability is granted
-            // Note: In WASM mode, all capabilities return true (browser sandbox)
-            // In native mode with no Interpreter context, default to true
             "ni_agbara" | "has_capability" | "can" => {
-                if let Some(IfaValue::Str(cap)) = args.first() {
-                    let cap_type = parse_capability_name(cap);
-                    // Return true for valid capabilities, false for Unknown
-                    // (Full sandbox integration requires Interpreter context)
-                    let has_cap = cap_type != "Unknown";
-                    return Ok(IfaValue::Bool(has_cap));
+                if let Some(IfaValue::Str(cap)) = arg0 {
+                         let cap_type = parse_capability_name(cap);
+                        // Return true for valid capabilities, false for Unknown
+                        let has_cap = cap_type != "Unknown";
+                    Ok(IfaValue::bool(has_cap))
+                } else {
+                    Err(IfaError::Runtime(
+                        "has_capability requires capability name".into(),
+                    ))
                 }
-                Err(IfaError::Runtime(
-                    "has_capability requires capability name".into(),
-                ))
             }
 
             // Request capability (logs and returns success)
             "beere" | "request" => {
-                if let Some(IfaValue::Str(cap)) = args.first() {
-                    let cap_type = parse_capability_name(cap);
-                    if cap_type == "Unknown" {
-                        return Err(IfaError::Runtime(format!(
-                            "Unknown capability: '{}'. Valid: stdio, time, random, network, files, env, execute, bridge",
-                            cap
-                        )));
+                 if let Some(IfaValue::Str(cap)) = arg0 {
+                        let cap_type = parse_capability_name(cap);
+                        if cap_type == "Unknown" {
+                            return Err(IfaError::Runtime(format!(
+                                "Unknown capability: '{}'. Valid: stdio, time, random, network, files, env, execute, bridge",
+                                cap
+                            )));
+                        }
+                        Ok(IfaValue::bool(true))
+                    } else {
+                        Err(IfaError::Runtime("request requires capability name".into()))
                     }
-                    // In production, this would go through CapabilitySet::grant
-                    return Ok(IfaValue::Bool(true));
-                }
-                Err(IfaError::Runtime("request requires capability name".into()))
             }
 
-            // Reflect on type - real implementation
+            // Reflect on type
             "iru" | "typeof" => {
-                if let Some(val) = args.first() {
-                    return Ok(IfaValue::Str(val.type_name().to_string()));
+                if let Some(val) = arg0 {
+                    return Ok(IfaValue::str(val.type_name()));
                 }
-                Ok(IfaValue::Str("null".to_string()))
+                Ok(IfaValue::str("null"))
             }
 
-            // Reflect on methods - real implementation with domain lookup
+            // Reflect on methods
             "awọn_ẹsẹ" | "methods" => {
-                if let Some(IfaValue::Str(domain)) = args.first() {
-                    return Ok(IfaValue::List(get_domain_methods(domain)));
-                }
-                // Return all domains if no argument
-                let domains: Vec<IfaValue> = vec![
-                    "irosu", "ogbe", "obara", "oturupon", "ika", "oyeku", "owonrin", "ogunda",
-                    "iwori", "okanran", "otura", "odi", "osa", "ofun", "irete", "ose", "ohun",
-                    "fidio",
-                ]
-                .into_iter()
-                .map(|d| IfaValue::Str(d.to_string()))
-                .collect();
-                Ok(IfaValue::List(domains))
+                if let Some(IfaValue::Str(domain)) = arg0 {
+                        Ok(IfaValue::list(get_domain_methods(domain)))
+                    } else {
+                        // Return all domains if no argument
+                        let domains: Vec<IfaValue> = vec![
+                            "irosu", "ogbe", "obara", "oturupon", "ika", "oyeku", "owonrin", "ogunda",
+                            "iwori", "okanran", "otura", "odi", "osa", "ofun", "irete", "ose", "ohun",
+                            "fidio",
+                        ]
+                        .into_iter()
+                        .map(|d| IfaValue::str(d.to_string()))
+                        .collect();
+                        Ok(IfaValue::list(domains))
+                    }
             }
 
             // List available capabilities
@@ -132,19 +134,19 @@ impl OduHandler for OfunHandler {
                     "stdio", "time", "random", "network", "files", "env", "execute", "bridge",
                 ]
                 .into_iter()
-                .map(|c| IfaValue::Str(c.to_string()))
+                .map(|c| IfaValue::str(c.to_string()))
                 .collect();
-                Ok(IfaValue::List(caps))
+                Ok(IfaValue::list(caps))
             }
 
-            // Get module info - real implementation
-            "alaye_ẹka" | "module_info" => Ok(IfaValue::Map(std::collections::HashMap::from([
-                ("name".to_string(), IfaValue::Str("ifá-core".to_string())),
+            // Get module info
+            "alaye_ẹka" | "module_info" => Ok(IfaValue::map(std::collections::HashMap::from([
+                ("name".into(), IfaValue::str("ifá-core")),
                 (
-                    "version".to_string(),
-                    IfaValue::Str(env!("CARGO_PKG_VERSION").to_string()),
+                    "version".into(),
+                    IfaValue::str(env!("CARGO_PKG_VERSION")),
                 ),
-                ("edition".to_string(), IfaValue::Str("2024".to_string())),
+                ("edition".into(), IfaValue::str("2024")),
             ]))),
 
             _ => Err(IfaError::Runtime(format!(

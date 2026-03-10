@@ -8,7 +8,7 @@ use thiserror::Error;
 pub type IfaResult<T> = Result<T, IfaError>;
 
 /// Core error type for Ifá-Lang runtime
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum IfaError {
     // =========================================================================
     // MATH ERRORS (Ọ̀bàrà / Òtúúrúpọ̀n)
@@ -56,7 +56,7 @@ pub enum IfaError {
     PermissionDenied(String),
 
     #[error("I/O error: {0}")]
-    IoError(#[from] std::io::Error),
+    IoError(String), // Changed from std::io::Error to String for Clone support
 
     // =========================================================================
     // NETWORK ERRORS (Òtúrá)
@@ -106,17 +106,63 @@ pub enum IfaError {
     #[error("{0}")]
     Custom(String),
 
+    #[error("User error: {0}")]
+    UserError(String),
+
     // =========================================================================
     // PARSER/INTERPRETER ERRORS
     // =========================================================================
     #[error("Parse error: {0}")]
     Parse(String),
 
+    #[error("Compile error: {0}")]
+    Compile(String),
+
     #[error("Runtime error: {0}")]
     Runtime(String),
 }
 
 impl IfaError {
+    /// Get the standard numeric error code for this error
+    pub fn error_code(&self) -> ifa_types::ErrorCode {
+        use ifa_types::ErrorCode;
+
+        match self {
+            IfaError::DivisionByZero(_) => ErrorCode::DivByZero,
+            IfaError::Overflow(_) | IfaError::Underflow(_) => ErrorCode::Overflow,
+
+            IfaError::TypeError { .. } => ErrorCode::TypeMismatch,
+            IfaError::ConversionError { .. } => ErrorCode::InvalidCast,
+
+            IfaError::IndexOutOfBounds { .. } => ErrorCode::OutOfBounds,
+            IfaError::KeyNotFound(_) => ErrorCode::OutOfBounds,
+
+            IfaError::FileNotFound(_) => ErrorCode::FileNotFound,
+            IfaError::PermissionDenied(_) | IfaError::SsrfBlocked(_) => ErrorCode::PermissionDenied,
+            IfaError::IoError(_) | IfaError::ConnectionFailed(_) => ErrorCode::IoError,
+            IfaError::Timeout(_) => ErrorCode::Timeout,
+
+            IfaError::UnknownOpcode(_) => ErrorCode::InvalidOpCode,
+            IfaError::StackUnderflow => ErrorCode::StackUnderflow,
+            IfaError::StackOverflow(_) => ErrorCode::StackOverflow,
+
+            IfaError::UndefinedVariable(_) | IfaError::UndefinedFunction(_) => {
+                ErrorCode::UndefinedVar
+            }
+            IfaError::OponExhausted { .. } => ErrorCode::OutOfMemory,
+
+            IfaError::Parse(_) | IfaError::Compile(_) => ErrorCode::InvalidBytecode,
+
+            // Generic mappings
+            IfaError::ArityMismatch { .. } | IfaError::ArgumentError(_) => ErrorCode::VmError,
+            IfaError::AssertionFailed(_) => ErrorCode::VmError,
+            IfaError::NotImplemented(_) => ErrorCode::VmError,
+            IfaError::Custom(_) => ErrorCode::VmError,
+            IfaError::UserError(_) => ErrorCode::VmError,
+            IfaError::Runtime(_) => ErrorCode::VmError,
+        }
+    }
+
     /// Get a Yoruba proverb related to this error (for educational context)
     pub fn proverb(&self) -> &'static str {
         match self {
@@ -137,6 +183,58 @@ impl IfaError {
                 "Ìgbà méjì kì í wọ inú àwo kan. (Two times cannot fit in one calabash.)"
             }
             _ => "Gbogbo ìṣòro ní ojúùtù. (Every problem has a solution.)",
+        }
+    }
+}
+
+impl From<ifa_types::IfaError> for IfaError {
+    fn from(err: ifa_types::IfaError) -> Self {
+        match err {
+            ifa_types::IfaError::DivisionByZero(msg) => IfaError::DivisionByZero(msg),
+            ifa_types::IfaError::Overflow(msg) => IfaError::Overflow(msg),
+            ifa_types::IfaError::Underflow(msg) => IfaError::Underflow(msg),
+            ifa_types::IfaError::ArityMismatch { expected, got } => {
+                IfaError::ArityMismatch { expected, got }
+            }
+            ifa_types::IfaError::ArgumentError(msg) => IfaError::ArgumentError(msg),
+            ifa_types::IfaError::TypeError { expected, got } => {
+                IfaError::TypeError { expected, got }
+            }
+            ifa_types::IfaError::ConversionError { from, to } => {
+                IfaError::ConversionError { from, to }
+            }
+            ifa_types::IfaError::IndexOutOfBounds { index, length } => {
+                IfaError::IndexOutOfBounds { index, length }
+            }
+            ifa_types::IfaError::KeyNotFound(k) => IfaError::KeyNotFound(k),
+            ifa_types::IfaError::FileNotFound(f) => IfaError::FileNotFound(f),
+            ifa_types::IfaError::PermissionDenied(p) => IfaError::PermissionDenied(p),
+            // Map IO error manually or through string if needed, io::Error isn't cloneable easily but here we construct new
+            ifa_types::IfaError::IoError(e) => {
+                IfaError::IoError(e.to_string())
+            }
+            ifa_types::IfaError::ConnectionFailed(c) => IfaError::ConnectionFailed(c),
+            ifa_types::IfaError::Timeout(t) => IfaError::Timeout(t),
+            ifa_types::IfaError::SsrfBlocked(s) => IfaError::SsrfBlocked(s),
+            ifa_types::IfaError::UnknownOpcode(o) => IfaError::UnknownOpcode(o),
+            ifa_types::IfaError::StackUnderflow => IfaError::StackUnderflow,
+            ifa_types::IfaError::StackOverflow(s) => IfaError::StackOverflow(s),
+            ifa_types::IfaError::UndefinedVariable(v) => IfaError::UndefinedVariable(v),
+            ifa_types::IfaError::UndefinedFunction(f) => IfaError::UndefinedFunction(f),
+            ifa_types::IfaError::OponExhausted {
+                requested,
+                available,
+            } => IfaError::OponExhausted {
+                requested,
+                available,
+            },
+            ifa_types::IfaError::AssertionFailed(a) => IfaError::AssertionFailed(a),
+            ifa_types::IfaError::NotImplemented(n) => IfaError::NotImplemented(n),
+            ifa_types::IfaError::Custom(c) => IfaError::Custom(c),
+            ifa_types::IfaError::UserError(u) => IfaError::UserError(u),
+            ifa_types::IfaError::Parse(p) => IfaError::Parse(p),
+            ifa_types::IfaError::Compile(c) => IfaError::Compile(c),
+            ifa_types::IfaError::Runtime(r) => IfaError::Runtime(r),
         }
     }
 }

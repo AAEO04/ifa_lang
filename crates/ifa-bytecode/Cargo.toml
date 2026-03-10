@@ -1,0 +1,20 @@
+[package]
+name = "ifa-bytecode"
+version = "0.1.0"
+edition = "2021"
+description = "Ifa VM bytecode definitions - the binary interface contract"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Optional serde usage for ifa-types compatibility. 
+# Default is zero-deps.
+serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
+
+[features]
+default = ["std"]
+# Feature name 'serde' is automatically created by the optional dependency `serde`
+alloc = []
+std = ["alloc", "serde?/std"]
+
+[package.metadata.docs.rs]
+all-features = true

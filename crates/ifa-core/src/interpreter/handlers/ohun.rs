@@ -98,26 +98,26 @@ impl OduHandler for OhunHandler {
             // Play audio file
             "ṣe" | "play" => {
                 if let Some(IfaValue::Str(path)) = args.first() {
-                    let result = play_audio_file(path)?;
-                    return Ok(IfaValue::Bool(result));
+                        let result = play_audio_file(path)?;
+                        return Ok(IfaValue::bool(result));
                 }
                 Err(IfaError::Runtime("play requires audio file path".into()))
             }
 
             // Stop playback (would need global state to track)
-            "duro" | "stop" => Ok(IfaValue::Bool(true)),
+            "duro" | "stop" => Ok(IfaValue::bool(true)),
 
             // Pause/resume (would need global state)
-            "da_duro" | "pause" => Ok(IfaValue::Bool(true)),
+            "da_duro" | "pause" => Ok(IfaValue::bool(true)),
 
             // Get/set volume (0.0 - 1.0)
             "ohùn" | "volume" => {
                 if let Some(IfaValue::Float(vol)) = args.first() {
-                    let vol = vol.clamp(0.0, 1.0);
-                    return Ok(IfaValue::Float(vol));
+                        let vol = vol.clamp(0.0, 1.0);
+                        return Ok(IfaValue::float(vol));
                 }
                 // Return current volume if no arg
-                Ok(IfaValue::Float(1.0))
+                Ok(IfaValue::float(1.0))
             }
 
             // Simple beep/tone with real audio when feature enabled
@@ -144,7 +144,7 @@ impl OduHandler for OhunHandler {
                     .unwrap_or(200);
 
                 play_beep(freq, duration)?;
-                Ok(IfaValue::Null)
+                Ok(IfaValue::null())
             }
 
             // Record from microphone (requires additional crate like cpal)
@@ -153,7 +153,7 @@ impl OduHandler for OhunHandler {
             )),
 
             // Check if audio is playing
-            "ṣe_ṣiṣẹ" | "is_playing" => Ok(IfaValue::Bool(false)),
+            "ṣe_ṣiṣẹ" | "is_playing" => Ok(IfaValue::bool(false)),
 
             // List audio devices
             #[cfg(feature = "audio")]
@@ -164,16 +164,16 @@ impl OduHandler for OhunHandler {
                     .output_devices()
                     .map(|devs| {
                         devs.filter_map(|d| d.name().ok())
-                            .map(IfaValue::Str)
+                            .map(IfaValue::str)
                             .collect()
                     })
-                    .unwrap_or_else(|_| vec![IfaValue::Str("Default Output".to_string())]);
-                Ok(IfaValue::List(devices))
+                    .unwrap_or_else(|_| vec![IfaValue::str("Default Output")]);
+                Ok(IfaValue::list(devices))
             }
 
             #[cfg(not(feature = "audio"))]
-            "awọn_ẹrọ" | "devices" => Ok(IfaValue::List(vec![IfaValue::Str(
-                "Default Output (audio feature disabled)".to_string(),
+            "awọn_ẹrọ" | "devices" => Ok(IfaValue::list(vec![IfaValue::str(
+                "Default Output (audio feature disabled)",
             )])),
 
             _ => Err(IfaError::Runtime(format!(

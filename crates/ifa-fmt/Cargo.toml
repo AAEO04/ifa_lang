@@ -1,0 +1,11 @@
+[package]
+name = "ifa-fmt"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Opinionated Code Formatter for Ifá-Lang"
+
+[dependencies]
+ifa-core = { path = "../ifa-core" }

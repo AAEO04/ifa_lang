@@ -29,61 +29,69 @@ impl OduHandler for IreteHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+
+        let arg0 = args.get(0);
+        
         match method {
-            // SHA256 hash - real implementation using sha2 crate
+            // SHA256 hash
             "sha256" | "fọwọsi" => {
-                if let Some(IfaValue::Str(data)) = args.first() {
-                    let mut hasher = Sha256::new();
-                    hasher.update(data.as_bytes());
-                    let result = hasher.finalize();
-                    let hex: String = result.iter().map(|b| format!("{:02x}", b)).collect();
-                    return Ok(IfaValue::Str(hex));
+                if let Some(val) = arg0 {
+                    if let IfaValue::Str(data) = val {
+                        let mut hasher = Sha256::new();
+                        hasher.update(data.as_bytes());
+                        let result = hasher.finalize();
+                        let hex: String = result.iter().map(|b| format!("{:02x}", b)).collect();
+                        return Ok(IfaValue::str(hex));
+                    }
                 }
                 Err(IfaError::Runtime("sha256 requires string data".into()))
             }
 
-            // Base64 encode - real implementation using base64 crate
+            // Base64 encode
             "encode_base64" | "si_base64" => {
-                if let Some(IfaValue::Str(data)) = args.first() {
-                    let encoded = BASE64_STANDARD.encode(data.as_bytes());
-                    return Ok(IfaValue::Str(encoded));
+                if let Some(val) = arg0 {
+                    if let IfaValue::Str(data) = val {
+                        let encoded = BASE64_STANDARD.encode(data.as_bytes());
+                        return Ok(IfaValue::str(encoded));
+                    }
                 }
                 Err(IfaError::Runtime("encode_base64 requires string".into()))
             }
 
-            // Base64 decode - real implementation
+            // Base64 decode
             "decode_base64" | "lati_base64" => {
-                if let Some(IfaValue::Str(data)) = args.first() {
-                    match BASE64_STANDARD.decode(data) {
-                        Ok(bytes) => match String::from_utf8(bytes) {
-                            Ok(s) => return Ok(IfaValue::Str(s)),
+                if let Some(val) = arg0 {
+                    if let IfaValue::Str(data) = val {
+                        match BASE64_STANDARD.decode(&**data) {
+                            Ok(bytes) => match String::from_utf8(bytes) {
+                                Ok(s) => return Ok(IfaValue::str(s)),
+                                Err(e) => {
+                                    return Err(IfaError::Runtime(format!(
+                                        "Base64 decoded to invalid UTF-8: {}",
+                                        e
+                                    )));
+                                }
+                            },
                             Err(e) => {
-                                return Err(IfaError::Runtime(format!(
-                                    "Base64 decoded to invalid UTF-8: {}",
-                                    e
-                                )));
+                                return Err(IfaError::Runtime(format!("Base64 decode failed: {}", e)));
                             }
-                        },
-                        Err(e) => {
-                            return Err(IfaError::Runtime(format!("Base64 decode failed: {}", e)));
                         }
                     }
                 }
                 Err(IfaError::Runtime("decode_base64 requires string".into()))
             }
 
-            // Generate random bytes (hex) - real implementation using getrandom
+            // Generate random bytes (hex)
             "random_bytes" | "awọn_baiti_laileto" => {
-                let count = args
-                    .first()
-                    .and_then(|v| {
-                        if let IfaValue::Int(n) = v {
-                            Some(*n as usize)
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or(16);
+                let count = if let Some(val) = arg0 {
+                    if let IfaValue::Int(n) = val {
+                        *n as usize
+                    } else {
+                        16
+                    }
+                } else {
+                    16
+                };
 
                 // Use cryptographically secure random bytes
                 let mut bytes = vec![0u8; count];
@@ -95,28 +103,25 @@ impl OduHandler for IreteHandler {
                 }
 
                 let hex: String = bytes.iter().map(|b| format!("{:02x}", b)).collect();
-                Ok(IfaValue::Str(hex))
+                Ok(IfaValue::str(hex))
             }
 
-            // UUID v4 - real implementation using uuid crate
+            // UUID v4
             "uuid" | "id_alailẹgbẹ" => {
                 let id = Uuid::new_v4();
-                Ok(IfaValue::Str(id.to_string()))
+                Ok(IfaValue::str(id.to_string()))
             }
 
-            // HMAC-SHA256 for message authentication
+            // HMAC-SHA256
             "hmac" | "ṣayẹwo" => {
-                if args.len() >= 2 {
-                    if let (Some(IfaValue::Str(key)), Some(IfaValue::Str(msg))) =
-                        (args.first(), args.get(1))
-                    {
-                        // Simple HMAC implementation using SHA256
+                if let (Some(key_val), Some(msg_val)) = (arg0, args.get(1)) {
+                    if let (IfaValue::Str(key), IfaValue::Str(msg)) = (key_val, msg_val) {
                         let mut hasher = Sha256::new();
                         hasher.update(key.as_bytes());
                         hasher.update(msg.as_bytes());
                         let result = hasher.finalize();
                         let hex: String = result.iter().map(|b| format!("{:02x}", b)).collect();
-                        return Ok(IfaValue::Str(hex));
+                        return Ok(IfaValue::str(hex));
                     }
                 }
                 Err(IfaError::Runtime(
@@ -124,25 +129,27 @@ impl OduHandler for IreteHandler {
                 ))
             }
 
-            // Hash password (using SHA256 + salt for basic security)
+            // Hash password
             "hash_password" | "fọwọsi_ọrọigbaniwọle" => {
-                if let Some(IfaValue::Str(password)) = args.first() {
-                    // Generate salt
-                    let mut salt = [0u8; 16];
-                    if let Err(e) = getrandom::getrandom(&mut salt) {
-                        return Err(IfaError::Runtime(format!("Salt generation failed: {}", e)));
+                if let Some(val) = arg0 {
+                    if let IfaValue::Str(password) = val {
+                        // Generate salt
+                        let mut salt = [0u8; 16];
+                        if let Err(e) = getrandom::getrandom(&mut salt) {
+                            return Err(IfaError::Runtime(format!("Salt generation failed: {}", e)));
+                        }
+                        let salt_hex: String = salt.iter().map(|b| format!("{:02x}", b)).collect();
+
+                        // Hash with salt
+                        let mut hasher = Sha256::new();
+                        hasher.update(salt);
+                        hasher.update(password.as_bytes());
+                        let result = hasher.finalize();
+                        let hash_hex: String = result.iter().map(|b| format!("{:02x}", b)).collect();
+
+                        // Return salt$hash format
+                        return Ok(IfaValue::str(format!("{}${}", salt_hex, hash_hex)));
                     }
-                    let salt_hex: String = salt.iter().map(|b| format!("{:02x}", b)).collect();
-
-                    // Hash with salt
-                    let mut hasher = Sha256::new();
-                    hasher.update(salt);
-                    hasher.update(password.as_bytes());
-                    let result = hasher.finalize();
-                    let hash_hex: String = result.iter().map(|b| format!("{:02x}", b)).collect();
-
-                    // Return salt$hash format
-                    return Ok(IfaValue::Str(format!("{}${}", salt_hex, hash_hex)));
                 }
                 Err(IfaError::Runtime(
                     "hash_password requires password string".into(),
@@ -151,10 +158,8 @@ impl OduHandler for IreteHandler {
 
             // Verify password against hash
             "verify_password" | "rii_daju_ọrọigbaniwọle" => {
-                if args.len() >= 2 {
-                    if let (Some(IfaValue::Str(password)), Some(IfaValue::Str(stored))) =
-                        (args.first(), args.get(1))
-                    {
+                if let (Some(pass_val), Some(stored_val)) = (arg0, args.get(1)) {
+                    if let (IfaValue::Str(password), IfaValue::Str(stored)) = (pass_val, stored_val) {
                         // Parse salt$hash format
                         let parts: Vec<&str> = stored.split('$').collect();
                         if parts.len() != 2 {
@@ -175,7 +180,7 @@ impl OduHandler for IreteHandler {
                         let hash_hex: String =
                             result.iter().map(|b| format!("{:02x}", b)).collect();
 
-                        return Ok(IfaValue::Bool(hash_hex == parts[1]));
+                        return Ok(IfaValue::bool(hash_hex == parts[1]));
                     }
                 }
                 Err(IfaError::Runtime(

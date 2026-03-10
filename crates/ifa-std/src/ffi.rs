@@ -298,37 +298,29 @@ impl IfaFfi {
 
     /// Validate library path for security
     fn validate_library_path(&self, path: &str) -> FfiResult<std::path::PathBuf> {
-        use std::path::PathBuf;
+        use std::path::{Path, PathBuf};
 
         let path_buf = PathBuf::from(path);
 
-        // 1. Check for path traversal attempts
-        let path_str = path_buf.to_string_lossy();
-        if path_str.contains("..") {
+        // 1. Check for basic traversal attempts in the input string
+        if path.contains("..") {
             return Err(FfiError::SecurityViolation(
-                "Path traversal (..) not allowed in library paths".to_string(),
+                "Path traversal (..) explicitly forbidden in library paths".to_string(),
             ));
         }
 
-        // 2. If absolute path, must exist
-        if path_buf.is_absolute() {
-            if !path_buf.exists() {
-                return Err(FfiError::LibraryNotFound(format!(
-                    "Library not found at absolute path: {}",
-                    path
-                )));
-            }
-            return Ok(path_buf);
-        }
+        // 2. Canonicalize the path to resolve all symlinks and relative components
+        // This ensures the file exists and gives us the absolute physical path.
+        let canonical_path = path_buf.canonicalize().map_err(|e| {
+            FfiError::LibraryNotFound(format!("Failed to resolve library path '{}': {}", path, e))
+        })?;
 
-        // 3. For relative paths, we allow libloading to search system paths
-        // but log a warning
-        eprintln!(
-            "[FFI] Warning: Loading library from relative path '{}'. Consider using absolute paths.",
-            path
-        );
+        // 3. Optional: In a future "hardened" mode, we could check if canonical_path
+        // starts with a trusted root (e.g. current working dir + "/deps").
+        // For now, canonicalization + existence check (implied by canonicalize) prevents
+        // loading from arbitrary relative paths that don't resolve to real files.
 
-        Ok(path_buf)
+        Ok(canonical_path)
     }
 
     /// Load a JavaScript script
@@ -457,7 +449,14 @@ impl IfaFfi {
             #[cfg(feature = "python")]
             Backend::Python { module_name, .. } => {
                 use pyo3::prelude::*;
-                Python::with_gil(|py| {
+                use pyo3::types::PyTuple;
+
+                // Clone the data we need to avoid borrow conflicts
+                let module_name = module_name.clone();
+                let func_name = func.to_string();
+                let args_cloned: Vec<FfiValue> = args.to_vec();
+
+                Python::attach(|py| {
                     // Pre-check: Ensure the module is discoverable
                     let module = py.import(module_name.as_str()).map_err(|e| {
                         FfiError::LibraryNotFound(format!(
@@ -466,18 +465,26 @@ impl IfaFfi {
                         ))
                     })?;
 
-                    let py_args = PyTuple::new(py, args.iter().map(|a| self.ffi_to_py(a, py)));
+                    // Convert args inline to avoid self borrow
+                    let py_args: Vec<Py<PyAny>> = args_cloned
+                        .iter()
+                        .map(|val| ffi_to_py_value(val, py))
+                        .collect();
+
+                    let py_tuple = PyTuple::new(py, &py_args).map_err(|e| {
+                        FfiError::CallFailed(format!("Failed to create tuple: {}", e))
+                    })?;
 
                     // Call with timeout protection (simulated for internal PyO3 calls)
                     let result = module
-                        .getattr(func)
+                        .getattr(func_name.as_str())
                         .map_err(|_| {
-                            FfiError::FunctionNotFound(format!("{}.{}", module_name, func))
+                            FfiError::FunctionNotFound(format!("{}.{}", module_name, func_name))
                         })?
-                        .call1(py_args)
+                        .call1(py_tuple)
                         .map_err(|e| FfiError::CallFailed(format!("Py Runtime Error: {}", e)))?;
 
-                    Ok(self.py_to_ffi(result))
+                    Ok(py_to_ffi_value(&result))
                 })
             }
             // Feature-gated backends may not all be present
@@ -640,42 +647,52 @@ impl IfaFfi {
         }
         FfiValue::Null
     }
-
-    #[cfg(feature = "python")]
-    fn ffi_to_py<'py>(&self, val: &FfiValue, py: pyo3::Python<'py>) -> pyo3::PyObject {
-        use pyo3::prelude::*;
-        match val {
-            FfiValue::I32(v) => v.into_py(py),
-            FfiValue::I64(v) => v.into_py(py),
-            FfiValue::F64(v) => v.into_py(py),
-            FfiValue::Str(s) => s.into_py(py),
-            FfiValue::List(l) => {
-                let items: Vec<PyObject> = l.iter().map(|i| self.ffi_to_py(i, py)).collect();
-                PyList::new(py, items).into_py(py)
-            }
-            _ => py.None(),
-        }
-    }
-
-    #[cfg(feature = "python")]
-    fn py_to_ffi(&self, val: &pyo3::PyAny) -> FfiValue {
-        if let Ok(i) = val.extract::<i32>() {
-            FfiValue::I32(i)
-        } else if let Ok(f) = val.extract::<f64>() {
-            FfiValue::F64(f)
-        } else if let Ok(s) = val.extract::<String>() {
-            FfiValue::Str(s)
-        } else if let Ok(list) = val.extract::<Vec<&pyo3::PyAny>>() {
-            FfiValue::List(list.iter().map(|&i| self.py_to_ffi(i)).collect())
-        } else {
-            FfiValue::Null
-        }
-    }
 }
 
 impl Default for IfaFfi {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// =============================================================================
+// PYTHON FFI HELPER FUNCTIONS (standalone to avoid borrow conflicts)
+// =============================================================================
+
+#[cfg(feature = "python")]
+fn ffi_to_py_value<'py>(val: &FfiValue, py: pyo3::Python<'py>) -> pyo3::Py<pyo3::PyAny> {
+    use pyo3::prelude::*;
+    use pyo3::types::PyList;
+    match val {
+        FfiValue::I32(v) => v.into_pyobject(py).unwrap().into_any().unbind(),
+        FfiValue::I64(v) => v.into_pyobject(py).unwrap().into_any().unbind(),
+        FfiValue::F64(v) => v.into_pyobject(py).unwrap().into_any().unbind(),
+        FfiValue::Str(s) => s.into_pyobject(py).unwrap().into_any().unbind(),
+        FfiValue::List(l) => {
+            let items: Vec<Py<PyAny>> = l.iter().map(|i| ffi_to_py_value(i, py)).collect();
+            PyList::new(py, &items).unwrap().into_any().unbind()
+        }
+        _ => py.None(),
+    }
+}
+
+#[cfg(feature = "python")]
+fn py_to_ffi_value(val: &pyo3::Bound<'_, pyo3::PyAny>) -> FfiValue {
+    use pyo3::prelude::*;
+    if let Ok(i) = val.extract::<i32>() {
+        FfiValue::I32(i)
+    } else if let Ok(f) = val.extract::<f64>() {
+        FfiValue::F64(f)
+    } else if let Ok(s) = val.extract::<String>() {
+        FfiValue::Str(s)
+    } else if let Ok(list) = val.extract::<Vec<Py<PyAny>>>() {
+        FfiValue::List(
+            list.iter()
+                .map(|i| pyo3::Python::attach(|py| py_to_ffi_value(&i.bind(py))))
+                .collect(),
+        )
+    } else {
+        FfiValue::Null
     }
 }
 
@@ -1169,6 +1186,25 @@ impl IfaRpcServer {
 // STDLIB API INTEGRATION
 // =============================================================================
 
+// Helpers for safe argument extraction
+fn get_int(args: &[FfiValue], idx: usize) -> FfiResult<i64> {
+    args.get(idx)
+        .and_then(|v| v.as_i64().or(v.as_i32().map(|i| i as i64)))
+        .ok_or_else(|| FfiError::TypeMismatch(format!("Expected integer at argument {}", idx)))
+}
+
+fn get_float(args: &[FfiValue], idx: usize) -> FfiResult<f64> {
+    args.get(idx)
+        .and_then(|v| v.as_f64())
+        .ok_or_else(|| FfiError::TypeMismatch(format!("Expected float at argument {}", idx)))
+}
+
+fn get_str(args: &[FfiValue], idx: usize) -> FfiResult<&str> {
+    args.get(idx)
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| FfiError::TypeMismatch(format!("Expected string at argument {}", idx)))
+}
+
 /// Create API from Ifa stdlib (16 Odu domains)
 pub fn create_stdlib_api() -> IfaApi {
     let mut api = IfaApi::new();
@@ -1179,8 +1215,8 @@ pub fn create_stdlib_api() -> IfaApi {
         &[IfaType::I64, IfaType::I64],
         IfaType::I64,
         |args| {
-            let a = args.get(0).and_then(|v| v.as_i32()).unwrap_or(0) as i64;
-            let b = args.get(1).and_then(|v| v.as_i32()).unwrap_or(0) as i64;
+            let a = get_int(args, 0)?;
+            let b = get_int(args, 1)?;
             Ok(FfiValue::I64(a + b))
         },
     );
@@ -1190,8 +1226,8 @@ pub fn create_stdlib_api() -> IfaApi {
         &[IfaType::I64, IfaType::I64],
         IfaType::I64,
         |args| {
-            let a = args.get(0).and_then(|v| v.as_i32()).unwrap_or(0) as i64;
-            let b = args.get(1).and_then(|v| v.as_i32()).unwrap_or(1) as i64;
+            let a = get_int(args, 0)?;
+            let b = get_int(args, 1)?;
             Ok(FfiValue::I64(a * b))
         },
     );
@@ -1202,8 +1238,8 @@ pub fn create_stdlib_api() -> IfaApi {
         &[IfaType::I64, IfaType::I64],
         IfaType::I64,
         |args| {
-            let a = args.get(0).and_then(|v| v.as_i32()).unwrap_or(0) as i64;
-            let b = args.get(1).and_then(|v| v.as_i32()).unwrap_or(0) as i64;
+            let a = get_int(args, 0)?;
+            let b = get_int(args, 1)?;
             Ok(FfiValue::I64(a - b))
         },
     );
@@ -1213,8 +1249,8 @@ pub fn create_stdlib_api() -> IfaApi {
         &[IfaType::I64, IfaType::I64],
         IfaType::F64,
         |args| {
-            let a = args.get(0).and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let b = args.get(1).and_then(|v| v.as_f64()).unwrap_or(1.0);
+            let a = get_float(args, 0)?;
+            let b = get_float(args, 1)?;
             if b == 0.0 {
                 Err(FfiError::CallFailed("Division by zero".to_string()))
             } else {
@@ -1225,7 +1261,7 @@ pub fn create_stdlib_api() -> IfaApi {
 
     // Ika (Strings)
     api.expose("ika.gigun", &[IfaType::Str], IfaType::I64, |args| {
-        let s = args.get(0).and_then(|v| v.as_str()).unwrap_or("");
+        let s = get_str(args, 0)?;
         Ok(FfiValue::I64(s.len() as i64))
     });
 
@@ -1245,8 +1281,8 @@ pub fn create_stdlib_api() -> IfaApi {
         &[IfaType::I64, IfaType::I64],
         IfaType::I64,
         |args| {
-            let min = args.get(0).and_then(|v| v.as_i32()).unwrap_or(0) as i64;
-            let max = args.get(1).and_then(|v| v.as_i32()).unwrap_or(100) as i64;
+            let min = get_int(args, 0)?;
+            let max = get_int(args, 1)?;
 
             // Simple LCG random
             use std::time::{SystemTime, UNIX_EPOCH};
@@ -1319,8 +1355,8 @@ mod tests {
     fn test_api_layer() {
         let mut api = IfaApi::new();
         api.expose("add", &[IfaType::I32, IfaType::I32], IfaType::I32, |args| {
-            let a = args.get(0).and_then(|v| v.as_i32()).unwrap_or(0);
-            let b = args.get(1).and_then(|v| v.as_i32()).unwrap_or(0);
+            let a = get_int(args, 0)? as i32;
+            let b = get_int(args, 1)? as i32;
             Ok(FfiValue::I32(a + b))
         });
 

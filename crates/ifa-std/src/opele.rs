@@ -131,6 +131,7 @@ impl OpeleChain {
     /// Simple hash function (SHA-256-like using basic ops)
     /// In production, use ring or sha2 crate
     /// Secure hash function using SHA-256 (via ring)
+    #[cfg(feature = "crypto")]
     fn compute_hash(&self, data: &str, prev: &[u8; 32], index: u64, ts: u64) -> [u8; 32] {
         use ring::digest::{Context, SHA256};
 
@@ -143,6 +144,25 @@ impl OpeleChain {
         let digest = context.finish();
         let mut hash = [0u8; 32];
         hash.copy_from_slice(digest.as_ref());
+        hash
+    }
+
+    /// Simple hash fallback (non-crypto) for WASM/Playground
+    #[cfg(not(feature = "crypto"))]
+    fn compute_hash(&self, data: &str, prev: &[u8; 32], index: u64, ts: u64) -> [u8; 32] {
+        // FNV-1a inspired mixer
+        let mut h: u64 = 0xcbf29ce484222325;
+        for b in data.as_bytes() {
+            h = h.wrapping_mul(0x100000001b3) ^ (*b as u64);
+        }
+        for b in prev {
+            h = h.wrapping_mul(0x100000001b3) ^ (*b as u64);
+        }
+        h = h.wrapping_mul(0x100000001b3) ^ index;
+        h = h.wrapping_mul(0x100000001b3) ^ ts;
+
+        let mut hash = [0u8; 32];
+        hash[0..8].copy_from_slice(&h.to_le_bytes());
         hash
     }
 }
@@ -302,6 +322,8 @@ impl Odu {
 ///
 /// # Example
 /// ```rust
+/// use ifa_std::opele::{CompoundOdu, PrincipalOdu};
+///
 /// // 2-level compound
 /// let compound = CompoundOdu::from_pair(
 ///     PrincipalOdu::Otura,
@@ -476,7 +498,7 @@ impl CompoundOdu {
     /// Pack to bytes (efficient variable-length encoding)
     pub fn to_bytes(&self) -> Vec<u8> {
         let bits_needed = self.depth() * 4;
-        let bytes_needed = (bits_needed + 7) / 8;
+        let bytes_needed = bits_needed.div_ceil(8);
         let mut bytes = vec![0u8; bytes_needed];
 
         for (i, odu) in self.ancestors.iter().enumerate() {

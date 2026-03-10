@@ -11,9 +11,10 @@ name = "ifa"
 path = "src/main.rs"
 
 [dependencies]
-ifa-core = { path = "../ifa-core" }
-ifa-std = { path = "../ifa-std", features = ["iot"] }
+ifa-core = { path = "../ifa-core", features = ["std", "sysinfo", "parallel", "gpu"] }
+ifa-std = { path = "../ifa-std", features = ["iot", "kernel", "sysinfo", "gpu", "parallel", "persistence"] }
 ifa-babalawo = { path = "../ifa-babalawo" }
+ifa-fmt = { path = "../ifa-fmt" }
 ifa-sandbox = { path = "../ifa-sandbox" }
 
 # CLI

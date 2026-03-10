@@ -24,74 +24,115 @@ impl OduHandler for OturuponHandler {
         _env: &mut Environment,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
+        let arg0 = args.first();
+        let arg1 = args.get(1);
+
         match method {
             // Subtraction
-            "din" | "yọkuro" | "sub" | "subtract" => match (args.first(), args.get(1)) {
-                (Some(IfaValue::Int(a)), Some(IfaValue::Int(b))) => Ok(IfaValue::Int(a - b)),
-                (Some(IfaValue::Float(a)), Some(IfaValue::Float(b))) => Ok(IfaValue::Float(a - b)),
-                (Some(IfaValue::Int(a)), Some(IfaValue::Float(b))) => {
-                    Ok(IfaValue::Float(*a as f64 - b))
+            "din" | "yọkuro" | "sub" | "subtract" => {
+                if let (Some(left), Some(right)) = (arg0, arg1) {
+                    match (left, right) {
+                        (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::int(a - b)),
+                        (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::float(a - b)),
+                        (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::float(*a as f64 - b)),
+                        (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::float(a - *b as f64)),
+                        _ => Ok(IfaValue::int(0)),
+                    }
+                } else {
+                    Ok(IfaValue::int(0))
                 }
-                (Some(IfaValue::Float(a)), Some(IfaValue::Int(b))) => {
-                    Ok(IfaValue::Float(a - *b as f64))
-                }
-                _ => Ok(IfaValue::Int(0)),
             },
 
             // Division
-            "pin" | "div" | "divide" => match (args.first(), args.get(1)) {
-                (Some(IfaValue::Int(a)), Some(IfaValue::Int(b))) if *b != 0 => {
-                    Ok(IfaValue::Int(a / b))
+            "pin" | "div" | "divide" => {
+                if let (Some(left), Some(right)) = (arg0, arg1) {
+                    match (left, right) {
+                        (IfaValue::Int(a), IfaValue::Int(b)) => {
+                            if *b == 0 { return Err(IfaError::Runtime("Division by zero".into())); }
+                            Ok(IfaValue::int(a / b))
+                        },
+                        (IfaValue::Float(a), IfaValue::Float(b)) => {
+                            if *b == 0.0 { return Err(IfaError::Runtime("Division by zero".into())); }
+                            Ok(IfaValue::float(a / b))
+                        },
+                        (IfaValue::Int(a), IfaValue::Float(b)) => {
+                            if *b == 0.0 { return Err(IfaError::Runtime("Division by zero".into())); }
+                            Ok(IfaValue::float(*a as f64 / b))
+                        },
+                        (IfaValue::Float(a), IfaValue::Int(b)) => {
+                            if *b == 0 { return Err(IfaError::Runtime("Division by zero".into())); }
+                            Ok(IfaValue::float(a / *b as f64))
+                        },
+                         // Handle errors or missing args in default
+                        _ => Ok(IfaValue::int(0)),
+                    }
+                } else {
+                     Ok(IfaValue::int(0))
                 }
-                (Some(IfaValue::Float(a)), Some(IfaValue::Float(b))) if *b != 0.0 => {
-                    Ok(IfaValue::Float(a / b))
-                }
-                (Some(IfaValue::Int(a)), Some(IfaValue::Float(b))) if *b != 0.0 => {
-                    Ok(IfaValue::Float(*a as f64 / b))
-                }
-                (Some(IfaValue::Float(a)), Some(IfaValue::Int(b))) if *b != 0 => {
-                    Ok(IfaValue::Float(a / *b as f64))
-                }
-                (_, Some(IfaValue::Int(0))) | (_, Some(IfaValue::Float(0.0))) => {
-                    Err(IfaError::Runtime("Division by zero".into()))
-                }
-                _ => Ok(IfaValue::Int(0)),
             },
 
             // Modulo
-            "iyoku" | "mod" | "modulo" => match (args.first(), args.get(1)) {
-                (Some(IfaValue::Int(a)), Some(IfaValue::Int(b))) if *b != 0 => {
-                    Ok(IfaValue::Int(a % b))
-                }
-                (Some(IfaValue::Float(a)), Some(IfaValue::Float(b))) if *b != 0.0 => {
-                    Ok(IfaValue::Float(a % b))
-                }
-                _ => Ok(IfaValue::Int(0)),
+            "iyoku" | "mod" | "modulo" => {
+                 if let (Some(left), Some(right)) = (arg0, arg1) {
+                    match (left, right) {
+                        (IfaValue::Int(a), IfaValue::Int(b)) => {
+                             if *b == 0 { return Err(IfaError::Runtime("Division by zero".into())); }
+                             Ok(IfaValue::int(a % b))
+                        },
+                        (IfaValue::Float(a), IfaValue::Float(b)) => {
+                             if *b == 0.0 { return Err(IfaError::Runtime("Division by zero".into())); }
+                             Ok(IfaValue::float(a % b))
+                        },
+                        _ => Ok(IfaValue::int(0)),
+                    }
+                 } else {
+                     Ok(IfaValue::int(0))
+                 }
             },
 
             // Floor division
-            "floor_div" => match (args.first(), args.get(1)) {
-                (Some(IfaValue::Int(a)), Some(IfaValue::Int(b))) if *b != 0 => {
-                    Ok(IfaValue::Int(a.div_euclid(*b)))
-                }
-                (Some(IfaValue::Float(a)), Some(IfaValue::Float(b))) if *b != 0.0 => {
-                    Ok(IfaValue::Float((a / b).floor()))
-                }
-                _ => Ok(IfaValue::Int(0)),
+            "floor_div" => {
+                 if let (Some(left), Some(right)) = (arg0, arg1) {
+                    match (left, right) {
+                        (IfaValue::Int(a), IfaValue::Int(b)) => {
+                             if *b == 0 { return Err(IfaError::Runtime("Division by zero".into())); }
+                             Ok(IfaValue::int(a.div_euclid(*b)))
+                        },
+                        (IfaValue::Float(a), IfaValue::Float(b)) => {
+                             if *b == 0.0 { return Err(IfaError::Runtime("Division by zero".into())); }
+                             Ok(IfaValue::float((a / b).floor()))
+                        },
+                        _ => Ok(IfaValue::int(0)),
+                    }
+                 } else {
+                     Ok(IfaValue::int(0))
+                 }
             },
 
             // Negate
-            "neg" | "negate" => match args.first() {
-                Some(IfaValue::Int(n)) => Ok(IfaValue::Int(-n)),
-                Some(IfaValue::Float(f)) => Ok(IfaValue::Float(-f)),
-                _ => Ok(IfaValue::Int(0)),
+            "neg" | "negate" => {
+                if let Some(val) = arg0 {
+                    match val {
+                        IfaValue::Int(n) => Ok(IfaValue::int(-n)),
+                        IfaValue::Float(f) => Ok(IfaValue::float(-f)),
+                         _ => Ok(IfaValue::int(0)),
+                    }
+                } else {
+                     Ok(IfaValue::int(0))
+                }
             },
 
             // Square root
-            "sqrt" => match args.first() {
-                Some(IfaValue::Int(n)) => Ok(IfaValue::Float((*n as f64).sqrt())),
-                Some(IfaValue::Float(f)) => Ok(IfaValue::Float(f.sqrt())),
-                _ => Ok(IfaValue::Float(0.0)),
+            "sqrt" => {
+                 if let Some(val) = arg0 {
+                    match val {
+                        IfaValue::Int(n) => Ok(IfaValue::float((*n as f64).sqrt())),
+                        IfaValue::Float(f) => Ok(IfaValue::float(f.sqrt())),
+                        _ => Ok(IfaValue::float(0.0)),
+                    }
+                 } else {
+                      Ok(IfaValue::float(0.0))
+                 }
             },
 
             _ => Err(IfaError::Runtime(format!(

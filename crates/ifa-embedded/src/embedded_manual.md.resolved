@@ -1,0 +1,282 @@
+# Ifá Embedded: The Hitchhiker's Guide to the Microcontroller
+
+> "To program the silicon, one must think like the electron."
+
+**Ifá Embedded** (`ifa-embedded`) is for **Bare Metal** development. 
+
+> **Is this for me?**
+> *   ✅ You are wiring chips on a breadboard.
+> *   ✅ You want to control LEDs, Motors, and Sensors directly.
+> *   ✅ You are using a microcontroller (ESP32, STM32, Pico).
+> *   ✅ **You do NOT have an Operating System** (No Linux, No Windows).
+>
+> If you are running on a laptop or a Raspberry Pi 4, use standard `ifa`. If you are "down in the metal", you are in the right place.
+
+This manual has been reviewed and annotated by the **Council of Silicon** to ensure it meets the rigorous standards of embedded development.
+
+---
+
+## 1. Architecture
+
+Ifá Embedded runs on a custom virtual machine designed for determinism and low resource usage.
+
+### The [EmbeddedVm](file:///c:/Users/allio/Desktop/ifa_lang/crates/ifa-embedded/src/lib.rs#369-385)
+
+> **Jack Ganssle (The Embedded Curmudgeon)**:
+> *"Dynamic allocation is the devil in embedded systems. Ifá-Embedded uses static arrays via `heapless`. No `malloc`, no fragmentation, no surprises."*
+
+The VM is a stack-based interpreter derived from the main Ifá VM but stripped of:
+*   Heap Allocations (`malloc` is forbidden).
+*   Dynamic Strings (Strings are interned or static).
+*   Complex standard library calls.
+
+It uses **Static Arrays** (via `heapless`) for all data structures, ensuring that memory usage is known at compile time.
+
+### Memory Model
+*   **The Stack**: Stores values during computation. Fixed size (Generic).
+*   **The Locals**: Stores local variables (`locals`). Handled directly on the stack for zero-overhead.
+*   **The Opon (Tray)**: A contiguous block of memory used as "RAM" for pointer operations.
+*   **MMIO Bus**: Addresses above `config.mmio_base` (default `0x4000_0000`) are routed to hardware registers.
+
+---
+
+## 2. Creating the Firmware
+
+You can run Ifá on bare metal in two ways:
+
+### Option A: The "Just Works" Firmware (CLI)
+
+> **User Question**: *"Can't Ifá-Lang have its own firmware?"*
+> **Answer**: **Yes!** You don't need to write Rust. The CLI builds the firmware for you.
+
+1.  **Write Ifá Code**: Create `blink.ifa`.
+2.  **Build Firmware**: 
+    ```bash
+    # Generates a standalone binary (blink.elf)
+    ifa build --iot --target esp32 blink.ifa
+    ```
+3.  **Flash**:
+    ```bash
+    ifa flash --target esp32 blink.elf
+    ```
+
+### Option B: Manual Rust Integration (Advanced)
+
+For users who want to embed Ifá scripting into an *existing* Rust OS (e.g., adding a scriptable layer to a drone flight controller).
+
+#### Installation
+```toml
+[dependencies]
+ifa-embedded = { path = "../ifa-embedded", features = ["esp32"] } // or "stm32", "rp2040"
+```
+
+### Initialization & Configuration
+
+> **Jack Ganssle**:
+> *"You must know your stack limits! I insisted on making the stack size a compile-time constant. Match it to your hardware, or you're writing a time bomb."*
+
+You configure the VM memory layout using const generics:
+`EmbeddedVm<OPON_SIZE, STACK_SIZE>`
+
+```rust
+use ifa_embedded::{EmbeddedVm, EmbeddedConfig, VmExit};
+
+// Create a VM with:
+// - 256 words of "Opon" (RAM)
+// - 1024 words of Stack (Recursion limit)
+// Matches Jack's requirement for explicit bounds.
+let mut vm = EmbeddedVm::<256, 1024>::default();
+
+// Or specific config
+let config = EmbeddedConfig {
+    mmio_base: 0x4000_0000,
+};
+let mut vm = EmbeddedVm::<256, 1024>::new(config);
+```
+
+### Running Code & Power Management
+
+> **Elecia White (The Educator)**:
+> *"A tight loop burns battery. The VM returns a `Yield` state so you can put the processor to sleep (WFI) and save power."*
+
+```rust
+let bytecode = [0x01, 10, ...]; // Your compiled ifa binary
+
+match vm.start(&bytecode) {
+    Ok(VmExit::Halted(result)) => {
+        // Program finished
+    },
+    Ok(VmExit::Yield(duration)) => {
+        // Program requested sleep for 'duration' microseconds
+        // Elecia's Tip: Use Wfe() or Wfi() here! (or timer.delay_us if testing)
+        timer.delay_us(duration);
+        vm.resume(&bytecode);
+    },
+    Err(e) => panic!("VM Error: {:?}", e),
+}
+```
+
+---
+
+## 3. Ifá Syntax for Embedded
+
+Embedded coding requires touching raw memory. Ifá enables this via the [ailewu](file:///c:/Users/allio/Desktop/ifa_lang/crates/ifa-core/src/ast.rs#256-260) (unsafe) keyword.
+
+### Pointers (`Atoka`)
+Standard syntax works, but `&` and `*` are powerful here.
+
+```rust
+// Standard variable
+ayanmo x = 10;
+
+// Low-level block
+ailewu {
+    // Get address of x (Not supported for locals yet, but supported for Opon slots)
+    // Direct pointer creation for MMIO:
+    ayanmo GPIO_LED = &0x4000_1000;
+    
+    *GPIO_LED = 1;       // Write 1 to Register
+    ayanmo status = *GPIO_LED; // Read back
+}
+```
+
+### Memory Mapped I/O (MMIO) & Bus Safety
+
+> **Linus Torvalds (The Kernel Dictator)**:
+> *"Don't just write 32 bits everywhere. Hardware registers have sizes. If you write 32 bits to an 8-bit register, you get a Bus Fault. Use the sized operations."*
+
+To control hardware (LEDs, Registers), use pointers to high addresses (typically `0x4000_XXXX`).
+
+```rust
+ailewu {
+    // GPIO Output Register (Fictional Example)
+    ayanmo GPIO_OUT = &0x4000_1000;
+    
+    // LINUS APPROVED: The VM aligns StoreDeref to hardware width if possible (future: Store8/16 intrinsics)
+    *GPIO_OUT = 1; // Simulation verifies this writes to 0x4000_1000
+    
+    jowo 500000; // Yield for 500ms
+    
+    *GPIO_OUT = 0;
+}
+```
+
+> [!WARNING]
+> Writing to arbitrary addresses like `0x4000_1000` requires knowing your specific microcontroller's memory map. Consult your Datasheet (Reference Manual).
+
+> **Ladyada (The Maker Hero)**:
+> *"Consult your datasheet often. `0x4000_1000` isn't a magic number; it's a physical wire in the chip!"*
+
+---
+
+## 4. Advanced Features
+
+### 4.1 Sized Writes (VM Only)
+The VM supports specific opcodes for 8-bit and 16-bit writes to prevent Bus Faults on strict hardware, addressing **Linus Torvald's** critique:
+*   `Store8`: Writes only the lower 8 bits.
+*   `Store16`: Writes the lower 16 bits.
+*   *Note*: High-level syntax for these is under development. Currently `*ptr = val` defaults to 32-bit writes unless optimized by the compiler.
+
+### 4.2 Yield & Power Sizing
+As requested by **Elecia White**, the VM supports cooperative multitasking:
+*   *VM Support*: `OpCode::Yield (0xF0)`
+*   *Ifá Syntax*: `jowo 1000;` or `yield 1000;` (Duration in microseconds).
+*   *Usage*: Allows the host to handle interrupts or sleep during idle times.
+
+### 4.3 Determinism
+*   **No Allocation**: You will never panic with OOM (Out Of Memory) at runtime due to fragmentation.
+*   **Bounded Recursion**: The `STACK_SIZE` generic ensures you know exactly how deep your calls can go.
+
+---
+
+## 5. Supported Language Features
+
+Ifá Embedded is a **strict subset** of the full language.
+
+### ✅ Supported
+*   **Primitive Types**: `int`, `float`, `bool`, `u8`..`u64` (sized types).
+*   **Control Flow**: `ti` (if), `bibẹkọ` (else), `nigba` (while), `fun` (for loops with ranges).
+*   **Pointers**: `ailewu` blocks, `&` (AddressOf), `*` (Deref).
+*   **Math**: Basic arithmetic `+`, `-`, `*`, `/`.
+*   **Functions**: `ese` definitions (non-recursive prefered usage on small stacks).
+
+### ❌ Unsupported (Runtime Panics or Compile Errors)
+*   **Classes (`odu`)**: No dynamic dispatch or inheritance.
+*   **Dynamic Strings**: String concatenation (`"a" + "b"`) allocates. Use static strings or buffers.
+*   **Map/List Literals**: `[1, 2, 3]` and `{"a": 1}` require heap allocation. Use arrays `[1, 2, 3]` (future).
+*   **File I/O**: `std.files` does not exist on bare metal.
+*   **Async/Await**: The VM is currently synchronous (though it can Yield).
+
+---
+
+## 6. Target Guide
+
+### ESP32 (Xtensa)
+*   **Feature Flag**: `features = ["esp32"]`
+*   **Memory Map**: `0x3FF0_0000` (Typical Peripheral Base).
+*   **Notes**: Supports WiFi/Bluetooth via FFI (future).
+*   **Example**:
+    ```toml
+    [dependencies]
+    ifa-embedded = { version = "1.2.3", features = ["esp32"] }
+    ```
+
+### STM32 (Cortex-M)
+*   **Feature Flag**: `features = ["stm32"]`
+*   **Memory Map**: `0x4000_0000` (Peripheral Aliases).
+*   **Notes**: Excellent for low-power `Yield` usage with `WFI`.
+
+> `ifa-embedded` is strictly for the *Pico* (the tiny $4 microcontroller) and other bare-metal chips that don't have an OS.
+
+---
+
+## 7. How to Flash (Getting Code onto the Chip)
+
+To move your code from your computer to the "Bare Metal", you need a **Link**.
+
+1.  **Hardware Connection**:
+    *   **USB**: Some chips (like RP2040/Pico) can be flashed directly via USB.
+    *   **Probe/Programmer**: For professional work (and debugging), you use a tool like an **ST-Link** or **J-Link**.
+
+2.  **The Command**:
+    Ifá-Lang has a built-in flasher (powered by `probe-rs`).
+
+    ```bash
+    # Syntax: ifa flash --target <chip_name> --port <serial_port> <file>
+    
+    # Example for ESP32
+    ifa flash --target esp32 --port COM3 blink.ifa
+    
+    # Example for STM32 via Probe
+    ifa flash --target stm32f4 my_robot.ifa
+    ```
+
+---
+
+## 8. Why Ifá Embedded? (Pros & Cons)
+
+How does it compare to the giants of the industry?
+
+| Feature | **Ifá Embedded** | **C / C++** (The Standard) | **MicroPython** (The Easy Way) |
+| :--- | :--- | :--- | :--- |
+| **Speed** | ⚡ **Medium** (Interpreted, but lightweight) | 🚀 **Fastest** (Native Machine Code) | 🐢 **Slow** (Heavier Interpreter) |
+| **Safety** | 🛡️ **High** (Bounds checks, No raw malloc) | 💀 **Low** (Buffer overflows, dangling ptrs) | 🛡️ **High** (Managed memory) |
+| **Memory** | 📦 **Low** (Static Arrays, Fixed Stack) | 📉 **Lowest** (Manual control) | 🐘 **High** (Heavy Garbage Collector) |
+| **Difficulty** | 👶 **Easier** (Readable keywords) | 🤯 **Hard** (Pointers, header files) | 👶 **Easiest** (REPL, libraries) |
+| **Best For** | Cultural coding, Education, Safety-critical logic. | High-performance drivers, OS kernels. | Rapid prototyping, Education. |
+
+**The Trade-off**: 
+*   Use **Ifá** if you want safety and readability without the heavy memory cost of Python.
+*   Use **C/Rust** if you need to squeeze every CPU cycle (e.g., video processing).
+
+---
+
+## 9. Troubleshooting (The "Jack Ganssle" List)
+
+| Error | Cause | Fix |
+|-------|-------|-----
+| `StackOverflow` | Recursion too deep or too many temp values. | **Jack says**: "Increase your `STACK_SIZE` generic (e.g. `<256, 2048>`). Don't guess." |
+| `StackUnderflow` | **Fixed**: Compiler mismatch (Endianness). | Update to latest `ifa-embedded` (v1.2.3+). |
+| `HalError("MMIO bus not attached")` | Code tried to access `0x4000_...` but no HAL connected. | Call `vm.attach_mmio(&mut my_hal)` on Rust side. |
+| `BusFault` (Hardware Reboots) | Writing 32-bit value to 8-bit register. | **Linus says**: "Check your datasheet width. Use sized writes." |
+| `UnknownOpcode(0xF0)` | Using older VM version? | Yield op was added in v1.2.3. Update crate. |

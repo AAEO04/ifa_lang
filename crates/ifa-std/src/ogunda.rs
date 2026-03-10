@@ -6,6 +6,7 @@
 
 use crate::impl_odu_domain;
 use ifa_core::error::{IfaError, IfaResult};
+use ifa_core::value::IfaValue;
 use std::process::{Command, Output, Stdio};
 
 /// Ògúndá - The Warrior (Arrays/Processes)
@@ -84,21 +85,111 @@ impl Ogunda {
 
     /// Check if any match (èyíkéyìí)
     pub fn eyikeyi<T, F: Fn(&T) -> bool>(&self, list: &[T], predicate: F) -> bool {
-        list.iter().any(|x| predicate(x))
+        list.iter().any(predicate)
     }
 
     /// Check if all match (gbogbo)
     pub fn gbogbo<T, F: Fn(&T) -> bool>(&self, list: &[T], predicate: F) -> bool {
-        list.iter().all(|x| predicate(x))
+        list.iter().all(predicate)
     }
 
     /// Slice list
-    pub fn ge<T: Clone>(&self, list: &[T], start: usize, end: usize) -> Vec<T> {
-        list.get(start..end).map(|s| s.to_vec()).unwrap_or_default()
+    pub fn ge<T: Clone>(&self, list: &[T], start: usize, end: usize) -> IfaResult<Vec<T>> {
+        if start > end {
+            return Err(IfaError::IndexOutOfBounds {
+                index: start as i64,
+                length: list.len(),
+            });
+        }
+        if end > list.len() {
+            return Err(IfaError::IndexOutOfBounds {
+                index: end as i64,
+                length: list.len(),
+            });
+        }
+        Ok(list[start..end].to_vec())
     }
 
     // =========================================================================
-    // PROCESS OPERATIONS
+    // MAP OPERATIONS (Associative Arrays)
+    // =========================================================================
+
+    /// Get map keys as list (awọn_kokoro)
+    pub fn awon_kokoro(&self, map: &IfaValue) -> IfaResult<Vec<String>> {
+        match map {
+            IfaValue::Map(m) => Ok(m.keys().map(|k| k.to_string()).collect()),
+            _ => Err(IfaError::TypeError {
+                expected: "Map or Object".into(),
+                got: map.type_name().into(),
+            }),
+        }
+    }
+
+    /// Get map values as list (awọn_iye)
+    pub fn awon_iye(&self, map: &IfaValue) -> IfaResult<Vec<IfaValue>> {
+        match map {
+            IfaValue::Map(m) => Ok(m.values().cloned().collect()),
+            _ => Err(IfaError::TypeError {
+                expected: "Map or Object".into(),
+                got: map.type_name().into(),
+            }),
+        }
+    }
+
+    /// Get map items as list of [key, value] pairs (awọn_nkan)
+    pub fn awon_nkan(&self, map: &IfaValue) -> IfaResult<Vec<Vec<IfaValue>>> {
+        match map {
+            IfaValue::Map(m) => Ok(m
+                .iter()
+                .map(|(k, v)| vec![IfaValue::Str(k.to_string().into()), v.clone()])
+                .collect()),
+            _ => Err(IfaError::TypeError {
+                expected: "Map or Object".into(),
+                got: map.type_name().into(),
+            }),
+        }
+    }
+
+    /// Remove key from map and return value (yọ)
+    pub fn yo(&self, map: &mut IfaValue, key: &str) -> IfaResult<IfaValue> {
+        match map {
+
+            IfaValue::Map(map_arc) => {
+                 // Clone-on-Write for Map mutation
+                 let map = std::sync::Arc::make_mut(map_arc);
+                 // Need to handle key type (Arc<str>)
+                 // This is tricky if we don't have the exact key instance.
+                 // We iterate to find matching key string? Efficient? No.
+                 // But HashMap keys are Strings/Arc<str>. 
+                 // We can simply remove by strict equality if the map key is `String` or `Arc<str>`.
+                 // IfaValue::Map uses `HashMap<Arc<str>, IfaValue>`.
+                 // `remove` takes `&Q` where `Arc<str>: Borrow<Q>`.
+                 // `str` works.
+                 Ok(map.remove(key).unwrap_or(IfaValue::Null))
+            }
+            _ => Err(IfaError::TypeError {
+                expected: "Map or Object".into(),
+                got: map.type_name().into(),
+            }),
+        }
+    }
+
+    /// English Aliases
+    pub fn keys(&self, map: &IfaValue) -> IfaResult<Vec<String>> {
+        self.awon_kokoro(map)
+    }
+
+    pub fn values(&self, map: &IfaValue) -> IfaResult<Vec<IfaValue>> {
+        self.awon_iye(map)
+    }
+
+    pub fn items(&self, map: &IfaValue) -> IfaResult<Vec<Vec<IfaValue>>> {
+        self.awon_nkan(map)
+    }
+
+    pub fn remove(&self, map: &mut IfaValue, key: &str) -> IfaResult<IfaValue> {
+        self.yo(map, key)
+    }
     // =========================================================================
 
     /// Dangerous shell metacharacters that could enable injection
@@ -106,11 +197,40 @@ impl Ogunda {
         '|', '&', ';', '$', '`', '\n', '\r', '(', ')', '{', '}', '<', '>',
     ];
 
+    /// dangerous shell interpreters that should not be spawned directly
+    const BLOCKED_SHELLS: &'static [&'static str] = &[
+        "cmd",
+        "cmd.exe",
+        "sh",
+        "bash",
+        "zsh",
+        "powershell",
+        "pwsh",
+        "dash",
+        "ksh",
+        "csh",
+        "tcsh",
+    ];
+
     /// Validate command is safe (no path traversal, no shell builtins for injection)
     fn validate_command(command: &str) -> IfaResult<()> {
         // Block empty commands
         if command.is_empty() {
             return Err(IfaError::Custom("Empty command".to_string()));
+        }
+
+        // Block shell interpreters (use specific ifa capabilities for shell access)
+        let cmd_lower = command.to_lowercase();
+        // Check exact match or ends_with (for /bin/sh)
+        if Self::BLOCKED_SHELLS.iter().any(|&s| {
+            cmd_lower == s
+                || cmd_lower.ends_with(&format!("/{}", s))
+                || cmd_lower.ends_with(&format!("\\{}", s))
+        }) {
+            return Err(IfaError::Custom(format!(
+                "Direct shell execution is blocked for security: {}. Use dedicated shell capabilities if needed.",
+                command
+            )));
         }
 
         // Block shell metacharacters in command name
@@ -220,5 +340,35 @@ mod tests {
         let list = vec![1, 2, 3, 4, 5, 6];
         let evens = ogunda.yan(&list, |x| x % 2 == 0);
         assert_eq!(evens, vec![2, 4, 6]);
+    }
+    #[test]
+    fn test_map_ops() {
+        use std::collections::HashMap;
+        let ogunda = Ogunda;
+        let mut map = HashMap::new();
+        map.insert("a".into(), IfaValue::Int(1));
+        map.insert("b".into(), IfaValue::Int(2));
+        let mut val = IfaValue::Map(map);
+
+        // Keys
+        let keys = ogunda.keys(&val).unwrap();
+        assert_eq!(keys.len(), 2);
+        assert!(keys.contains(&"a".to_string()));
+        assert!(keys.contains(&"b".to_string()));
+
+        // Values
+        let values = ogunda.values(&val).unwrap();
+        assert_eq!(values.len(), 2);
+
+        // Items
+        let items = ogunda.items(&val).unwrap();
+        assert_eq!(items.len(), 2);
+
+        // Remove
+        let removed = ogunda.remove(&mut val, "a").unwrap();
+        assert_eq!(removed, IfaValue::Int(1));
+        let keys_after = ogunda.keys(&val).unwrap();
+        assert_eq!(keys_after.len(), 1);
+        assert_eq!(keys_after[0], "b");
     }
 }

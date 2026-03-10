@@ -9,6 +9,8 @@ members = [
     "crates/ifa-macros",
     "crates/ifa-wasm",
     "crates/ifa-babalawo", "crates/ifa-sandbox", "crates/ifa-installer-core", "crates/ifa-installer-gui",
+    "crates/ifa-bytecode",
+    "crates/ifa-fmt",
 ]
 
 [workspace.package]
@@ -66,7 +68,7 @@ tokio-rustls = "0.25"
 rustls = "0.22"
 
 # Terminal UI (Ọ̀ṣẹ́ - The Painter)
-ratatui = "0.26"
+ratatui = "0.30"
 
 # CLI (Ọ̀gbè - The Initiator)
 clap = { version = "4.5", features = ["derive"] }

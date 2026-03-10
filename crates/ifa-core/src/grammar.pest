@@ -13,8 +13,11 @@ statement = {
     import_stmt
     | opon_stmt
     | ebo_stmt
+    | ailewu_stmt
     | var_decl
+    | const_stmt
     | assignment_stmt
+
     | odu_def
     | ese_def
     | if_stmt
@@ -26,6 +29,8 @@ statement = {
     | instruction
     | ase_stmt
     | match_stmt
+    | try_stmt
+    | yield_stmt
     | COMMENT
 }
 
@@ -50,10 +55,26 @@ ebo_kw = { "ebo" | "ẹbọ" | "sacrifice" }
 // Variable: ayanmo x = 5;
 var_decl = { var_kw ~ ident ~ type_hint? ~ "=" ~ expression ~ ";" }
 type_hint = { ":" ~ type_name }
-type_name = { "Int" | "Float" | "Str" | "Bool" | "List" | "Map" | "Any" }
+type_name = { 
+    "Int" | "Float" | "Str" | "Bool" | "List" | "Map" | "Any" 
+    | "int" | "float" | "str" | "bool" | "list" | "map" | "any"
+    | "i8" | "i16" | "i32" | "i64" 
+    | "u8" | "u16" | "u32" | "u64"
+    | "f32" | "f64"
+    | "void"
+}
+
+// Constant: const X = 1;
+const_stmt = { const_kw ~ ident ~ "=" ~ expression ~ ";" }
+const_kw = { "const" | "loruko" | "ka" }
 
 // Assignment: x = 5;
-assignment_stmt = { ident ~ "=" ~ expression ~ ";" }
+
+// Assignment: x = 5; *p = 5; arr[0] = 5;
+assignment_stmt = { lvalue ~ "=" ~ expression ~ ";" }
+lvalue = { deref_lvalue | index_lvalue | ident }
+deref_lvalue = { "*" ~ expression } // *ptr
+index_lvalue = { ident ~ "[" ~ expression ~ "]" }
 
 // Instruction: Obara.fikun(10);
 instruction = { odu_call ~ ";" }
@@ -104,6 +125,23 @@ range_pattern = { expression ~ ".." ~ expression }
 literal_pattern = { expression }
 wildcard_pattern = { "_" }
 
+// Ailewu (unsafe) block: ailewu { } or unsafe { }
+// Yoruba: àìléwu = without danger (ironic - marks dangerous code)
+ailewu_stmt = { ailewu_kw ~ "{" ~ statement* ~ "}" }
+ailewu_kw = _{ "ailewu" | "àìléwu" | "unsafe" }
+
+// Yield: jowo 1000; or yield 1000;
+// Yoruba: jọ̀wọ́ (please/yield) or pèsè (provide/yield) - using jowo for "yielding control"
+yield_stmt = { yield_kw ~ expression ~ ";" }
+yield_kw = _{ "jowo" | "jọ̀wọ́" | "yield" }
+
+// Try/Catch: gbiyanju { ... } gba (e) { ... }
+// Yoruba: gbiyanju (try), gba (accept/take/catch)
+try_stmt = { try_kw ~ "{" ~ statement* ~ "}" ~ catch_clause }
+catch_clause = { catch_kw ~ "(" ~ ident ~ ")" ~ "{" ~ statement* ~ "}" }
+try_kw = _{ "gbiyanju" | "gbìyànjú" | "try" }
+catch_kw = _{ "gba" | "gbà" | "catch" }
+
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPRESSIONS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -111,11 +149,17 @@ wildcard_pattern = { "_" }
 expression = { or_expr }
 or_expr = { and_expr ~ (or_op ~ and_expr)* }
 and_expr = { not_expr ~ (and_op ~ not_expr)* }
-not_expr = { not_op? ~ comparison }
-comparison = { arith_expr ~ (comp_op ~ arith_expr)? }
+not_expr = { comparison } // Removed explicit not_op here, handled by unary_op in factor? No, logic NOT is different.
+// Logic NOT (!) is often lower precedence than arithmetic but higher than AND/OR.
+// Let's keep it simple: factor handles ALL unary ops including logic NOT, bitwise NOT, etc.
+// But wait, `!` is in `unary_op` definition.
+// So `not_expr` is redundant if `factor` handles `unary_op`.
+// Let's simplify hierarchy:
+
+comparison = { arith_expr ~ (comp_op ~ arith_expr)* }
 arith_expr = { term ~ ((add_op | sub_op) ~ term)* }
 term = { factor ~ ((mul_op | div_op | mod_op) ~ factor)* }
-factor = { unary_op? ~ atom }
+factor = { unary_op* ~ atom } // Allow multiple unary ops: - -x, !!x, *&x
 
 atom = {
     odu_call
@@ -155,7 +199,7 @@ sub_op = { "-" }
 mul_op = { "*" }
 div_op = { "/" }
 mod_op = { "%" }
-unary_op = { "+" | "-" }
+unary_op = { "+" | "-" | "&" | "*" }
 
 comp_op = { "==" | "!=" | "<=" | ">=" | "<" | ">" }
 and_op = { "&&" | "ati" | "and" }
@@ -203,7 +247,21 @@ odu_name = @{
     "Ofun" | "Òfún" |
     // Pseudo-domains
     "Coop" | "Àjọṣe" |
-    "Opele" | "Ọpẹlẹ" | "Oracle"
+    "Opele" | "Ọpẹlẹ" | "Oracle" |
+
+    // Infrastructure
+    "Sys" | "System" |
+    "Cpu" | "Gpu" |
+    "Storage" | "Store" | "Db" |
+    "Ohun" | "Audio" |
+    "Fidio" | "Video" |
+
+    // Stacks
+    "Backend" | "Frontend" |
+    "Fullstack" | "Fusion" |
+    "Game" | "GameDev" |
+    "Ml" | "Ai" |
+    "Iot" | "Embedded"
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -211,7 +269,11 @@ odu_name = @{
 // ═══════════════════════════════════════════════════════════════════════════
 
 ident = @{ (ASCII_ALPHA | "_" | '\u{0080}'..'\u{FFFF}') ~ (ASCII_ALPHANUMERIC | "_" | '\u{0080}'..'\u{FFFF}')* }
-number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+number = @{
+    ("0x" ~ (ASCII_HEX_DIGIT | "_")+)
+    | ("0b" ~ (ASCII_BIN_DIGIT | "_")+)
+    | (ASCII_DIGIT ~ (ASCII_DIGIT | "_")* ~ ("." ~ ASCII_DIGIT ~ (ASCII_DIGIT | "_")*)?)
+}
 string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "'" ~ (!"'" ~ ANY)* ~ "'" }
 boolean = { "true" | "false" | "otito" | "iro" }
 

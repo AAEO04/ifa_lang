@@ -1,12 +1,10 @@
-//! # OduDomain - The 16 Odù + Infrastructure + Stacks
-//!
-//! This module defines all callable domains in Ifá-Lang.
+use serde::{Deserialize, Serialize};
 
-/// The Odù domains enumeration
+/// The 16 Odù domains + Infrastructure + Stacks
 ///
 /// Includes the 16 principal Odù, pseudo-domains (Coop, Opele),
 /// infrastructure layer (Cpu, Gpu, Storage), and application stacks.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OduDomain {
     // =========================================================================
     // Core 16 Odù (Traditional)
@@ -61,6 +59,12 @@ pub enum OduDomain {
     Gpu,
     /// Storage - Key-value store
     Storage,
+    /// System - Kernel/OS (extends Ogbe)
+    Sys,
+    /// Audio / Ohun
+    Ohun,
+    /// Video / Fidio
+    Fidio,
 
     // =========================================================================
     // Application Stacks
@@ -127,6 +131,9 @@ impl OduDomain {
             OduDomain::Cpu => "Ẹrọ-ìṣirò",
             OduDomain::Gpu => "Ẹrọ-àwòrán",
             OduDomain::Storage => "Àkójọpọ̀",
+            OduDomain::Sys => "Ètò",
+            OduDomain::Ohun => "Ohùn",
+            OduDomain::Fidio => "Fídíò",
             OduDomain::Backend => "Ẹ̀hìn-ọ̀nà",
             OduDomain::Frontend => "Ojú-ọ̀nà",
             OduDomain::Crypto => "Àṣírí",
@@ -143,7 +150,15 @@ impl OduDomain {
 
     /// Check if this is an infrastructure domain
     pub fn is_infrastructure(&self) -> bool {
-        matches!(self, OduDomain::Cpu | OduDomain::Gpu | OduDomain::Storage)
+        matches!(
+            self,
+            OduDomain::Cpu
+                | OduDomain::Gpu
+                | OduDomain::Storage
+                | OduDomain::Sys
+                | OduDomain::Ohun
+                | OduDomain::Fidio
+        )
     }
 
     /// Check if this is an application stack

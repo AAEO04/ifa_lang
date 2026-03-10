@@ -17,6 +17,8 @@ use ratatui::{
     style::Color,
     widgets::{Block, Borders, Paragraph},
 };
+#[cfg(feature = "full")]
+use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use std::io;
 
 /// Ọ̀ṣẹ́ - The Painter (Graphics/UI)
@@ -66,6 +68,41 @@ impl Ose {
             "1001" => Color::Cyan,    // Òdí - Container
             "0110" => Color::Gray,    // Ìwòrì - Time
             _ => Color::Reset,
+        }
+    }
+    /// Poll for input event (gbọ́ran - to hear/listen)
+    /// Returns: "char", "Enter", "Esc", "Up", "Down" or null
+    pub fn gboran(&self) -> io::Result<Option<String>> {
+        if event::poll(std::time::Duration::from_millis(10))? {
+            if let Event::Key(key) = event::read()? {
+               let s = match key.code {
+                   KeyCode::Char(c) => c.to_string(),
+                   KeyCode::Enter => "Enter".to_string(),
+                   KeyCode::Esc => "Esc".to_string(),
+                   KeyCode::Up => "Up".to_string(),
+                   KeyCode::Down => "Down".to_string(),
+                   KeyCode::Left => "Left".to_string(),
+                   KeyCode::Right => "Right".to_string(),
+                   KeyCode::Backspace => "Backspace".to_string(),
+                   _ => return Ok(None),
+               };
+               return Ok(Some(s));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Block until input (gbilẹ̀ - to wait/ground)
+    pub fn gbile(&self) -> io::Result<String> {
+        loop {
+            if let Event::Key(key) = event::read()? {
+                 return Ok(match key.code {
+                   KeyCode::Char(c) => c.to_string(),
+                   KeyCode::Enter => "Enter".to_string(),
+                   KeyCode::Esc => "Esc".to_string(),
+                   _ => "?".to_string(),
+               });
+            }
         }
     }
 }
