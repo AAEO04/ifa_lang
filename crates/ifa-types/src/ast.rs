@@ -57,13 +57,18 @@ pub enum Statement {
         span: Span,
     },
 
-    /// Import: iba std.otura;
-    Import { path: Vec<String>, span: Span },
+    /// Import: iba std.otura; or iba { a, b } from std.otura;
+    Import {
+        path: Vec<String>,
+        names: Option<Vec<String>>,
+        span: Span,
+    },
 
     /// Constant declaration: const X = 1;
     Const {
         name: String,
         value: Expression,
+        visibility: Visibility,
         span: Span,
     },
 
@@ -84,6 +89,7 @@ pub enum Statement {
         visibility: Visibility,
         params: Vec<Param>,
         body: Vec<Statement>,
+        is_async: bool,
         span: Span,
     },
 
@@ -160,11 +166,17 @@ pub enum Statement {
     /// Yield execution: jowo 1000; or yield 1000;
     Yield { duration: Expression, span: Span },
 
-    /// Try/Catch block: gbiyanju { ... } pada (err) { ... }
+    /// Try/Catch/Finally block: gbiyanju { ... } gba (err) { ... } nipari { ... }
+    ///
+    /// The `finally_body` is OPTIONAL. When present, it MUST execute on all
+    /// exit paths: normal completion, caught error, or error propagation.
+    /// This implements the guarantee in §12.4 of the spec.
     Try {
         try_body: Vec<Statement>,
         catch_var: String, // The error variable name (e.g., "e")
         catch_body: Vec<Statement>,
+        /// Yoruba: nipari = "finally / in conclusion". Executes unconditionally.
+        finally_body: Option<Vec<Statement>>,
         span: Span,
     },
 }
@@ -362,6 +374,9 @@ pub enum Expression {
     /// Function call: func(args)
     Call { name: String, args: Vec<Expression> },
 
+    /// Await expression: reti expr
+    Await(Box<Expression>),
+
     /// List literal: [1, 2, 3]
     List(Vec<Expression>),
 
@@ -373,6 +388,23 @@ pub enum Expression {
         object: Box<Expression>,
         index: Box<Expression>,
     },
+
+    /// Error propagation operator: `expr?`
+    /// §12.3: If `expr` evaluates to an error value, immediately return it from
+    /// the enclosing function. Otherwise, unwrap and yield the Ok value.
+    Try(Box<Expression>),
+    
+    /// Interpolated string literal: $"Count: {x}"
+    InterpolatedString {
+        parts: Vec<InterpolatedPart>,
+    },
+}
+
+/// A part of an interpolated string
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum InterpolatedPart {
+    Literal(String),
+    Expression(Box<Expression>),
 }
 
 /// Odù domain method call

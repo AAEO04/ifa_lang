@@ -11,6 +11,7 @@ program = { SOI ~ statement* ~ EOI }
 
 statement = {
     import_stmt
+    | from_import_stmt
     | opon_stmt
     | ebo_stmt
     | ailewu_stmt
@@ -36,12 +37,16 @@ statement = {
 
 // Import: iba std.otura;
 import_stmt = { import_kw ~ module_path ~ ";" }
+
+// Named Import: iba { yọkuro, pin } from std.otura;
+from_import_stmt = { import_kw ~ "{" ~ ident ~ ("," ~ ident)* ~ "}" ~ from_kw ~ module_path ~ ";" }
+
 module_path = { ident ~ ("." ~ ident)* }
 
 // Opon (memory) directive: #opon kekere; or opon: nla;
 opon_stmt = { opon_kw ~ ":"? ~ opon_size ~ ";"? }
 opon_kw = { "#opon" | "opon" | "#Opon" | "Opon" | "#mem" | "mem" }
-opon_size = { 
+opon_size = {
     "kekere" | "kẹ́kẹ́rẹ́" | "small" | "tiny" | "embedded"
     | "arinrin" | "àrínrin" | "medium" | "standard" | "default"
     | "nla" | "nlá" | "large" | "big"
@@ -53,22 +58,20 @@ ebo_stmt = { ebo_kw ~ expression ~ ";"? }
 ebo_kw = { "ebo" | "ẹbọ" | "sacrifice" }
 
 // Variable: ayanmo x = 5;
-var_decl = { var_kw ~ ident ~ type_hint? ~ "=" ~ expression ~ ";" }
+var_decl = { public_mod? ~ var_kw ~ ident ~ type_hint? ~ "=" ~ expression ~ ";" }
 type_hint = { ":" ~ type_name }
-type_name = { 
-    "Int" | "Float" | "Str" | "Bool" | "List" | "Map" | "Any" 
+type_name = {
+    "Int" | "Float" | "Str" | "Bool" | "List" | "Map" | "Any"
     | "int" | "float" | "str" | "bool" | "list" | "map" | "any"
-    | "i8" | "i16" | "i32" | "i64" 
+    | "i8" | "i16" | "i32" | "i64"
     | "u8" | "u16" | "u32" | "u64"
     | "f32" | "f64"
     | "void"
 }
 
 // Constant: const X = 1;
-const_stmt = { const_kw ~ ident ~ "=" ~ expression ~ ";" }
-const_kw = { "const" | "loruko" | "ka" }
-
-// Assignment: x = 5;
+const_stmt = { public_mod? ~ const_kw ~ ident ~ "=" ~ expression ~ ";" }
+const_kw = { "const" | "loruko" | "ka" | "ayanfe" | "àyànfẹ́" }
 
 // Assignment: x = 5; *p = 5; arr[0] = 5;
 assignment_stmt = { lvalue ~ "=" ~ expression ~ ";" }
@@ -84,8 +87,8 @@ odu_call = { odu_name ~ "." ~ ident ~ "(" ~ arguments? ~ ")" }
 odu_def = { public_mod? ~ odu_kw ~ ident ~ "{" ~ odu_body ~ "}" }
 odu_body = { (ese_def | var_decl)* }
 
-// Function: ese start() { }
-ese_def = { public_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ "{" ~ statement* ~ "}" }
+// Function: ese start() { } or daro ese start() { }
+ese_def = { public_mod? ~ async_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ "{" ~ statement* ~ "}" }
 params = { param ~ ("," ~ param)* }
 param = { ident ~ (":" ~ type_name)? }
 
@@ -131,16 +134,18 @@ ailewu_stmt = { ailewu_kw ~ "{" ~ statement* ~ "}" }
 ailewu_kw = _{ "ailewu" | "àìléwu" | "unsafe" }
 
 // Yield: jowo 1000; or yield 1000;
-// Yoruba: jọ̀wọ́ (please/yield) or pèsè (provide/yield) - using jowo for "yielding control"
+// Yoruba: jọ̀wọ́ (please/yield) - using jowo for "yielding control"
 yield_stmt = { yield_kw ~ expression ~ ";" }
 yield_kw = _{ "jowo" | "jọ̀wọ́" | "yield" }
 
-// Try/Catch: gbiyanju { ... } gba (e) { ... }
-// Yoruba: gbiyanju (try), gba (accept/take/catch)
-try_stmt = { try_kw ~ "{" ~ statement* ~ "}" ~ catch_clause }
+// Try/Catch/Finally: gbiyanju { ... } gba (e) { ... } nipari { ... }
+// Yoruba: gbiyanju (try), gba (accept/take/catch), nipari (finally/in conclusion)
+try_stmt = { try_kw ~ "{" ~ statement* ~ "}" ~ catch_clause ~ nipari_clause? }
 catch_clause = { catch_kw ~ "(" ~ ident ~ ")" ~ "{" ~ statement* ~ "}" }
+nipari_clause = { nipari_kw ~ "{" ~ statement* ~ "}" }
 try_kw = _{ "gbiyanju" | "gbìyànjú" | "try" }
 catch_kw = _{ "gba" | "gbà" | "catch" }
+nipari_kw = _{ "nipari" | "nípàrí" | "finally" }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPRESSIONS
@@ -149,30 +154,40 @@ catch_kw = _{ "gba" | "gbà" | "catch" }
 expression = { or_expr }
 or_expr = { and_expr ~ (or_op ~ and_expr)* }
 and_expr = { not_expr ~ (and_op ~ not_expr)* }
-not_expr = { comparison } // Removed explicit not_op here, handled by unary_op in factor? No, logic NOT is different.
-// Logic NOT (!) is often lower precedence than arithmetic but higher than AND/OR.
-// Let's keep it simple: factor handles ALL unary ops including logic NOT, bitwise NOT, etc.
-// But wait, `!` is in `unary_op` definition.
-// So `not_expr` is redundant if `factor` handles `unary_op`.
-// Let's simplify hierarchy:
+not_expr = { comparison }
 
 comparison = { arith_expr ~ (comp_op ~ arith_expr)* }
 arith_expr = { term ~ ((add_op | sub_op) ~ term)* }
 term = { factor ~ ((mul_op | div_op | mod_op) ~ factor)* }
-factor = { unary_op* ~ atom } // Allow multiple unary ops: - -x, !!x, *&x
+// Postfix `?` (error propagation, §12.3) binds tightly to its atom.
+factor = { unary_op* ~ atom ~ try_op? }
+try_op = { "?" }
 
 atom = {
     odu_call
     | method_call
+    | function_call
+    | await_expr
     | list_literal
-    | map_literal  
+    | map_literal
     | index_access
     | number
+    | interpolated_string
     | string
     | boolean
+    | nil
     | ident
     | "(" ~ expression ~ ")"
 }
+
+// Interpolated string: $"Hello {name}"
+interpolated_string = { "$" ~ "\"" ~ (interp_part)* ~ "\"" }
+interp_part = { interp_expr | interp_text }
+interp_text = @{ (!("\"" | "{") ~ ANY)+ }
+interp_expr = { "{" ~ expression ~ "}" }
+
+// Function call: func(args)
+function_call = { ident ~ "(" ~ arguments? ~ ")" }
 
 // Method call: obj.method(args)
 method_call = { ident ~ "." ~ ident ~ "(" ~ arguments? ~ ")" }
@@ -186,6 +201,9 @@ map_entry = { (string | ident) ~ ":" ~ expression }
 
 // Index: arr[0]
 index_access = { ident ~ "[" ~ expression ~ "]" }
+
+// Await: reti expr
+await_expr = { await_kw ~ expression }
 
 // Arguments
 arguments = { expression ~ ("," ~ expression)* }
@@ -210,7 +228,8 @@ not_op = { "!" | "kii" | "not" }
 // KEYWORDS (Yoruba + English)
 // ═══════════════════════════════════════════════════════════════════════════
 
-import_kw = _{ "iba" | "ìbà" | "import" }
+import_kw = _{ "iba" | "ìbà" | "import" | "mu" }
+from_kw = _{ "lati" | "láti" | "from" }
 var_kw = _{ "ayanmo" | "àyànmọ́" | "let" | "var" }
 odu_kw = _{ "odu" | "odù" | "class" }
 ese_kw = _{ "ese" | "ẹsẹ" | "fn" | "function" | "def" }
@@ -219,10 +238,13 @@ else_kw = _{ "bibẹkọ" | "else" }
 while_kw = _{ "nigba" | "while" }
 for_kw = _{ "fun" | "for" }
 in_kw = _{ "ninu" | "in" }
-return_kw = _{ "pada" | "return" }
+return_kw = _{ "pada" | "return" | "da" }
 ase_kw = _{ "ase" | "àṣẹ" | "end" }
 match_kw = _{ "yàn" | "yán" | "match" }
-public_mod = { "gbangba" | "public" }
+public_mod = { "gbangba" | "public" | "fi" | "export" }
+async_mod = { async_kw }
+async_kw = _{ "daro" | "async" }
+await_kw = _{ "reti" | "await" }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ODÙ DOMAIN NAMES (The 16 Principal)
@@ -276,11 +298,12 @@ number = @{
 }
 string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "'" ~ (!"'" ~ ANY)* ~ "'" }
 boolean = { "true" | "false" | "otito" | "iro" }
+nil = { "ofo" | "null" | "nil" }
 
 // Comments - multiple styles supported
 COMMENT = _{
     block_comment
-    | doc_comment  
+    | doc_comment
     | line_comment_slash
     | line_comment_hash
 }
@@ -291,4 +314,3 @@ line_comment_slash = @{ "//" ~ (!NEWLINE ~ ANY)* }
 line_comment_hash = @{ "#" ~ (!NEWLINE ~ ANY)* }
 
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
-

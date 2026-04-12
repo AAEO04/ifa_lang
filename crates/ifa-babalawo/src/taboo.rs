@@ -112,7 +112,7 @@ impl TabooEnforcer {
                 let source_match = caller == taboo.source_domain || taboo.source_domain.is_empty();
                 let context_match =
                     self.current_context == taboo.source_context || taboo.source_context.is_empty();
-                let target_match = callee == taboo.target_domain;
+                let target_match = callee == taboo.target_domain || taboo.target_domain.is_empty();
 
                 if source_match && context_match && target_match {
                     self.violations.push(TabooViolation {
@@ -276,5 +276,14 @@ mod tests {
         let mut enforcer = TabooEnforcer::new();
         assert!(enforcer.check_call("irosu", "obara", 10, 1));
         assert!(enforcer.is_clean());
+    }
+
+    #[test]
+    fn test_source_to_any_target_taboo() {
+        let mut enforcer = TabooEnforcer::new();
+        enforcer.add_taboo("ose", "", "", "", false);
+
+        assert!(!enforcer.check_call("ose", "odi", 12, 3));
+        assert!(!enforcer.check_call("ose", "otura", 13, 3));
     }
 }

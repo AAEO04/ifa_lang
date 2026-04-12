@@ -9,6 +9,14 @@
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ```
 
+## Project Status (March 2026)
+
+IfáLang is under active development. A correct/ratified spec does not automatically mean the toolchain is feature-complete.
+
+- Normative semantics: `IFA_LANG_RUNTIME_SPEC.md`
+- Runtime reality check: Capability Matrix (§20) + conformance gates (§21)
+- Project sequencing toward a “complete language”: `ROADMAP.md`
+
 ##  Features
 
 - **256 Amúlù Instructions** - 8-bit ISA with 16 Verbs × 16 Nouns

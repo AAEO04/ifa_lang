@@ -160,7 +160,10 @@ impl SysHandler {
     fn handle_gpu(&self, method: &str, args: &[IfaValue]) -> IfaResult<IfaValue> {
         match method {
             "gpu_init" => {
-                let mut gpu_guard = self.gpu.write().map_err(|_| IfaError::Runtime("GPU lock poisoned".into()))?;
+                let mut gpu_guard = self
+                    .gpu
+                    .write()
+                    .map_err(|_| IfaError::Runtime("GPU lock poisoned".into()))?;
                 if gpu_guard.is_some() {
                     return Ok(IfaValue::Bool(true));
                 }
@@ -177,7 +180,10 @@ impl SysHandler {
                 if args.len() < 2 {
                     return Err(IfaError::Runtime("gpu_matmul(A, B) required".into()));
                 }
-                let gpu_guard = self.gpu.read().map_err(|_| IfaError::Runtime("GPU lock poisoned".into()))?;
+                let gpu_guard = self
+                    .gpu
+                    .read()
+                    .map_err(|_| IfaError::Runtime("GPU lock poisoned".into()))?;
                 let ctx = gpu_guard
                     .as_ref()
                     .ok_or(IfaError::Runtime("GPU not initialized".into()))?;
@@ -225,7 +231,10 @@ impl SysHandler {
                 Ok(IfaValue::List(Arc::new(matrix)))
             }
             "gpu_sync" => {
-                let gpu_guard = self.gpu.read().map_err(|_| IfaError::Runtime("GPU lock poisoned".into()))?;
+                let gpu_guard = self
+                    .gpu
+                    .read()
+                    .map_err(|_| IfaError::Runtime("GPU lock poisoned".into()))?;
                 if let Some(ctx) = gpu_guard.as_ref() {
                     ctx.sync();
                 }
@@ -246,7 +255,10 @@ impl SysHandler {
                     _ => return Err(IfaError::Runtime("source must be string".into())),
                 };
 
-                let gpu_guard = self.gpu.write().map_err(|_| IfaError::Runtime("GPU lock poisoned".into()))?;
+                let gpu_guard = self
+                    .gpu
+                    .write()
+                    .map_err(|_| IfaError::Runtime("GPU lock poisoned".into()))?;
                 let ctx = gpu_guard
                     .as_ref()
                     .ok_or(IfaError::Runtime("GPU not initialized".into()))?;
@@ -276,7 +288,10 @@ impl SysHandler {
                     _ => return Err(IfaError::Runtime("z must be int".into())),
                 };
 
-                let gpu_guard = self.gpu.read().map_err(|_| IfaError::Runtime("GPU lock poisoned".into()))?;
+                let gpu_guard = self
+                    .gpu
+                    .read()
+                    .map_err(|_| IfaError::Runtime("GPU lock poisoned".into()))?;
                 let ctx = gpu_guard
                     .as_ref()
                     .ok_or(IfaError::Runtime("GPU not initialized".into()))?;
@@ -422,7 +437,7 @@ impl OduHandler for SysHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &std::rc::Rc<std::cell::RefCell<Environment>>,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         if method.starts_with("gpu_") {

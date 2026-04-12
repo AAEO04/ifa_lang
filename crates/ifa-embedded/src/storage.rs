@@ -9,7 +9,6 @@ use alloc::string::String;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
-
 /// flash storage trait
 pub trait FlashStorage {
     fn read(&self, addr: u32, buf: &mut [u8]) -> Result<(), ()>;
@@ -22,5 +21,5 @@ pub trait FlashStorage {
 pub struct OduStoreEmbedded<F: FlashStorage> {
     flash: F,
     // Index would be in RAM (HashMap requires std or hashbrown+alloc)
-    // index: HashMap<String, u32>, 
+    // index: HashMap<String, u32>,
 }

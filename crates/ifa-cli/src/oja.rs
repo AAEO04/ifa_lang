@@ -1,7 +1,7 @@
 //! # Ọjà Package Manager
 //!
-//! "Fetch and Run" philosophy.
-//! Handles `ifa fetch` (download + compile + log) and `ifa run`.
+//! Dependency resolution, lockfile generation, and sandboxed execution.
+//! Conforms to IFA_LANG_RUNTIME_SPEC §33.
 
 #![allow(dead_code)]
 
@@ -12,12 +12,126 @@ use ifa_sandbox::{OmniBox, SandboxConfig, SecurityProfile};
 use reqwest::blocking::Client;
 use ring::digest::{Context, SHA256};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs::{self};
 use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tar::Archive;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct SemVer {
+    major: u64,
+    minor: u64,
+    patch: u64,
+}
+
+impl SemVer {
+    fn parse(raw: &str) -> Option<Self> {
+        let parts: Vec<&str> = raw.split('.').collect();
+        let major = parts.get(0)?.parse().ok()?;
+        let minor = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+        let patch = parts.get(2).and_then(|s| s.parse().ok()).unwrap_or(0);
+        Some(Self {
+            major,
+            minor,
+            patch,
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+enum VersionConstraint {
+    Any,
+    Exact(SemVer),
+    Caret(SemVer),
+    Tilde(SemVer),
+}
+
+impl VersionConstraint {
+    fn parse(raw: &str) -> Option<Self> {
+        let s = raw.trim();
+        if s.is_empty() || s == "*" || s.eq_ignore_ascii_case("latest") {
+            return Some(Self::Any);
+        }
+        if let Some(rest) = s.strip_prefix('^') {
+            return SemVer::parse(rest).map(Self::Caret);
+        }
+        if let Some(rest) = s.strip_prefix('~') {
+            return SemVer::parse(rest).map(Self::Tilde);
+        }
+        SemVer::parse(s).map(Self::Exact)
+    }
+
+    fn min_version(&self) -> SemVer {
+        match self {
+            VersionConstraint::Any => SemVer {
+                major: 0,
+                minor: 0,
+                patch: 0,
+            },
+            VersionConstraint::Exact(v) => *v,
+            VersionConstraint::Caret(v) => *v,
+            VersionConstraint::Tilde(v) => *v,
+        }
+    }
+
+    fn satisfies(&self, v: SemVer) -> bool {
+        match self {
+            VersionConstraint::Any => true,
+            VersionConstraint::Exact(target) => v == *target,
+            VersionConstraint::Caret(base) => {
+                if base.major > 0 {
+                    v >= *base
+                        && v < SemVer {
+                            major: base.major + 1,
+                            minor: 0,
+                            patch: 0,
+                        }
+                } else if base.minor > 0 {
+                    v >= *base
+                        && v < SemVer {
+                            major: 0,
+                            minor: base.minor + 1,
+                            patch: 0,
+                        }
+                } else {
+                    v >= *base
+                        && v < SemVer {
+                            major: 0,
+                            minor: 0,
+                            patch: base.patch + 1,
+                        }
+                }
+            }
+            VersionConstraint::Tilde(base) => {
+                v >= *base
+                    && v < SemVer {
+                        major: base.major,
+                        minor: base.minor + 1,
+                        patch: 0,
+                    }
+            }
+        }
+    }
+}
+
+fn mvs_select(available: &[SemVer], constraints: &[VersionConstraint]) -> Option<SemVer> {
+    if constraints.is_empty() {
+        return None;
+    }
+    let mut min = constraints[0].min_version();
+    for c in constraints.iter().skip(1) {
+        let cmin = c.min_version();
+        if cmin > min {
+            min = cmin;
+        }
+    }
+    if constraints.iter().all(|c| c.satisfies(min)) && available.contains(&min) {
+        return Some(min);
+    }
+    None
+}
 
 const OJA_REGISTRY_URL: &str = "https://raw.githubusercontent.com/AAEO04/oja-registry/main";
 
@@ -35,17 +149,26 @@ struct RegistryVersion {
     yanked: bool,
 }
 
-/// Ọjà project manifest (Iwe.toml)
+/// Ọjà project manifest (ifa.toml / Iwe.toml legacy)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IfaManifest {
     #[serde(default)]
     pub package: Option<PackageInfo>,
+    #[serde(default, alias = "project")]
+    pub project: Option<PackageInfo>,
     #[serde(default)]
     pub workspace: Option<WorkspaceInfo>,
     #[serde(default)]
     pub dependencies: HashMap<String, Dependency>,
-    #[serde(default)]
+    #[serde(default, alias = "dev-dependencies")]
     pub dev_dependencies: HashMap<String, Dependency>,
+}
+
+impl IfaManifest {
+    /// Access package info from either `[package]` or `[project]` (§33 uses `[project]`)
+    pub fn package_info(&self) -> Option<&PackageInfo> {
+        self.package.as_ref().or(self.project.as_ref())
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,18 +188,71 @@ pub struct PackageInfo {
     pub language: Option<String>,
 }
 
+/// Dependency specification — supports bare version strings and detailed tables.
+/// Aligns with §33.1 of the spec.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Dependency {
+    /// Bare version string: `"1.4.0"` or `"^1.4"`
     Version(String),
-    Git {
-        git: String,
+    /// Detailed table with optional fields
+    Detailed {
+        #[serde(default)]
+        version: Option<String>,
+        #[serde(default)]
+        features: Option<Vec<String>>,
+        #[serde(default)]
+        git: Option<String>,
+        #[serde(default)]
         branch: Option<String>,
+        #[serde(default)]
         tag: Option<String>,
+        #[serde(default)]
+        path: Option<String>,
     },
-    Path {
-        path: String,
-    },
+}
+
+impl Dependency {
+    /// Extract the version constraint string, if any.
+    pub fn version_str(&self) -> Option<&str> {
+        match self {
+            Dependency::Version(v) => Some(v.as_str()),
+            Dependency::Detailed { version, .. } => version.as_deref(),
+        }
+    }
+
+    /// True if this is a path dependency (local).
+    pub fn is_path(&self) -> bool {
+        matches!(self, Dependency::Detailed { path: Some(_), .. })
+    }
+
+    /// True if this is a git dependency.
+    pub fn is_git(&self) -> bool {
+        matches!(self, Dependency::Detailed { git: Some(_), .. })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Lockfile — §33.2
+// ---------------------------------------------------------------------------
+
+/// A single resolved dependency in `oja.lock`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct LockedPackage {
+    name: String,
+    version: String,
+    source: String,
+    checksum: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    dependencies: Vec<String>,
+}
+
+/// The lockfile (`oja.lock`) — exact resolved versions + checksums.
+/// Committed to VCS for applications, not for libraries.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Lockfile {
+    #[serde(rename = "package")]
+    packages: Vec<LockedPackage>,
 }
 
 /// Ọjà package manager
@@ -105,6 +281,7 @@ impl Oja {
                 authors: vec![],
                 language: None,
             }),
+            project: None,
             workspace: None,
             dependencies: HashMap::new(),
             dev_dependencies: HashMap::new(),
@@ -130,6 +307,58 @@ impl Oja {
 fn main() {
     println("🎮 Starting Game Engine...");
     // let world = World::new();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn semver_parse_basic() {
+        assert_eq!(SemVer::parse("1.2.3"), Some(SemVer { major: 1, minor: 2, patch: 3 }));
+        assert_eq!(SemVer::parse("1.2"), Some(SemVer { major: 1, minor: 2, patch: 0 }));
+        assert_eq!(SemVer::parse("1"), Some(SemVer { major: 1, minor: 0, patch: 0 }));
+    }
+
+    #[test]
+    fn constraint_satisfies_caret() {
+        let c = VersionConstraint::parse("^1.2.0").unwrap();
+        assert!(c.satisfies(SemVer { major: 1, minor: 2, patch: 0 }));
+        assert!(c.satisfies(SemVer { major: 1, minor: 9, patch: 9 }));
+        assert!(!c.satisfies(SemVer { major: 2, minor: 0, patch: 0 }));
+    }
+
+    #[test]
+    fn constraint_satisfies_tilde() {
+        let c = VersionConstraint::parse("~1.2.3").unwrap();
+        assert!(c.satisfies(SemVer { major: 1, minor: 2, patch: 3 }));
+        assert!(c.satisfies(SemVer { major: 1, minor: 2, patch: 9 }));
+        assert!(!c.satisfies(SemVer { major: 1, minor: 3, patch: 0 }));
+    }
+
+    #[test]
+    fn mvs_select_picks_max_of_mins() {
+        let available = vec![
+            SemVer { major: 1, minor: 0, patch: 0 },
+            SemVer { major: 1, minor: 2, patch: 0 },
+            SemVer { major: 1, minor: 3, patch: 0 },
+        ];
+        let c1 = VersionConstraint::parse("^1.0.0").unwrap();
+        let c2 = VersionConstraint::parse("^1.3.0").unwrap();
+        let selected = mvs_select(&available, &[c1, c2]).unwrap();
+        assert_eq!(selected, SemVer { major: 1, minor: 3, patch: 0 });
+    }
+
+    #[test]
+    fn mvs_select_rejects_missing_version() {
+        let available = vec![
+            SemVer { major: 1, minor: 0, patch: 0 },
+            SemVer { major: 1, minor: 2, patch: 0 },
+        ];
+        let c1 = VersionConstraint::parse("^1.0.0").unwrap();
+        let c2 = VersionConstraint::parse("^1.3.0").unwrap();
+        assert!(mvs_select(&available, &[c1, c2]).is_none());
+    }
 }
 "#
             }
@@ -196,6 +425,7 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
 
         let manifest = IfaManifest {
             package: None,
+            project: None,
             workspace: Some(WorkspaceInfo {
                 members: vec!["backend".to_string(), "frontend".to_string()],
             }),
@@ -256,7 +486,10 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
         // 2. Package Build
         if let Some(package) = manifest.package {
             let lang = package.language.as_deref().unwrap_or("ifa");
-            println!("📦 Building Package: {} v{} [{}]", package.name, package.version, lang);
+            println!(
+                "📦 Building Package: {} v{} [{}]",
+                package.name, package.version, lang
+            );
 
             if lang == "rust" {
                 // Rust Project Support
@@ -267,7 +500,7 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
                     .arg(if release { "--release" } else { "--dev" }) // simplified
                     .current_dir(&self.project_root)
                     .status()?;
-                
+
                 if !status.success() {
                     return Err(eyre!("Cargo build failed"));
                 }
@@ -399,7 +632,14 @@ opt-level = 3
         Ok(())
     }
 
-    /// `ifa fetch`: Download, Audit, and Compile
+    /// `ifa oja install` / `ifa fetch`: Download, verify, lock, and compile.
+    ///
+    /// This method implements the full §33 install pipeline:
+    /// 1. Load manifest and existing lockfile (if any)
+    /// 2. Resolve all dependencies transitively
+    /// 3. Download and verify integrity (SHA-256)
+    /// 4. Generate / update `oja.lock`
+    /// 5. AOT compile WASM artifacts
     pub fn fetch(&self) -> Result<()> {
         println!("🛒  Fetching dependencies...");
 
@@ -411,78 +651,276 @@ opt-level = 3
             return Ok(());
         }
 
-        // Initialize OmniBox for AOT compilation
+        // Load existing lockfile for integrity verification
+        let existing_lock = self.load_lockfile();
+
+        // Build a lookup map from locked packages for checksum verification
+        let locked_checksums: HashMap<String, String> = existing_lock
+            .as_ref()
+            .map(|lf| {
+                lf.packages
+                    .iter()
+                    .map(|p| (p.name.clone(), p.checksum.clone()))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        // Resolve the full dependency graph (direct + transitive)
+        let resolved = self.resolve_transitive(&manifest, &lib_dir)?;
+
+        println!(
+            "   Resolved {} packages (including transitive)",
+            resolved.len()
+        );
+
+        // Verify checksums against lockfile
+        for pkg in &resolved {
+            if let Some(expected) = locked_checksums.get(&pkg.name) {
+                if &pkg.checksum != expected {
+                    return Err(eyre!(
+                        "OjaIntegrityError: checksum mismatch for '{}'\n  \
+                         expected: {}\n  \
+                         got:      {}\n  \
+                         The lockfile does not match the downloaded artifact. \
+                         This may indicate tampering or a version change. \
+                         Run `ifa oja update {}` to re-resolve.",
+                        pkg.name,
+                        expected,
+                        pkg.checksum,
+                        pkg.name
+                    ));
+                }
+            }
+        }
+
+        // Write oja.lock
+        let lockfile = Lockfile {
+            packages: resolved.clone(),
+        };
+        self.save_lockfile(&lockfile)?;
+        println!(
+            "   🔒 Wrote oja.lock ({} packages)",
+            lockfile.packages.len()
+        );
+
+        // AOT compile any WASM sources
         let config = SandboxConfig::new(SecurityProfile::Standard);
         let omnibox = OmniBox::new(config).wrap_err("Failed to init compiler")?;
 
-        println!("🔥  Compiling to native machine code...");
+        for pkg in &resolved {
+            let wasm_candidate = lib_dir
+                .join(format!("{}-{}", pkg.name, pkg.version))
+                .join(format!("{}.wasm", pkg.name));
 
-        for (name, dep) in &manifest.dependencies {
-            println!("   - {}", name);
-
-            // 1. Resolve & Download (Stub - assumes local file exists or uses path)
-            // In real impl, git clone or http download happens here
-            // 1. Resolve & Download
-            let wasm_source = match dep {
-                Dependency::Path { path } => PathBuf::from(path).join(format!("{}.wasm", name)),
-                Dependency::Version(ver) => {
-                    let url = self.resolve_registry(name, ver);
-                    let target_dir = lib_dir.join(format!("{}-{}", name, ver));
-
-                    if !target_dir.exists() {
-                        self.download_package(&url, &target_dir)?;
-                        self.verify_signature(&target_dir)?;
-                    }
-
-                    // Assume the package layout puts the wasm in pkg/name.wasm or similar
-                    // For now, look for any .wasm file or fallback
-                    let candidate = target_dir.join(format!("{}.wasm", name));
-                    if !candidate.exists() {
-                        // Fallback: maybe inside a subdir (github release structure)
-                        // logic simplified
-                    }
-                    candidate
-                }
-                Dependency::Git { git, .. } => {
-                    return Err(eyre!(
-                        "Git dependencies are not yet implemented (package '{}', source: '{}').
-                        Use a `path` or `version` dependency instead.",
-                        name, git
-                    ));
-                }
-            };
-
-            if wasm_source.exists() {
-                let wasm_bytes = fs::read(&wasm_source).wrap_err("Failed to read Wasm source")?;
-
-                // 2. Audit Log (Opẹlẹ)
-                self.audit_log("FETCH", &format!("Compiled native artifact for {}", name))?;
-
-                // 3. AOT Compile (Atomic Write)
+            if wasm_candidate.exists() {
+                let wasm_bytes =
+                    fs::read(&wasm_candidate).wrap_err("Failed to read Wasm source")?;
                 let artifact = omnibox.compile_artifact(&wasm_bytes)?;
-
-                // Calculate hash (Carmack's Cache Key)
-                let mut context = Context::new(&SHA256);
-                context.update(&wasm_bytes);
-                let hash_value: String = context
-                    .finish()
-                    .as_ref()
-                    .iter()
-                    .map(|b| format!("{:02x}", b))
-                    .collect();
-
-                let target_path = cache_dir.join(format!("{}.cwasm", hash_value));
-
-                // Atomic Write Strategy
+                let target_path = cache_dir.join(format!("{}.cwasm", &pkg.checksum[7..15]));
                 self.atomic_write(&target_path, &artifact)?;
-                println!("     ✓ Compiled ({})", &hash_value[..8]);
-            } else {
-                println!("     ! Source not found (skipping download logic)");
+                self.audit_log(
+                    "FETCH",
+                    &format!("Compiled artifact for {} v{}", pkg.name, pkg.version),
+                )?;
+                println!(
+                    "     ✓ {} v{} compiled ({})",
+                    pkg.name,
+                    pkg.version,
+                    &pkg.checksum[7..15]
+                );
             }
         }
 
         println!("✨  Ready to run.");
         Ok(())
+    }
+
+    /// Resolve all dependencies transitively.
+    ///
+    /// Walks the dependency graph breadth-first, downloading each package and
+    /// reading its own manifest to discover transitive dependencies.
+    /// Returns a topologically-ordered list of `LockedPackage` entries.
+    fn resolve_transitive(
+        &self,
+        manifest: &IfaManifest,
+        lib_dir: &Path,
+    ) -> Result<Vec<LockedPackage>> {
+        let mut resolved: Vec<LockedPackage> = Vec::new();
+        let mut seen: HashSet<String> = HashSet::new();
+        // Queue: (name, dep, required_by)
+        let mut queue: VecDeque<(String, Dependency, String)> = VecDeque::new();
+
+        // Seed with direct dependencies
+        for (name, dep) in &manifest.dependencies {
+            queue.push_back((name.clone(), dep.clone(), "(root)".to_string()));
+        }
+
+        while let Some((name, dep, required_by)) = queue.pop_front() {
+            if seen.contains(&name) {
+                continue;
+            }
+            seen.insert(name.clone());
+
+            println!("   📦 Resolving: {} (required by {})", name, required_by);
+
+            let (version, source, pkg_dir) = match &dep {
+                Dependency::Version(ver) => {
+                    let url = self.resolve_registry(&name, ver);
+                    let target_dir = lib_dir.join(format!("{}-{}", name, ver));
+                    if !target_dir.exists() {
+                        self.download_package(&url, &target_dir)?;
+                    }
+                    (
+                        ver.clone(),
+                        format!("registry+{}", OJA_REGISTRY_URL),
+                        target_dir,
+                    )
+                }
+                Dependency::Detailed {
+                    version,
+                    path: Some(p),
+                    ..
+                } => {
+                    let pkg_path = PathBuf::from(p);
+                    let ver = version.as_deref().unwrap_or("0.0.0-local").to_string();
+                    (ver, format!("path+{}", p), pkg_path)
+                }
+                Dependency::Detailed {
+                    version: _,
+                    git: Some(g),
+                    ..
+                } => {
+                    return Err(eyre!(
+                        "Git dependencies are not yet implemented (package '{}', source: '{}'). \
+                         Use a `path` or `version` dependency instead.",
+                        name,
+                        g
+                    ));
+                }
+                Dependency::Detailed {
+                    version: Some(ver), ..
+                } => {
+                    let url = self.resolve_registry(&name, ver);
+                    let target_dir = lib_dir.join(format!("{}-{}", name, ver));
+                    if !target_dir.exists() {
+                        self.download_package(&url, &target_dir)?;
+                    }
+                    (
+                        ver.clone(),
+                        format!("registry+{}", OJA_REGISTRY_URL),
+                        target_dir,
+                    )
+                }
+                _ => {
+                    return Err(eyre!(
+                        "Dependency '{}' has no version, path, or git source.",
+                        name
+                    ));
+                }
+            };
+
+            // Compute checksum of the downloaded package directory
+            let checksum = self.sha256_dir(&pkg_dir)?;
+
+            // Read the dependency's own manifest to find transitive deps
+            let mut transitive_names: Vec<String> = Vec::new();
+            let dep_manifest_path = Self::find_manifest_in(&pkg_dir);
+            if let Some(mp) = dep_manifest_path {
+                if let Ok(content) = fs::read_to_string(&mp) {
+                    if let Ok(dep_manifest) = toml::from_str::<IfaManifest>(&content) {
+                        for (tname, tdep) in &dep_manifest.dependencies {
+                            transitive_names.push(tname.clone());
+                            if !seen.contains(tname) {
+                                queue.push_back((tname.clone(), tdep.clone(), name.clone()));
+                            }
+                        }
+                    }
+                }
+            }
+
+            resolved.push(LockedPackage {
+                name,
+                version,
+                source,
+                checksum,
+                dependencies: transitive_names,
+            });
+        }
+
+        Ok(resolved)
+    }
+
+    /// Find the manifest file inside a dependency directory.
+    /// Prefers `ifa.toml`, falls back to `Iwe.toml`.
+    fn find_manifest_in(dir: &Path) -> Option<PathBuf> {
+        let ifa = dir.join("ifa.toml");
+        if ifa.exists() {
+            return Some(ifa);
+        }
+        let iwe = dir.join("Iwe.toml");
+        if iwe.exists() {
+            return Some(iwe);
+        }
+        // GitHub archives have a root subdirectory — look one level down
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                if entry.path().is_dir() {
+                    let nested_ifa = entry.path().join("ifa.toml");
+                    if nested_ifa.exists() {
+                        return Some(nested_ifa);
+                    }
+                    let nested_iwe = entry.path().join("Iwe.toml");
+                    if nested_iwe.exists() {
+                        return Some(nested_iwe);
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// SHA-256 hash of a directory's file contents (deterministic, sorted).
+    fn sha256_dir(&self, dir: &Path) -> Result<String> {
+        let mut context = Context::new(&SHA256);
+
+        if dir.is_file() {
+            let bytes = fs::read(dir)?;
+            context.update(&bytes);
+        } else if dir.is_dir() {
+            let mut paths: Vec<PathBuf> = Vec::new();
+            Self::collect_files(dir, &mut paths);
+            paths.sort(); // deterministic order
+            for p in &paths {
+                let bytes = fs::read(p)?;
+                // Include relative path in hash so renames are detected
+                if let Ok(rel) = p.strip_prefix(dir) {
+                    context.update(rel.to_string_lossy().as_bytes());
+                }
+                context.update(&bytes);
+            }
+        }
+
+        let hash: String = context
+            .finish()
+            .as_ref()
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+        Ok(format!("sha256:{}", hash))
+    }
+
+    /// Recursively collect all files under `dir`.
+    fn collect_files(dir: &Path, out: &mut Vec<PathBuf>) {
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if p.is_dir() {
+                    Self::collect_files(&p, out);
+                } else {
+                    out.push(p);
+                }
+            }
+        }
     }
 
     /// Atomic write compatible with Windows (Linus Fix)
@@ -510,17 +948,46 @@ opt-level = 3
         }
     }
 
+    /// Load project manifest.
+    /// Prefers `ifa.toml` (§33 canonical), falls back to `Iwe.toml` (legacy).
     pub fn load_manifest(&self) -> Result<IfaManifest> {
-        let path = self.project_root.join("Iwe.toml");
-        // Fallback for legacy
-        let path = if path.exists() {
-            path
+        let ifa_path = self.project_root.join("ifa.toml");
+        let iwe_path = self.project_root.join("Iwe.toml");
+
+        let path = if ifa_path.exists() {
+            ifa_path
+        } else if iwe_path.exists() {
+            iwe_path
         } else {
-            self.project_root.join("ifa.toml")
+            return Err(eyre!(
+                "No manifest found. Expected `ifa.toml` (or legacy `Iwe.toml`) in {}\n  \
+                 Run `ifa oja init` to create one.",
+                self.project_root.display()
+            ));
         };
 
-        let content = fs::read_to_string(&path).wrap_err("Failed to read Iwe.toml")?;
-        toml::from_str(&content).wrap_err("Failed to parse Iwe.toml")
+        let content = fs::read_to_string(&path)
+            .wrap_err_with(|| format!("Failed to read {}", path.display()))?;
+        toml::from_str(&content).wrap_err_with(|| format!("Failed to parse {}", path.display()))
+    }
+
+    /// Load the lockfile (`oja.lock`). Returns `None` if it doesn't exist.
+    fn load_lockfile(&self) -> Option<Lockfile> {
+        let path = self.project_root.join("oja.lock");
+        if !path.exists() {
+            return None;
+        }
+        let content = fs::read_to_string(&path).ok()?;
+        toml::from_str(&content).ok()
+    }
+
+    /// Write the lockfile to disk (atomic).
+    fn save_lockfile(&self, lockfile: &Lockfile) -> Result<()> {
+        let path = self.project_root.join("oja.lock");
+        let header = "# oja.lock — generated by Oja, do not edit manually\n\n";
+        let body = toml::to_string_pretty(lockfile).wrap_err("Failed to serialize lockfile")?;
+        let content = format!("{}{}", header, body);
+        self.atomic_write(&path, content.as_bytes())
     }
 
     /// Resolve package name to download URL via the Ọjà registry.
@@ -543,8 +1010,19 @@ opt-level = 3
 
                         // Find version
                         let target_ver = if version == "latest" || version == "*" {
-                            // Get last non-yanked version
                             entry.versions.iter().rfind(|v| !v.yanked)
+                        } else if let Some(constraint) = VersionConstraint::parse(version) {
+                            let available: Vec<SemVer> = entry
+                                .versions
+                                .iter()
+                                .filter(|v| !v.yanked)
+                                .filter_map(|v| SemVer::parse(&v.version))
+                                .collect();
+                            let selected = mvs_select(&available, &[constraint]);
+                            selected.and_then(|s| {
+                                let s = format!("{}.{}.{}", s.major, s.minor, s.patch);
+                                entry.versions.iter().find(|v| v.version == s)
+                            })
                         } else {
                             entry.versions.iter().find(|v| v.version == version)
                         };
@@ -613,39 +1091,34 @@ opt-level = 3
         Ok(())
     }
 
-    /// Verify Package Integrity (SHA256)
-    fn verify_signature(&self, path: &Path) -> Result<()> {
-        println!("     🔒 Verifying Integrity...");
-        // In a real implementation, we would check against a hash from the registry metadata.
-        // For now, we will calculate the hash of the directory content to ensure it's readable.
-        
-        let mut context = Context::new(&SHA256);
-        
-        if path.is_dir() {
-            for entry in fs::read_dir(path)? {
-                let entry = entry?;
-                let p = entry.path();
-                if p.is_file() {
-                    let bytes = fs::read(&p)?;
-                    context.update(&bytes);
-                }
+    /// Verify package integrity against an expected SHA-256 checksum.
+    ///
+    /// If `expected_checksum` is `Some`, the computed hash MUST match or
+    /// the install is aborted with `OjaIntegrityError`.
+    /// If `None`, this is a first install — the hash is computed and returned.
+    fn verify_integrity(&self, path: &Path, expected_checksum: Option<&str>) -> Result<String> {
+        println!("     🔒 Verifying integrity...");
+        let computed = self.sha256_dir(path)?;
+
+        if let Some(expected) = expected_checksum {
+            if computed != expected {
+                return Err(eyre!(
+                    "OjaIntegrityError: checksum mismatch for {}\n  \
+                     expected: {}\n  \
+                     computed: {}\n  \
+                     The downloaded package does not match the lockfile. \
+                     This may indicate tampering, corruption, or a changed version.",
+                    path.display(),
+                    expected,
+                    computed
+                ));
             }
+            println!("       ✓ Checksum verified: {}", &computed[7..15]);
         } else {
-             let bytes = fs::read(path)?;
-             context.update(&bytes);
+            println!("       ✓ Computed checksum: {}", &computed[7..15]);
         }
 
-        let _hash_value: String = context
-            .finish()
-            .as_ref()
-            .iter()
-            .map(|b| format!("{:02x}", b))
-            .collect();
-
-        // Check against registry (mocked for now)
-        // println!("       Computed Hash: {}", _hash_value);
-        println!("       ✅ Integrity Verify Passed");
-        Ok(())
+        Ok(computed)
     }
 
     /// Publish to Registry (Git Tagging Strategy)
@@ -717,7 +1190,6 @@ opt-level = 3
             ));
         }
 
-        println!("✨  Published successfully to Registry (Git)!");
         println!("✨  Published successfully to Registry (Git)!");
         Ok(())
     }
@@ -857,17 +1329,139 @@ opt-level = 3
         Ok(())
     }
 
-    /// Install dependencies
+    /// Install dependencies (alias for fetch)
     pub fn install(&self) -> Result<()> {
         self.fetch()
     }
 
-    /// List dependencies
+    /// List installed dependencies and their locked versions.
     pub fn list(&self) -> Result<()> {
         let manifest = self.load_manifest()?;
+        let lockfile = self.load_lockfile();
+
         println!("Dependencies:");
         for (name, dep) in &manifest.dependencies {
-            println!("  - {}: {:?}", name, dep);
+            let ver = dep.version_str().unwrap_or("*");
+            // Show locked version if available
+            let locked_ver = lockfile.as_ref().and_then(|lf| {
+                lf.packages
+                    .iter()
+                    .find(|p| p.name == *name)
+                    .map(|p| p.version.as_str())
+            });
+            if let Some(lv) = locked_ver {
+                println!("  {} {} (locked: {})", name, ver, lv);
+            } else {
+                println!("  {} {} (not installed)", name, ver);
+            }
+        }
+        Ok(())
+    }
+
+    /// Update dependencies: re-resolve and regenerate `oja.lock`.
+    pub fn update(&self) -> Result<()> {
+        println!("🔄  Updating dependencies...");
+        // Delete the existing lockfile so fetch() does a full re-resolve
+        let lock_path = self.project_root.join("oja.lock");
+        if lock_path.exists() {
+            fs::remove_file(&lock_path).wrap_err("Failed to remove old oja.lock")?;
+        }
+        self.fetch()
+    }
+
+    /// Show the full dependency tree.
+    pub fn tree(&self) -> Result<()> {
+        let lockfile = self
+            .load_lockfile()
+            .ok_or_else(|| eyre!("No oja.lock found. Run `ifa oja install` first."))?;
+        let manifest = self.load_manifest()?;
+
+        println!("Dependency tree:");
+
+        // Build a lookup
+        let pkg_map: HashMap<&str, &LockedPackage> = lockfile
+            .packages
+            .iter()
+            .map(|p| (p.name.as_str(), p))
+            .collect();
+
+        // Print direct deps, then recurse
+        for (name, _) in &manifest.dependencies {
+            self.print_tree_node(name, &pkg_map, 0, &mut HashSet::new());
+        }
+        Ok(())
+    }
+
+    fn print_tree_node(
+        &self,
+        name: &str,
+        pkgs: &HashMap<&str, &LockedPackage>,
+        depth: usize,
+        visited: &mut HashSet<String>,
+    ) {
+        let indent = "  ".repeat(depth);
+        let prefix = if depth == 0 { "├── " } else { "│   " };
+
+        if let Some(pkg) = pkgs.get(name) {
+            if visited.contains(name) {
+                println!("{}{}{} v{} (*)", indent, prefix, name, pkg.version);
+                return;
+            }
+            visited.insert(name.to_string());
+            println!("{}{}{} v{}", indent, prefix, name, pkg.version);
+            for dep_name in &pkg.dependencies {
+                self.print_tree_node(dep_name, pkgs, depth + 1, visited);
+            }
+        } else {
+            println!("{}{}{} (not resolved)", indent, prefix, name);
+        }
+    }
+
+    /// Search the registry for packages matching a query.
+    pub fn search(&self, query: &str) -> Result<()> {
+        println!("🔍  Searching registry for '{}'...", query);
+        let client = Client::new();
+        let url = format!("{}/search/{}", OJA_REGISTRY_URL, query);
+
+        match client.get(&url).send() {
+            Ok(resp) if resp.status().is_success() => {
+                if let Ok(text) = resp.text() {
+                    println!("{}", text);
+                } else {
+                    println!("   No results.");
+                }
+            }
+            _ => {
+                println!("   Registry unreachable. Try again later.");
+            }
+        }
+        Ok(())
+    }
+
+    /// Audit installed dependencies for known vulnerabilities.
+    pub fn audit(&self) -> Result<()> {
+        println!("🔍  Auditing dependencies...");
+        let lockfile = self
+            .load_lockfile()
+            .ok_or_else(|| eyre!("No oja.lock found. Run `ifa oja install` first."))?;
+
+        let mut issues = 0;
+        for pkg in &lockfile.packages {
+            // In production this would query oja.ifá.dev/advisories
+            // For now, verify that checksums are present and well-formed
+            if !pkg.checksum.starts_with("sha256:") || pkg.checksum.len() < 71 {
+                println!("   ⚠ {}: missing or malformed checksum", pkg.name);
+                issues += 1;
+            }
+        }
+
+        if issues == 0 {
+            println!(
+                "   ✅ No known issues found ({} packages audited).",
+                lockfile.packages.len()
+            );
+        } else {
+            println!("   ⚠ {} issue(s) found.", issues);
         }
         Ok(())
     }

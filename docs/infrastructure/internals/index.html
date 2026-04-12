@@ -4,114 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Language Internals - If�-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2rem 0 1rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        .internal-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin: 2rem 0;
-        }
-
-        .internal-card {
-            background: var(--bg-card);
-            padding: 1.5rem;
-            border-radius: 12px;
-            border-left: 4px solid var(--accent);
-        }
-
-        .internal-card h3 {
-            color: var(--gold);
-            margin: 0 0 0.5rem;
-        }
-
-        .internal-card p {
-            color: var(--text-dim);
-            margin: 0.5rem 0;
-            font-size: 0.9rem;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Language Internals - Ifá-Lang</title>
+    <meta name="description" content="Internal architecture of Ifá-Lang for contributors and advanced users">
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -119,105 +20,471 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
-            <h1>?? Language Internals</h1>
-            <p style="color: var(--text-dim);">Deep dive into If�-Lang's implementation</p>
+            <h1>Language Internals</h1>
+            <p class="subtitle">Architecture & Implementation Details</p>
         </header>
 
-        <p>This section documents the internal architecture of If�-Lang for contributors and advanced users.</p>
+        <p>This section documents the internal architecture of Ifá-Lang for contributors and advanced users, based on the actual codebase implementation and runtime specification.</p>
 
-        <h2>Core Components</h2>
-        <div class="internal-grid">
-            <div class="internal-card">
-                <h3>?? AST & Parser</h3>
-                <p>Grammar, lexer, and abstract syntax tree representation.</p>
-                <p><strong>Source:</strong> <code>ifa-core/src/ast.rs</code>, <code>parser.rs</code></p>
-            </div>
-
-            <div class="internal-card">
-                <h3>?? Compiler</h3>
-                <p>AST to bytecode compilation.</p>
-                <p><strong>Source:</strong> <code>ifa-core/src/compiler.rs</code></p>
-            </div>
-
-            <div class="internal-card">
-                <h3>??? Virtual Machine</h3>
-                <p>Stack-based bytecode interpreter.</p>
-                <p><strong>Source:</strong> <code>ifa-core/src/vm.rs</code></p>
+        <div class="step">
+            <h2>Three-Tier Runtime Architecture</h2>
+            <p>Ifá-Lang implements a unified three-tier execution model as specified in the runtime specification:</p>
+            
+            <div class="runtime-diagram">
+                <div class="tier">
+                    <h3>AST Interpreter</h3>
+                    <p>Direct source code interpretation for development and debugging</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/parser.rs</code>, <code>interpreter/core.rs</code></p>
+                </div>
+                <div class="tier">
+                    <h3>Bytecode VM</h3>
+                    <p>Optimized stack-based bytecode execution for production</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/vm.rs</code>, <code>compiler.rs</code></p>
+                </div>
+                <div class="tier">
+                    <h3>Transpiler</h3>
+                    <p>Native code generation for maximum performance</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/transpiler/</code></p>
+                </div>
             </div>
         </div>
 
-        <h2>Execution Pipeline</h2>
-        <pre><code>Source Code (.ifa)
-      ?
-   Lexer (tokenize)
-      ?
-   Parser (AST)
-      ?
-   Babalawo (static analysis)
-      ?
-   Compiler (bytecode)
-      ?
-   VM (execute)</code></pre>
+        <div class="step">
+            <h2>Core Components</h2>
+            <div class="internal-grid">
+                <div class="internal-card">
+                    <h3>Grammar & Lexer</h3>
+                    <p>Pest grammar definition and lexical analysis with bilingual keyword support.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/grammar.pest</code>, <code>lexer.rs</code></p>
+                    <ul>
+                        <li>Bilingual Yoruba/English keywords</li>
+                        <li>16 Odù domain tokenization</li>
+                        <li>Expression parsing</li>
+                        <li>Statement structure</li>
+                    </ul>
+                </div>
 
-        <h2>Key Data Structures</h2>
+                <div class="internal-card">
+                    <h3>Parser</h3>
+                    <p>AST generation from tokens with error recovery and span tracking.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/parser.rs</code> (41,502 bytes)</p>
+                    <ul>
+                        <li>Recursive descent parsing</li>
+                        <li>Error recovery</li>
+                        <li>AST node construction</li>
+                        <li>Expression precedence</li>
+                    </ul>
+                </div>
 
-        <h3>IfaValue</h3>
-        <p>The core value type representing all If�-Lang values:</p>
-        <pre><code>// From crates/ifa-core/src/value.rs
-pub enum IfaValue {
-    Nil,
-    Bool(bool),
-    Number(f64),
-    String(Rc<String>),
-    List(Rc<RefCell<Vec<IfaValue>>>),
-    Map(Rc<RefCell<HashMap<String, IfaValue>>>),
-    Function(Rc<Function>),
-    NativeFunction(Rc<NativeFunction>),
-    // ...
-}</code></pre>
+                <div class="internal-card">
+                    <h3>Compiler</h3>
+                    <p>AST to bytecode compilation with optimization passes.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/compiler.rs</code> (48,344 bytes)</p>
+                    <ul>
+                        <li>Bytecode generation</li>
+                        <li>Constant folding</li>
+                        <li>Dead code elimination</li>
+                        <li>Jump optimization</li>
+                    </ul>
+                </div>
 
-        <h3>OpCode</h3>
-        <p>Bytecode instructions:</p>
-        <pre><code>// From crates/ifa-core/src/bytecode.rs
-pub enum OpCode {
-    LoadConst(u16),
-    LoadLocal(u16),
-    StoreLocal(u16),
-    Add, Sub, Mul, Div,
-    Call(u8),
-    Return,
-    Jump(i16),
-    JumpIfFalse(i16),
-    // ...
-}</code></pre>
+                <div class="internal-card">
+                    <h3>Virtual Machine</h3>
+                    <p>Stack-based bytecode interpreter with Opon memory management.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/vm.rs</code> (109,076 bytes)</p>
+                    <ul>
+                        <li>Stack-based execution</li>
+                        <li>Opon memory system</li>
+                        <li>Àjõsé reactive system</li>
+                        <li>16 Odù domain dispatch</li>
+                    </ul>
+                </div>
 
-        <h2>Crate Dependencies</h2>
-        <pre><code>ifa-cli
-   +-- ifa-core
-         +-- ifa-std (domains, stacks, infra)
-         +-- ifa-babalawo (linting)
-         +-- ifa-types (shared types)
+                <div class="internal-card">
+                    <h3>Interpreter</h3>
+                    <p>Direct AST execution with domain handler dispatch.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/interpreter/core.rs</code> (78,137 bytes)</p>
+                    <ul>
+                        <li>AST traversal</li>
+                        <li>Environment management</li>
+                        <li>Domain handler registry</li>
+                        <li>Resource tracking</li>
+                    </ul>
+                </div>
 
-ifa-wasm
-   +-- ifa-core (subset without native features)</code></pre>
+                <div class="internal-card">
+                    <h3>Domain Handlers</h3>
+                    <p>Modular handler system for the 16 Odù domains.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/interpreter/handlers/</code></p>
+                    <ul>
+                        <li>16 core Odù handlers</li>
+                        <li>Infrastructure handlers</li>
+                        <li>Method dispatch</li>
+                        <li>Resource management</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-        <h2>Further Reading</h2>
-        <ul style="margin-left: 1.5rem;">
-            <li><a href="../../community/community.html">Contributing Guide</a></li>
-            <li><code>crates/README.md</code> � Detailed crate documentation</li>
-            <li>Source code comments (rustdoc)</li>
-        </ul>
+        <div class="step">
+            <h2>Memory & Resource Management</h2>
+            
+            <div class="internal-grid">
+                <div class="internal-card">
+                    <h3>Opon Memory System</h3>
+                    <p>Sacred memory management inspired by divination tray.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/opon.rs</code> (16,003 bytes)</p>
+                    <ul>
+                        <li>Heap allocation management</li>
+                        <li>Garbage collection</li>
+                        <li>Memory pools</li>
+                        <li>Sacred space metaphor</li>
+                    </ul>
+                </div>
 
-        <footer class="doc-footer">
-            <p><a href="../../api/api.html">? API Reference</a></p>
-            <p><a href="../../index.html">Documentation Home</a></p>
+                <div class="internal-card">
+                    <h3>  (Ebo) Resource System</h3>
+                    <p>Resource lifecycle management with obligation tracking.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/ebo.rs</code> (5,473 bytes)</p>
+                    <ul>
+                        <li>Resource acquisition</li>
+                        <li>Obligation tracking</li>
+                        <li>Automatic cleanup</li>
+                        <li>Leak prevention</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Àjõsé Reactive System</h3>
+                    <p>Reactive relationships and dependency management.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/ajose.rs</code> (19,644 bytes)</p>
+                    <ul>
+                        <li>Reactive bindings</li>
+                        <li>Dependency tracking</li>
+                        <li>Change propagation</li>
+                        <li>Community metaphor</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Type System Implementation</h2>
+            
+            <div class="internal-grid">
+                <div class="internal-card">
+                    <h3>IfaValue System</h3>
+                    <p>Dynamic typing with tagged union implementation.</p>
+                    <p><strong>Source:</strong> <code>ifa-types/src/value_union.rs</code></p>
+                    <ul>
+                        <li>Tagged union layout</li>
+                        <li>Primitive types</li>
+                        <li>Collection types</li>
+                        <li>Function types</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>OduDomain Registry</h3>
+                    <p>Canonical domain enumeration and dispatch.</p>
+                    <p><strong>Source:</strong> <code>ifa-types/src/domain.rs</code></p>
+                    <ul>
+                        <li>16 core Odù domains</li>
+                        <li>Infrastructure domains</li>
+                        <li>Stack domains</li>
+                        <li>Binary patterns</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Error Handling</h3>
+                    <p>Canonical error system with Yoruba proverbs.</p>
+                    <p><strong>Source:</strong> <code>ifa-types/src/error.rs</code></p>
+                    <ul>
+                        <li>IfaError enumeration</li>
+                        <li>Error code mapping</li>
+                        <li>Cultural proverbs</li>
+                        <li>Result types</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Transpiler Architecture</h2>
+            
+            <div class="internal-grid">
+                <div class="internal-card">
+                    <h3>Core Transpiler</h3>
+                    <p>AST to native code generation framework.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/transpiler/core.rs</code></p>
+                    <ul>
+                        <li>Code generation pipeline</li>
+                        <li>Target abstraction</li>
+                        <li>Optimization passes</li>
+                        <li>Output formatting</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Statement Transpilation</h3>
+                    <p>Statement-level code generation with control flow.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/transpiler/statements.rs</code> (20,379 bytes)</p>
+                    <ul>
+                        <li>Control flow generation</li>
+                        <li>Variable declarations</li>
+                        <li>Function definitions</li>
+                        <li>Domain calls</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Expression Transpilation</h3>
+                    <p>Expression evaluation and code generation.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/transpiler/expressions.rs</code> (6,922 bytes)</p>
+                    <ul>
+                        <li>Operator precedence</li>
+                        <li>Type coercion</li>
+                        <li>Constant folding</li>
+                        <li>Inline optimization</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Domain Code Gen</h3>
+                    <p>Odù domain method call transpilation.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/transpiler/domains.rs</code> (19,247 bytes)</p>
+                    <ul>
+                        <li>Domain method mapping</li>
+                        <li>Native function calls</li>
+                        <li>Runtime integration</li>
+                        <li>Performance optimization</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Safety & Enforcement Systems</h2>
+            
+            <div class="internal-grid">
+                <div class="internal-card">
+                    <h3>Ìwà Pélé Balance Checker</h3>
+                    <p>Compile-time resource balance checking.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/iwa_pele.rs</code> (7,992 bytes)</p>
+                    <ul>
+                        <li>Lexical CFG analysis</li>
+                        <li>Resource pair tracking</li>
+                        <li>Compile-time errors</li>
+                        <li>Zero runtime cost</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Oracle Error System</h3>
+                    <p>Error handling and recovery mechanisms.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/oracle.rs</code> (2,624 bytes)</p>
+                    <ul>
+                        <li>Error propagation</li>
+                        <li>Recovery strategies</li>
+                        <li>Wisdom integration</li>
+                        <li>Debug information</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Module Resolver</h3>
+                    <p>Import resolution and dependency management.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/module_resolver.rs</code> (6,743 bytes)</p>
+                    <ul>
+                        <li>Path resolution</li>
+                        <li>Dependency tracking</li>
+                        <li>Circular import detection</li>
+                        <li>Module caching</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Performance Optimizations</h2>
+            
+            <div class="internal-grid">
+                <div class="internal-card">
+                    <h3>VM Optimizations</h3>
+                    <p>Bytecode VM performance enhancements.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/vm_ikin.rs</code>, <code>vm_iroke.rs</code></p>
+                    <ul>
+                        <li>Instruction caching</li>
+                        <li>Jump prediction</li>
+                        <li>Inline caching</li>
+                        <li>Stack optimization</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Compiler Optimizations</h3>
+                    <p>AST to bytecode optimization passes.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/compiler.rs</code></p>
+                    <ul>
+                        <li>Constant propagation</li>
+                        <li>Dead code elimination</li>
+                        <li>Loop optimization</li>
+                        <li>Tail call optimization</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Memory Optimizations</h3>
+                    <p>Opon memory system performance tuning.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/opon.rs</code></p>
+                    <ul>
+                        <li>Memory pooling</li>
+                        <li>Garbage collection</li>
+                        <li>Allocation patterns</li>
+                        <li>Cache efficiency</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Development Tools</h2>
+            
+            <div class="internal-grid">
+                <div class="internal-card">
+                    <h3>Project Generator</h3>
+                    <p>Template-based project creation.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/project_generator.rs</code> (3,070 bytes)</p>
+                    <ul>
+                        <li>Template system</li>
+                        <li>Project scaffolding</li>
+                        <li>Configuration management</li>
+                        <li>Dependency setup</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Native Interface</h3>
+                    <p>FFI and native function integration.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/native.rs</code> (1,724 bytes)</p>
+                    <ul>
+                        <li>Foreign function interface</li>
+                        <li>Native binding</li>
+                        <li>ABI compatibility</li>
+                        <li>Safety checks</li>
+                    </ul>
+                </div>
+
+                <div class="internal-card">
+                    <h3>Constants System</h3>
+                    <p>Compile-time constant evaluation.</p>
+                    <p><strong>Source:</strong> <code>ifa-core/src/transpiler/constants.rs</code> (4,662 bytes)</p>
+                    <ul>
+                        <li>Constant folding</li>
+                        <li>Compile-time evaluation</li>
+                        <li>Optimization hints</li>
+                        <li>Type inference</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Architecture Principles</h2>
+            
+            <h3>Protocol-Oriented Design</h3>
+            <ul>
+                <li><strong>No Classes:</strong> Trait-based composition instead of inheritance</li>
+                <li><strong>Structural Typing:</strong> Capability-based type checking</li>
+                <li><strong>Domain Protocols:</strong> Odù-specific capability contracts</li>
+                <li><strong>Composition:</strong> Flexible trait composition patterns</li>
+            </ul>
+
+            <h3>Cultural Integration</h3>
+            <ul>
+                <li><strong>Sacred Memory:</strong> Opon system with divination tray metaphor</li>
+                <li><strong>Resource Obligation:</strong>   (sacrifice) lifecycle management</li>
+                <li><strong>Community Relationships:</strong> Àjõsé reactive system</li>
+                <li><strong>Gentle Balance:</strong> Ìwà Pélé harmony enforcement</li>
+            </ul>
+
+            <h3>Performance Philosophy</h3>
+            <ul>
+                <li><strong>Zero Cost Abstractions:</strong> Compile-time optimizations</li>
+                <li><strong>Runtime Flexibility:</strong> Dynamic typing with performance</li>
+                <li><strong>Memory Efficiency:</strong> Sacred space management</li>
+                <li><strong>Reactive Efficiency:</strong> Minimal overhead relationships</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Key Metrics</h2>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3>VM Implementation</h3>
+                    <p><strong>109,076 bytes</strong> - Largest component</p>
+                    <p>Stack-based execution with full optimization</p>
+                </div>
+
+                <div class="metric-card">
+                    <h3>Parser Implementation</h3>
+                    <p><strong>41,502 bytes</strong> - Complex grammar handling</p>
+                    <p>Recursive descent with error recovery</p>
+                </div>
+
+                <div class="metric-card">
+                    <h3>Compiler Implementation</h3>
+                    <p><strong>48,344 bytes</strong> - Optimization heavy</p>
+                    <p>Multi-pass optimization pipeline</p>
+                </div>
+
+                <div class="metric-card">
+                    <h3>Interpreter Core</h3>
+                    <p><strong>78,137 bytes</strong> - Feature rich</p>
+                    <p>Direct execution with full language support</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Contributing to Internals</h2>
+            
+            <h3>Development Guidelines</h3>
+            <ul>
+                <li><strong>Cultural Alignment:</strong> Maintain Yoruba philosophical principles</li>
+                <li><strong>Protocol Consistency:</strong> Follow protocol-oriented design patterns</li>
+                <li><strong>Performance Awareness:</strong> Consider zero-cost abstractions</li>
+                <li><strong>Documentation:</strong> Update this documentation with changes</li>
+            </ul>
+
+            <h3>Testing Strategy</h3>
+            <ul>
+                <li><strong>Unit Tests:</strong> Individual component testing</li>
+                <li><strong>Integration Tests:</strong> Cross-component interaction</li>
+                <li><strong>Performance Tests:</strong> Benchmark critical paths</li>
+                <li><strong>Cultural Tests:</strong> Verify philosophical alignment</li>
+            </ul>
+
+            <h3>Code Organization</h3>
+            <ul>
+                <li><strong>Single Responsibility:</strong> Each module has clear purpose</li>
+                <li><strong>Dependency Direction:</strong> Core types at bottom, features on top</li>
+                <li><strong>Feature Flags:</strong> Conditional compilation for capabilities</li>
+                <li><strong>Error Handling:</strong> Canonical IfaError usage throughout</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="../index.html">Infrastructure Documentation</a></p>
         </footer>
     </div>
-    <script src="../../js/nav.js"></script>
+
     <script src="../../js/common.js"></script>
 </body>
 
 </html>
-

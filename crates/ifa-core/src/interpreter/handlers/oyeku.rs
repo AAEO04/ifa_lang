@@ -7,7 +7,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 
 /// Handler for Ọ̀yẹ̀kú (Exit/Sleep) domain.
 pub struct OyekuHandler;
@@ -21,10 +21,9 @@ impl OduHandler for OyekuHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
-
         let arg0 = args.first();
 
         match method {
@@ -35,14 +34,21 @@ impl OduHandler for OyekuHandler {
                 } else {
                     0
                 };
-                std::process::exit(code);
+                // Remove direct host abort: std::process::exit(code);
+                _output.push(format!("[exit] requested with code {}", code));
+                // Signal exit via error in embedded AST mode
+                Err(IfaError::Runtime(format!(
+                    "Process exit requested with code {}",
+                    code
+                )))
             }
 
             // Wait/sleep (milliseconds)
             "duro" | "sun" | "sleep" => {
                 if let Some(val) = arg0 {
                     if let IfaValue::Int(ms) = val {
-                        std::thread::sleep(std::time::Duration::from_millis(*ms as u64));
+                        // Remove direct host block: std::thread::sleep(...);
+                        _output.push(format!("[sleep] requested {} ms", ms));
                     }
                 }
                 Ok(IfaValue::null())
@@ -52,7 +58,8 @@ impl OduHandler for OyekuHandler {
             "sun_sẹkọndi" | "sleep_sec" => {
                 if let Some(val) = arg0 {
                     if let IfaValue::Int(sec) = val {
-                        std::thread::sleep(std::time::Duration::from_secs(*sec as u64));
+                        // Remove direct host block: std::thread::sleep(...);
+                        _output.push(format!("[sleep] requested {} sec", sec));
                     }
                 }
                 Ok(IfaValue::null())

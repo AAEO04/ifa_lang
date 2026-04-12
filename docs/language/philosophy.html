@@ -4,166 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Philosophy - The 16 Od˘ Domains</title>
-    <meta name="description"
-        content="The 16 Od˘ domains of If·-Lang explained. Each domain maps to a core programming concept.">
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .subtitle {
-            color: var(--text-dim);
-            font-size: 1.2rem;
-            margin-top: 0.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            font-size: 1.8rem;
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        .odu-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin: 2rem 0;
-        }
-
-        .odu-card {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid rgba(233, 69, 96, 0.3);
-            transition: all 0.3s;
-        }
-
-        .odu-card:hover {
-            border-color: var(--gold);
-            transform: translateY(-3px);
-        }
-
-        .odu-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-        }
-
-        .odu-name {
-            font-size: 1.3rem;
-            color: var(--gold);
-            font-weight: bold;
-        }
-
-        .odu-pattern {
-            font-family: monospace;
-            background: #0d1321;
-            padding: 4px 10px;
-            border-radius: 4px;
-            color: var(--accent);
-            font-size: 1rem;
-        }
-
-        .odu-meaning {
-            color: var(--accent);
-            font-style: italic;
-            margin-bottom: 0.5rem;
-        }
-
-        .odu-purpose {
-            color: var(--text-dim);
-        }
-
-        .odu-aliases {
-            margin-top: 0.75rem;
-            font-size: 0.85rem;
-            color: var(--text-dim);
-        }
-
-        .odu-aliases code {
-            background: #0d1321;
-            padding: 2px 6px;
-            border-radius: 3px;
-            color: var(--gold);
-            margin-right: 4px;
-        }
-
-        .section-intro {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            border-left: 4px solid var(--accent);
-        }
-
-        a {
-            color: var(--gold);
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Philosophy - The 16 Od√π Domains</title>
+    <meta name="description" content="The 16 Od√π domains of If√°-Lang explained. Each domain maps to a core programming concept.">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -171,288 +20,300 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
-            <h1>The 16 Od˘ Domains</h1>
-            <p class="subtitle">Sacred patterns mapped to programming concepts</p>
+            <h1>Philosophy of If√°-Lang</h1>
+            <p class="subtitle">The 16 Od√π Domains - Sacred Patterns of Programming</p>
         </header>
 
-        <div class="section-intro">
-            <p>In Yoruba tradition, the <strong>Od˘ If·</strong> are 256 sacred patterns used in divination.
-                If·-Lang uses the 16 principal Od˘ (Oj˙ Od˘) as the foundation for its standard library,
-                mapping each pattern to a fundamental programming domain.</p>
-            <p>Each Od˘ is represented by a 4-bit binary pattern, creating a natural hierarchy for organizing code.</p>
+        <div class="step">
+            <h2>Core Philosophy</h2>
+            <p>If√°-Lang is built on Yoruba cosmology where every aspect of programming maps to an Od√π - the sacred patterns of If√° divination. The language embodies the principle that <strong>programming is a form of divination</strong>, where we seek wisdom through structured patterns and logical reasoning.</p>
+            
+            <blockquote>
+                "A k√¨ √≠ wo oun kan soso." - One never looks in only one direction.<br>
+                <small>Every problem has multiple perspectives; the 16 Od√π provide different approaches to programming challenges.</small>
+            </blockquote>
         </div>
 
-        <h2>Core 16 Od˘</h2>
-        <div class="odu-grid">
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Ogbe</span>
-                    <span class="odu-pattern">1111</span>
-                </div>
-                <div class="odu-meaning">The Initiator</div>
-                <div class="odu-purpose">System & Lifecycle ó CLI arguments, environment variables, OS info, program
-                    initialization</div>
-                <div class="odu-aliases">Aliases: <code>sys</code> <code>os</code></div>
-            </div>
+        <div class="step">
+            <h2>The Three-Tier Runtime Model</h2>
+            <p>If√°-Lang implements a unified three-tier execution model that mirrors the three levels of Yoruba spiritual hierarchy:</p>
+            
+            <h3>1. AST Interpreter (The Diviner)</h3>
+            <ul>
+                <li><strong>Role:</strong> Direct interpretation of source code</li>
+                <li><strong>Speed:</strong> Development and debugging</li>
+                <li><strong>Use Case:</strong> REPL, rapid prototyping</li>
+                <li><strong>Character:</strong> Immediate wisdom, clear understanding</li>
+            </ul>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">“y?`k˙</span>
-                    <span class="odu-pattern">0000</span>
-                </div>
-                <div class="odu-meaning">The Finisher</div>
-                <div class="odu-purpose">Exit & Cleanup ó Program termination, sleep, graceful shutdown</div>
-                <div class="odu-aliases">Aliases: <code>exit</code></div>
-            </div>
+            <h3>2. Bytecode VM (The Oracle)</h3>
+            <ul>
+                <li><strong>Role:</strong> Optimized bytecode execution</li>
+                <li><strong>Speed:</strong> Production performance</li>
+                <li><strong>Use Case:</strong> Compiled applications</li>
+                <li><strong>Character:</strong> Efficient execution, reliable results</li>
+            </ul>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">ÃwÚrÏ</span>
-                    <span class="odu-pattern">0110</span>
-                </div>
-                <div class="odu-meaning">The Observer</div>
-                <div class="odu-purpose">Time & DateTime ó Timestamps, duration, scheduling</div>
-                <div class="odu-aliases">Aliases: <code>time</code> <code>datetime</code></div>
-            </div>
+            <h3>3. Transpiler (The Messenger)</h3>
+            <ul>
+                <li><strong>Role:</strong> Translation to native targets</li>
+                <li><strong>Speed:</strong> Maximum performance</li>
+                <li><strong>Use Case:</strong> Embedded systems, WASM</li>
+                <li><strong>Character:</strong> Universal communication, platform bridging</li>
+            </ul>
+        </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">“dÌ</span>
-                    <span class="odu-pattern">1001</span>
-                </div>
-                <div class="odu-meaning">The Guardian</div>
-                <div class="odu-purpose">File I/O ó Read, write, file system operations</div>
-                <div class="odu-aliases">Aliases: <code>fs</code> <code>io</code></div>
-            </div>
+        <div class="step">
+            <h2>Protocol-Oriented Design</h2>
+            <p>If√°-Lang rejects traditional object-oriented programming in favor of a <strong>protocol-oriented data model</strong>. This aligns with Yoruba philosophy where relationships and capabilities matter more than rigid hierarchies.</p>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Ãros˘</span>
-                    <span class="odu-pattern">1100</span>
-                </div>
-                <div class="odu-meaning">The Speaker</div>
-                <div class="odu-purpose">Console I/O ó Print, input, logging, error output</div>
-                <div class="odu-aliases">Aliases: <code>fmt</code> <code>log</code></div>
-            </div>
+            <h3>No Classes or Inheritance</h3>
+            <ul>
+                <li><strong>Instead of classes:</strong> Values implement protocols (capabilities)</li>
+                <li><strong>Instead of inheritance:</strong> Structural subtyping</li>
+                <li><strong>Instead of polymorphism:</strong> Domain protocols</li>
+                <li><strong>Instead of interfaces:</strong> Od√π domain contracts</li>
+            </ul>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">?`w?¥nrÌn</span>
-                    <span class="odu-pattern">0011</span>
-                </div>
-                <div class="odu-meaning">The Changer</div>
-                <div class="odu-purpose">Random ó Random number generation, shuffling</div>
-                <div class="odu-aliases">Aliases: <code>rand</code></div>
-            </div>
+            <h3>Values Have Character (√åw√†)</h3>
+            <blockquote>
+                "√åw√† l'ew√†." - Character is beauty.<br>
+                <small>In If√°-Lang, types encode character, not just structure. A FileHandle isn't just a descriptor - it's a value with obligations (must be closed).</small>
+            </blockquote>
+        </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">?`b‡r‡</span>
-                    <span class="odu-pattern">1000</span>
-                </div>
-                <div class="odu-meaning">The Builder</div>
-                <div class="odu-purpose">Math+ ó Addition, multiplication, exponents, trigonometry</div>
-                <div class="odu-aliases">Aliases: <code>math</code></div>
-            </div>
+        <div class="step">
+            <h2>The 16 Od√π Domains</h2>
+            <p>Each Od√π represents a fundamental aspect of programming, with a binary pattern that reflects its character:</p>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">?`k‡nr‡n</span>
-                    <span class="odu-pattern">0001</span>
+            <div class="domains-grid">
+                <div class="domain-card">
+                    <h3><span class="pattern">1111</span> Ogbe</h3>
+                    <p><strong>System</strong> - Process control, environment variables, command-line arguments</p>
+                    <p>The fully illuminated - complete system access and control</p>
                 </div>
-                <div class="odu-meaning">The Warner</div>
-                <div class="odu-purpose">Errors ó Error handling, panic, assertions</div>
-                <div class="odu-aliases">Aliases: <code>err</code> <code>panic</code></div>
-            </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">“g˙nd·</span>
-                    <span class="odu-pattern">1110</span>
+                <div class="domain-card">
+                    <h3><span class="pattern">0000</span> √íy√®k√∫</h3>
+                    <p><strong>Random</strong> - Random number generation, entropy, non-determinism</p>
+                    <p>The void - pure randomness and unpredictability</p>
                 </div>
-                <div class="odu-meaning">The Warrior</div>
-                <div class="odu-purpose">Collections ó Arrays, lists, vectors, process management</div>
-                <div class="odu-aliases">Aliases: <code>vec</code> <code>list</code></div>
-            </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">?`s·</span>
-                    <span class="odu-pattern">0111</span>
+                <div class="domain-card">
+                    <h3><span class="pattern">0001</span> √åw√≤r√¨</h3>
+                    <p><strong>Time</strong> - Timestamps, durations, scheduling, calendars</p>
+                    <p>The beginning - temporal awareness and timing</p>
                 </div>
-                <div class="odu-meaning">The Runner</div>
-                <div class="odu-purpose">Concurrency ó Parallel operations (sum, sort, min/max) via rayon</div>
-                <div class="odu-aliases">Aliases: <code>async</code> <code>thread</code></div>
-            </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Ãk·</span>
-                    <span class="odu-pattern">0100</span>
+                <div class="domain-card">
+                    <h3><span class="pattern">0010</span> √íd√≠</h3>
+                    <p><strong>Errors</strong> - Error types, exception handling, result types</p>
+                    <p>The obstacle - error handling and recovery</p>
                 </div>
-                <div class="odu-meaning">The Controller</div>
-                <div class="odu-purpose">Strings ó String manipulation, regex, JSON/CSV serialization</div>
-                <div class="odu-aliases">Aliases: <code>str</code> <code>string</code></div>
-            </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">“t˙˙r˙p?`n</span>
-                    <span class="odu-pattern">0010</span>
+                <div class="domain-card">
+                    <h3><span class="pattern">0011</span> √år√≤s√∫</h3>
+                    <p><strong>Console</strong> - Print, read, colored output, terminal control</p>
+                    <p>The speaker - communication and interface</p>
                 </div>
-                <div class="odu-meaning">The Reducer</div>
-                <div class="odu-purpose">Math- ó Subtraction, division, modulo with checked arithmetic</div>
-                <div class="odu-aliases">Aliases: <code>div</code></div>
-            </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">“t˙r·</span>
-                    <span class="odu-pattern">1011</span>
+                <div class="domain-card">
+                    <h3><span class="pattern">0100</span> Owonrin</h3>
+                    <p><strong>Collections</strong> - Lists, maps, sets, iterators, comprehensions</p>
+                    <p>The wanderer - data structures and navigation</p>
                 </div>
-                <div class="odu-meaning">The Traveler</div>
-                <div class="odu-purpose">Networking ó HTTP GET/POST, JSON fetch, URL encoding</div>
-                <div class="odu-aliases">Aliases: <code>net</code> <code>http</code></div>
-            </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Ãr?t?`</span>
-                    <span class="odu-pattern">1101</span>
+                <div class="domain-card">
+                    <h3><span class="pattern">0101</span> Obara</h3>
+                    <p><strong>Math</strong> - Arithmetic, trig, statistics</p>
+                    <p>The calculation - mathematical operations</p>
                 </div>
-                <div class="odu-meaning">The Keeper</div>
-                <div class="odu-purpose">Cryptography ó SHA256, Base64, UUID, secure random bytes</div>
-                <div class="odu-aliases">Aliases: <code>crypto</code> <code>hash</code></div>
-            </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">?`??¥</span>
-                    <span class="odu-pattern">1010</span>
+                <div class="domain-card">
+                    <h3><span class="pattern">0110</span> Okanran</h3>
+                    <p><strong>Assertions/Debug</strong> - Assert, debug output, panic</p>
+                    <p>The troublemaker - debugging and validation</p>
                 </div>
-                <div class="odu-meaning">The Artist</div>
-                <div class="odu-purpose">UI & Canvas ó ASCII graphics, terminal UI, drawing</div>
-                <div class="odu-aliases">Aliases: <code>tui</code> <code>term</code></div>
-            </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">?`f˙n</span>
-                    <span class="odu-pattern">0101</span>
+                <div class="domain-card">
+                    <h3><span class="pattern">0111</span> Ogunda</h3>
+                    <p><strong>Collections/Process</strong> - Array ops, map/filter, child processes</p>
+                    <p>The transformation - data processing and execution</p>
                 </div>
-                <div class="odu-meaning">The Judge</div>
-                <div class="odu-purpose">Permissions ó Capability checking, access control, reflection</div>
-                <div class="odu-aliases">Aliases: <code>perm</code> <code>auth</code></div>
+
+                <div class="domain-card">
+                    <h3><span class="pattern">1000</span> Osa</h3>
+                    <p><strong>Concurrency</strong> - Async tasks, channels, sleep</p>
+                    <p>The abundance - parallel execution and resources</p>
+                </div>
+
+                <div class="domain-card">
+                    <h3><span class="pattern">1001</span> Ika</h3>
+                    <p><strong>Strings</strong> - String manipulation, regex</p>
+                    <p>The measurement - text processing and analysis</p>
+                </div>
+
+                <div class="domain-card">
+                    <h3><span class="pattern">1010</span> Oturupon</h3>
+                    <p><strong>Math (inverse)</strong> - Subtraction, division, rounding</p>
+                    <p>The opposition - inverse mathematical operations</p>
+                </div>
+
+                <div class="domain-card">
+                    <h3><span class="pattern">1011</span> Otura</h3>
+                    <p><strong>Networking</strong> - HTTP, TCP/UDP, sockets</p>
+                    <p>The transmission - communication and networking</p>
+                </div>
+
+                <div class="domain-card">
+                    <h3><span class="pattern">1100</span> Irete</h3>
+                    <p><strong>Crypto/Compression</strong> - SHA-256, HMAC, base64, zlib</p>
+                    <p>The crusher - data transformation and security</p>
+                </div>
+
+                <div class="domain-card">
+                    <h3><span class="pattern">1101</span> Ose</h3>
+                    <p><strong>Graphics/Canvas</strong> - Drawing, GUI, canvas</p>
+                    <p>The creation - visual representation and graphics</p>
+                </div>
+
+                <div class="domain-card">
+                    <h3><span class="pattern">1110</span> Ofun</h3>
+                    <p><strong>Capabilities/Reflection</strong> - Type inspection, permission queries</p>
+                    <p>The completion - introspection and capabilities</p>
+                </div>
             </div>
         </div>
 
-        <h2>Special Domains</h2>
-        <div class="odu-grid">
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Coop / ¿j??e</span>
-                    <span class="odu-pattern">ó</span>
-                </div>
-                <div class="odu-meaning">The Bridge</div>
-                <div class="odu-purpose">FFI Bridge ó Python/Rust interop, reactive bindings, cross-language calls</div>
-                <div class="odu-aliases">Aliases: <code>ffi</code> <code>bridge</code> <code>coop</code></div>
+        <div class="step">
+            <h2>The 256 Od√π Lattice Vision</h2>
+            <p>In the long-term design, the 256 Od√π combinations become the 256 fundamental type categories. Each combination represents a specific character of program behavior:</p>
+
+            <div class="lattice-examples">
+                <h3>Type Characters</h3>
+                <ul>
+                    <li><strong>Ogbe + Ogbe (1111 + 1111):</strong> The fully illuminated - complete, self-consistent values</li>
+                    <li><strong>Oyeku + Ogbe (0000 + 1111):</strong> The transition from darkness to light - generator types, lazy values</li>
+                    <li><strong>Ogbe + Oyeku (1111 + 0000):</strong> The full-to-empty transformation - compression, hashing, encryption</li>
+                    <li><strong>Odi + Otura (0010 + 1011):</strong> Containment + transmission - serializable types</li>
+                    <li><strong>Irete + Osa (1100 + 0111):</strong> Compression + concurrency - parallel-safe immutable values</li>
+                </ul>
             </div>
 
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">?p?l?</span>
-                    <span class="odu-pattern">ó</span>
+            <blockquote>
+                "The 256 Od√π as a type lattice is the horizon this language is moving toward. It is not the current state. It is the direction."<br>
+                <small>This vision guides the evolution of If√°-Lang's type system.</small>
+            </blockquote>
+        </div>
+
+        <div class="step">
+            <h2>Memory Management: Opon</h2>
+            <p>Opon (the divination tray) is If√°-Lang's memory management system, inspired by the physical divination tray used in If√° ceremonies.</p>
+
+            <h3>Memory Philosophy</h3>
+            <ul>
+                <li><strong>Sacred Space:</strong> Memory is a sacred space for computation</li>
+                <li><strong>Ritual Cleanup:</strong> Resources must be properly sacrificed (closed)</li>
+                <li><strong>Pattern Recognition:</strong> Memory allocation follows sacred patterns</li>
+                <li><strong>Community Sharing:</strong> Memory is shared but respected</li>
+            </ul>
+
+            <h3>Resource Lifecycle:  </h3>
+            <p>Every resource acquired through an Od√π domain carries an <strong> </strong> (obligation) - a sacred duty to properly release the resource. This is enforced through the language's resource management system.</p>
+        </div>
+
+        <div class="step">
+            <h2>Reactive System: √Äj√µs√©</h2>
+            <p>√Äj√µs√© (the gathering) is If√°-Lang's reactive system for managing dependencies and updates. It embodies the Yoruba concept of community gathering where changes propagate through relationships.</p>
+
+            <h3>Reactive Philosophy</h3>
+            <ul>
+                <li><strong>Community:</strong> Values exist in relationship to each other</li>
+                <li><strong>Communication:</strong> Changes are communicated through the system</li>
+                <li><strong>Adaptation:</strong> The system adapts to changing conditions</li>
+                <li><strong>Harmony:</strong> All parts work together in harmony</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Bilingual Design</h2>
+            <p>If√°-Lang is fundamentally bilingual, supporting both Yoruba and English keywords. This reflects the dual nature of wisdom - traditional and modern, sacred and practical.</p>
+
+            <h3>Language Philosophy</h3>
+            <ul>
+                <li><strong>Accessibility:</strong> Both native speakers and learners can use the language</li>
+                <li><strong>Cultural Preservation:</strong> Yoruba terminology preserves cultural knowledge</li>
+                <li><strong>Universal Understanding:</strong> English terms provide global accessibility</li>
+                <li><strong>Cognitive Diversity:</strong> Multiple perspectives enhance problem-solving</li>
+            </ul>
+
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Bilingual Examples</span>
                 </div>
-                <div class="odu-meaning">The Oracle</div>
-                <div class="odu-purpose">Divination ó Compound Od˘, probabilistic computing, weighted random</div>
-                <div class="odu-aliases">Aliases: <code>opele</code> <code>oracle</code></div>
+                <pre><code>// Variable declaration
+ayanmo name = "If√°";        // Yoruba
+let name = "If√°";           // English
+
+// Function definition  
+ese greet(name) { ... }     // Yoruba
+fn greet(name) { ... }       // English
+
+// Error handling
+gbiyanju { ... } gba(e) { ... }    // Yoruba  
+try { ... } catch(e) { ... }       // English
+
+// Assertions
+ewo x > 0;                  // Yoruba
+assert x > 0;               // English</code></pre>
             </div>
         </div>
 
-        <h2>Infrastructure Layer</h2>
-        <div class="odu-grid">
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Cpu</span>
-                    <span class="odu-pattern">ó</span>
+        <div class="step">
+            <h2>Taboo System: √à√®w√≤</h2>
+            <p>√à√®w√≤ (taboo) defines architectural constraints and safety rules. In Yoruba tradition, taboos protect the community from harm; in If√°-Lang, they protect the program from errors and vulnerabilities.</p>
+
+            <h3>Architectural Taboos</h3>
+            <ul>
+                <li><strong>Thread Safety:</strong> Certain operations are taboo in multi-threaded contexts</li>
+                <li><strong>Memory Safety:</strong> Direct pointer manipulation is taboo in safe code</li>
+                <li><strong>Resource Management:</strong> Leaking resources is taboo</li>
+                <li><strong>Type Safety:</strong> Violating type contracts is taboo</li>
+            </ul>
+
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Taboo Declaration</span>
                 </div>
-                <div class="odu-purpose">Parallel computing with rayon</div>
-                <div class="odu-aliases">Aliases: <code>cpu</code> <code>parallel</code></div>
-            </div>
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Gpu</span>
-                    <span class="odu-pattern">ó</span>
-                </div>
-                <div class="odu-purpose">GPU compute with wgpu</div>
-                <div class="odu-aliases">Aliases: <code>gpu</code> <code>compute</code></div>
-            </div>
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Storage</span>
-                    <span class="odu-pattern">ó</span>
-                </div>
-                <div class="odu-purpose">Key-value store, database operations</div>
-                <div class="odu-aliases">Aliases: <code>storage</code> <code>kv</code> <code>db</code></div>
-            </div>
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Ohun</span>
-                    <span class="odu-pattern">ó</span>
-                </div>
-                <div class="odu-purpose">Audio I/O with rodio</div>
-                <div class="odu-aliases">Aliases: <code>ohun</code> <code>audio</code> <code>sound</code></div>
+                <pre><code>// Declare taboo: Ose (Graphics) -> Odi (Errors) in multi-threaded context
+√®√®w√≤: Ose -> Odi;
+
+// This means graphics operations that might error are forbidden
+// in multi-threaded contexts without proper synchronization</code></pre>
             </div>
         </div>
 
-        <h2>Application Stacks</h2>
-        <div class="odu-grid">
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Backend</span>
-                </div>
-                <div class="odu-purpose">HTTP server, ORM, REST APIs</div>
-                <div class="odu-aliases">Aliases: <code>backend</code> <code>server</code></div>
-            </div>
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">Frontend</span>
-                </div>
-                <div class="odu-purpose">HTML, CSS generation, web UI</div>
-                <div class="odu-aliases">Aliases: <code>frontend</code> <code>html</code> <code>web</code></div>
-            </div>
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">ML</span>
-                </div>
-                <div class="odu-purpose">Machine learning, tensors, neural networks</div>
-                <div class="odu-aliases">Aliases: <code>ml</code> <code>tensor</code> <code>ai</code></div>
-            </div>
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">GameDev</span>
-                </div>
-                <div class="odu-purpose">Game engine, ECS, sprites</div>
-                <div class="odu-aliases">Aliases: <code>gamedev</code> <code>game</code> <code>engine</code></div>
-            </div>
-            <div class="odu-card">
-                <div class="odu-header">
-                    <span class="odu-name">IoT</span>
-                </div>
-                <div class="odu-purpose">Embedded systems, GPIO, sensors</div>
-                <div class="odu-aliases">Aliases: <code>iot</code> <code>gpio</code> <code>embedded</code></div>
-            </div>
+        <div class="step">
+            <h2>Conclusion: Wisdom Through Patterns</h2>
+            <p>If√°-Lang represents a synthesis of ancient wisdom and modern programming. The 16 Od√π domains provide a comprehensive framework for thinking about programming problems, while the protocol-oriented design ensures flexibility and safety.</p>
+
+            <blockquote>
+                "Programming is divination. Code is prayer. Execution is revelation."<br>
+                <small>Through the sacred patterns of the Od√π, we seek not just to instruct machines, but to gain wisdom in the process of creation.</small>
+            </blockquote>
+
+            <p>The language continues to evolve toward the vision of the 256 Od√π lattice, where types encode not just structure but character, and where every program becomes a form of sacred communication between human intent and machine execution.</p>
         </div>
 
         <footer>
-            <p><a href="../index.html">? Back to Documentation</a></p>
+            <p><a href="index.html">Language Documentation</a></p>
         </footer>
     </div>
-    <script src="../js/nav.js"></script>
+
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

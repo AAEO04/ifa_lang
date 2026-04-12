@@ -4,150 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deployment - If�-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 1rem;
-        }
-
-        .subtitle {
-            color: var(--text-dim);
-            font-size: 1.2rem;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin: 2rem 0;
-        }
-
-        .card {
-            background: var(--bg-card);
-            padding: 2rem;
-            border-radius: 12px;
-            border: 1px solid rgba(233, 69, 96, 0.3);
-            transition: transform 0.3s ease, border-color 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            border-color: var(--accent);
-        }
-
-        .card h3 {
-            color: var(--gold);
-            margin-bottom: 1rem;
-            font-size: 1.3rem;
-        }
-
-        .card p {
-            color: var(--text-dim);
-            margin-bottom: 1.5rem;
-        }
-
-        .card a {
-            display: inline-block;
-            background: var(--accent);
-            color: white;
-            padding: 0.7rem 1.5rem;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: background 0.3s ease;
-        }
-
-        .card a:hover {
-            background: #d63850;
-        }
-
-        .quick-links {
-            text-align: center;
-            margin: 3rem 0;
-        }
-
-        .quick-links h2 {
-            margin-bottom: 1.5rem;
-            color: var(--gold);
-        }
-
-        .quick-links a {
-            display: inline-block;
-            margin: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(255, 215, 0, 0.1);
-            border: 1px solid var(--gold);
-            border-radius: 20px;
-            color: var(--gold);
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-
-        .quick-links a:hover {
-            background: var(--gold);
-            color: var(--bg-dark);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-
-        footer a {
-            color: var(--gold);
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <title>Deployment - Ifá-Lang</title>
+    <meta name="description" content="Ifá-Lang deployment documentation for all platforms">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -155,49 +20,438 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
-            <h1>?? Deployment</h1>
-            <p class="subtitle">Deploy and distribute your If�-Lang applications</p>
+            <h1>Deployment</h1>
+            <p class="subtitle">Multi-Platform Runtime Architecture</p>
         </header>
 
-        <div class="grid">
-            <div class="card">
-                <h3>?? Deployment Guide</h3>
-                <p>Learn how to deploy If�-Lang applications to various platforms and environments.</p>
-                <a href="deployment.html">Deployment Guide ?</a>
-            </div>
+        <div class="step">
+            <h2>Deployment Overview</h2>
+            <p>Ifá-Lang supports multiple deployment targets through a unified codebase with platform-specific optimizations. The three-tier runtime architecture adapts to different environments while maintaining language consistency.</p>
+            
+            <div class="deployment-grid">
+                <div class="deployment-card">
+                    <h3>Native (ifa-cli)</h3>
+                    <p>Full-featured runtime with complete 16 Odù domains, JIT compilation, and development tools.</p>
+                    <ul>
+                        <li>Complete standard library</li>
+                        <li>Maximum performance</li>
+                        <li>Full development tools</li>
+                        <li>Multi-threading support</li>
+                    </ul>
+                    <a href="deployment.html">Learn More</a>
+                </div>
 
-            <div class="card">
-                <h3>?? Oja Publishing</h3>
-                <p>Publish your packages to the Oja package registry and share with the community.</p>
-                <a href="oja-publishing.html">Oja Publishing ?</a>
-            </div>
+                <div class="deployment-card">
+                    <h3>WebAssembly (ifa-wasm)</h3>
+                    <p>Browser runtime with core domains and WebGPU support for web applications.</p>
+                    <ul>
+                        <li>Core 8 domains</li>
+                        <li>Browser sandboxing</li>
+                        <li>WebGPU graphics</li>
+                        <li>Async/await support</li>
+                    </ul>
+                    <a href="deployment.html#webassembly-deployment-ifa-wasm">Learn More</a>
+                </div>
 
-            <div class="card">
-                <h3>??? Deployment Stacks</h3>
-                <p>Pre-configured deployment stacks for different application types and platforms.</p>
-                <a href="../index.html">Deployment Stacks ?</a>
+                <div class="deployment-card">
+                    <h3>Embedded (ifa-embedded)</h3>
+                    <p>no_std runtime for microcontrollers with memory constraints and hardware integration.</p>
+                    <ul>
+                        <li>Minimal 5 domains</li>
+                        <li>Bounded memory</li>
+                        <li>GPIO support</li>
+                        <li>Real-time constraints</li>
+                    </ul>
+                    <a href="deployment.html#embedded-deployment-ifa-embedded">Learn More</a>
+                </div>
+
+                <div class="deployment-card">
+                    <h3>Sandbox (ifa-sandbox)</h3>
+                    <p>Capability-based WASM sandbox for safe execution of untrusted code.</p>
+                    <ul>
+                        <li>Safe 5 domains</li>
+                        <li>Resource limits</li>
+                        <li>Capability control</li>
+                        <li>Time boxing</li>
+                    </ul>
+                    <a href="deployment.html#sandboxed-deployment-ifa-sandbox">Learn More</a>
+                </div>
             </div>
         </div>
 
-        <div class="quick-links">
-            <h2>Quick Navigation</h2>
-            <a href="../index.html">Getting Started</a>
-            <a href="../language/syntax.html">Language Syntax</a>
-            <a href="../api/api.html">API Reference</a>
-            <a href="../examples/examples.html">Examples</a>
-            <a href="../tools/cli.html">CLI Tools</a>
+        <div class="step">
+            <h2>Quick Start</h2>
+            
+            <h3>Choose Your Platform</h3>
+            <div class="platform-selector">
+                <div class="platform-option">
+                    <h4>Desktop Applications</h4>
+                    <p>Use the native runtime for maximum features and performance.</p>
+                    <div class="code-example">
+                        <pre><code># Install native runtime
+curl -sSL https://install.ifa-lang.org | sh
+
+# Run your code
+ifa run program.ifa</code></pre>
+                    </div>
+                </div>
+
+                <div class="platform-option">
+                    <h4>Web Applications</h4>
+                    <p>Deploy to browsers using WebAssembly for cross-platform compatibility.</p>
+                    <div class="code-example">
+                        <pre><code># Build for WebAssembly
+cargo build --target wasm32-unknown-unknown --package ifa-wasm
+
+# Use in web page
+import { run_ifa_code } from './ifa-wasm.js';</code></pre>
+                    </div>
+                </div>
+
+                <div class="platform-option">
+                    <h4>IoT Devices</h4>
+                    <p>Deploy to embedded systems with minimal memory footprint.</p>
+                    <div class="code-example">
+                        <pre><code># Build for embedded target
+cargo build --target thumbv7m-none-eabi --package ifa-embedded
+
+# Flash to device
+openocd -f interface.cfg -f target.cfg</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Platform Comparison</h2>
+            
+            <div class="comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Native</th>
+                            <th>WebAssembly</th>
+                            <th>Embedded</th>
+                            <th>Sandbox</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Performance</strong></td>
+                            <td>Maximum</td>
+                            <td>High</td>
+                            <td>Low</td>
+                            <td>Medium</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Memory</strong></td>
+                            <td>Unlimited</td>
+                            <td>Limited</td>
+                            <td>Very Limited</td>
+                            <td>Limited</td>
+                        </tr>
+                        <tr>
+                            <td><strong>16 Odù Domains</strong></td>
+                            <td>Full (16)</td>
+                            <td>Core (8)</td>
+                            <td>Minimal (5)</td>
+                            <td>Safe (5)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>File System</strong></td>
+                            <td>Full</td>
+                            <td>Browser API</td>
+                            <td>None</td>
+                            <td>None</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Networking</strong></td>
+                            <td>Full</td>
+                            <td>Browser API</td>
+                            <td>Limited</td>
+                            <td>None</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GPU/Graphics</strong></td>
+                            <td>Full</td>
+                            <td>WebGPU</td>
+                            <td>None</td>
+                            <td>None</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Security</strong></td>
+                            <td>OS-level</td>
+                            <td>Browser sandbox</td>
+                            <td>Hardware isolation</td>
+                            <td>Capability-based</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Feature Matrix</h2>
+            
+            <h3>Domain Availability</h3>
+            <div class="feature-matrix">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>Native</th>
+                            <th>WASM</th>
+                            <th>Embedded</th>
+                            <th>Sandbox</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Ogbe</strong></td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>System operations</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Irosu</strong></td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>Console I/O</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Obara</strong></td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>Math (add/mul)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Oturupon</strong></td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>❌</td>
+                            <td>❌</td>
+                            <td>Math (sub/div)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ika</strong></td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>❌</td>
+                            <td>✅</td>
+                            <td>String operations</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ogunda</strong></td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>❌</td>
+                            <td>✅</td>
+                            <td>Array operations</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Owọn</strong></td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>❌</td>
+                            <td>Random numbers</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Odi</strong></td>
+                            <td>✅</td>
+                            <td>❌</td>
+                            <td>❌</td>
+                            <td>❌</td>
+                            <td>File/Database</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Otura</strong></td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>❌</td>
+                            <td>❌</td>
+                            <td>Networking</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Irete</strong></td>
+                            <td>✅</td>
+                            <td>❌</td>
+                            <td>❌</td>
+                            <td>❌</td>
+                            <td>Crypto/Compression</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ose</strong></td>
+                            <td>✅</td>
+                            <td>✅</td>
+                            <td>❌</td>
+                            <td>❌</td>
+                            <td>Graphics</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ofun</strong></td>
+                            <td>✅</td>
+                            <td>❌</td>
+                            <td>❌</td>
+                            <td>❌</td>
+                            <td>Permissions</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Build Configuration</h2>
+            
+            <h3>Cargo Features</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Feature Selection</span>
+                </div>
+                <pre><code># Full native build
+cargo build --features native,full-domains
+
+# WebAssembly build
+cargo build --target wasm32-unknown-unknown --features wasm,core-domains
+
+# Embedded build
+cargo build --target thumbv7m-none-eabi --features embedded,core-domains
+
+# Sandbox build
+cargo build --features sandbox,safe-domains</code></pre>
+            </div>
+
+            <h3>Feature Groups</h3>
+            <div class="feature-groups">
+                <div class="feature-group">
+                    <h4>Platform Features</h4>
+                    <ul>
+                        <li><strong>native:</strong> Full desktop/server features</li>
+                        <li><strong>wasm:</strong> Browser/WebAssembly features</li>
+                        <li><strong>embedded:</strong> no_std embedded features</li>
+                        <li><strong>sandbox:</strong> Capability-based sandbox</li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Domain Groups</h4>
+                    <ul>
+                        <li><strong>full-domains:</strong> All 16 Odù domains</li>
+                        <li><strong>core-domains:</strong> Essential 8 domains</li>
+                        <li><strong>safe-domains:</strong> Sandbox-safe 5 domains</li>
+                        <li><strong>minimal-domains:</strong> Embedded 5 domains</li>
+                    </ul>
+                </div>
+                <div class="feature-group">
+                    <h4>Infrastructure</h4>
+                    <ul>
+                        <li><strong>backend:</strong> Server-side features</li>
+                        <li><strong>frontend:</strong> Web UI features</li>
+                        <li><strong>game:</strong> Game development</li>
+                        <li><strong>ml:</strong> Machine learning</li>
+                        <li><strong>iot:</strong> IoT device support</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Development Workflow</h2>
+            
+            <h3>Local Development</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Development Setup</span>
+                </div>
+                <pre><code># Clone repository
+git clone https://github.com/ifa-lang/ifa-lang
+cd ifa-lang
+
+# Install development tools
+cargo install --path ifa-cli
+cargo install --path ifa-babalawo
+
+# Run locally
+ifa run examples/hello.ifa
+
+# Start REPL
+ifa repl
+
+# Start LSP server
+ifa-babalawo</code></pre>
+            </div>
+
+            <h3>Testing Across Platforms</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Multi-Platform Testing</span>
+                </div>
+                <pre><code># Test all platforms
+cargo test --features native,full-domains
+cargo test --target wasm32-unknown-unknown --features wasm,core-domains
+cargo test --target thumbv7m-none-eabi --features embedded,core-domains
+
+# Integration tests
+cargo test --test integration --features native,full-domains
+
+# Performance benchmarks
+cargo bench --features native,full-domains</code></pre>
+            </div>
+
+            <h3>CI/CD Pipeline</h3>
+            <ul>
+                <li><strong>Automated Builds:</strong> Build for all targets on every push</li>
+                <li><strong>Automated Testing:</strong> Run tests across all platforms</li>
+                <li><strong>Performance Testing:</strong> Benchmark each target</li>
+                <li><strong>Deployment:</strong> Automatic deployment to package registries</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Resources</h2>
+            
+            <h3>Documentation</h3>
+            <ul>
+                <li><a href="deployment.html">Complete Deployment Guide</a></li>
+                <li><a href="../language/index.html">Language Reference</a></li>
+                <li><a href="../reference/index.html">API Reference</a></li>
+                <li><a href="../infrastructure/index.html">Infrastructure Guide</a></li>
+            </ul>
+
+            <h3>Tools</h3>
+            <ul>
+                <li><strong>ifa-cli:</strong> Native command-line interface</li>
+                <li><strong>ifa-babalawo:</strong> Language server for IDEs</li>
+                <li><strong>ifa-installer:</strong> Cross-platform installer</li>
+                <li><strong>ifa-playground:</strong> Web-based playground</li>
+            </ul>
+
+            <h3>Community</h3>
+            <ul>
+                <li><strong>GitHub:</strong> Source code and issues</li>
+                <li><strong>Discord:</strong> Community chat and support</li>
+                <li><strong>Forums:</strong> Discussions and Q&A</li>
+                <li><strong>Contributing:</strong> Development guidelines</li>
+            </ul>
         </div>
 
         <footer>
-            <p><a href="../index.html">? Back to Documentation Home</a></p>
+            <p><a href="../index.html">Documentation Home</a></p>
         </footer>
     </div>
-    <script src="../js/nav.js"></script>
+
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-
-

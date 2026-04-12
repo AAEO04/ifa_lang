@@ -4,99 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Procedural Macros - If�-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        .api-card {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        .api-card h4 {
-            color: var(--gold);
-            margin: 0 0 0.5rem;
-            font-family: monospace;
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Procedural Macros - Ifá-Lang</title>
+    <meta name="description" content="Procedural macros for Ifá-Lang's cultural safety features and reactive programming">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -104,102 +20,393 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
-        <h1>?? Procedural Macros</h1>
-        <p>Compile-time code generation for If�-Lang's cultural safety features.</p>
-        <p><strong>Source:</strong> <code>crates/ifa-macros/src/lib.rs</code> (290 lines)</p>
+        <header>
+            <h1>Procedural Macros</h1>
+            <p class="subtitle">Cultural Safety Features & Reactive Programming</p>
+        </header>
 
-        <h2>Available Macros</h2>
+        <div class="step">
+            <h2>Overview</h2>
+            <p>Ifá-Lang's procedural macros provide compile-time safety checks and code generation that embody Yoruba cultural principles. These macros ensure resource safety, balance checking, and reactive relationships in your code.</p>
+        </div>
 
-        <div class="api-card">
-            <h4>#[derive(Ebo)]</h4>
-            <p>Auto-implement <code>Drop</code> for RAII resource cleanup.</p>
-            <pre><code>// Rust usage
-#[derive(Ebo)]
-#[ebo(cleanup = "close")]  // Optional: specify cleanup method
+        <div class="step">
+            <h2>Available Macros</h2>
+            
+            <div class="macro-grid">
+                <div class="macro-card">
+                    <h3>#[derive(Ebo)]</h3>
+                    <p>Auto-implement Drop for RAII resource cleanup</p>
+                    <span class="pattern">Resource Management</span>
+                </div>
+
+                <div class="macro-card">
+                    <h3>#[iwa_pele]</h3>
+                    <p>Compile-time balance checking for paired operations</p>
+                    <span class="pattern">Safety Enforcement</span>
+                </div>
+
+                <div class="macro-card">
+                    <h3>ajose!</h3>
+                    <p>Reactive binding declarations between values</p>
+                    <span class="pattern">Reactive Programming</span>
+                </div>
+
+                <div class="macro-card">
+                    <h3>ebo_block!</h3>
+                    <p>Scoped RAII block with guaranteed cleanup</p>
+                    <span class="pattern">Resource Safety</span>
+                </div>
+
+                <div class="macro-card">
+                    <h3>#[derive(Observable)]</h3>
+                    <p>Makes struct fields observable for reactive updates</p>
+                    <span class="pattern">Reactive Data</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>#[derive(Ebo)] - Resource Sacrifice</h2>
+            <p>Automatically implements <code>Drop</code> trait for RAII resource cleanup. The macro embodies the Yoruba concept of   (sacrifice/offering) where resources must be properly returned to the system.</p>
+
+            <h3>Basic Usage</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Ebo Derive</span>
+                </div>
+                <pre><code>#[derive(Ebo)]
 struct MyFile {
     handle: std::fs::File,
 }
 
-// Drop is auto-implemented calling self.close()</code></pre>
+// Drop is auto-implemented:
+impl Drop for MyFile {
+    fn drop(&mut self) {
+        println!("[Ebo] Sacrificed: MyFile");
+    }
+}</code></pre>
+            </div>
+
+            <h3>Custom Cleanup Method</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Custom Ebo</span>
+                </div>
+                <pre><code>#[derive(Ebo)]
+#[ebo(cleanup = "close")]
+struct DatabaseConnection {
+    pool: sql::Pool,
+}
+
+// Generates:
+impl Drop for DatabaseConnection {
+    fn drop(&mut self) {
+        println!("[Ebo] Sacrificing DatabaseConnection");
+        self.close();  // Calls custom cleanup method
+    }
+}</code></pre>
+            </div>
+
+            <h3>Attribute Parameters</h3>
+            <ul>
+                <li><strong>cleanup = "method"</strong> - Specify custom cleanup method name</li>
+                <li><strong>Default:</strong> Prints sacrifice message without cleanup</li>
+            </ul>
         </div>
 
-        <div class="api-card">
-            <h4>#[iwa_pele]</h4>
-            <p>Compile-time balance checking for paired operations.</p>
-            <pre><code>// Ensures open/close pairs match
-#[iwa_pele]
+        <div class="step">
+            <h2>#[iwa_pele] - Gentle Balance</h2>
+            <p>Compile-time balance checking for paired operations. Ìwà Pélé (gentle character) ensures that resources opened in a scope are properly closed in the same scope, preventing resource leaks.</p>
+
+            <h3>Checked Operation Pairs</h3>
+            <ul>
+                <li><strong>so / pa</strong> - socket open/close</li>
+                <li><strong>si / ti</strong> - file open/close</li>
+                <li><strong>mu / fi</strong> - acquire/release</li>
+                <li><strong>bere / da</strong> - start/stop</li>
+            </ul>
+
+            <h3>Usage Example</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Balance Checking</span>
+                </div>
+                <pre><code>#[iwa_pele]
 fn network_task() {
     let conn = Otura.so("example.com", 80);  // open
-    // ... use connection ...
-    Otura.pa(conn);  // close - required!
+    // ... work with connection
+    conn.pa();  // close - REQUIRED or compile error
 }
 
-// Pairs checked:
-// - so / pa (open/close)
-// - si / ti (write open/close)
-// - mu / fi (acquire/release)
-// - bere / da (start/stop)</code></pre>
-        </div>
-
-        <div class="api-card">
-            <h4>ajose!</h4>
-            <p>Create reactive bindings between values.</p>
-            <pre><code>// Reactive binding declaration
-ajose!(counter.value => label.text);
-
-// When counter.value changes, label.text updates automatically</code></pre>
-        </div>
-
-        <div class="api-card">
-            <h4>ebo_block!</h4>
-            <p>Scoped RAII block with guaranteed cleanup.</p>
-            <pre><code>ebo_block! {
-    let file = std::fs::File::open("data.txt")?;
-    // ... use file ...
-    // file auto-closed when block exits (even on error)
+// This would cause compile error:
+#[iwa_pele]
+fn bad_function() {
+    let file = Odi.si("data.txt");  // open file
+    // Missing: file.ti() - compile error!
+    // Ìwà Pélé violation: Block leaks resource
 }</code></pre>
+            </div>
+
+            <h3>Compile-Time Enforcement</h3>
+            <p>The macro performs lexical CFG (Control Flow Graph) analysis at compile time:</p>
+            <ul>
+                <li><strong>Zero Runtime Cost:</strong> No runtime overhead</li>
+                <li><strong>Lexical Scope:</strong> Checks within each block</li>
+                <li><strong>Clear Errors:</strong> Detailed violation messages</li>
+                <li><strong>Early Detection:</strong> Catches leaks before execution</li>
+            </ul>
         </div>
 
-        <div class="api-card">
-            <h4>#[derive(Observable)]</h4>
-            <p>Make struct fields observable for reactive updates.</p>
-            <pre><code>#[derive(Observable)]
+        <div class="step">
+            <h2>ajose! - Reactive Binding</h2>
+            <p>Creates reactive bindings between values. Àjõsé (gathering/assembly) represents the reactive system where changes propagate through relationships automatically.</p>
+
+            <h3>Basic Reactive Binding</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Standard Binding</span>
+                </div>
+                <pre><code>let counter = RefCell::new(0);
+let label = RefCell::new("0".to_string());
+
+// Create reactive binding
+ajose!(counter.borrow() => label.borrow_mut());
+
+// When counter changes, label updates automatically
+*counter.borrow_mut() = 42;  // label becomes "42"</code></pre>
+            </div>
+
+            <h3>Freeze Binding (Cross-thread)</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Thread-Safe Binding</span>
+                </div>
+                <pre><code>let shared_data = Arc::new(Mutex::new(Vec::new()));
+let local_counter = RefCell::new(0);
+
+// Auto-freeze for cross-thread safety
+ajose!(local_counter.borrow() => #freeze shared_data.lock().unwrap());
+
+// Creates frozen value safe for sharing across threads</code></pre>
+            </div>
+
+            <h3>Generated Code</h3>
+            <p>The macro generates subscription logic and initial synchronization:</p>
+            <ul>
+                <li><strong>Subscription Creation:</strong> Callback for value changes</li>
+                <li><strong>Initial Sync:</strong> Sets target to source value</li>
+                <li><strong>Freeze Logic:</strong> Optional thread-safe freezing</li>
+                <li><strong>Debug Output:</strong> Binding creation logging</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>ebo_block! - Scoped Resource Management</h2>
+            <p>Creates a scoped RAII block with guaranteed cleanup. The block embodies the concept of ritual boundaries where resources are managed within a sacred space.</p>
+
+            <h3>Usage</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Ebo Block</span>
+                </div>
+                <pre><code>ebo_block! {
+    let file = std::fs::File::open("data.txt")?;
+    let conn = Database::connect("localhost")?;
+    
+    // Work with resources
+    process_data(&file, &conn)?;
+    
+    // All resources auto-cleanup when block exits
+}
+
+// Output:
+// --- Ebo Block Started ---
+// [Work happens here]
+// --- Ebo Block Complete ---</code></pre>
+            </div>
+
+            <h3>Generated Structure</h3>
+            <p>The macro creates a guard struct with Drop implementation:</p>
+            <ul>
+                <li><strong>Guard Creation:</strong> _EboGuard instance</li>
+                <li><strong>Start Logging:</strong> Block initiation message</li>
+                <li><strong>Drop Implementation:</strong> Completion logging</li>
+                <li><strong>Scope Safety:</strong> Guaranteed cleanup</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>#[derive(Observable)] - Reactive Data</h2>
+            <p>Makes a struct's fields observable for reactive updates. Generates watcher methods for each field, enabling reactive programming patterns.</p>
+
+            <h3>Basic Usage</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Observable Struct</span>
+                </div>
+                <pre><code>#[derive(Observable)]
 struct Counter {
     value: i32,
+    name: String,
 }
 
-// Generates Counter::watch_value() method
-let counter = Counter { value: 0 };
-counter.watch_value(|new_val| {
-    println!("Value changed to: {}", new_val);
+// Generated methods:
+impl Counter {
+    pub fn watch_value<F: Fn(&i32) + 'static>(&self, callback: F) {
+        println!("[Observable] Watching: Counter.value");
+        callback(&self.value);
+    }
+    
+    pub fn watch_name<F: Fn(&String) + 'static>(&self, callback: F) {
+        println!("[Observable] Watching: Counter.name");
+        callback(&self.name);
+    }
+}</code></pre>
+            </div>
+
+            <h3>Reactive Pattern</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Reactive Usage</span>
+                </div>
+                <pre><code>let counter = Counter { value: 0, name: "counter".to_string() };
+
+// Watch for changes
+counter.watch_value(|val| {
+    println!("Value changed to: {}", val);
+});
+
+counter.watch_name(|name| {
+    println!("Name changed to: {}", name);
 });</code></pre>
+            </div>
+
+            <h3>Generated Features</h3>
+            <ul>
+                <li><strong>Field Watchers:</strong> watch_{field_name} methods</li>
+                <li><strong>Type Safety:</strong> Generics for callback types</li>
+                <li><strong>Logging:</strong> Debug output for watcher creation</li>
+                <li><strong>Struct Only:</strong> Works only on struct types</li>
+            </ul>
         </div>
 
-        <h2>Usage in Rust</h2>
-        <pre><code>// Add to Cargo.toml
-[dependencies]
-ifa-macros = "1.2"
+        <div class="step">
+            <h2>Integration with Runtime Specification</h2>
+            
+            <h3>Cultural Safety</h3>
+            <p>These macros embody Yoruba cultural principles:</p>
+            <ul>
+                <li><strong>  (Sacrifice):</strong> Resources must be properly returned</li>
+                <li><strong>Ìwà Pélé (Gentle Character):</strong> Balance and harmony in operations</li>
+                <li><strong>Àjõsé (Gathering):</strong> Community of reactive relationships</li>
+                <li><strong>Sacred Boundaries:</strong> Scoped resource management</li>
+            </ul>
 
-// Import in Rust code
-use ifa_macros::{Ebo, iwa_pele, ajose, ebo_block};</code></pre>
+            <h3>Protocol-Oriented Design</h3>
+            <p>Macros support the protocol-oriented architecture:</p>
+            <ul>
+                <li><strong>No Classes:</strong> Derive macros work with struct protocols</li>
+                <li><strong>Capability-Based:</strong> Resources implement cleanup protocols</li>
+                <li><strong>Structural Typing:</strong> Balance checking based on method names</li>
+                <li><strong>Reactive Protocols:</strong> Observable and binding capabilities</li>
+            </ul>
 
-        <h2>How �w� P?`l?� Works</h2>
-        <p>The <code>#[iwa_pele]</code> macro performs AST analysis to count method calls:</p>
-        <ol style="margin-left: 1.5rem;">
-            <li>Parses the function body into AST</li>
-            <li>Counts calls to paired methods (so/pa, mu/fi, etc.)</li>
-            <li>Emits compile error if counts don't match</li>
-        </ol>
+            <h3>Three-Tier Runtime Support</h3>
+            <ul>
+                <li><strong>AST Interpreter:</strong> Macro expansion at compile time</li>
+                <li><strong>Bytecode VM:</strong> Zero-cost abstractions</li>
+                <li><strong>Transpiler:</strong> Generated code compatible with all targets</li>
+            </ul>
+        </div>
 
-        <footer class="doc-footer">
-            <p><a href="../ebo.html">? ?b? RAII</a> � <a href="../ajose.html">�j??e Reactivity ?</a></p>
-            <p><a href="../index.html">Documentation Home</a></p>
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>Resource Management</h3>
+            <ul>
+                <li>Use <code>#[derive(Ebo)]</code> for all resource-holding structs</li>
+                <li>Apply <code>#[iwa_pele]</code> to functions with paired operations</li>
+                <li>Wrap critical sections with <code>ebo_block!</code></li>
+                <li>Specify custom cleanup methods when needed</li>
+            </ul>
+
+            <h3>Reactive Programming</h3>
+            <ul>
+                <li>Make data structures <code>#[derive(Observable)]</code> for UI updates</li>
+                <li>Use <code>ajose!</code> for cross-component data binding</li>
+                <li>Apply <code>#freeze</code> modifier for cross-thread bindings</li>
+                <li>Combine with async patterns for reactive I/O</li>
+            </ul>
+
+            <h3>Performance Considerations</h3>
+            <ul>
+                <li><strong>Zero Cost:</strong> <code>#[iwa_pele]</code> has no runtime overhead</li>
+                <li><strong>Compile Time:</strong> All checks happen during compilation</li>
+                <li><strong>Minimal Runtime:</strong> Other macros have minimal overhead</li>
+                <li><strong>Optimization Friendly:</strong> Generated code optimizes well</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Example: Complete Application</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Integrated Macro Usage</span>
+                </div>
+                <pre><code>// Observable data structure
+#[derive(Observable)]
+struct AppState {
+    counter: i32,
+    status: String,
+}
+
+// Resource with automatic cleanup
+#[derive(Ebo)]
+#[ebo(cleanup = "disconnect")]
+struct DatabaseConnection {
+    pool: sql::Pool,
+}
+
+impl DatabaseConnection {
+    fn disconnect(&mut self) {
+        // Custom cleanup logic
+        self.pool.close();
+    }
+}
+
+#[iwa_pele]
+fn main() {
+    ebo_block! {
+        let conn = DatabaseConnection::new();
+        let state = AppState { counter: 0, status: "ready".to_string() };
+        
+        // Reactive binding
+        ajose!(state.counter => conn.query_count);
+        
+        // Watch for changes
+        state.watch_status(|status| {
+            println!("Status: {}", status);
+        });
+        
+        // Update state (triggers reactive updates)
+        state.counter = 42;
+        state.status = "processing".to_string();
+        
+        // conn automatically disconnected on block exit
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Language Documentation</a></p>
         </footer>
     </div>
-    <script src="../js/nav.js"></script>
+
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

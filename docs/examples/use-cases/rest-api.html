@@ -4,134 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Build a REST API - If·-Lang Use Cases</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-            --success: #4ade80;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-            margin: 2.5rem 0 1rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        .step {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            border-left: 4px solid var(--accent);
-        }
-
-        .step-number {
-            display: inline-block;
-            background: var(--accent);
-            color: white;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 28px;
-            font-weight: bold;
-            margin-right: 0.5rem;
-        }
-
-        .file-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--gold);
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-
-        .info-box {
-            background: rgba(74, 222, 128, 0.1);
-            border: 1px solid var(--success);
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>REST API Server - If√°-Lang</title>
+    <meta name="description" content="Complete REST API server example using If√°-Lang's web development capabilities">
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -139,189 +20,2273 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
-            <p style="color: var(--text-dim); margin-bottom: 0.5rem;">USE CASE</p>
-            <h1>?? Build a REST API</h1>
-            <p style="color: var(--text-dim);">Create a JSON API server using the Backend stack</p>
+            <h1>REST API Server</h1>
+            <p class="subtitle">Web Service Development with If√°-Lang</p>
         </header>
 
-        <h2>What You'll Build</h2>
-        <p>A simple REST API with endpoints for managing a to-do list:</p>
-        <ul style="margin-left: 2rem; color: var(--text-dim);">
-            <li><code>GET /todos</code> ó List all todos</li>
-            <li><code>POST /todos</code> ó Create a new todo</li>
-            <li><code>GET /todos/:id</code> ó Get a specific todo</li>
-            <li><code>DELETE /todos/:id</code> ó Delete a todo</li>
-        </ul>
-
-        <h2>Prerequisites</h2>
-        <p>Make sure you have If·-Lang installed with the <strong>Backend</strong> stack:</p>
-        <pre><code>ifa --version
-# If·-Lang v1.2.2 (Backend stack enabled)</code></pre>
-
         <div class="step">
-            <h3><span class="step-number">1</span> Create the Project</h3>
-            <pre><code>oja new todo-api
-cd todo-api</code></pre>
+            <h2>Overview</h2>
+            <p>This example demonstrates building a complete REST API server using If√°-Lang's web development capabilities. The server includes CRUD operations, middleware, authentication, database integration, and proper error handling following If√°-Lang's cultural and architectural principles.</p>
         </div>
 
         <div class="step">
-            <h3><span class="step-number">2</span> Define the Server</h3>
-            <div class="file-header">?? src/main.ifa</div>
-            <pre><code>// Todo API Server
-ayanmo Backend = import("@stacks/backend");
+            <h2>Project Structure</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Project Layout</span>
+                </div>
+                <pre><code>ifa-rest-api/
+|-- src/
+|   |-- main.ifa           # Application entry point
+|   |-- models.ifa         # Data models
+|   |-- handlers.ifa       # HTTP request handlers
+|   |-- middleware.ifa     # Custom middleware
+|   |-- database.ifa       # Database operations
+|   |-- auth.ifa           # Authentication logic
+|   `-- config.ifa         # Configuration management
+|-- tests/
+|   |-- api_tests.ifa      # Integration tests
+|   `-- auth_tests.ifa     # Authentication tests
+|-- static/                # Static files (CSS, JS, images)
+|-- templates/             # HTML templates
+|-- ifa.toml              # Project configuration
+`-- README.md             # Project documentation</code></pre>
+            </div>
+        </div>
 
-// In-memory storage
-ayanmo todos = [];
-ayanmo next_id = 1;
+        <div class="step">
+            <h2>Data Models</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/models.ifa</span>
+                </div>
+                <pre><code>// User model with validation
+struct User {
+    id: u64,
+    username: Str,
+    email: Str,
+    password_hash: Str,
+    created_at: u64,
+    updated_at: u64,
+    is_active: Bool
+}
 
-// Create router
-ayanmo router = Backend.router();
+// Blog post model
+struct BlogPost {
+    id: u64,
+    title: Str,
+    content: Str,
+    author_id: u64,
+    created_at: u64,
+    updated_at: u64,
+    published: Bool,
+    tags: Vec<Str>
+}
 
-// GET /todos - List all
-router.get("/todos", (req, res) => {
-    res.json(todos);
-});
+// API response wrapper
+struct ApiResponse<T> {
+    success: Bool,
+    data: Option<T>,
+    message: Str,
+    timestamp: u64
+}
 
-// POST /todos - Create new
-router.post("/todos", (req, res) => {
-    ayanmo body = req.json();
-    ayanmo todo = {
-        "id": next_id,
-        "title": body["title"],
-        "done": iro
+// Pagination parameters
+struct Pagination {
+    page: u32,
+    limit: u32,
+    total: u64,
+    offset: u32
+}
+
+// Error response
+struct ErrorResponse {
+    success: eke,
+    error: Str,
+    code: u32,
+    timestamp: u64
+}
+
+// User creation request
+struct CreateUserRequest {
+    username: Str,
+    email: Str,
+    password: Str
+}
+
+// User update request
+struct UpdateUserRequest {
+    username: Option<Str>,
+    email: Option<Str>,
+    is_active: Option<Bool>
+}
+
+// Blog post creation request
+struct CreatePostRequest {
+    title: Str,
+    content: Str,
+    tags: Vec<Str>,
+    published: Bool
+}
+
+// Validation functions
+ese validate_user_request(request: CreateUserRequest) -> Result<(), Str> {
+    // Username validation
+    if Ika.length(request.username) < 3 {
+        pada Err("Username must be at least 3 characters long");
+    }
+    
+    if Ika.length(request.username) > 50 {
+        pada Err("Username must not exceed 50 characters");
+    }
+    
+    if !Ika.matches(request.username, "^[a-zA-Z0-9_]+$") {
+        pada Err("Username can only contain letters, numbers, and underscores");
+    }
+    
+    // Email validation
+    if !Ika.contains(request.email, "@") or !Ika.contains(request.email, ".") {
+        pada Err("Invalid email format");
+    }
+    
+    // Password validation
+    if Ika.length(request.password) < 8 {
+        pada Err("Password must be at least 8 characters long");
+    }
+    
+    if !Ika.matches(request.password, "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$") {
+        pada Err("Password must contain at least one lowercase letter, one uppercase letter, and one number");
+    }
+    
+    pada Ok(());
+}
+
+ese validate_post_request(request: CreatePostRequest) -> Result<(), Str> {
+    if Ika.length(Ika.trim(request.title)) == 0 {
+        pada Err("Title cannot be empty");
+    }
+    
+    if Ika.length(request.title) > 200 {
+        pada Err("Title must not exceed 200 characters");
+    }
+    
+    if Ika.length(Ika.trim(request.content)) == 0 {
+        pada Err("Content cannot be empty");
+    }
+    
+    if Ika.length(request.content) > 10000 {
+        pada Err("Content must not exceed 10,000 characters");
+    }
+    
+    if request.tags.length() > 10 {
+        pada Err("Cannot have more than 10 tags");
+    }
+    
+    fun tag ninu request.tags {
+        if Ika.length(tag) > 50 {
+            pada Err("Tag '" + tag + "' exceeds 50 characters");
+        }
+    }
+    
+    pada Ok(());
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Database Operations</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/database.ifa</span>
+                </div>
+                <pre><code>// Database connection and operations
+struct Database {
+    connection: DatabaseConnection,
+    pool_size: u32
+}
+
+// Initialize database connection
+ese init_database(config: DatabaseConfig) -> Database {
+    gbiyanju {
+        ayanmo connection = Otura.connect(config.url, config.pool_size);
+        
+        // Run migrations
+        run_migrations(connection);
+        
+        Irosu.fo("Database initialized successfully");
+        
+        pada Database {
+            connection: connection,
+            pool_size: config.pool_size
+        };
+    } gba (error) {
+        Irosu.kigbe("Failed to initialize database: " + error.message);
+        Oyeku.exit(1);
+    }
+}
+
+// Database migrations
+ese run_migrations(connection: DatabaseConnection) {
+    ayanmo migrations = [
+        "CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT 1
+        )",
+        
+        "CREATE TABLE IF NOT EXISTS blog_posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            author_id INTEGER NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            published BOOLEAN NOT NULL DEFAULT 0,
+            FOREIGN KEY (author_id) REFERENCES users(id)
+        )",
+        
+        "CREATE TABLE IF NOT EXISTS post_tags (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            post_id INTEGER NOT NULL,
+            tag TEXT NOT NULL,
+            FOREIGN KEY (post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
+        )",
+        
+        "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+        "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+        "CREATE INDEX IF NOT EXISTS idx_blog_posts_author ON blog_posts(author_id)",
+        "CREATE INDEX IF NOT EXISTS idx_blog_posts_published ON blog_posts(published)",
+        "CREATE INDEX IF NOT EXISTS idx_post_tags_post ON post_tags(post_id)",
+        "CREATE INDEX IF NOT EXISTS idx_post_tags_tag ON post_tags(tag)"
+    ];
+    
+    fun migration ninu migrations {
+        gbiyanju {
+            connection.execute(migration);
+            Irosu.fo("Migration executed: " + migration);
+        } gba (error) {
+            Irosu.kigbe("Migration failed: " + error.message);
+            Oyeku.exit(1);
+        }
+    }
+}
+
+// User CRUD operations
+se create_user(db: Database, request: CreateUserRequest) -> Result<User, Str> {
+    gbiyanju {
+        // Validate request
+        validate_user_request(request)?;
+        
+        // Check if username already exists
+        ayanmo existing_user = get_user_by_username(db, request.username);
+        if existing_user.is_some() {
+            pada Err("Username already exists");
+        }
+        
+        // Check if email already exists
+        ayanmo existing_email = get_user_by_email(db, request.email);
+        if existing_email.is_some() {
+            pada Err("Email already exists");
+        }
+        
+        // Hash password
+        ayanmo password_hash = Irete.hash_password(request.password);
+        
+        // Create user
+        ayanmo now = Iwori.timestamp();
+        ayanmo result = connection.execute(
+            "INSERT INTO users (username, email, password_hash, created_at, updated_at, is_active) 
+             VALUES (?, ?, ?, ?, ?, ?)",
+            [request.username, request.email, password_hash, now, now, otito]
+        );
+        
+        ayanmo user_id = connection.last_insert_id();
+        
+        pada User {
+            id: user_id,
+            username: request.username,
+            email: request.email,
+            password_hash: password_hash,
+            created_at: now,
+            updated_at: now,
+            is_active: otito
+        };
+    } gba (error) {
+        pada Err("Failed to create user: " + error.message);
+    }
+}
+
+se get_user_by_id(db: Database, user_id: u64) -> Option<User> {
+    gbiyanju {
+        ayanmo rows = connection.query(
+            "SELECT id, username, email, password_hash, created_at, updated_at, is_active 
+             FROM users WHERE id = ? AND is_active = 1",
+            [user_id]
+        );
+        
+        if rows.length() > 0 {
+            ayanmo row = rows[0];
+            pada Some(User {
+                id: row[0],
+                username: row[1],
+                email: row[2],
+                password_hash: row[3],
+                created_at: row[4],
+                updated_at: row[5],
+                is_active: row[6]
+            });
+        } else {
+            pada None;
+        }
+    } gba (error) {
+        Irosu.kigbe("Failed to get user: " + error.message);
+        pada None;
+    }
+}
+
+se get_user_by_username(db: Database, username: Str) -> Option<User> {
+    gbiyanju {
+        ayanmo rows = connection.query(
+            "SELECT id, username, email, password_hash, created_at, updated_at, is_active 
+             FROM users WHERE username = ? AND is_active = 1",
+            [username]
+        );
+        
+        if rows.length() > 0 {
+            ayanmo row = rows[0];
+            pada Some(User {
+                id: row[0],
+                username: row[1],
+                email: row[2],
+                password_hash: row[3],
+                created_at: row[4],
+                updated_at: row[5],
+                is_active: row[6]
+            });
+        } else {
+            pada None;
+        }
+    } gba (error) {
+        Irosu.kigbe("Failed to get user by username: " + error.message);
+        pada None;
+    }
+}
+
+se update_user(db: Database, user_id: u64, request: UpdateUserRequest) -> Result<User, Str> {
+    gbiyanju {
+        ayanmo user = get_user_by_id(db, user_id);
+        if user.is_none() {
+            pada Err("User not found");
+        }
+        
+        ayanmo mut user = user.unwrap();
+        ayanmo now = Iwori.timestamp();
+        
+        // Build update query dynamically
+        ayanmo updates = Vec::<Str>::new();
+        ayanmo values = Vec::<Str>::new();
+        
+        if request.username.is_some() {
+            ayanmo username = request.username.unwrap();
+            if Ika.length(username) < 3 or Ika.length(username) > 50 {
+                pada Err("Username must be between 3 and 50 characters");
+            }
+            
+            // Check if username already exists
+            ayanmo existing = get_user_by_username(db, username);
+            if existing.is_some() and existing.unwrap().id != user_id {
+                pada Err("Username already exists");
+            }
+            
+            updates.push("username = ?");
+            values.push(username);
+            user.username = username;
+        }
+        
+        if request.email.is_some() {
+            ayanmo email = request.email.unwrap();
+            if !Ika.contains(email, "@") or !Ika.contains(email, ".") {
+                pada Err("Invalid email format");
+            }
+            
+            // Check if email already exists
+            ayanmo existing = get_user_by_email(db, email);
+            if existing.is_some() and existing.unwrap().id != user_id {
+                pada Err("Email already exists");
+            }
+            
+            updates.push("email = ?");
+            values.push(email);
+            user.email = email;
+        }
+        
+        if request.is_active.is_some() {
+            updates.push("is_active = ?");
+            values.push(Obara.to_str(request.is_active.unwrap()));
+            user.is_active = request.is_active.unwrap();
+        }
+        
+        if updates.length() > 0 {
+            updates.push("updated_at = ?");
+            values.push(Obara.to_str(now));
+            values.push(Obara.to_str(user_id));
+            
+            ayanmo query = "UPDATE users SET " + Ika.join(updates, ", ") + " WHERE id = ?";
+            connection.execute(query, values);
+            
+            user.updated_at = now;
+        }
+        
+        pada user;
+    } gba (error) {
+        pada Err("Failed to update user: " + error.message);
+    }
+}
+
+se delete_user(db: Database, user_id: u64) -> Result<(), Str> {
+    gbiyanju {
+        ayanmo user = get_user_by_id(db, user_id);
+        if user.is_none() {
+            pada Err("User not found");
+        }
+        
+        // Soft delete by setting is_active to false
+        connection.execute(
+            "UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?",
+            [Iwori.timestamp(), user_id]
+        );
+        
+        pada Ok(());
+    } gba (error) {
+        pada Err("Failed to delete user: " + error.message);
+    }
+}
+
+// Blog post CRUD operations
+se create_blog_post(db: Database, author_id: u64, request: CreatePostRequest) -> Result<BlogPost, Str> {
+    gbiyanju {
+        // Validate request
+        validate_post_request(request)?;
+        
+        // Check if author exists
+        ayanmo author = get_user_by_id(db, author_id);
+        if author.is_none() {
+            pada Err("Author not found");
+        }
+        
+        ayanmo now = Iwori.timestamp();
+        
+        // Create blog post
+        ayanmo result = connection.execute(
+            "INSERT INTO blog_posts (title, content, author_id, created_at, updated_at, published) 
+             VALUES (?, ?, ?, ?, ?, ?)",
+            [request.title, request.content, author_id, now, now, request.published]
+        );
+        
+        ayanmo post_id = connection.last_insert_id();
+        
+        // Add tags
+        fun tag ninu request.tags {
+            connection.execute(
+                "INSERT INTO post_tags (post_id, tag) VALUES (?, ?)",
+                [post_id, tag]
+            );
+        }
+        
+        pada BlogPost {
+            id: post_id,
+            title: request.title,
+            content: request.content,
+            author_id: author_id,
+            created_at: now,
+            updated_at: now,
+            published: request.published,
+            tags: request.tags
+        };
+    } gba (error) {
+        pada Err("Failed to create blog post: " + error.message);
+    }
+}
+
+se get_blog_posts(db: Database, pagination: Pagination, published_only: Bool) -> Result<Vec<BlogPost>, Str> {
+    gbiyanju {
+        ayanmo where_clause = if published_only { "WHERE published = 1" } else { "" };
+        ayanmo query = "
+            SELECT id, title, content, author_id, created_at, updated_at, published 
+            FROM blog_posts " + where_clause + " 
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
+        ";
+        
+        ayanmo rows = connection.query(query, [pagination.limit, pagination.offset]);
+        
+        ayanmo posts = Vec::<BlogPost>::new();
+        
+        fun row ninu rows {
+            ayanmo post_id = row[0];
+            
+            // Get tags for this post
+            ayanmo tag_rows = connection.query(
+                "SELECT tag FROM post_tags WHERE post_id = ?",
+                [post_id]
+            );
+            
+            ayanmo tags = Vec::<Str>::new();
+            fun tag_row ninu tag_rows {
+                tags.push(tag_row[0]);
+            }
+            
+            posts.push(BlogPost {
+                id: post_id,
+                title: row[1],
+                content: row[2],
+                author_id: row[3],
+                created_at: row[4],
+                updated_at: row[5],
+                published: row[6],
+                tags: tags
+            });
+        }
+        
+        pada posts;
+    } gba (error) {
+        pada Err("Failed to get blog posts: " + error.message);
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Authentication</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/auth.ifa</span>
+                </div>
+                <pre><code>// JWT token structure
+struct JWTToken {
+    user_id: u64,
+    username: Str,
+    email: Str,
+    issued_at: u64,
+    expires_at: u64
+}
+
+// Authentication middleware result
+struct AuthResult {
+    user: User,
+    token: Str
+}
+
+// Generate JWT token
+se generate_jwt_token(user: User) -> Str {
+    ayanmo now = Iwori.timestamp();
+    ayanmo expires_at = now + (24 * 60 * 60); // 24 hours
+    
+    ayanmo payload = JWTToken {
+        user_id: user.id,
+        username: user.username,
+        email: user.email,
+        issued_at: now,
+        expires_at: expires_at
     };
-    ayanmo next_id = next_id + 1;
-    ayanmo todos = Ogunda.push(todos, todo);
-    res.status(201).json(todo);
-});
-
-// GET /todos/:id - Get one
-router.get("/todos/:id", (req, res) => {
-    ayanmo id = Ogbe.parse_int(req.params["id"]);
-    ayanmo found = nil;
     
-    fun todo ninu todos {
-        ti (todo["id"] == id) {
-            ayanmo found = todo;
+    ayanmo payload_json = Ika.to_json(payload);
+    ayanmo signature = Irete.hmac_sha256(payload_json, "secret_key");
+    
+    // Base64 encode payload and signature
+    ayanmo encoded_payload = Irete.base64_encode(payload_json);
+    ayanmo encoded_signature = Irete.base64_encode(signature);
+    
+    pada encoded_payload + "." + encoded_signature;
+}
+
+// Verify JWT token
+se verify_jwt_token(token: Str) -> Option<JWTToken> {
+    gbiyanju {
+        ayanmo parts = Ika.split(token, ".");
+        if parts.length() != 2 {
+            pada None;
         }
-    }
-    
-    ti (found != nil) {
-        res.json(found);
-    } bib?k? {
-        res.status(404).json({"error": "Not found"});
-    }
-});
-
-// DELETE /todos/:id - Delete one
-router.delete("/todos/:id", (req, res) => {
-    ayanmo id = Ogbe.parse_int(req.params["id"]);
-    ayanmo new_todos = [];
-    
-    fun todo ninu todos {
-        ti (todo["id"] != id) {
-            ayanmo new_todos = Ogunda.push(new_todos, todo);
+        
+        ayanmo encoded_payload = parts[0];
+        ayanmo encoded_signature = parts[1];
+        
+        ayanmo payload_json = Irete.base64_decode(encoded_payload);
+        ayanmo signature = Irete.base64_decode(encoded_signature);
+        
+        // Verify signature
+        ayanmo expected_signature = Irete.hmac_sha256(payload_json, "secret_key");
+        if signature != expected_signature {
+            pada None;
         }
+        
+        // Parse payload
+        ayanmo payload = Ika.from_json<JWTToken>(payload_json);
+        
+        // Check expiration
+        if Iwori.timestamp() > payload.expires_at {
+            pada None;
+        }
+        
+        pada Some(payload);
+    } gba (error) {
+        Irosu.kigbe("JWT verification failed: " + error.message);
+        pada None;
+    }
+}
+
+// Authentication middleware
+se authenticate_middleware(request: Request, next: ese (Request) -> Response) -> Response {
+    ayanmo auth_header = request.get_header("Authorization");
+    
+    if auth_header.is_none() {
+        pada Response::unauthorized("Missing authorization header");
     }
     
-    ayanmo todos = new_todos;
-    res.status(204).send("");
-});
+    ayanmo header = auth_header.unwrap();
+    if !Ika.starts_with(header, "Bearer ") {
+        pada Response::unauthorized("Invalid authorization format");
+    }
+    
+    ayanmo token = Ika.substring(header, 7); // Remove "Bearer "
+    
+    ayanmo jwt_payload = verify_jwt_token(token);
+    if jwt_payload.is_none() {
+        pada Response::unauthorized("Invalid or expired token");
+    }
+    
+    ayanmo payload = jwt_payload.unwrap();
+    ayanmo user = get_user_by_id(database, payload.user_id);
+    
+    if user.is_none() {
+        pada Response::unauthorized("User not found");
+    }
+    
+    // Add user to request context
+    request.set_context("user", user.unwrap());
+    
+    // Call next middleware/handler
+    next(request);
+}
 
-// Start server
-Irosu.fo("?? Starting Todo API on port 8080...");
-Backend.serve(router, 8080);</code></pre>
+// User login
+se login_user(db: Database, username: Str, password: Str) -> Result<AuthResult, Str> {
+    gbiyanju {
+        ayanmo user = get_user_by_username(db, username);
+        if user.is_none() {
+            pada Err("Invalid username or password");
+        }
+        
+        ayanmo user_data = user.unwrap();
+        if !user_data.is_active {
+            pada Err("Account is deactivated");
+        }
+        
+        if !Irete.verify_password(password, user_data.password_hash) {
+            pada Err("Invalid username or password");
+        }
+        
+        ayanmo token = generate_jwt_token(user_data);
+        
+        pada AuthResult {
+            user: user_data,
+            token: token
+        };
+    } gba (error) {
+        pada Err("Login failed: " + error.message);
+    }
+}
+
+// Password hashing
+se hash_password(password: Str) -> Str {
+    ayanmo salt = Irete.generate_salt();
+    ayanmo hash = Irete.pbkdf2(password, salt, 10000);
+    pada salt + ":" + hash;
+}
+
+se verify_password(password: Str, hash: Str) -> Bool {
+    gbiyanju {
+        ayanmo parts = Ika.split(hash, ":");
+        if parts.length() != 2 {
+            pada eke;
+        }
+        
+        ayanmo salt = parts[0];
+        ayanmo stored_hash = parts[1];
+        ayanmo computed_hash = Irete.pbkdf2(password, salt, 10000);
+        
+        pada computed_hash == stored_hash;
+    } gba (error) {
+        Irosu.kigbe("Password verification failed: " + error.message);
+        pada eke;
+    }
+}</code></pre>
+            </div>
         </div>
 
         <div class="step">
-            <h3><span class="step-number">3</span> Run the Server</h3>
-            <pre><code>ifa run src/main.ifa</code></pre>
-            <p>Output:</p>
-            <pre><code>?? Starting Todo API on port 8080...</code></pre>
+            <h2>HTTP Handlers</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/handlers.ifa</span>
+                </div>
+                <pre><code>// User handlers
+se create_user_handler(request: Request) -> Response {
+    gbiyanju {
+        ayanmo body = request.get_json_body<CreateUserRequest>();
+        if body.is_none() {
+            pada Response::bad_request("Invalid JSON body");
+        }
+        
+        ayanmo user_request = body.unwrap();
+        
+        // Validate request
+        ayanmo validation = validate_user_request(user_request);
+        if validation.is_err() {
+            pada Response::bad_request(validation.unwrap_err());
+        }
+        
+        // Create user
+        ayanmo user = create_user(database, user_request);
+        if user.is_err() {
+            pada Response::internal_server_error(user.unwrap_err());
+        }
+        
+        ayanmo created_user = user.unwrap();
+        
+        // Remove password hash from response
+        created_user.password_hash = "";
+        
+        ayanmo response = ApiResponse {
+            success: otito,
+            data: Some(created_user),
+            message: "User created successfully",
+            timestamp: Iwori.timestamp()
+        };
+        
+        pada Response::json(201, response);
+    } gba (error) {
+        Irosu.kigbe("Error in create_user_handler: " + error.message);
+        pada Response::internal_server_error("Internal server error");
+    }
+}
+
+se get_user_handler(request: Request) -> Response {
+    gbiyanju {
+        ayanmo user_id_str = request.get_param("id");
+        if user_id_str.is_none() {
+            pada Response::bad_request("Missing user ID");
+        }
+        
+        ayanmo user_id = Obara.parse_u64(user_id_str.unwrap());
+        if user_id.is_err() {
+            pada Response::bad_request("Invalid user ID");
+        }
+        
+        ayanmo user = get_user_by_id(database, user_id.unwrap());
+        if user.is_none() {
+            pada Response::not_found("User not found");
+        }
+        
+        ayanmo user_data = user.unwrap();
+        user_data.password_hash = ""; // Remove sensitive data
+        
+        ayanmo response = ApiResponse {
+            success: otito,
+            data: Some(user_data),
+            message: "User retrieved successfully",
+            timestamp: Iwori.timestamp()
+        };
+        
+        pada Response::json(200, response);
+    } gba (error) {
+        Irosu.kigbe("Error in get_user_handler: " + error.message);
+        pada Response::internal_server_error("Internal server error");
+    }
+}
+
+se update_user_handler(request: Request) -> Response {
+    gbiyanju {
+        ayanmo user_id_str = request.get_param("id");
+        if user_id_str.is_none() {
+            pada Response::bad_request("Missing user ID");
+        }
+        
+        ayanmo user_id = Obara.parse_u64(user_id_str.unwrap());
+        if user_id.is_err() {
+            pada Response::bad_request("Invalid user ID");
+        }
+        
+        ayanmo body = request.get_json_body<UpdateUserRequest>();
+        if body.is_none() {
+            pada Response::bad_request("Invalid JSON body");
+        }
+        
+        ayanmo update_request = body.unwrap();
+        
+        // Users can only update their own profile (unless admin)
+        ayanmo current_user = request.get_context<User>("user");
+        if current_user.id != user_id and !current_user.is_admin {
+            pada Response::forbidden("You can only update your own profile");
+        }
+        
+        ayanmo user = update_user(database, user_id.unwrap(), update_request);
+        if user.is_err() {
+            pada Response::bad_request(user.unwrap_err());
+        }
+        
+        ayanmo updated_user = user.unwrap();
+        updated_user.password_hash = ""; // Remove sensitive data
+        
+        ayanmo response = ApiResponse {
+            success: otito,
+            data: Some(updated_user),
+            message: "User updated successfully",
+            timestamp: Iwori.timestamp()
+        };
+        
+        pada Response::json(200, response);
+    } gba (error) {
+        Irosu.kigbe("Error in update_user_handler: " + error.message);
+        pada Response::internal_server_error("Internal server error");
+    }
+}
+
+se delete_user_handler(request: Request) -> Response {
+    gbiyanju {
+        ayanmo user_id_str = request.get_param("id");
+        if user_id_str.is_none() {
+            pada Response::bad_request("Missing user ID");
+        }
+        
+        ayanmo user_id = Obara.parse_u64(user_id_str.unwrap());
+        if user_id.is_err() {
+            pada Response::bad_request("Invalid user ID");
+        }
+        
+        // Users can only delete their own profile (unless admin)
+        ayanmo current_user = request.get_context<User>("user");
+        if current_user.id != user_id and !current_user.is_admin {
+            pada Response::forbidden("You can only delete your own profile");
+        }
+        
+        ayanmo result = delete_user(database, user_id.unwrap());
+        if result.is_err() {
+            pada Response::bad_request(result.unwrap_err());
+        }
+        
+        ayanmo response = ApiResponse {
+            success: otito,
+            data: None,
+            message: "User deleted successfully",
+            timestamp: Iwori.timestamp()
+        };
+        
+        pada Response::json(200, response);
+    } gba (error) {
+        Irosu.kigbe("Error in delete_user_handler: " + error.message);
+        pada Response::internal_server_error("Internal server error");
+    }
+}
+
+// Authentication handlers
+se login_handler(request: Request) -> Response {
+    gbiyanju {
+        ayanmo body = request.get_json_body();
+        if body.is_none() {
+            pada Response::bad_request("Invalid JSON body");
+        }
+        
+        ayanmo json_data = body.unwrap();
+        ayanmo username = json_data.get("username");
+        ayanmo password = json_data.get("password");
+        
+        if username.is_none() or password.is_none() {
+            pada Response::bad_request("Username and password are required");
+        }
+        
+        ayanmo auth_result = login_user(database, username.unwrap(), password.unwrap());
+        if auth_result.is_err() {
+            pada Response::unauthorized(auth_result.unwrap_err());
+        }
+        
+        ayanmo result = auth_result.unwrap();
+        
+        ayanmo response_data = Map::<Str, Str>::new();
+        response_data.insert("token", result.token);
+        response_data.insert("user_id", Obara.to_str(result.user.id));
+        response_data.insert("username", result.user.username);
+        response_data.insert("email", result.user.email);
+        
+        ayanmo response = ApiResponse {
+            success: otito,
+            data: Some(response_data),
+            message: "Login successful",
+            timestamp: Iwori.timestamp()
+        };
+        
+        pada Response::json(200, response);
+    } gba (error) {
+        Irosu.kigbe("Error in login_handler: " + error.message);
+        pada Response::internal_server_error("Internal server error");
+    }
+}
+
+se logout_handler(request: Request) -> Response {
+    // In a real implementation, you might want to invalidate the token
+    // For now, we'll just return success
+    
+    ayanmo response = ApiResponse {
+        success: otito,
+        data: None,
+        message: "Logout successful",
+        timestamp: Iwori.timestamp()
+    };
+    
+    pada Response::json(200, response);
+}
+
+// Blog post handlers
+se create_post_handler(request: Request) -> Response {
+    gbiyanju {
+        ayanmo body = request.get_json_body<CreatePostRequest>();
+        if body.is_none() {
+            pada Response::bad_request("Invalid JSON body");
+        }
+        
+        ayanmo post_request = body.unwrap();
+        
+        // Validate request
+        ayanmo validation = validate_post_request(post_request);
+        if validation.is_err() {
+            pada Response::bad_request(validation.unwrap_err());
+        }
+        
+        ayanmo current_user = request.get_context<User>("user");
+        
+        ayanmo post = create_blog_post(database, current_user.id, post_request);
+        if post.is_err() {
+            pada Response::internal_server_error(post.unwrap_err());
+        }
+        
+        ayanmo response = ApiResponse {
+            success: otito,
+            data: Some(post.unwrap()),
+            message: "Blog post created successfully",
+            timestamp: Iwori.timestamp()
+        };
+        
+        pada Response::json(201, response);
+    } gba (error) {
+        Irosu.kigbe("Error in create_post_handler: " + error.message);
+        pada Response::internal_server_error("Internal server error");
+    }
+}
+
+se get_posts_handler(request: Request) -> Response {
+    gbiyanju {
+        ayanmo page_str = request.get_query_param("page").unwrap_or("1");
+        ayanmo limit_str = request.get_query_param("limit").unwrap_or("10");
+        ayanmo published_str = request.get_query_param("published").unwrap_or("true");
+        
+        ayanmo page = Obara.parse_u32(page_str).unwrap_or(1);
+        ayanmo limit = Obara.min(Obara.parse_u32(limit_str).unwrap_or(10), 100); // Max 100
+        ayanmo published = published_str == "true";
+        
+        ayanmo offset = (page - 1) * limit;
+        
+        ayanmo pagination = Pagination {
+            page: page,
+            limit: limit,
+            total: 0, // Would need separate query to get total
+            offset: offset
+        };
+        
+        ayanmo posts = get_blog_posts(database, pagination, published);
+        if posts.is_err() {
+            pada Response::internal_server_error(posts.unwrap_err());
+        }
+        
+        ayanmo response_data = Map::<Str, Any>::new();
+        response_data.insert("posts", posts.unwrap());
+        response_data.insert("pagination", pagination);
+        
+        ayanmo response = ApiResponse {
+            success: otito,
+            data: Some(response_data),
+            message: "Blog posts retrieved successfully",
+            timestamp: Iwori.timestamp()
+        };
+        
+        pada Response::json(200, response);
+    } gba (error) {
+        Irosu.kigbe("Error in get_posts_handler: " + error.message);
+        pada Response::internal_server_error("Internal server error");
+    }
+}</code></pre>
+            </div>
         </div>
 
         <div class="step">
-            <h3><span class="step-number">4</span> Test the API</h3>
-            <p>In another terminal:</p>
-            <pre><code># Create a todo
-curl -X POST http://localhost:8080/todos \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Learn If·-Lang"}'
+            <h2>Middleware</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/middleware.ifa</span>
+                </div>
+                <pre><code>// CORS middleware
+se cors_middleware(request: Request, next: ese (Request) -> Response) -> Response {
+    ayanmo response = next(request);
+    
+    // Add CORS headers
+    response.set_header("Access-Control-Allow-Origin", "*");
+    response.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    response.set_header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    response.set_header("Access-Control-Max-Age", "86400");
+    
+    // Handle preflight requests
+    if request.method == "OPTIONS" {
+        pada Response::no_content(204);
+    }
+    
+    pada response;
+}
 
-# Response: {"id": 1, "title": "Learn If·-Lang", "done": false}
+// Logging middleware
+se logging_middleware(request: Request, next: ese (Request) -> Response) -> Response {
+    ayanmo start_time = Iwori.timestamp();
+    
+    // Log request
+    Irosu.fo("[" + Iwori.format_timestamp(start_time) + "] " + 
+             request.method + " " + request.path + 
+             " from " + request.get_remote_addr());
+    
+    ayanmo response = next(request);
+    
+    ayanmo end_time = Iwori.timestamp();
+    ayanmo duration = end_time - start_time;
+    
+    // Log response
+    Irosu.fo("[" + Iwori.format_timestamp(end_time) + "] " + 
+             Obara.to_str(response.status_code) + " " + 
+             request.method + " " + request.path + 
+             " - " + Obara.to_str(duration) + "ms");
+    
+    pada response;
+}
 
-# List todos
-curl http://localhost:8080/todos
+// Rate limiting middleware
+se rate_limit_middleware(request: Request, next: ese (Request) -> Response) -> Response {
+    ayanmo client_ip = request.get_remote_addr();
+    ayanmo current_time = Iwori.timestamp();
+    ayanmo window_size = 60; // 1 minute window
+    
+    // Simple in-memory rate limiting (in production, use Redis)
+    static mut RATE_LIMITS: Map<Str, Vec<u64>> = Map::<Str, Vec<u64>>::new();
+    
+    unsafe {
+        if !RATE_LIMITS.contains_key(client_ip) {
+            RATE_LIMITS.insert(client_ip, Vec::<u64>::new());
+        }
+        
+        ayanmo requests = RATE_LIMITS.get_mut(client_ip).unwrap();
+        
+        // Remove old requests outside the window
+        requests.retain(|timestamp| *timestamp > current_time - window_size);
+        
+        // Check if rate limit exceeded (100 requests per minute)
+        if requests.length() >= 100 {
+            ayanmo response = ErrorResponse {
+                success: eke,
+                error: "Rate limit exceeded",
+                code: 429,
+                timestamp: current_time
+            };
+            
+            pada Response::json(429, response);
+        }
+        
+        // Add current request
+        requests.push(current_time);
+    }
+    
+    pada next(request);
+}
 
-# Response: [{"id": 1, "title": "Learn If·-Lang", "done": false}]
-
-# Get one todo
-curl http://localhost:8080/todos/1
-
-# Delete a todo
-curl -X DELETE http://localhost:8080/todos/1</code></pre>
+// Error handling middleware
+se error_handling_middleware(request: Request, next: ese (Request) -> Response) -> Response {
+    gbiyanju {
+        pada next(request);
+    } gba (error) {
+        Irosu.kigbe("Unhandled error: " + error.message);
+        
+        ayanmo response = ErrorResponse {
+            success: eke,
+            error: "Internal server error",
+            code: 500,
+            timestamp: Iwori.timestamp()
+        };
+        
+        pada Response::json(500, response);
+    }
+}</code></pre>
+            </div>
         </div>
 
-        <h2>Adding Middleware</h2>
-        <p>Add logging and CORS support:</p>
-
-        <pre><code>// Logging middleware
-router.use((req, res, next) => {
-    Irosu.fo(req.method + " " + req.path);
-    next();
-});
-
-// CORS middleware
-router.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, DELETE");
-    next();
-});</code></pre>
-
-        <h2>Adding Persistence</h2>
-        <p>Save todos to a file using Odi:</p>
-
-        <pre><code>// Load todos on startup
-ti (Odi.exists("todos.json")) {
-    ayanmo data = Odi.read("todos.json");
-    ayanmo todos = Ogbe.parse_json(data);
+        <div class="step">
+            <h2>Main Application</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/main.ifa</span>
+                </div>
+                <pre><code>// Application configuration
+struct AppConfig {
+    host: Str,
+    port: u16,
+    database_url: Str,
+    jwt_secret: Str,
+    log_level: Str
 }
 
-// Save function
-ise save_todos() {
-    ayanmo json = Ogbe.format_json(todos);
-    Odi.write("todos.json", json);
+// Load configuration
+se load_config() -> AppConfig {
+    ayanmo config = AppConfig {
+        host: Ogbe.get_env("IFA_HOST").unwrap_or("0.0.0.0"),
+        port: Obara.parse_u16(Ogbe.get_env("IFA_PORT").unwrap_or("8080")).unwrap_or(8080),
+        database_url: Ogbe.get_env("IFA_DATABASE_URL").unwrap_or("sqlite:ifa_api.db"),
+        jwt_secret: Ogbe.get_env("IFA_JWT_SECRET").unwrap_or("default_secret_change_in_production"),
+        log_level: Ogbe.get_env("IFA_LOG_LEVEL").unwrap_or("info")
+    };
+    
+    // Validate configuration
+    if config.jwt_secret == "default_secret_change_in_production" {
+        Irosu.kigbe("WARNING: Using default JWT secret. Please set IFA_JWT_SECRET environment variable.");
+    }
+    
+    pada config;
 }
 
-// Call save after changes
-router.post("/todos", (req, res) => {
-    // ... create todo ...
-    save_todos();
-    res.status(201).json(todo);
-});</code></pre>
+// Initialize database
+static mut DATABASE: Database;
 
-        <div class="info-box">
-            <p><strong>?? What You Learned:</strong></p>
-            <ul style="margin: 0.5rem 0 0 1.5rem; color: var(--text-dim);">
-                <li>Creating a Backend router</li>
-                <li>Handling GET, POST, DELETE requests</li>
-                <li>Route parameters (<code>:id</code>)</li>
-                <li>JSON request/response handling</li>
-                <li>Adding middleware</li>
-                <li>File persistence with Odi</li>
+// Main application
+ese main() {
+    // Load configuration
+    ayanmo config = load_config();
+    
+    // Set up logging
+    Irosu.set_log_level(config.log_level);
+    
+    Irosu.fo("Starting If√°-Lang REST API Server...");
+    Irosu.fo("Host: " + config.host);
+    Irosu.fo("Port: " + Obara.to_str(config.port));
+    Irosu.fo("Database: " + config.database_url);
+    
+    // Initialize database
+    unsafe {
+        DATABASE = init_database(DatabaseConfig {
+            url: config.database_url,
+            pool_size: 10
+        });
+    }
+    
+    // Create web server
+    ayanmo app = Iwori.create_app();
+    
+    // Add global middleware
+    app.add_middleware(cors_middleware);
+    app.add_middleware(logging_middleware);
+    app.add_middleware(error_handling_middleware);
+    
+    // Public routes (no authentication required)
+    app.post("/api/auth/login", login_handler);
+    app.post("/api/auth/logout", logout_handler);
+    app.get("/api/posts", get_posts_handler);
+    
+    // Protected routes (authentication required)
+    ayanmo protected_routes = app.group("/api");
+    protected_routes.add_middleware(authenticate_middleware);
+    protected_routes.add_middleware(rate_limit_middleware);
+    
+    // User routes
+    protected_routes.post("/users", create_user_handler);
+    protected_routes.get("/users/{id}", get_user_handler);
+    protected_routes.put("/users/{id}", update_user_handler);
+    protected_routes.delete("/users/{id}", delete_user_handler);
+    
+    // Blog post routes
+    protected_routes.post("/posts", create_post_handler);
+    protected_routes.get("/posts/{id}", get_post_handler);
+    protected_routes.put("/posts/{id}", update_post_handler);
+    protected_routes.delete("/posts/{id}", delete_post_handler);
+    
+    // Health check endpoint
+    app.get("/health", health_check_handler);
+    
+    // Static files
+    app.serve_static("/static", "./static");
+    
+    // Start server
+    Irosu.fo("Server starting on " + config.host + ":" + Obara.to_str(config.port));
+    
+    gbiyanju {
+        app.listen(config.host, config.port);
+    } gba (error) {
+        Irosu.kigbe("Failed to start server: " + error.message);
+        Oyeku.exit(1);
+    }
+}
+
+// Health check handler
+se health_check_handler(request: Request) -> Response {
+    ayanmo health_data = Map::<Str, Any>::new();
+    health_data.insert("status", "healthy");
+    health_data.insert("timestamp", Iwori.timestamp());
+    health_data.insert("version", "1.3.0");
+    health_data.insert("uptime", Iwori.timestamp() - start_time);
+    
+    // Check database connection
+    gbiyanju {
+        unsafe {
+            DATABASE.connection.ping();
+            health_data.insert("database", "connected");
+        }
+    } gba (error) {
+        health_data.insert("database", "disconnected");
+    }
+    
+    ayanmo response = ApiResponse {
+        success: otito,
+        data: Some(health_data),
+        message: "Service is healthy",
+        timestamp: Iwori.timestamp()
+    };
+    
+    pada Response::json(200, response);
+}
+
+// Application start time
+static start_time: u64 = Iwori.timestamp();
+
+// Graceful shutdown
+se setup_signal_handlers() {
+    // Handle SIGINT (Ctrl+C)
+    Ogbe.set_signal_handler(2, || {
+        Irosu.fo("Received shutdown signal, gracefully shutting down...");
+        
+        // Close database connections
+        unsafe {
+            DATABASE.connection.close();
+        }
+        
+        Irosu.fo("Server stopped");
+        Oyeku.exit(0);
+    });
+    
+    // Handle SIGTERM
+    Ogbe.set_signal_handler(15, || {
+        Irosu.fo("Received termination signal, gracefully shutting down...");
+        
+        // Close database connections
+        unsafe {
+            DATABASE.connection.close();
+        }
+        
+        Irosu.fo("Server stopped");
+        Oyeku.exit(0);
+    });
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Testing</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">tests/api_tests.ifa</span>
+                </div>
+                <pre><code>// API integration tests
+test_suite "User API Tests" {
+    test "POST /api/users - Create user" {
+        ayanmo app = create_test_app();
+        ayanmo request = Request::post("/api/users")
+            .with_json_body(CreateUserRequest {
+                username: "testuser",
+                email: "test@example.com",
+                password: "TestPass123"
+            });
+        
+        ayanmo response = app.handle(request);
+        
+        ewo response.status_code == 201, "Should return 201 Created";
+        ewo response.get_header("Content-Type") == "application/json", "Should return JSON";
+        
+        ayanmo api_response = response.get_json_body<ApiResponse<User>>();
+        ewo api_response.success == otito, "Response should be successful";
+        ewo api_response.data.is_some(), "Should contain user data";
+        ewo api_response.data.unwrap().username == "testuser", "Username should match";
+    }
+    
+    test "GET /api/users/{id} - Get user" {
+        ayanmo app = create_test_app();
+        
+        // First create a user
+        ayanmo create_request = Request::post("/api/users")
+            .with_json_body(CreateUserRequest {
+                username: "getuser",
+                email: "get@example.com",
+                password: "GetPass123"
+            });
+        
+        ayanmo create_response = app.handle(create_request);
+        ayanmo user = create_response.get_json_body<ApiResponse<User>>().data.unwrap();
+        
+        // Then get the user
+        ayanmo get_request = Request::get("/api/users/" + Obara.to_str(user.id))
+            .with_header("Authorization", "Bearer " + get_test_token(user));
+        
+        ayanmo get_response = app.handle(get_request);
+        
+        ewo get_response.status_code == 200, "Should return 200 OK";
+        ayanmo api_response = get_response.get_json_body<ApiResponse<User>>();
+        ewo api_response.success == otito, "Response should be successful";
+        ewo api_response.data.unwrap().id == user.id, "User ID should match";
+    }
+    
+    test "PUT /api/users/{id} - Update user" {
+        ayanmo app = create_test_app();
+        
+        // Create a user
+        ayanmo create_request = Request::post("/api/users")
+            .with_json_body(CreateUserRequest {
+                username: "updateuser",
+                email: "update@example.com",
+                password: "UpdatePass123"
+            });
+        
+        ayanmo create_response = app.handle(create_request);
+        ayanmo user = create_response.get_json_body<ApiResponse<User>>().data.unwrap();
+        
+        // Update the user
+        ayanmo update_request = Request::put("/api/users/" + Obara.to_str(user.id))
+            .with_header("Authorization", "Bearer " + get_test_token(user))
+            .with_json_body(UpdateUserRequest {
+                username: Some("updateduser"),
+                email: None,
+                is_active: Some(otito)
+            });
+        
+        ayanmo update_response = app.handle(update_request);
+        
+        ewo update_response.status_code == 200, "Should return 200 OK";
+        ayanmo api_response = update_response.get_json_body<ApiResponse<User>>();
+        ewo api_response.success == otito, "Response should be successful";
+        ewo api_response.data.unwrap().username == "updateduser", "Username should be updated";
+    }
+    
+    test "DELETE /api/users/{id} - Delete user" {
+        ayanmo app = create_test_app();
+        
+        // Create a user
+        ayanmo create_request = Request::post("/api/users")
+            .with_json_body(CreateUserRequest {
+                username: "deleteuser",
+                email: "delete@example.com",
+                password: "DeletePass123"
+            });
+        
+        ayanmo create_response = app.handle(create_request);
+        ayanmo user = create_response.get_json_body<ApiResponse<User>>().data.unwrap();
+        
+        // Delete the user
+        ayanmo delete_request = Request::delete("/api/users/" + Obara.to_str(user.id))
+            .with_header("Authorization", "Bearer " + get_test_token(user));
+        
+        ayanmo delete_response = app.handle(delete_request);
+        
+        ewo delete_response.status_code == 200, "Should return 200 OK";
+        ayanmo api_response = delete_response.get_json_body<ApiResponse>();
+        ewo api_response.success == otito, "Response should be successful";
+        
+        // Verify user is deleted
+        ayanmo get_request = Request::get("/api/users/" + Obara.to_str(user.id))
+            .with_header("Authorization", "Bearer " + get_test_token(user));
+        
+        ayanmo get_response = app.handle(get_request);
+        ewo get_response.status_code == 404, "Should return 404 Not Found";
+    }
+}
+
+test_suite "Authentication Tests" {
+    test "POST /api/auth/login - Valid login" {
+        ayanmo app = create_test_app();
+        
+        // Create a user first
+        ayanmo create_request = Request::post("/api/users")
+            .with_json_body(CreateUserRequest {
+                username: "loginuser",
+                email: "login@example.com",
+                password: "LoginPass123"
+            });
+        
+        app.handle(create_request);
+        
+        // Login
+        ayanmo login_request = Request::post("/api/auth/login")
+            .with_json_body(Map::<Str, Str>::new()
+                .insert("username", "loginuser")
+                .insert("password", "LoginPass123"));
+        
+        ayanmo login_response = app.handle(login_request);
+        
+        ewo login_response.status_code == 200, "Should return 200 OK";
+        ayanmo api_response = login_response.get_json_body<ApiResponse>();
+        ewo api_response.success == otito, "Response should be successful";
+        ewo api_response.data.is_some(), "Should contain auth data";
+        
+        ayanmo auth_data = api_response.data.unwrap();
+        ewo auth_data.contains("token"), "Should contain JWT token";
+    }
+    
+    test "POST /api/auth/login - Invalid credentials" {
+        ayanmo app = create_test_app();
+        
+        ayanmo login_request = Request::post("/api/auth/login")
+            .with_json_body(Map::<Str, Str>::new()
+                .insert("username", "nonexistent")
+                .insert("password", "wrongpassword"));
+        
+        ayanmo login_response = app.handle(login_request);
+        
+        ewo login_response.status_code == 401, "Should return 401 Unauthorized";
+        ayanmo api_response = login_response.get_json_body<ApiResponse>();
+        ewo api_response.success == eke, "Response should be unsuccessful";
+    }
+}
+
+// Helper functions for testing
+se create_test_app() -> App {
+    ayanmo app = Iwori.create_test_app();
+    
+    // Set up in-memory database for testing
+    unsafe {
+        DATABASE = init_database(DatabaseConfig {
+            url: ":memory:",
+            pool_size: 1
+        });
+    }
+    
+    // Add routes
+    app.post("/api/auth/login", login_handler);
+    app.post("/api/users", create_user_handler);
+    app.get("/api/users/{id}", get_user_handler);
+    app.put("/api/users/{id}", update_user_handler);
+    app.delete("/api/users/{id}", delete_user_handler);
+    
+    pada app;
+}
+
+se get_test_token(user: User) -> Str {
+    generate_jwt_token(user);
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Deployment</h2>
+            
+            <h3>Docker Configuration</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Dockerfile</span>
+                </div>
+                <pre><code># Multi-stage Dockerfile for If√°-Lang REST API
+
+# Build stage
+FROM ifa-lang:1.3.0 AS builder
+
+WORKDIR /app
+
+# Copy dependency files
+COPY ifa.toml ./
+COPY src ./src
+
+# Build the application
+RUN ifa build --release
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libsqlite3-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN useradd -m -u 1000 ifauser
+
+# Set working directory
+WORKDIR /app
+
+# Copy binary from builder stage
+COPY --from=builder /app/target/release/ifa-rest-api ./
+
+# Create data directory
+RUN mkdir -p /app/data && chown -R ifauser:ifauser /app
+
+# Switch to non-root user
+USER ifauser
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Set environment variables
+ENV IFA_HOST=0.0.0.0
+ENV IFA_PORT=8080
+ENV IFA_DATABASE_URL=sqlite:///app/data/api.db
+ENV IFA_LOG_LEVEL=info
+
+# Run the application
+CMD ["./ifa-rest-api"]</code></pre>
+            </div>
+
+            <h3>Docker Compose</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">docker-compose.yml</span>
+                </div>
+                <pre><code>version: '3.8'
+
+services:
+  ifa-api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - IFA_HOST=0.0.0.0
+      - IFA_PORT=8080
+      - IFA_DATABASE_URL=postgresql://ifauser:ifapass@postgres:5432/ifadb
+      - IFA_JWT_SECRET=your-super-secret-jwt-key-here
+      - IFA_LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=ifadb
+      - POSTGRES_USER=ifauser
+      - POSTGRES_PASSWORD=ifapass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ifauser -d ifadb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - ifa-api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:</code></pre>
+            </div>
+
+            <h3>Kubernetes Deployment</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">k8s-deployment.yaml</span>
+                </div>
+                <pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ifa-api
+  labels:
+    app: ifa-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ifa-api
+  template:
+    metadata:
+      labels:
+        app: ifa-api
+    spec:
+      containers:
+      - name: ifa-api
+        image: ifa-api:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: IFA_HOST
+          value: "0.0.0.0"
+        - name: IFA_PORT
+          value: "8080"
+        - name: IFA_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ifa-secrets
+              key: database-url
+        - name: IFA_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ifa-secrets
+              key: jwt-secret
+        - name: IFA_LOG_LEVEL
+          value: "info"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ifa-api-service
+spec:
+  selector:
+    app: ifa-api
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ifa-api-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - api.ifa-lang.com
+    secretName: ifa-api-tls
+  rules:
+  - host: api.ifa-lang.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ifa-api-service
+            port:
+              number: 80</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>API Documentation</h2>
+            
+            <h3>OpenAPI Specification</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">openapi.yaml</span>
+                </div>
+                <pre><code>openapi: 3.0.0
+info:
+  title: If√°-Lang REST API
+  description: A REST API built with If√°-Lang demonstrating modern web development capabilities
+  version: 1.3.0
+  contact:
+    name: If√°-Lang Community
+    url: https://ifa-lang.org
+    email: community@ifa-lang.org
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.ifa-lang.com
+    description: Production server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the API service
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                data:
+                  status: healthy
+                  timestamp: 1640995200000
+                  version: 1.3.0
+                  uptime: 3600000
+                  database: connected
+                message: Service is healthy
+                timestamp: 1640995200000
+
+  /api/auth/login:
+    post:
+      summary: User login
+      description: Authenticate user and return JWT token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/logout:
+    post:
+      summary: User logout
+      description: Logout user (invalidate token)
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/users:
+    post:
+      summary: Create user
+      description: Create a new user account
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/users/{id}:
+    get:
+      summary: Get user by ID
+      description: Retrieve user information
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update user
+      description: Update user information
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete user
+      description: Delete user account (soft delete)
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/posts:
+    get:
+      summary: Get blog posts
+      description: Retrieve paginated list of blog posts
+      tags:
+        - Blog Posts
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: published
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Posts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    post:
+      summary: Create blog post
+      description: Create a new blog post
+      tags:
+        - Blog Posts
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the operation was successful
+        data:
+          oneOf:
+            - type: object
+            - type: array
+            - type: null
+          description: Response data (if any)
+        message:
+          type: string
+          description: Human-readable message
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        error:
+          type: string
+          description: Error message
+        code:
+          type: integer
+          description: HTTP status code
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: User ID
+        username:
+          type: string
+          description: Username
+        email:
+          type: string
+          format: email
+          description: Email address
+        created_at:
+          type: integer
+          format: int64
+          description: Creation timestamp
+        updated_at:
+          type: integer
+          format: int64
+          description: Last update timestamp
+        is_active:
+          type: boolean
+          description: Whether user account is active
+
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9_]+$'
+          description: Username (3-50 chars, alphanumeric + underscore)
+        email:
+          type: string
+          format: email
+          description: Email address
+        password:
+          type: string
+          minLength: 8
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$'
+          description: Password (8+ chars, at least one lowercase, uppercase, and number)
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9_]+$'
+          description: Username (3-50 chars, alphanumeric + underscore)
+        email:
+          type: string
+          format: email
+          description: Email address
+        is_active:
+          type: boolean
+          description: Whether user account is active
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: Username
+        password:
+          type: string
+          description: Password
+
+    BlogPost:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Post ID
+        title:
+          type: string
+          description: Post title
+        content:
+          type: string
+          description: Post content
+        author_id:
+          type: integer
+          format: int64
+          description: Author user ID
+        created_at:
+          type: integer
+          format: int64
+          description: Creation timestamp
+        updated_at:
+          type: integer
+          format: int64
+          description: Last update timestamp
+        published:
+          type: boolean
+          description: Whether post is published
+        tags:
+          type: array
+          items:
+            type: string
+          description: Post tags
+
+    CreatePostRequest:
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Post title (1-200 chars)
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Post content (1-10000 chars)
+        tags:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 10
+          description: Post tags (max 10 tags, 50 chars each)
+        published:
+          type: boolean
+          default: false
+          description: Whether to publish immediately
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Users
+    description: User management
+  - name: Blog Posts
+    description: Blog post management</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>Security</h3>
+            <ul>
+                <li><strong>Input Validation:</strong> Validate all input data with proper error messages</li>
+                <li><strong>Authentication:</strong> Use JWT tokens with proper expiration and refresh</li>
+                <li><strong>Authorization:</strong> Implement proper role-based access control</li>
+                <li><strong>Password Security:</strong> Use strong hashing algorithms (PBKDF2, bcrypt, Argon2)</li>
+                <li><strong>HTTPS:</strong> Always use HTTPS in production with proper certificates</li>
+                <li><strong>CORS:</strong> Configure CORS properly for your frontend domains</li>
+            </ul>
+
+            <h3>Performance</h3>
+            <ul>
+                <li><strong>Database Connection Pooling:</strong> Use connection pools for database access</li>
+                <li><strong>Caching:</strong> Implement caching for frequently accessed data</li>
+                <li><strong>Pagination:</strong> Always paginate list endpoints to prevent large responses</li>
+                <li><strong>Async Operations:</strong> Use async/await for I/O-bound operations</li>
+                <li><strong>Rate Limiting:</strong> Implement rate limiting to prevent abuse</li>
+            </ul>
+
+            <h3>Reliability</h3>
+            <ul>
+                <li><strong>Error Handling:</strong> Provide consistent error responses with proper HTTP status codes</li>
+                <li><strong>Logging:</strong> Implement structured logging with appropriate log levels</li>
+                <li><strong>Health Checks:</strong> Provide health check endpoints for monitoring</li>
+                <li><strong>Graceful Shutdown:</strong> Handle shutdown signals properly</li>
+                <li><strong>Circuit Breakers:</strong> Implement circuit breakers for external services</li>
+            </ul>
+
+            <h3>Testing</h3>
+            <ul>
+                <li><strong>Unit Tests:</strong> Test individual functions and methods</li>
+                <li><strong>Integration Tests:</strong> Test API endpoints with real database</li>
+                <li><strong>Load Testing:</strong> Test performance under load</li>
+                <li><strong>Security Testing:</strong> Test for common vulnerabilities</li>
+                <li><strong>Contract Testing:</strong> Test API contracts with consumers</li>
             </ul>
         </div>
 
-        <footer class="doc-footer">
-            <p><a href="cli-tool.html">Next: Build a CLI Tool ?</a></p>
-            <p><a href="../../index.html">? Documentation Home</a></p>
+        <footer>
+            <p><a href="index.html">Use Cases Documentation</a></p>
         </footer>
     </div>
-        <script src="../../js/nav.js"></script>
+
     <script src="../../js/common.js"></script>
 </body>
 
 </html>
-

@@ -3,7 +3,7 @@
 //! An opinionated code formatter for Ifá-Lang.
 //! Uses a Token Stream approach to preserve comments.
 
-use ifa_core::lexer::{tokenize, Token};
+use ifa_core::lexer::{Token, tokenize};
 
 /// Formatting configuration
 #[derive(Debug, Clone)]
@@ -26,13 +26,13 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
     let tokens = tokenize(source);
     let mut formatted = String::with_capacity(source.len() * 2);
     let mut indent_level = 0;
-    
+
     // Track if we just started a new line (to know if we need to indentation)
     let mut is_start_of_line = true;
-    
+
     // Iterate through tokens
     let mut iter = tokens.into_iter().peekable();
-    
+
     while let Some(spanned) = iter.next() {
         let token = spanned.value;
         let original_text = &source[spanned.span];
@@ -43,15 +43,10 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
             if matches!(token, Token::RBrace) && indent_level > 0 {
                 indent_level -= 1;
             }
-            
-            // Only print indentation if it's not a newline (avoid trailing spaces on empty lines)
-            if !matches!(token, Token::Newline | Token::Comment(_)) { // Comments might be blocks? No, Lexer handles comments.
-               // Actually Lexer returns Token::Newline.
-               // If next token is Newline, we just print Newline.
-            }
-            
+
+            // Only print indentation if it's not a newline
             if !matches!(token, Token::Newline) {
-                 formatted.push_str(&" ".repeat(indent_level * config.indent_size));
+                formatted.push_str(&" ".repeat(indent_level * config.indent_size));
             }
             is_start_of_line = false;
         }
@@ -62,58 +57,34 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
                 is_start_of_line = true;
             }
             Token::Comment(_c) => {
-                // If comment starts with #, likely line comment.
-                // Text includes the # or // or /* */
                 formatted.push_str(original_text);
-                
-                // If it's a line comment, it usually ends at newline, but Lexer might capture the newline separately or not?
-                // Checking lexer.rs:
-                // #[regex(r"#[^\n]*", ...)] -> Matches until newline. Code does NOT consume newline.
-                // So next token should be Token::Newline.
-                // Block comments? 
-                // #[token("/*", ...)] -> Not in lexer.rs? 
-                // lexer.rs has:
-                // #[regex(r"#[^\n]*", |lex| lex.slice().to_string())] Comment(String),
-                // Only hash comments supported by lexer right now? 
-                // Wait, I saw `grammar.pest` having `block_comment`.
-                // Checking `lexer.rs` again...
-                // `lexer.rs` content only shows `#[regex(r"#[^\n]*", ...)]` for `Comment`.
-                // Does it support `///` or `//` or `/*`?
-                // Validating lexer.rs:
-                // Line 360: #[regex(r"#[^\n]*", |lex| lex.slice().to_string())] Comment(String),
-                // Only hash comments? 
-                // But `lexer.rs` line 273 `COMMENT = _ { block_comment | doc_comment ... }` was in `grammar.pest`.
-                // `lexer.rs` (logos) seems to ONLY have Hash comments defined in the visible snippet!
-                // Wait, I see `Token` enum around line 360.
-                // It only has `#[regex(r"#[^\n]*"...`?
-                // Need to double check `lexer.rs` content carefully.
-                // If Lexer only supports `#` comments, then `//` comments in my code are being TOKENIZED AS OPERATORS?
-                // `/` `*` etc?
-                // IMPORTANT: I must ensure Lexer supports all comment types before writing Formatter.
-                
-                // Assuming it's a hash comment for now, it's just text.
             }
             Token::LBrace => {
                 formatted.push_str(" {");
                 indent_level += 1;
-                // We usually want a newline after {
-                // Check if next token is already a newline.
                 if let Some(next) = iter.peek() {
-                   if !matches!(next.value, Token::Newline) {
-                       formatted.push('\n');
-                       is_start_of_line = true;
-                   }
+                    if !matches!(next.value, Token::Newline) {
+                        formatted.push('\n');
+                        is_start_of_line = true;
+                    }
                 }
             }
             Token::RBrace => {
                 formatted.push('}');
-                // We usually want a newline after } unless followed by ; or else
+                // Check what comes after the closing brace
                 if let Some(next) = iter.peek() {
-                    if matches!(next.value, Token::Else | Token::Semicolon | Token::Comma | Token::RParen) {
-                        // Don't add newline
+                    let next_text = source[next.span.clone()].trim();
+                    if matches!(
+                        next.value,
+                        Token::Else | Token::Semicolon | Token::Comma | Token::RParen
+                    ) || next_text == "else"
+                        || next_text == "bibẹkọ"
+                    {
+                        // Don't add newline, it will continue on same line (e.g. `} else {`)
+                        formatted.push(' ');
                     } else if !matches!(next.value, Token::Newline) {
-                         formatted.push('\n');
-                         is_start_of_line = true;
+                        formatted.push('\n');
+                        is_start_of_line = true;
                     }
                 }
             }
@@ -145,22 +116,35 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
             Token::And => formatted.push_str(" && "),
             Token::Or => formatted.push_str(" || "),
             Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent => {
-                 // Spacing around math operators? "x+y" vs "x + y".
-                 // Linus prefers space.
-                 formatted.push(' ');
-                 formatted.push_str(original_text);
-                 formatted.push(' ');
+                // Spacing around math operators? "x+y" vs "x + y".
+                // Linus prefers space.
+                formatted.push(' ');
+                formatted.push_str(original_text);
+                formatted.push(' ');
             }
             Token::FatArrow => formatted.push_str(" => "),
-            
+
             // Keywords
-            Token::Let | Token::Const | Token::If | Token::Else | Token::For | Token::While | 
-            Token::Return | Token::Function | Token::Class | Token::Import | Token::Ebo | 
-            Token::Ewo | Token::Ase | Token::Match | Token::Pub | Token::Private => {
+            Token::Let
+            | Token::Const
+            | Token::If
+            | Token::Else
+            | Token::For
+            | Token::While
+            | Token::Return
+            | Token::Function
+            | Token::Class
+            | Token::Import
+            | Token::Ebo
+            | Token::Ewo
+            | Token::Ase
+            | Token::Match
+            | Token::Pub
+            | Token::Private => {
                 formatted.push_str(original_text);
                 formatted.push(' '); // Keywords usually followed by space
             }
-            
+
             // Literals / Identifiers
             _ => {
                 formatted.push_str(original_text);
@@ -175,9 +159,41 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
             }
         }
     }
-    
-    // Post-processing to trim trailing spaces?
-    // Token stream reconstruction is hard to get perfect on first try.
-    // Iteration 1: Simple loop.
-    formatted
+
+    // Post-processing: trim trailing spaces from each line
+    let mut final_out = String::with_capacity(formatted.len());
+    for line in formatted.lines() {
+        final_out.push_str(line.trim_end());
+        final_out.push('\n');
+    }
+
+    // Remove the very last newline if it wasn't in original?
+    // Let's just return it as cleanly formatted.
+    final_out.trim_end().to_string() + "\n"
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_basic_if_else() {
+        let input = "ti x>5{Irosu.fo(1);}else{Irosu.fo(2);}";
+        let expected = "ti x > 5 {\n    Irosu.fo(1);\n} else {\n    Irosu.fo(2);\n}\n";
+        assert_eq!(format(input, FormatterConfig::default()), expected);
+    }
+
+    #[test]
+    fn test_format_nested_blocks() {
+        let input = "ese main(){ti otito{Irosu.fo(\"yes\");}}";
+        let expected = "ese main() {\n    ti otito {\n        Irosu.fo(\"yes\");\n    }\n}\n";
+        assert_eq!(format(input, FormatterConfig::default()), expected);
+    }
+
+    #[test]
+    fn test_format_preserves_comments() {
+        let input = "ayanmo x = 1; # initial value\nx += 1;";
+        let expected = "ayanmo x = 1; # initial value\nx += 1;\n";
+        assert_eq!(format(input, FormatterConfig::default()), expected);
+    }
 }

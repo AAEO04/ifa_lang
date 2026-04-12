@@ -4,81 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iwori Use Cases - Time & Date Examples</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Iwori Domain Examples - Ifá-Lang</title>
+    <meta name="description" content="Examples of Iwori (0001) domain operations for time management and scheduling in Ifá-Lang">
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -86,215 +20,994 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
-        <h1>? Iwori: Time & Date</h1>
-        <p>Real-world time management and scheduling.</p>
+        <header>
+            <h1>Iwori Domain Examples</h1>
+            <p class="subtitle">Time Management and Scheduling (0001)</p>
+        </header>
 
-        <h2>Use Case 1: Performance Benchmarking</h2>
-        <pre><code>// benchmark.ifa - Measure code execution time
+        <div class="step">
+            <h2>Overview</h2>
+            <p>Iwori (0001) is the time domain representing timing, scheduling, and temporal operations. It provides comprehensive time management, scheduling, timing operations, and temporal analysis capabilities following Ifá-Lang's cultural and architectural principles.</p>
+            
+            <div class="domain-info">
+                <div class="domain-card">
+                    <h3>Domain Characteristics</h3>
+                    <ul>
+                        <li><strong>Binary Pattern:</strong> 0001 (timing and beginning)</li>
+                        <li><strong>Yoruba Meaning:</strong> "The watcher" or "The timekeeper"</li>
+                        <li><strong>System Role:</strong> Time operations and scheduling</li>
+                        <li><strong>Element:</strong> Air (time flows like air)</li>
+                    </ul>
+                </div>
+                
+                <div class="domain-card">
+                    <h3>Core Capabilities</h3>
+                    <ul>
+                        <li><strong>Time Operations:</strong> Timestamps, durations, intervals</li>
+                        <li><strong>Scheduling:</strong> Task scheduling, timers, alarms</li>
+                        <li><strong>Calendars:</strong> Date operations, calendar systems</li>
+                        <li><strong>Time Zones:</strong> Time zone conversions and handling</li>
+                        <li><strong>Performance:</strong> Timing, benchmarking, profiling</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-ise benchmark(name, iterations, func) {
-    Irosu.fo("Benchmarking: " + name);
-    
-    // Warm-up run
-    func();
-    
-    // Timed runs
-    ayanmo times = [];
-    ayanmo i = 0;
-    
-    nigba (i < iterations) {
-        ayanmo start = Iwori.now_ns();
-        func();
-        ayanmo elapsed = Iwori.now_ns() - start;
-        ayanmo times = Ogunda.push(times, elapsed);
-        ayanmo i = i + 1;
-    }
-    
-    // Calculate statistics
-    ayanmo total = Osa.sum(times);
-    ayanmo avg = total / iterations;
-    ayanmo min = Osa.min(times);
-    ayanmo max = Osa.max(times);
-    
-    Irosu.fo("  Iterations: " + iterations);
-    Irosu.fo("  Avg: " + (avg / 1000000) + " ms");
-    Irosu.fo("  Min: " + (min / 1000000) + " ms");
-    Irosu.fo("  Max: " + (max / 1000000) + " ms");
-    
-    padap? {"avg": avg, "min": min, "max": max};
+        <div class="step">
+            <h2>Basic Time Operations</h2>
+            
+            <h3>Timestamps and Durations</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Fundamental Time Operations</span>
+                </div>
+                <pre><code>// Get current timestamp
+ayanmo now = Iwori.timestamp();
+Irosu.fo("Current timestamp: " + Obara.to_str(now));
+
+// Get timestamp with milliseconds precision
+ayanmo now_ms = Iwori.timestamp_ms();
+Irosu.fo("Current timestamp (ms): " + Obara.to_str(now_ms));
+
+// Format timestamp as human-readable date/time
+ayanmo formatted = Iwori.format_timestamp(now);
+Irosu.fo("Formatted: " + formatted);  // e.g., "2024-01-15 14:30:45"
+
+// Custom formatting
+ayanmo custom_format = Iwori.format_time(now, "%Y-%m-%d %H:%M:%S");
+Irosu.fo("Custom format: " + custom_format);
+
+// Parse date/time string
+ayanmo parsed = Iwori.parse_time("2024-01-15 14:30:45", "%Y-%m-%d %H:%M:%S");
+Irosu.fo("Parsed timestamp: " + Obara.to_str(parsed));
+
+// Calculate duration between timestamps
+ayanmo start = Iwori.timestamp();
+Iwori.sleep(1000);  // Sleep 1 second
+ayanmo end = Iwori.timestamp();
+
+ayanmo duration = end - start;
+Irosu.fo("Duration: " + Obara.to_str(duration) + "ms");
+
+// Duration in different units
+ayanmo seconds = duration / 1000;
+ayanmo minutes = seconds / 60;
+ayanmo hours = minutes / 60;
+
+Irosu.fo("Duration: " + Obara.to_str(seconds) + "s");
+Irosu.fo("Duration: " + Obara.to_str(minutes) + "m");
+Irosu.fo("Duration: " + Obara.to_str(hours) + "h");
+
+// Format duration
+ayanmo formatted_duration = Iwori.format_duration(duration);
+Irosu.fo("Formatted duration: " + formatted_duration);  // "1s"</code></pre>
+            </div>
+
+            <h3>Time Arithmetic</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Time Calculations</span>
+                </div>
+                <pre><code>// Add time to timestamp
+ayanmo base_time = Iwori.parse_time("2024-01-15 14:30:00", "%Y-%m-%d %H:%M:%S");
+
+// Add 2 hours
+ayanmo plus_2h = Iwori.add_time(base_time, 2 * 60 * 60 * 1000);  // 2 hours in ms
+Irosu.fo("Plus 2 hours: " + Iwori.format_timestamp(plus_2h));
+
+// Add 30 minutes
+ayanmo plus_30m = Iwori.add_time(base_time, 30 * 60 * 1000);  // 30 minutes in ms
+Irosu.fo("Plus 30 minutes: " + Iwori.format_timestamp(plus_30m));
+
+// Add 5 days
+ayanmo plus_5d = Iwori.add_days(base_time, 5);
+Irosu.fo("Plus 5 days: " + Iwori.format_timestamp(plus_5d));
+
+// Subtract time
+ayanmo minus_1h = Iwori.subtract_time(base_time, 60 * 60 * 1000);  // 1 hour in ms
+Irosu.fo("Minus 1 hour: " + Iwori.format_timestamp(minus_1h));
+
+// Time difference calculation
+ayanmo time1 = Iwori.parse_time("2024-01-15 14:30:00", "%Y-%m-%d %H:%M:%S");
+ayanmo time2 = Iwori.parse_time("2024-01-15 16:45:00", "%Y-%m-%d %H:%M:%S");
+
+ayanmo difference = Iwori.time_difference(time1, time2);
+Irosu.fo("Time difference: " + Iwori.format_duration(difference));  // "2h 15m"
+
+// Check if time is before/after
+ayanmo is_before = Iwori.is_before(time1, time2);
+ayanmo is_after = Iwori.is_after(time2, time1);
+
+Irosu.fo("Time1 is before Time2: " + Obara.to_str(is_before));  // otito
+Irosu.fo("Time2 is after Time1: " + Obara.to_str(is_after));    // otito
+
+// Time range checking
+se is_time_in_range(time: u64, start: u64, end: u64) -> Bool {
+    pada time >= start and time <= end;
 }
 
-// Usage
-benchmark("Fibonacci", 100, || {
-    ise fib(n) {
-        ti (n <= 1) { padap? n; }
-        padap? fib(n - 1) + fib(n - 2);
+ayanmo current = Iwori.timestamp();
+ayanmo work_start = Iwori.parse_time("2024-01-15 09:00:00", "%Y-%m-%d %H:%M:%S");
+ayanmo work_end = Iwori.parse_time("2024-01-15 17:00:00", "%Y-%m-%d %H:%M:%S");
+
+ayanmo is_work_hours = is_time_in_range(current, work_start, work_end);
+Irosu.fo("Is work hours: " + Obara.to_str(is_work_hours));</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Calendar Operations</h2>
+            
+            <h3>Date Operations</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Calendar Functions</span>
+                </div>
+                <pre><code>// Get current date components
+ayanmo now = Iwori.timestamp();
+ayanmo date_info = Iwori.get_date_info(now);
+
+Irosu.fo("Current date information:");
+Irosu.fo("Year: " + Obara.to_str(date_info.year));
+Irosu.fo("Month: " + Obara.to_str(date_info.month));
+Irosu.fo("Day: " + Obara.to_str(date_info.day));
+Irosu.fo("Day of week: " + Obara.to_str(date_info.day_of_week));  // 0 = Sunday
+Irosu.fo("Day of year: " + Obara.to_str(date_info.day_of_year));
+Irosu.fo("Week of year: " + Obara.to_str(date_info.week_of_year));
+
+// Get day of week name
+ayanmo day_names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+ayanmo day_name = day_names[date_info.day_of_week];
+Irosu.fo("Day name: " + day_name);
+
+// Get month name
+ayanmo month_names = ["January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December"];
+ayanmo month_name = month_names[date_info.month - 1];
+Irosu.fo("Month name: " + month_name);
+
+// Check if year is leap year
+ayanmo is_leap = Iwori.is_leap_year(date_info.year);
+Irosu.fo("Is leap year: " + Obara.to_str(is_leap));
+
+// Get days in month
+ayanmo days_in_month = Iwori.days_in_month(date_info.year, date_info.month);
+Irosu.fo("Days in month: " + Obara.to_str(days_in_month));
+
+// Calculate age from birth date
+se calculate_age(birth_date: u64) -> u32 {
+    ayanmo now = Iwori.timestamp();
+    ayanmo birth_info = Iwori.get_date_info(birth_date);
+    ayanmo current_info = Iwori.get_date_info(now);
+    
+    ayanmo age = current_info.year - birth_info.year;
+    
+    // Adjust if birthday hasn't occurred yet this year
+    if current_info.month < birth_info.month or 
+       (current_info.month == birth_info.month and current_info.day < birth_info.day) {
+        age -= 1;
     }
-    fib(20);
+    
+    pada age;
+}
+
+// Example age calculation
+ayanmo birth_date = Iwori.parse_time("1990-05-15 00:00:00", "%Y-%m-%d %H:%M:%S");
+ayanmo age = calculate_age(birth_date);
+Irosu.fo("Age: " + Obara.to_str(age) + " years");
+
+// Find next occurrence of a specific date
+se find_next_occurrence(month: u32, day: u32, from_date: u64) -> u64 {
+    ayanmo from_info = Iwori.get_date_info(from_date);
+    
+    ayanmo candidate_year = from_info.year;
+    ayanmo candidate = Iwori.create_timestamp(candidate_year, month, day, 0, 0, 0);
+    
+    // If candidate date is before from_date, try next year
+    if candidate < from_date {
+        candidate_year += 1;
+        candidate = Iwori.create_timestamp(candidate_year, month, day, 0, 0, 0);
+    }
+    
+    pada candidate;
+}
+
+// Find next birthday
+ayanmo next_birthday = find_next_occurrence(5, 15, now);
+Irosu.fo("Next birthday: " + Iwori.format_timestamp(next_birthday));
+
+// Days until next birthday
+ayanmo days_until_birthday = (next_birthday - now) / (24 * 60 * 60 * 1000);
+Irosu.fo("Days until birthday: " + Obara.to_str(days_until_birthday));</code></pre>
+            </div>
+
+            <h3>Calendar Events</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Calendar Event Management</span>
+                </div>
+                <pre><code>// Calendar event structure
+struct CalendarEvent {
+    title: Str,
+    description: Str,
+    start_time: u64,
+    end_time: u64,
+    is_recurring: Bool,
+    recurrence_pattern: Str
+}
+
+// Create calendar event
+se create_event(title: Str, description: Str, start: u64, end: u64, 
+                recurring: Bool, pattern: Str) -> CalendarEvent {
+    CalendarEvent {
+        title: title,
+        description: description,
+        start_time: start,
+        end_time: end,
+        is_recurring: recurring,
+        recurrence_pattern: pattern
+    }
+}
+
+// Check if event occurs on specific date
+se event_occurs_on(event: CalendarEvent, date: u64) -> Bool {
+    ayanmo date_start = Iwori.start_of_day(date);
+    ayanmo date_end = Iwori.end_of_day(date);
+    
+    if !event.is_recurring {
+        // Check if event falls within the date
+        pada event.start_time >= date_start and event.start_time <= date_end;
+    } else {
+        // Handle recurring events
+        match event.recurrence_pattern {
+            "daily" => otito,
+            "weekly" => {
+                ayanmo event_day = Iwori.get_date_info(event.start_time).day_of_week;
+                ayanmo check_day = Iwori.get_date_info(date).day_of_week;
+                event_day == check_day
+            }
+            "monthly" => {
+                ayanmo event_day = Iwori.get_date_info(event.start_time).day;
+                ayanmo check_day = Iwori.get_date_info(date).day;
+                event_day == check_day
+            }
+            "yearly" => {
+                ayanmo event_month = Iwori.get_date_info(event.start_time).month;
+                ayanmo event_day = Iwori.get_date_info(event.start_time).day;
+                ayanmo check_month = Iwori.get_date_info(date).month;
+                ayanmo check_day = Iwori.get_date_info(date).day;
+                event_month == check_month and event_day == check_day
+            }
+            _ => eke
+        }
+    }
+}
+
+// Get upcoming events
+se get_upcoming_events(events: Vec<CalendarEvent>, days: u32) -> Vec<CalendarEvent> {
+    ayanmo now = Iwori.timestamp();
+    ayanmo end_date = Iwori.add_days(now, days);
+    
+    ayanmo upcoming = Vec::<CalendarEvent>::new();
+    
+    fun event ninu events {
+        ayanmo check_date = event.start_time;
+        
+        // For recurring events, check multiple occurrences
+        if event.is_recurring {
+            fun day_offset ninu 0..days {
+                ayanmo test_date = Iwori.add_days(now, day_offset);
+                if event_occurs_on(event, test_date) {
+                    ayanmo occurrence = event;
+                    occurrence.start_time = Iwori.create_timestamp(
+                        Iwori.get_date_info(test_date).year,
+                        Iwori.get_date_info(test_date).month,
+                        Iwori.get_date_info(test_date).day,
+                        Iwori.get_date_info(event.start_time).hour,
+                        Iwori.get_date_info(event.start_time).minute,
+                        Iwori.get_date_info(event.start_time).second
+                    );
+                    upcoming.push(occurrence);
+                }
+            }
+        } else if event.start_time >= now and event.start_time <= end_date {
+            upcoming.push(event);
+        }
+    }
+    
+    // Sort by start time
+    upcoming.sort_by(|a, b| Obara.compare(a.start_time, b.start_time));
+    
+    pada upcoming;
+}
+
+// Example calendar usage
+ayanmo events = [
+    create_event("Team Meeting", "Weekly team sync", 
+                Iwori.parse_time("2024-01-15 10:00:00", "%Y-%m-%d %H:%M:%S"),
+                Iwori.parse_time("2024-01-15 11:00:00", "%Y-%m-%d %H:%M:%S"),
+                otito, "weekly"),
+    
+    create_event("Birthday", "Personal birthday celebration",
+                Iwori.parse_time("1990-05-15 00:00:00", "%Y-%m-%d %H:%M:%S"),
+                Iwori.parse_time("1990-05-15 23:59:59", "%Y-%m-%d %H:%M:%S"),
+                otito, "yearly"),
+    
+    create_event("Project Deadline", "Project submission deadline",
+                Iwori.parse_time("2024-01-20 17:00:00", "%Y-%m-%d %H:%M:%S"),
+                Iwori.parse_time("2024-01-20 17:00:00", "%Y-%m-%d %H:%M:%S"),
+                eke, "")
+];
+
+Irosu.fo("Upcoming events (next 30 days):");
+ayanmo upcoming = get_upcoming_events(events, 30);
+
+fun event ninu upcoming {
+    Irosu.fo("  " + Iwori.format_timestamp(event.start_time) + " - " + event.title);
+    Irosu.fo("    " + event.description);
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Time Zones</h2>
+            
+            <h3>Time Zone Operations</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Time Zone Handling</span>
+                </div>
+                <pre><code>// Get current time in different time zones
+ayanmo utc_time = Iwori.utc_timestamp();
+Irosu.fo("UTC time: " + Iwori.format_timestamp(utc_time));
+
+// Convert to local time
+ayanmo local_time = Iwori.utc_to_local(utc_time);
+Irosu.fo("Local time: " + Iwori.format_timestamp(local_time));
+
+// Convert to specific time zones
+ayanmo ny_time = Iwori.convert_timezone(utc_time, "America/New_York");
+ayanmo london_time = Iwori.convert_timezone(utc_time, "Europe/London");
+ayanmo tokyo_time = Iwori.convert_timezone(utc_time, "Asia/Tokyo");
+
+Irosu.fo("New York: " + Iwori.format_timestamp(ny_time));
+Irosu.fo("London: " + Iwori.format_timestamp(london_time));
+Irosu.fo("Tokyo: " + Iwori.format_timestamp(tokyo_time));
+
+// Get time zone offset
+se get_timezone_offset(timestamp: u64, timezone: Str) -> i32 {
+    ayanmo utc = Iwori.utc_timestamp();
+    ayanmo converted = Iwori.convert_timezone(utc, timezone);
+    pada (converted - utc) / (60 * 1000);  // Convert to minutes
+}
+
+ayanmo ny_offset = get_timezone_offset(utc_time, "America/New_York");
+ayanmo london_offset = get_timezone_offset(utc_time, "Europe/London");
+ayanmo tokyo_offset = get_timezone_offset(utc_time, "Asia/Tokyo");
+
+Irosu.fo("Time zone offsets (minutes from UTC):");
+Irosu.fo("  New York: " + Obara.to_str(ny_offset));     // -300 or -240 depending on DST
+Irosu.fo("  London: " + Obara.to_str(london_offset));     // 60 or 120 depending on DST
+Irosu.fo("  Tokyo: " + Obara.to_str(tokyo_offset));       // 540
+
+// Check if time zone observes daylight saving time
+se observes_dst(timezone: Str) -> Bool {
+    // Check summer and winter offsets
+    ayanmo summer_date = Iwori.parse_time("2024-07-01 12:00:00", "%Y-%m-%d %H:%M:%S");
+    ayanmo winter_date = Iwori.parse_time("2024-01-01 12:00:00", "%Y-%m-%d %H:%M:%S");
+    
+    ayanmo summer_offset = get_timezone_offset(summer_date, timezone);
+    ayanmo winter_offset = get_timezone_offset(winter_date, timezone);
+    
+    summer_offset != winter_offset;
+}
+
+Irosu.fo("");
+Irosu.fo("Daylight Saving Time:");
+Irosu.fo("  New York observes DST: " + Obara.to_str(observes_dst("America/New_York")));
+Irosu.fo("  London observes DST: " + Obara.to_str(observes_dst("Europe/London")));
+Irosu.fo("  Tokyo observes DST: " + Obara.to_str(observes_dst("Asia/Tokyo")));
+
+// Convert between time zones
+se convert_between_zones(timestamp: u64, from_zone: Str, to_zone: Str) -> u64 {
+    ayanmo utc = Iwori.convert_timezone(timestamp, from_zone, "UTC");
+    pada Iwori.convert_timezone(utc, "UTC", to_zone);
+}
+
+// Example: Convert 3 PM New York time to Tokyo time
+ayanmo ny_3pm = Iwori.parse_time("2024-01-15 15:00:00", "%Y-%m-%d %H:%M:%S");
+ayanmo tokyo_time = convert_between_zones(ny_3pm, "America/New_York", "Asia/Tokyo");
+
+Irosu.fo("");
+Irosu.fo("3 PM New York = " + Iwori.format_timestamp(tokyo_time) + " Tokyo");
+
+// List available time zones
+se list_time_zones() -> Vec<Str> {
+    [
+        "UTC",
+        "America/New_York",
+        "America/Chicago",
+        "America/Denver",
+        "America/Los_Angeles",
+        "Europe/London",
+        "Europe/Paris",
+        "Europe/Berlin",
+        "Asia/Tokyo",
+        "Asia/Shanghai",
+        "Asia/Kolkata",
+        "Australia/Sydney",
+        "Pacific/Auckland"
+    ]
+}
+
+Irosu.fo("");
+Irosu.fo("Available time zones:");
+fun zone ninu list_time_zones() {
+    Irosu.fo("  " + zone);
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Scheduling and Timers</h2>
+            
+            <h3>Task Scheduling</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Scheduling Operations</span>
+                </div>
+                <pre><code>// Simple timer
+se simple_timer(duration_ms: u32, callback: ese () -> ()) {
+    ayanmo start_time = Iwori.timestamp();
+    ayanmo end_time = start_time + duration_ms;
+    
+    while Iwori.timestamp() < end_time {
+        Iwori.sleep(10);  // Check every 10ms
+    }
+    
+    callback();
+}
+
+// Example simple timer
+Irosu.fo("Starting 3 second timer...");
+simple_timer(3000, || {
+    Irosu.fo("Timer completed!");
 });
 
-benchmark("List operations", 1000, || {
-    ayanmo list = [];
-    ayanmo i = 0;
-    nigba (i < 100) {
-        ayanmo list = Ogunda.push(list, i);
-        ayanmo i = i + 1;
+// Repeating timer
+se repeating_timer(interval_ms: u32, count: u32, callback: ese (u32) -> ()) {
+    fun iteration ninu 0..count {
+        callback(iteration);
+        if iteration < count - 1 {
+            Iwori.sleep(interval_ms);
+        }
     }
-});</code></pre>
-
-        <h2>Use Case 2: Scheduled Task Runner</h2>
-        <pre><code>// scheduler.ifa - Run tasks at specific times
-
-ayanmo tasks = [];
-
-ise schedule(name, interval_ms, func) {
-    ayanmo tasks = Ogunda.push(tasks, {
-        "name": name,
-        "interval": interval_ms,
-        "last_run": 0,
-        "func": func
-    });
 }
 
-ise run_scheduler() {
-    Irosu.fo("Scheduler started at " + Iwori.format(Iwori.now(), "%H:%M:%S"));
-    
-    nigba (otito) {
-        ayanmo now = Iwori.now_ms();
+// Example repeating timer
+Irosu.fo("Starting repeating timer (5 times, every 500ms)...");
+repeating_timer(500, 5, |i| {
+    Irosu.fo("Timer iteration " + Obara.to_str(i + 1));
+});
+
+// Scheduled task
+struct ScheduledTask {
+    id: Str,
+    callback: ese () -> (),
+    scheduled_time: u64,
+    is_executed: Bool
+}
+
+// Task scheduler
+se schedule_task(tasks: Vec<ScheduledTask>) {
+    while ototo {
+        ayanmo now = Iwori.timestamp();
+        ayanmo all_done = otito;
         
         fun task ninu tasks {
-            ayanmo elapsed = now - task["last_run"];
+            if !task.is_executed and task.scheduled_time <= now {
+                task.callback();
+                task.is_executed = otito;
+            }
             
-            ti (elapsed >= task["interval"]) {
-                Irosu.fo("[" + Iwori.format(Iwori.now(), "%H:%M:%S") + "] Running: " + task["name"]);
-                task["func"]();
-                task["last_run"] = now;
+            if !task.is_executed {
+                all_done = eke;
             }
         }
         
-        Oyeku.sleep(100);  // Check every 100ms
+        if all_done {
+            break;
+        }
+        
+        Iwori.sleep(100);  // Check every 100ms
     }
 }
 
-// Usage
-schedule("Health check", 5000, || {
-    Irosu.fo("  ? System healthy");
-});
-
-schedule("Sync data", 10000, || {
-    Irosu.fo("  ? Data synced");
-});
-
-schedule("Cleanup temp files", 30000, || {
-    Irosu.fo("  ? Temp files cleaned");
-});
-
-run_scheduler();</code></pre>
-
-        <h2>Use Case 3: Time Zone Converter</h2>
-        <pre><code>// timezone.ifa - Convert between time zones
-
-ayanmo TIMEZONES = {
-    "UTC": 0,
-    "EST": -5,
-    "PST": -8,
-    "CET": 1,
-    "JST": 9,
-    "WAT": 1,
-    "IST": 5.5
-};
-
-ise convert_timezone(timestamp, from_tz, to_tz) {
-    ayanmo from_offset = TIMEZONES[from_tz];
-    ayanmo to_offset = TIMEZONES[to_tz];
-    
-    ti (from_offset == nil || to_offset == nil) {
-        padap? Okanran.error("Unknown timezone");
+// Example scheduled tasks
+ayanmo tasks = [
+    ScheduledTask {
+        id: "task1",
+        callback: || { Irosu.fo("Task 1 executed"); },
+        scheduled_time: Iwori.timestamp() + 1000,  // 1 second from now
+        is_executed: eke
+    },
+    ScheduledTask {
+        id: "task2", 
+        callback: || { Irosu.fo("Task 2 executed"); },
+        scheduled_time: Iwori.timestamp() + 2000,  // 2 seconds from now
+        is_executed: eke
+    },
+    ScheduledTask {
+        id: "task3",
+        callback: || { Irosu.fo("Task 3 executed"); },
+        scheduled_time: Iwori.timestamp() + 1500,  // 1.5 seconds from now
+        is_executed: eke
     }
-    
-    // Convert to UTC first, then to target
-    ayanmo utc = timestamp - (from_offset * 3600);
-    ayanmo result = utc + (to_offset * 3600);
-    
-    padap? result;
-}
-
-ise format_local_time(timestamp, tz) {
-    ayanmo formatted = Iwori.format(timestamp, "%Y-%m-%d %H:%M:%S");
-    padap? formatted + " " + tz;
-}
-
-// Usage
-ayanmo now = Iwori.now();
-
-Irosu.fo("Current time around the world:");
-Irosu.fo("-----------------------------");
-
-fun tz key(TIMEZONES) {
-    ayanmo local = convert_timezone(now, "UTC", tz);
-    Irosu.fo(tz + ": " + format_local_time(local, tz));
-}</code></pre>
-
-        <h2>Use Case 4: Event Countdown</h2>
-        <pre><code>// countdown.ifa - Calculate time until events
-
-ise time_until(target_date) {
-    ayanmo now = Iwori.now();
-    ayanmo diff = target_date - now;
-    
-    ti (diff <= 0) {
-        padap? {"expired": otito};
-    }
-    
-    ayanmo days = Oturupon.div(diff, 86400);
-    ayanmo hours = Oturupon.div(Oturupon.mod(diff, 86400), 3600);
-    ayanmo mins = Oturupon.div(Oturupon.mod(diff, 3600), 60);
-    ayanmo secs = Oturupon.mod(diff, 60);
-    
-    padap? {
-        "expired": iro,
-        "days": days,
-        "hours": hours,
-        "minutes": mins,
-        "seconds": secs
-    };
-}
-
-ise format_countdown(remaining) {
-    ti (remaining["expired"]) {
-        padap? "Event has passed!";
-    }
-    
-    padap? remaining["days"] + "d " + 
-           remaining["hours"] + "h " + 
-           remaining["minutes"] + "m " + 
-           remaining["seconds"] + "s";
-}
-
-// Usage
-ayanmo events = [
-    {"name": "New Year 2027", "date": Iwori.parse("2027-01-01 00:00:00")},
-    {"name": "Summer Solstice", "date": Iwori.parse("2026-06-21 00:00:00")},
-    {"name": "Product Launch", "date": Iwori.parse("2026-03-15 09:00:00")}
 ];
 
-Irosu.fo("? Event Countdowns");
-Irosu.fo("------------------");
+Irosu.fo("Executing scheduled tasks...");
+schedule_task(tasks);
 
-fun event ninu events {
-    ayanmo remaining = time_until(event["date"]);
-    Irosu.fo(event["name"] + ": " + format_countdown(remaining));
+// Cron-like scheduler
+struct CronJob {
+    name: Str,
+    cron_expression: Str,  // "0 12 * * *" = daily at noon
+    callback: ese () -> (),
+    last_run: u64
+}
+
+// Parse cron expression (simplified)
+se parse_cron_next(expression: Str, from_time: u64) -> u64 {
+    // This is a simplified implementation
+    // Real implementation would parse the full cron expression
+    
+    if expression == "0 12 * * *" {  // Daily at noon
+        ayanmo date_info = Iwori.get_date_info(from_time);
+        ayanmo noon_today = Iwori.create_timestamp(
+            date_info.year, date_info.month, date_info.day, 12, 0, 0
+        );
+        
+        if noon_today > from_time {
+            pada noon_today;
+        } else {
+            pada Iwori.add_days(noon_today, 1);
+        }
+    } else if expression == "0 9 * * 1" {  // Every Monday at 9 AM
+        ayanmo next_monday = Iwori.next_weekday(from_time, 1);  // 1 = Monday
+        ayanmo date_info = Iwori.get_date_info(next_monday);
+        pada Iwori.create_timestamp(
+            date_info.year, date_info.month, date_info.day, 9, 0, 0
+        );
+    } else {
+        // Default: 1 hour from now
+        pada from_time + (60 * 60 * 1000);
+    }
+}
+
+// Cron scheduler
+se cron_scheduler(jobs: Vec<CronJob>, duration_ms: u32) {
+    ayanmo start_time = Iwori.timestamp();
+    ayanmo end_time = start_time + duration_ms;
+    
+    while Iwori.timestamp() < end_time {
+        ayanmo now = Iwori.timestamp();
+        
+        fun job ninu jobs {
+            ayanmo next_run = parse_cron_next(job.cron_expression, job.last_run);
+            
+            if next_run <= now and next_run > job.last_run {
+                job.callback();
+                job.last_run = now;
+            }
+        }
+        
+        Iwori.sleep(1000);  // Check every second
+    }
+}
+
+// Example cron jobs
+ayanmo cron_jobs = [
+    CronJob {
+        name: "daily_backup",
+        cron_expression: "0 12 * * *",
+        callback: || { Irosu.fo("Daily backup executed"); },
+        last_run: 0
+    },
+    CronJob {
+        name: "weekly_report",
+        cron_expression: "0 9 * * 1",
+        callback: || { Irosu.fo("Weekly report generated"); },
+        last_run: 0
+    }
+];
+
+// Run cron scheduler for 10 seconds (for demo)
+// cron_scheduler(cron_jobs, 10000);</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Performance and Benchmarking</h2>
+            
+            <h3>Timing and Profiling</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Performance Measurement</span>
+                </div>
+                <pre><code>// Benchmark function
+se benchmark(name: Str, iterations: u32, function: ese () -> ()) {
+    Irosu.fo("Benchmarking: " + name + " (" + Obara.to_str(iterations) + " iterations)");
+    
+    ayanmo start_time = Iwori.timestamp();
+    
+    fun i ninu 0..iterations {
+        function();
+    }
+    
+    ayanmo end_time = Iwori.timestamp();
+    ayanmo total_time = end_time - start_time;
+    ayanmo avg_time = total_time / iterations;
+    
+    Irosu.fo("Total time: " + Iwori.format_duration(total_time));
+    Irosu.fo("Average time: " + Obara.to_str(avg_time) + "ms per iteration");
+    Irosu.fo("Iterations per second: " + Obara.to_str((iterations * 1000) / total_time));
+    
+    if total_time > 0 {
+        Irosu.fo("Throughput: " + Obara.format((iterations * 1000.0) / total_time as f64, 2) + " ops/sec");
+    }
+    
+    Irosu.fo("");
+}
+
+// Example benchmarks
+benchmark("String concatenation", 10000, || {
+    ayanmo result = "";
+    fun i ninu 0..100 {
+        result += "test";
+    }
+});
+
+benchmark("String join", 10000, || {
+    ayanmo parts = Vec::<Str>::new();
+    fun i ninu 0..100 {
+        parts.push("test");
+    }
+    ayanmo result = Ika.join(parts, "");
+});
+
+benchmark("Math operations", 100000, || {
+    ayanmo result = 0.0;
+    fun i ninu 0..1000 {
+        result = Obara.sqrt(i as f64);
+    }
+});
+
+// Memory usage monitoring
+se monitor_memory_usage() -> Map<Str, u64> {
+    ayanmo usage = Map::<Str, u64>::new();
+    
+    // Get memory information (platform-specific)
+    ayanmo mem_info = Ogbe.memory_info();
+    usage.insert("total", mem_info.total);
+    usage.insert("used", mem_info.used);
+    usage.insert("free", mem_info.free);
+    
+    pada usage;
+}
+
+// Performance profiler
+se profile_function(name: Str, function: ese () -> ()) {
+    Irosu.fo("Profiling: " + name);
+    
+    // Memory before
+    ayanmo mem_before = monitor_memory_usage();
+    
+    // Time measurement
+    ayanmo start_time = Iwori.timestamp();
+    function();
+    ayanmo end_time = Iwori.timestamp();
+    
+    // Memory after
+    ayanmo mem_after = monitor_memory_usage();
+    
+    Irosu.fo("Execution time: " + Obara.to_str(end_time - start_time) + "ms");
+    Irosu.fo("Memory before: " + Ika.format_bytes(mem_before.get("used")));
+    Irosu.fo("Memory after: " + Ika.format_bytes(mem_after.get("used")));
+    Irosu.fo("Memory delta: " + Ika.format_bytes(mem_after.get("used") - mem_before.get("used")));
+    Irosu.fo("");
+}
+
+// Example profiling
+profile_function("Large string creation", || {
+    ayanmo large_string = "";
+    fun i ninu 0..10000 {
+        large_string += "This is a test string for memory profiling. ";
+    }
+});
+
+profile_function("Vector operations", || {
+    ayanmo numbers = Vec::<u64>::new();
+    fun i ninu 0..100000 {
+        numbers.push(i);
+    }
+    
+    fun num ninu numbers {
+        ayanmo squared = num * num;
+    }
+});
+
+// Performance comparison
+se compare_performance(name1: Str, func1: ese () -> (), name2: Str, func2: ese () -> (), iterations: u32) {
+    Irosu.fo("Performance comparison: " + name1 + " vs " + name2);
+    
+    // Benchmark first function
+    ayanmo start1 = Iwori.timestamp();
+    fun i ninu 0..iterations {
+        func1();
+    }
+    ayanmo time1 = Iwori.timestamp() - start1;
+    
+    // Benchmark second function
+    ayanmo start2 = Iwori.timestamp();
+    fun i ninu 0..iterations {
+        func2();
+    }
+    ayanmo time2 = Iwori.timestamp() - start2;
+    
+    Irosu.fo(name1 + ": " + Obara.to_str(time1) + "ms");
+    Irosu.fo(name2 + ": " + Obara.to_str(time2) + "ms");
+    
+    if time1 > 0 and time2 > 0 {
+        ayanmo ratio = time1 as f64 / time2 as f64;
+        Irosu.fo("Ratio (" + name1 + "/" + name2 + "): " + Obara.format(ratio, 2) + "x");
+        
+        if ratio > 1.1 {
+            Irosu.fo(name2 + " is faster");
+        } else if ratio < 0.9 {
+            Irosu.fo(name1 + " is faster");
+        } else {
+            Irosu.fo("Performance is similar");
+        }
+    }
+    
+    Irosu.fo("");
+}
+
+// Example comparison
+compare_performance(
+    "String concatenation",
+    || {
+        ayanmo result = "";
+        fun i ninu 0..1000 {
+            result += "test";
+        }
+    },
+    "String builder",
+    || {
+        ayanmo builder = Ika.StringBuilder::new();
+        fun i ninu 0..1000 {
+            builder.append("test");
+        }
+        ayanmo result = builder.to_string();
+    },
+    1000
+);</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Advanced Time Operations</h2>
+            
+            <h3>Time Series Analysis</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Time Series Processing</span>
+                </div>
+                <pre><code>// Time series data point
+struct TimeSeriesPoint {
+    timestamp: u64,
+    value: f64
+}
+
+// Time series analysis
+se analyze_time_series(data: Vec<TimeSeriesPoint>) -> Map<Str, f64> {
+    if data.length() == 0 {
+        return Map::<Str, f64>::new();
+    }
+    
+    ayanmo analysis = Map::<Str, f64>::new();
+    
+    // Basic statistics
+    ayanmo values = data.map(|point| point.value);
+    ayanmo sum = 0.0;
+    fun value ninu values {
+        sum = Obara.fikun(sum, value);
+    }
+    
+    ayanmo mean = sum / values.length() as f64;
+    analysis.insert("mean", mean);
+    
+    // Min and max
+    ayanmo min_val = values[0];
+    ayanmo max_val = values[0];
+    fun value ninu values {
+        if value < min_val { min_val = value; }
+        if value > max_val { max_val = value; }
+    }
+    
+    analysis.insert("min", min_val);
+    analysis.insert("max", max_val);
+    
+    // Trend analysis (simple linear regression)
+    if data.length() >= 2 {
+        ayanmo n = data.length() as f64;
+        ayanmo sum_x = 0.0;
+        ayanmo sum_y = 0.0;
+        ayanmo sum_xy = 0.0;
+        ayanmo sum_x2 = 0.0;
+        
+        fun i ninu 0..data.length() {
+            ayanmo x = i as f64;
+            ayanmo y = data[i].value;
+            
+            sum_x = Obara.fikun(sum_x, x);
+            sum_y = Obara.fikun(sum_y, y);
+            sum_xy = Obara.fikun(sum_xy, x * y);
+            sum_x2 = Obara.fikun(sum_x2, x * x);
+        }
+        
+        ayanmo slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+        analysis.insert("trend_slope", slope);
+        
+        ayanmo intercept = (sum_y - slope * sum_x) / n;
+        analysis.insert("trend_intercept", intercept);
+        
+        // Correlation coefficient
+        ayanmo numerator = n * sum_xy - sum_x * sum_y;
+        ayanmo denominator = Obara.sqrt((n * sum_x2 - sum_x * sum_x) * (n * sum_y * sum_y / n - sum_y * sum_y));
+        
+        if denominator != 0.0 {
+            ayanmo correlation = numerator / denominator;
+            analysis.insert("correlation", correlation);
+        }
+    }
+    
+    // Volatility (standard deviation)
+    ayanmo variance = 0.0;
+    fun value ninu values {
+        ayanmo diff = value - mean;
+        variance = Obara.fikun(variance, diff * diff);
+    }
+    
+    ayanmo std_dev = Obara.sqrt(variance / values.length() as f64);
+    analysis.insert("volatility", std_dev);
+    
+    pada analysis;
+}
+
+// Generate sample time series data
+se generate_sample_data(start_time: u64, points: u32, trend: f64, noise: f64) -> Vec<TimeSeriesPoint> {
+    ayanmo data = Vec::<TimeSeriesPoint>::new();
+    
+    fun i ninu 0..points {
+        ayanmo timestamp = start_time + (i * 60 * 1000);  // Every minute
+        ayanmo base_value = trend * i as f64;
+        ayanmo random_noise = (Owòn.random_float() - 0.5) * 2.0 * noise;  // Random noise
+        ayanmo value = base_value + random_noise;
+        
+        data.push(TimeSeriesPoint { timestamp, value });
+    }
+    
+    pada data;
+}
+
+// Example time series analysis
+ayanmo now = Iwori.timestamp();
+ayanmo sample_data = generate_sample_data(now, 100, 0.5, 2.0);
+
+Irosu.fo("Time Series Analysis:");
+ayanmo analysis = analyze_time_series(sample_data);
+
+fun (metric, value) ninu analysis {
+    Irosu.fo(metric + ": " + Obara.format(value, 4));
+}
+
+// Moving average
+se moving_average(data: Vec<TimeSeriesPoint>, window: u32) -> Vec<TimeSeriesPoint> {
+    ayanmo result = Vec::<TimeSeriesPoint>::new();
+    
+    fun i ninu window..data.length() {
+        ayanmo start = i - window;
+        ayanmo sum = 0.0;
+        
+        fun j ninu start..i {
+            sum = Obara.fikun(sum, data[j].value);
+        }
+        
+        ayanmo avg = sum / window as f64;
+        result.push(TimeSeriesPoint {
+            timestamp: data[i].timestamp,
+            value: avg
+        });
+    }
+    
+    pada result;
+}
+
+// Calculate moving average
+ayanmo ma_data = moving_average(sample_data, 10);
+Irosu.fo("");
+Irosu.fo("Moving average (last 5 points):");
+fun i ninu (ma_data.length() - 5)..ma_data.length() {
+    Irosu.fo("  " + Iwori.format_timestamp(ma_data[i].timestamp) + ": " + Obara.format(ma_data[i].value, 2));
 }</code></pre>
+            </div>
+        </div>
 
-        <footer class="doc-footer">
-            <p><a href="domains.html">? All Domain Use Cases</a></p>
-            <p><a href="../../index.html">Documentation Home</a></p>
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>Time Handling</h3>
+            <ul>
+                <li><strong>UTC First:</strong> Always store timestamps in UTC, convert for display</li>
+                <li><strong>Time Zones:</strong> Handle time zones explicitly, avoid assumptions</li>
+                <li><strong>Leap Seconds:</strong> Be aware of leap seconds in precise timing</li>
+                <li><strong>Monotonic Time:</strong> Use monotonic clocks for duration measurements</li>
+            </ul>
+
+            <h3>Performance</h3>
+            <ul>
+                <li><strong>Minimize Calls:</strong> Cache timestamp values when possible</li>
+                <li><strong>Use Efficient Types:</strong> Use appropriate time units (ms vs ns)</li>
+                <li><strong>Bulk Operations:</strong> Process multiple time values together</li>
+                <li><strong>Avoid String Parsing:</strong> Use native time operations when possible</li>
+            </ul>
+
+            <h3>Scheduling</h3>
+            <ul>
+                <li><strong>Graceful Shutdown:</strong> Handle scheduler shutdown properly</li>
+                <li><strong>Error Handling:</strong> Handle task execution errors gracefully</li>
+                <li><strong>Resource Cleanup:</strong> Clean up completed tasks</li>
+                <li><strong>Priority Handling:</strong> Implement task priorities when needed</li>
+            </ul>
+
+            <h3>Cultural Considerations</h3>
+            <ul>
+                <li><strong>Yoruba Calendar:</strong> Consider traditional Yoruba time systems</li>
+                <li><strong>Cultural Events:</strong> Handle cultural festivals and observances</li>
+                <li><strong>Proverb Timing:</strong> Use appropriate timing for proverb delivery</li>
+                <li><strong>Ceremonial Timing:</strong> Respect traditional timing for ceremonies</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Use Cases Documentation</a></p>
         </footer>
     </div>
-    <script src="../../js/nav.js"></script>
+
     <script src="../../js/common.js"></script>
 </body>
 
 </html>
-

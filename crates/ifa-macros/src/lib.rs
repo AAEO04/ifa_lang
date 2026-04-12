@@ -12,6 +12,7 @@
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
+use syn::visit::Visit;
 use syn::{DeriveInput, Expr, ItemFn, Token, parse::Parse, parse::ParseStream, parse_macro_input};
 
 /// # Ẹbọ Derive Macro
@@ -100,29 +101,54 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let fn_sig = &input.sig;
     let fn_block = &input.block;
 
-    // Use AST visitor to properly count method calls
-    use syn::visit::Visit;
-
-    struct MethodCallCounter {
-        counts: std::collections::HashMap<String, usize>,
+    struct BlockVisitor<'a> {
+        errors: &'a mut Vec<String>,
+        pairs: &'a [(&'static str, &'static str)],
     }
 
-    impl<'ast> Visit<'ast> for MethodCallCounter {
-        fn visit_expr_method_call(&mut self, node: &'ast syn::ExprMethodCall) {
-            // Get the method name
-            let method_name = node.method.to_string();
-            *self.counts.entry(method_name).or_insert(0) += 1;
-            // Continue visiting nested expressions
-            syn::visit::visit_expr_method_call(self, node);
+    impl<'ast, 'a> Visit<'ast> for BlockVisitor<'a> {
+        fn visit_block(&mut self, node: &'ast syn::Block) {
+            // Count method calls strictly within this lexical block
+            let mut counts = std::collections::HashMap::new();
+
+            for stmt in &node.stmts {
+                // We use a temporary simple visitor to count direct calls in this statement
+                struct StmtCounter {
+                    calls: std::collections::HashMap<String, usize>,
+                }
+                impl<'ast> Visit<'ast> for StmtCounter {
+                    fn visit_expr_method_call(&mut self, call: &'ast syn::ExprMethodCall) {
+                        *self.calls.entry(call.method.to_string()).or_insert(0) += 1;
+                        syn::visit::visit_expr_method_call(self, call);
+                    }
+                }
+                let mut stmt_counter = StmtCounter {
+                    calls: std::collections::HashMap::new(),
+                };
+                stmt_counter.visit_stmt(stmt);
+
+                for (k, v) in stmt_counter.calls {
+                    *counts.entry(k).or_insert(0) += v;
+                }
+            }
+
+            // Lexical CFG check: resources allocated in this block must be freed in this block
+            for (open, close) in self.pairs {
+                let open_count = *counts.get(*open).unwrap_or(&0);
+                let close_count = *counts.get(*close).unwrap_or(&0);
+                if open_count > close_count {
+                    self.errors.push(format!(
+                        "Ìwà Pẹ̀lẹ́ violation: Block leaks resource. {} '{}' calls but only {} '{}' calls inside this lexical scope.",
+                        open_count, open, close_count, close
+                    ));
+                }
+            }
+
+            // Continue traversal for nested blocks
+            syn::visit::visit_block(self, node);
         }
     }
 
-    let mut counter = MethodCallCounter {
-        counts: std::collections::HashMap::new(),
-    };
-    syn::visit::visit_block(&mut counter, fn_block);
-
-    // Define pairs to check (open_method, close_method)
     let pairs = [
         ("so", "pa"),   // socket open/close
         ("si", "ti"),   // file open/close
@@ -131,19 +157,11 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
     ];
 
     let mut errors = Vec::new();
-
-    for (open, close) in &pairs {
-        let open_count = *counter.counts.get(*open).unwrap_or(&0);
-        let close_count = *counter.counts.get(*close).unwrap_or(&0);
-
-        if open_count > close_count {
-            errors.push(format!(
-                "Ìwà Pẹ̀lẹ́ violation: {} '{}' calls but only {} '{}' calls. \
-                 Proverb: Ohun tí a ṣí, a gbọdọ̀ pa. (What we open, we must close.)",
-                open_count, open, close_count, close
-            ));
-        }
-    }
+    let mut visitor = BlockVisitor {
+        errors: &mut errors,
+        pairs: &pairs,
+    };
+    visitor.visit_block(fn_block);
 
     if !errors.is_empty() {
         let error_msg = errors.join("\n");
@@ -152,10 +170,9 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
         });
     }
 
-    // Function passes balance check - emit with wrapper
+    // Function passes static CFG balance check - emit ZERO-COST wrapper (no runtime prints)
     TokenStream::from(quote! {
         #fn_vis #fn_sig {
-            println!("[Iwa Pele] Balanced function: {}", stringify!(#fn_name));
             #fn_block
         }
     })

@@ -13,7 +13,7 @@ fn main() {
     println!("=== Ifá-Lang GPU Compute Benchmark ===\n");
 
     // Initialize GPU
-    let ctx = GpuContext::new_blocking().expect("Failed to initialize GPU");
+    let ctx = pollster::block_on(GpuContext::new()).expect("Failed to initialize GPU");
     println!(
         "✓ GPU initialized: {:?}",
         ctx.device.limits().max_compute_workgroups_per_dimension

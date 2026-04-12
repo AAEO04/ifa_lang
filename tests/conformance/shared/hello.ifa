@@ -1,0 +1,2 @@
+# expect: Hello, Odu!
+Irosu.fo("Hello, Odu!");

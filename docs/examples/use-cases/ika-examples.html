@@ -4,81 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ika Use Cases - String Manipulation Examples</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Ika Domain Examples - Ifá-Lang</title>
+    <meta name="description" content="Examples of Ika (1010) domain operations for string processing and text manipulation in Ifá-Lang">
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -86,250 +20,895 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
-        <h1>?? Ika: String Manipulation</h1>
-        <p>Real-world text processing and transformation.</p>
+        <header>
+            <h1>Ika Domain Examples</h1>
+            <p class="subtitle">String Processing and Text Manipulation (1010)</p>
+        </header>
 
-        <h2>Use Case 1: URL Slug Generator</h2>
-        <pre><code>// slug.ifa - Generate URL-friendly slugs from titles
+        <div class="step">
+            <h2>Overview</h2>
+            <p>Ika (1010) is the string domain representing communication, knowledge, and text processing. It provides comprehensive string operations, text manipulation, Unicode handling, and cultural text processing capabilities following Ifá-Lang's cultural and architectural principles.</p>
+            
+            <div class="domain-info">
+                <div class="domain-card">
+                    <h3>Domain Characteristics</h3>
+                    <ul>
+                        <li><strong>Binary Pattern:</strong> 1010 (knowledge and communication)</li>
+                        <li><strong>Yoruba Meaning:</strong> "The seeker" or "The knower"</li>
+                        <li><strong>System Role:</strong> String operations and text processing</li>
+                        <li><strong>Element:</strong> Air (communication and knowledge)</li>
+                    </ul>
+                </div>
+                
+                <div class="domain-card">
+                    <h3>Core Capabilities</h3>
+                    <ul>
+                        <li><strong>String Operations:</strong> Concatenation, splitting, joining</li>
+                        <li><strong>Text Processing:</strong> Searching, replacing, formatting</li>
+                        <li><strong>Unicode Support:</strong> Multi-byte character handling</li>
+                        <li><strong>Cultural Text:</strong> Yoruba diacritics and proverbs</li>
+                        <li><strong>Pattern Matching:</strong> Regular expressions and wildcards</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-ise slugify(title) {
-    // Convert to lowercase
-    ayanmo slug = Ika.lowercase(title);
-    
-    // Replace spaces with hyphens
-    ayanmo slug = Ika.replace(slug, " ", "-");
-    
-    // Remove special characters
-    ayanmo allowed = "abcdefghijklmnopqrstuvwxyz0123456789-";
-    ayanmo result = "";
-    
-    ayanmo i = 0;
-    nigba (i < Ika.len(slug)) {
-        ayanmo char = Ika.char_at(slug, i);
-        ti (Ika.contains(allowed, char)) {
-            ayanmo result = result + char;
-        }
-        ayanmo i = i + 1;
-    }
-    
-    // Remove multiple consecutive hyphens
-    nigba (Ika.contains(result, "--")) {
-        ayanmo result = Ika.replace(result, "--", "-");
-    }
-    
-    // Trim hyphens from ends
-    ayanmo result = Ika.trim_char(result, "-");
-    
-    padap? result;
+        <div class="step">
+            <h2>Basic String Operations</h2>
+            
+            <h3>String Manipulation</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Fundamental String Operations</span>
+                </div>
+                <pre><code>// String concatenation
+ayanmo greeting = "Àkàá";
+ayanmo name = "Ifá-Lang";
+ayanmo full_greeting = Ika.joined(greeting, ", ", name, "!");
+Irosu.fo(full_greeting);  // "Àkàá, Ifá-Lang!"
+
+// String length
+ayanmo text = "Ifá-Lang is powerful";
+ayanmo length = Ika.length(text);
+Irosu.fo("Length: " + Obara.to_str(length));  // 19
+
+// Character access (Unicode-aware)
+ayanmo first_char = Ika.char_at(text, 0);
+ayanmo last_char = Ika.char_at(text, Ika.length(text) - 1);
+Irosu.fo("First character: " + first_char);  // "I"
+Irosu.fo("Last character: " + last_char);    // "l"
+
+// String slicing
+ayanmo substring = Ika.substring(text, 0, 8);
+Irosu.fo("Substring: " + substring);  // "Ifá-Lang"
+
+// String repetition
+ayanmo repeated = Ika.repeat("Ifá ", 3);
+Irosu.fo("Repeated: " + repeated);  // "Ifá Ifá Ifá "
+
+// String reversal
+ayanmo reversed = Ika.reverse("Ifá-Lang");
+Irosu.fo("Reversed: " + reversed);  // "gnaL-áfI"
+
+// Case conversion
+ayanmo upper = Ika.to_upper("ifá-lang");
+ayanmo lower = Ika.to_lower("IFÁ-LANG");
+ayanmo title = Ika.to_title("ifá-lang programming language");
+
+Irosu.fo("Upper: " + upper);    // "IFÁ-LANG"
+Irosu.fo("Lower: " + lower);    // "ifá-lang"
+Irosu.fo("Title: " + title);    // "Ifá-Lang Programming Language"</code></pre>
+            </div>
+
+            <h3>String Splitting and Joining</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Split and Join Operations</span>
+                </div>
+                <pre><code>// Split by whitespace
+ayanmo sentence = "Ifá-Lang is a culturally rich programming language";
+ayanmo words = Ika.split(sentence, " ");
+Irosu.fo("Words: " + Obara.to_str(words.length()));  // 8
+fun word ninu words {
+    Irosu.fo("  " + word);
 }
 
-// Usage
-ayanmo titles = [
-    "Hello World! This is a Test",
-    "10 Tips for Better Coding",
-    "If�-Lang: The Future of Programming!!!"
-];
+// Split by character
+ayanmo text = "programming";
+ayanmo chars = Ika.split_chars(text);
+Irosu.fo("Characters: " + Ika.join(chars, ", "));  // p, r, o, g, r, a, m, m, i, n, g
 
-fun title ninu titles {
-    Irosu.fo(title);
-    Irosu.fo("  ? " + slugify(title) + "\n");
+// Split with limit
+ayanmo limited = Ika.split("a:b:c:d:e", ":", 3);
+Irosu.fo("Limited split: " + Ika.join(limited, " | "));  // a | b | c:d:e
+
+// Join with different separators
+ayanmo items = ["apple", "banana", "cherry"];
+ayanmo comma_separated = Ika.join(items, ", ");
+ayanmo space_separated = Ika.join(items, " ");
+ayanmo newline_separated = Ika.join(items, "\n");
+
+Irosu.fo("Comma separated: " + comma_separated);  // "apple, banana, cherry"
+Irosu.fo("Space separated: " + space_separated);   // "apple banana cherry"
+Irosu.fo("Newline separated:\n" + newline_separated);
+
+// Join with prefix and suffix
+ayanmo numbered = Ika.join_with_prefix(items, "Item ", ": ");
+Irosu.fo("Numbered: " + numbered);  // "Item 1: apple, Item 2: banana, Item 3: cherry"</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Text Processing</h2>
+            
+            <h3>Searching and Replacing</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Search and Replace Operations</span>
+                </div>
+                <pre><code>// Check if string contains substring
+ayanmo text = "Ifá-Lang is a powerful programming language";
+ayanmo contains1 = Ika.contains(text, "powerful");
+ayanmo contains2 = Ika.contains(text, "weak");
+
+Irosu.fo("Contains 'powerful': " + Obara.to_str(contains1));  // otito
+Irosu.fo("Contains 'weak': " + Obara.to_str(contains2));      // eke
+
+// Find substring position
+ayanmo position = Ika.find(text, "programming");
+if position != -1 {
+    Irosu.fo("Found 'programming' at position: " + Obara.to_str(position));  // 22
+} else {
+    Irosu.fo("Substring not found");
+}
+
+// Find all occurrences
+ayanmo all_positions = Ika.find_all(text, "a");
+Irosu.fo("All 'a' positions: " + Ika.join(all_positions.map(Obara.to_str), ", "));  // 2, 8, 21, 27, 33, 40
+
+// Count occurrences
+ayanmo count = Ika.count(text, "a");
+Irosu.fo("Count of 'a': " + Obara.to_str(count));  // 6
+
+// Replace first occurrence
+ayanmo replaced1 = Ika.replace_first(text, "powerful", "amazing");
+Irosu.fo("Replace first: " + replaced1);  // "Ifá-Lang is an amazing programming language"
+
+// Replace all occurrences
+ayanmo replaced2 = Ika.replace_all(text, "a", "@");
+Irosu.fo("Replace all: " + replaced2);  // "Ifá-L@ng is @ powerful progr@mming l@ngu@ge"
+
+// Replace with callback function
+se replace_with_upper(match: Str) -> Str {
+    Ika.to_upper(match)
+}
+
+ayanmo replaced3 = Ika.replace_with_callback(text, "programming", replace_with_upper);
+Irosu.fo("Replace with callback: " + replaced3);  // "Ifá-Lang is a powerful PROGRAMMING language"</code></pre>
+            </div>
+
+            <h3>String Trimming and Padding</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Trim and Pad Operations</span>
+                </div>
+                <pre><code>// Trim whitespace
+ayanmo text_with_spaces = "   Ifá-Lang   ";
+ayanmo trimmed = Ika.trim(text_with_spaces);
+ayanmo left_trimmed = Ika.trim_left(text_with_spaces);
+ayanmo right_trimmed = Ika.trim_right(text_with_spaces);
+
+Irosu.fo("Original: '" + text_with_spaces + "'");  // '   Ifá-Lang   '
+Irosu.fo("Trimmed: '" + trimmed + "'");            // 'Ifá-Lang'
+Irosu.fo("Left trimmed: '" + left_trimmed + "'");    // 'Ifá-Lang   '
+Irosu.fo("Right trimmed: '" + right_trimmed + "'");  // '   Ifá-Lang'
+
+// Trim specific characters
+ayanmo text_with_chars = "---Ifá-Lang===";
+ayanmo trimmed_chars = Ika.trim_chars(text_with_chars, "-=");
+Irosu.fo("Trimmed chars: '" + trimmed_chars + "'");  // 'Ifá-Lang'
+
+// Padding
+ayanmo text = "Ifá";
+ayanmo padded_left = Ika.pad_left(text, 10, " ");
+ayanmo padded_right = Ika.pad_right(text, 10, " ");
+ayanmo centered = Ika.center(text, 10, " ");
+
+Irosu.fo("Padded left: '" + padded_left + "'");    // '      Ifá'
+Irosu.fo("Padded right: '" + padded_right + "'");  // 'Ifá      '
+Irosu.fo("Centered: '" + centered + "'");        // '   Ifá   '
+
+// Zero padding for numbers
+ayanmo number = "42";
+ayanmo zero_padded = Ika.pad_left(number, 6, "0");
+Irosu.fo("Zero padded: " + zero_padded);  // "000042"</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Unicode and Cultural Text</h2>
+            
+            <h3>Unicode Handling</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Unicode String Operations</span>
+                </div>
+                <pre><code>// Unicode character information
+ayanmo yoruba_text = "Àkàá'gbà Orí";
+ayanmo char_count = Ika.char_count(yoruba_text);
+ayanmo byte_count = Ika.byte_count(yoruba_text);
+
+Irosu.fo("Text: " + yoruba_text);
+Irosu.fo("Character count: " + Obara.to_str(char_count));  // 11
+Irosu.fo("Byte count: " + Obara.to_str(byte_count));       // 22 (UTF-8)
+
+// Iterate over Unicode characters
+Irosu.fo("Characters:");
+fun i ninu 0..Ika.char_count(yoruba_text) {
+    ayanmo char = Ika.char_at(yoruba_text, i);
+    ayanmo code_point = Ika.code_point_at(yoruba_text, i);
+    Irosu.fo("  " + Obara.to_str(i) + ": '" + char + "' (U+" + Obara.format(code_point, "04X") + ")");
+}
+
+// Check for diacritics
+ayanmo has_diacritics = Ika.has_diacritics(yoruba_text);
+Irosu.fo("Has diacritics: " + Obara.to_str(has_diacritics));  // otito
+
+// Remove diacritics
+ayanmo without_diacritics = Ika.remove_diacritics(yoruba_text);
+Irosu.fo("Without diacritics: " + without_diacritics);  // "Aka'gba Ori"
+
+// Normalize Unicode
+ayanmo normalized = Ika.normalize(yoruba_text, "NFC");  // Normalization Form C
+Irosu.fo("Normalized: " + normalized);
+
+// Case folding for case-insensitive comparison
+ayanmo case_folded = Ika.case_fold(yoruba_text);
+Irosu.fo("Case folded: " + case_folded);
+
+// Check script type
+ayanmo is_latin = Ika.is_latin_script(yoruba_text);
+ayanmo is_arabic = Ika.is_arabic_script(yoruba_text);
+Irosu.fo("Is Latin script: " + Obara.to_str(is_latin));   // otito
+Irosu.fo("Is Arabic script: " + Obara.to_str(is_arabic)); // eke</code></pre>
+            </div>
+
+            <h3>Yoruba Text Processing</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Yoruba-Specific Operations</span>
+                </div>
+                <pre><code>// Yoruba vowel harmony checking
+se has_vowel_harmony(word: Str) -> Bool {
+    ayanmo vowels = ["a", "e", "i", "o", "u", "á", "é", "í", "ó", "ú", "à", "è", "ì", "ò", "ù"];
+    ayanmo vowel_groups = [
+        ["a", "á", "à"],  // A-group
+        ["e", "é", "è"],  // E-group
+        ["i", "í", "ì"],  // I-group
+        ["o", "ó", "ò"],  // O-group
+        ["u", "ú", "ù"]   // U-group
+    ];
+    
+    ayanmo word_vowels = Vec::<Str>::new();
+    fun char ninu Ika.split_chars(Ika.to_lower(word)) {
+        if vowels.contains(char) {
+            word_vowels.push(char);
+        }
+    }
+    
+    if word_vowels.length() <= 1 {
+        pada otito;
+    }
+    
+    // Find the vowel group of the first vowel
+    ayanmo first_group = -1;
+    fun group_index ninu 0..vowel_groups.length() {
+        if vowel_groups[group_index].contains(word_vowels[0]) {
+            first_group = group_index;
+            break;
+        }
+    }
+    
+    if first_group == -1 {
+        pada otito;  // No vowels found
+    }
+    
+    // Check if all vowels belong to the same group
+    fun vowel ninu word_vowels {
+        ayanmo vowel_group = -1;
+        fun group_index ninu 0..vowel_groups.length() {
+            if vowel_groups[group_index].contains(vowel) {
+                vowel_group = group_index;
+                break;
+            }
+        }
+        
+        if vowel_group != first_group {
+            pada eke;
+        }
+    }
+    
+    pada otito;
+}
+
+// Test vowel harmony
+ayanmo words = ["ilé", "ilé", "ilé", "ilé", "ilé"];  // house (should have harmony)
+fun word ninu words {
+    ayanmo has_harmony = has_vowel_harmony(word);
+    Irosu.fo(word + " has vowel harmony: " + Obara.to_str(has_harmony));
+}
+
+// Yoruba tonal marks
+se add_tonal_marks(text: Str, tone: Str) -> Str {
+    ayanmo tone_map = Map::<Str, Str>::new();
+    tone_map.insert("a", if tone == "high" { "á" } else if tone == "mid" { "à" } else { "a" });
+    tone_map.insert("e", if tone == "high" { "é" } else if tone == "mid" { "è" } else { "e" });
+    tone_map.insert("i", if tone == "high" { "í" } else if tone == "mid" { "ì" } else { "i" });
+    tone_map.insert("o", if tone == "high" { "ó" } else if tone == "mid" { "ò" } else { "o" });
+    tone_map.insert("u", if tone == "high" { "ú" } else if tone == "mid" { "ù" } else { "u" });
+    
+    ayanmo result = text;
+    fun (base, accented) ninu tone_map {
+        result = Ika.replace_all(result, base, accented);
+    }
+    
+    pada result;
+}
+
+// Add tonal marks
+ayanmo base_text = "ile";
+ayanmo high_tone = add_tonal_marks(base_text, "high");
+ayanmo mid_tone = add_tonal_marks(base_text, "mid");
+
+Irosu.fo("Base: " + base_text);      // "ile"
+Irosu.fo("High tone: " + high_tone);  // "ílé"
+Irosu.fo("Mid tone: " + mid_tone);    // "ìlè"
+
+// Extract proverbs from text
+se extract_proverbs(text: Str) -> Vec<Str> {
+    ayanmo proverb_indicators = [
+        "àdìtú", "ìtàn", "òwe", "asílà", "àbáláyé",
+        "bí a bá", "kí a má", "à fi", "ò ní"
+    ];
+    
+    ayanmo sentences = Ika.split(text, ".");
+    ayanmo proverbs = Vec::<Str>::new();
+    
+    fun sentence ninu sentences {
+        ayanmo trimmed = Ika.trim(sentence);
+        if trimmed.length() > 10 {  // Ignore very short sentences
+            fun indicator ninu proverb_indicators {
+                if Ika.contains(trimmed, indicator) {
+                    proverbs.push(trimmed + ".");
+                    break;
+                }
+            }
+        }
+    }
+    
+    pada proverbs;
+}
+
+// Example proverb extraction
+ayanmo proverb_text = "Àdìtú kì í fi ilé-ìyá pamó. Kí a má bà gbàgbé, a fi ilé-ìyá pamó. À fi ìmàlè pamó, a fi ilé-ìyá pamó.";
+ayanmo proverbs = extract_proverbs(proverb_text);
+
+Irosu.fo("");
+Irosu.fo("Extracted proverbs:");
+fun proverb ninu proverbs {
+    Irosu.fo("  " + proverb);
 }</code></pre>
+            </div>
+        </div>
 
-        <h2>Use Case 2: Template Engine</h2>
-        <pre><code>// template.ifa - Simple template variable substitution
+        <div class="step">
+            <h2>Pattern Matching</h2>
+            
+            <h3>Regular Expressions</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Regular Expression Operations</span>
+                </div>
+                <pre><code>// Check if string matches pattern
+ayanmo email = "user@example.com";
+ayanmo phone = "123-456-7890";
+ayanmo url = "https://ifa-lang.org";
 
-ise render_template(template, vars) {
+ayanmo email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
+ayanmo phone_pattern = r"^\d{3}-\d{3}-\d{4}$";
+ayanmo url_pattern = r"^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}";
+
+Irosu.fo("Email validation: " + Obara.to_str(Ika.matches(email, email_pattern)));     // otito
+Irosu.fo("Phone validation: " + Obara.to_str(Ika.matches(phone, phone_pattern)));   // otito
+Irosu.fo("URL validation: " + Obara.to_str(Ika.matches(url, url_pattern)));         // otito
+
+// Extract matches
+ayanmo text = "Contact us at info@ifa-lang.org or call 555-123-4567";
+ayanmo email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}";
+ayanmo phone_pattern = r"\d{3}-\d{3}-\d{4}";
+
+ayanmo emails = Ika.extract_all(text, email_pattern);
+ayanmo phones = Ika.extract_all(text, phone_pattern);
+
+Irosu.fo("Found emails: " + Ika.join(emails, ", "));  // "info@ifa-lang.org"
+Irosu.fo("Found phones: " + Ika.join(phones, ", "));  // "555-123-4567"
+
+// Replace with regex
+ayanmo masked_text = Ika.replace_regex(text, r"\d{3}-\d{3}-\d{4}", "XXX-XXX-XXXX");
+Irosu.fo("Masked text: " + masked_text);  // "Contact us at info@ifa-lang.org or call XXX-XXX-XXXX"
+
+// Split by regex
+ayanmo log_text = "2023-01-01 ERROR: File not found\n2023-01-02 INFO: Connection established\n2023-01-03 WARNING: Low memory";
+ayanmo log_entries = Ika.split_regex(log_text, r"\n(?=\d{4}-\d{2}-\d{2})");
+
+Irosu.fo("Log entries:");
+fun entry ninu log_entries {
+    Irosu.fo("  " + Ika.trim(entry));
+}
+
+// Word boundaries
+ayanmo word_text = "The cat sat on the mat";
+ayanmo word_pattern = r"\bcat\b";
+ayanmo contains_cat = Ika.matches(word_text, word_pattern);
+Irosu.fo("Contains 'cat' as whole word: " + Obara.to_str(contains_cat));  // otito
+
+// Case-insensitive matching
+ayanmo case_insensitive = Ika.matches("IFÁ-LANG", r"ifa-lang", "i");
+Irosu.fo("Case-insensitive match: " + Obara.to_str(case_insensitive));  // otito</code></pre>
+            </div>
+
+            <h3>Wildcard Matching</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Wildcard Pattern Matching</span>
+                </div>
+                <pre><code>// Simple wildcard matching
+se wildcard_match(text: Str, pattern: Str) -> Bool {
+    ayanmo regex_pattern = Ika.wildcard_to_regex(pattern);
+    pada Ika.matches(text, regex_pattern);
+}
+
+// Test wildcard patterns
+ayanmo filename = "document_2023_01_15.pdf";
+
+Irosu.fo("Wildcard matching:");
+Irosu.fo("document_*.pdf: " + Obara.to_str(wildcard_match(filename, "document_*.pdf")));     // otito
+Irosu.fo("document_2023_*.pdf: " + Obara.to_str(wildcard_match(filename, "document_2023_*.pdf"))); // otito
+Irosu.fo("document_*.txt: " + Obara.to_str(wildcard_match(filename, "document_*.txt")));       // eke
+Irosu.fo("*_2023_*.pdf: " + Obara.to_str(wildcard_match(filename, "*_2023_*.pdf")));         // otito
+
+// Multiple wildcard patterns
+se matches_any(text: Str, patterns: Vec<Str>) -> Bool {
+    fun pattern ninu patterns {
+        if wildcard_match(text, pattern) {
+            pada otito;
+        }
+    }
+    pada eke;
+}
+
+ayanmo patterns = ["*.pdf", "*.doc", "*.txt"];
+ayanmo matches = matches_any(filename, patterns);
+Irosu.fo("Matches any document type: " + Obara.to_str(matches));  // otito
+
+// Advanced wildcard with character classes
+se advanced_wildcard_match(text: Str, pattern: Str) -> Bool {
+    // Convert [abc] to regex character class
+    // Convert ? to .
+    // Convert * to .*
+    ayanmo regex = pattern;
+    regex = Ika.replace_all(regex, "[", "[");
+    regex = Ika.replace_all(regex, "]", "]");
+    regex = Ika.replace_all(regex, "?", ".");
+    regex = Ika.replace_all(regex, "*", ".*");
+    
+    pada Ika.matches("^" + regex + "$", text);
+}
+
+// Test advanced wildcard
+ayanmo test_files = ["file1.txt", "file2.doc", "image.png", "data1.csv"];
+ayanmo advanced_pattern = "file[12].*";
+
+Irosu.fo("");
+Irosu.fo("Advanced wildcard '" + advanced_pattern + "':");
+fun file ninu test_files {
+    Irosu.fo("  " + file + ": " + Obara.to_str(advanced_wildcard_match(file, advanced_pattern)));
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Text Formatting</h2>
+            
+            <h3>Advanced Formatting</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Text Formatting Functions</span>
+                </div>
+                <pre><code>// String formatting with templates
+se format_template(template: Str, variables: Map<Str, Str>) -> Str {
     ayanmo result = template;
     
-    fun key ninu Ogbe.keys(vars) {
-        ayanmo placeholder = "{{" + key + "}}";
-        ayanmo value = vars[key];
-        ayanmo result = Ika.replace(result, placeholder, value);
+    fun (key, value) ninu variables {
+        ayanmo placeholder = "{" + key + "}";
+        result = Ika.replace_all(result, placeholder, value);
     }
     
-    padap? result;
+    pada result;
 }
 
-ise render_list(template, items, item_template) {
-    ayanmo list_content = "";
+// Template example
+ayanmo template = "Hello {name}, you have {count} new messages in {folder}.";
+ayanmo variables = Map::<Str, Str>::new();
+variables.insert("name", "Ifá-Lang");
+variables.insert("count", "5");
+variables.insert("folder", "Inbox");
+
+ayanmo formatted = format_template(template, variables);
+Irosu.fo("Formatted: " + formatted);  // "Hello Ifá-Lang, you have 5 new messages in Inbox."
+
+// Number formatting
+se format_number(number: f64, decimals: u32) -> Str {
+    ayanmo rounded = Obara.round(number * Obara.pow(10, decimals)) / Obara.pow(10, decimals);
+    ayanmo str_num = Obara.to_str(rounded);
     
-    fun item ninu items {
-        ayanmo rendered = render_template(item_template, item);
-        ayanmo list_content = list_content + rendered;
-    }
-    
-    padap? Ika.replace(template, "{{items}}", list_content);
-}
-
-// Usage
-ayanmo email_template = "
-Dear {{name}},
-
-Thank you for your order #{{order_id}}.
-Total: ${{total}}
-
-{{items}}
-
-Best regards,
-{{company}}
-";
-
-ayanmo item_template = "- {{product}}: ${{price}}\n";
-
-ayanmo vars = {
-    "name": "John",
-    "order_id": "12345",
-    "total": "150.00",
-    "company": "If� Shop"
-};
-
-ayanmo items = [
-    {"product": "Widget A", "price": "50.00"},
-    {"product": "Widget B", "price": "100.00"}
-];
-
-ayanmo email = render_template(email_template, vars);
-ayanmo email = render_list(email, items, item_template);
-Irosu.fo(email);</code></pre>
-
-        <h2>Use Case 3: CSV Parser</h2>
-        <pre><code>// csv_parser.ifa - Parse CSV files into structured data
-
-ise parse_csv(content) {
-    ayanmo lines = Ika.split(content, "\n");
-    ayanmo headers = [];
-    ayanmo rows = [];
-    
-    ayanmo first = otito;
-    fun line ninu lines {
-        ti (Ika.len(Ika.trim(line)) == 0) {
-            tesiwaju;
+    if !Ika.contains(str_num, ".") {
+        str_num += "." + Ika.repeat("0", decimals);
+    } else {
+        ayanmo parts = Ika.split(str_num, ".");
+        ayanmo decimal_part = parts[1];
+        while Ika.length(decimal_part) < decimals {
+            decimal_part += "0";
         }
-        
-        ayanmo cells = parse_csv_line(line);
-        
-        ti (first) {
-            ayanmo headers = cells;
-            ayanmo first = iro;
-        } bib?k? {
-            ayanmo row = {};
-            ayanmo i = 0;
-            fun cell ninu cells {
-                ayanmo key = Ogunda.get(headers, i);
-                row[key] = cell;
-                ayanmo i = i + 1;
-            }
-            ayanmo rows = Ogunda.push(rows, row);
-        }
+        str_num = parts[0] + "." + decimal_part;
     }
     
-    padap? rows;
-}
-
-ise parse_csv_line(line) {
-    ayanmo cells = [];
-    ayanmo current = "";
-    ayanmo in_quotes = iro;
-    
-    ayanmo i = 0;
-    nigba (i < Ika.len(line)) {
-        ayanmo char = Ika.char_at(line, i);
-        
-        ti (char == "\"") {
-            ayanmo in_quotes = !in_quotes;
-        } bib?k? ti (char == "," && !in_quotes) {
-            ayanmo cells = Ogunda.push(cells, Ika.trim(current));
-            ayanmo current = "";
-        } bib?k? {
-            ayanmo current = current + char;
-        }
-        
-        ayanmo i = i + 1;
-    }
-    
-    ayanmo cells = Ogunda.push(cells, Ika.trim(current));
-    padap? cells;
-}
-
-// Usage
-ayanmo csv = "name,email,age
-John Doe,john@example.com,30
-Jane Smith,jane@example.com,25
-\"Bob, Jr.\",bob@example.com,35";
-
-ayanmo data = parse_csv(csv);
-fun row ninu data {
-    Irosu.fo(row["name"] + " (" + row["email"] + ") - Age: " + row["age"]);
-}</code></pre>
-
-        <h2>Use Case 4: Word Counter</h2>
-        <pre><code>// word_count.ifa - Text analysis utilities
-
-ise count_words(text) {
-    ayanmo words = Ika.split(text, " ");
-    ayanmo filtered = [];
-    
-    fun word ninu words {
-        ti (Ika.len(Ika.trim(word)) > 0) {
-            ayanmo filtered = Ogunda.push(filtered, word);
-        }
-    }
-    
-    padap? Ogunda.len(filtered);
-}
-
-ise count_sentences(text) {
+    // Add thousands separator
+    ayanmo int_part = parts[0];
+    ayanmo formatted = "";
     ayanmo count = 0;
     
-    fun char ninu [".", "!", "?"] {
-        ayanmo parts = Ika.split(text, char);
-        ayanmo count = count + Ogunda.len(parts) - 1;
-    }
-    
-    padap? count;
-}
-
-ise word_frequency(text) {
-    ayanmo words = Ika.split(Ika.lowercase(text), " ");
-    ayanmo freq = {};
-    
-    fun word ninu words {
-        ayanmo clean = Ika.replace(word, ".", "");
-        ayanmo clean = Ika.replace(clean, ",", "");
-        ayanmo clean = Ika.trim(clean);
-        
-        ti (Ika.len(clean) > 0) {
-            ti (freq[clean] == nil) {
-                freq[clean] = 0;
-            }
-            freq[clean] = freq[clean] + 1;
+    fun i ninu (Ika.length(int_part) - 1)..0 {
+        count += 1;
+        formatted = int_part[i] + formatted;
+        if count == 3 and i > 0 {
+            formatted = "," + formatted;
+            count = 0;
         }
     }
     
-    padap? freq;
+    if Ika.contains(str_num, ".") {
+        formatted += "." + parts[1];
+    }
+    
+    pada formatted;
 }
 
-// Usage
-ayanmo text = "The quick brown fox jumps over the lazy dog. The dog was very lazy. The fox was very quick.";
+// Number formatting examples
+Irosu.fo("Number formatting:");
+Irosu.fo("1234.5678 (2 decimals): " + format_number(1234.5678, 2));  // "1,234.57"
+Irosu.fo("9876543.21 (1 decimal): " + format_number(9876543.21, 1));  // "9,876,543.2"
+Irosu.fo("42.5 (0 decimals): " + format_number(42.5, 0));                 // "42.0"
 
-Irosu.fo("Words: " + count_words(text));
-Irosu.fo("Sentences: " + count_sentences(text));
+// Currency formatting
+se format_currency(amount: f64, currency: Str) -> Str {
+    ayanmo formatted_num = format_number(amount, 2);
+    pada currency + formatted_num;
+}
 
-ayanmo freq = word_frequency(text);
-Irosu.fo("\nWord Frequency:");
-fun word key(freq) {
-    Irosu.fo("  " + word + ": " + freq[word]);
-}</code></pre>
+Irosu.fo("Currency formatting:");
+Irosu.fo("$1234.56: " + format_currency(1234.56, "$"));  // "$1,234.56"
+Irosu.fo("¥987.65: " + format_currency(987.65, "¥"));   // "¥987.65"
 
-        <footer class="doc-footer">
-            <p><a href="domains.html">? All Domain Use Cases</a></p>
-            <p><a href="../../index.html">Documentation Home</a></p>
+// Text alignment
+se align_text(text: Str, width: u32, alignment: Str) -> Str {
+    ayanmo text_length = Ika.length(text);
+    
+    if text_length >= width {
+        pada text;
+    }
+    
+    ayanmo padding = width - text_length;
+    
+    match alignment {
+        "left" => pada text + Ika.repeat(" ", padding),
+        "right" => pada Ika.repeat(" ", padding) + text,
+        "center" => {
+            ayanmo left_pad = padding / 2;
+            ayanmo right_pad = padding - left_pad;
+            pada Ika.repeat(" ", left_pad) + text + Ika.repeat(" ", right_pad);
+        }
+        _ => pada text
+    }
+}
+
+// Text alignment examples
+ayanmo sample_text = "Ifá-Lang";
+Irosu.fo("Text alignment (width 15):");
+Irosu.fo("Left:   '" + align_text(sample_text, 15, "left") + "'");   // "'Ifá-Lang       '"
+Irosu.fo("Right:  '" + align_text(sample_text, 15, "right") + "'");  // "'       Ifá-Lang'"
+Irosu.fo("Center: '" + align_text(sample_text, 15, "center") + "'");  // "'    Ifá-Lang    '"</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Text Analysis</h2>
+            
+            <h3>Text Statistics</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Text Analysis Functions</span>
+                </div>
+                <pre><code>// Word frequency analysis
+se word_frequency(text: Str) -> Map<Str, u32> {
+    ayanmo words = Ika.split(Ika.to_lower(text), " ");
+    ayanmo frequency = Map::<Str, u32>::new();
+    
+    fun word ninu words {
+        // Remove punctuation
+        ayanmo clean_word = Ika.trim_chars(word, ".,!?;:\"'()[]{}");
+        if clean_word.length() > 0 {
+            if frequency.contains_key(clean_word) {
+                frequency.insert(clean_word, frequency.get(clean_word) + 1);
+            } else {
+                frequency.insert(clean_word, 1);
+            }
+        }
+    }
+    
+    pada frequency;
+}
+
+// Character frequency analysis
+se char_frequency(text: Str) -> Map<Str, u32> {
+    ayanmo frequency = Map::<Str, u32>::new();
+    
+    fun char ninu Ika.split_chars(Ika.to_lower(text)) {
+        if Ika.is_alphanumeric(char) {
+            if frequency.contains_key(char) {
+                frequency.insert(char, frequency.get(char) + 1);
+            } else {
+                frequency.insert(char, 1);
+            }
+        }
+    }
+    
+    pada frequency;
+}
+
+// Text statistics
+se text_statistics(text: Str) -> Map<Str, Any> {
+    ayanmo stats = Map::<Str, Any>::new();
+    
+    // Basic counts
+    stats.insert("char_count", Ika.char_count(text));
+    stats.insert("word_count", Ika.split(text, " ").length());
+    stats.insert("line_count", Ika.split(text, "\n").length());
+    stats.insert("sentence_count", Ika.split(text, ".").length());
+    
+    // Average word length
+    ayanmo words = Ika.split(text, " ");
+    ayanmo total_length = 0;
+    fun word ninu words {
+        total_length += Ika.length(Ika.trim_chars(word, ".,!?;:\"'()[]{}"));
+    }
+    ayanmo avg_word_length = if words.length() > 0 {
+        total_length as f64 / words.length() as f64
+    } else {
+        0.0
+    };
+    stats.insert("avg_word_length", avg_word_length);
+    
+    // Reading time (assuming 200 words per minute)
+    ayanmo reading_time_minutes = words.length() as f64 / 200.0;
+    stats.insert("reading_time_minutes", reading_time_minutes);
+    
+    pada stats;
+}
+
+// Example text analysis
+ayanmo sample_text = "Ifá-Lang is a culturally rich programming language. It combines modern computer science with ancient Yoruba wisdom. The language features 16 domains, each representing different aspects of life and knowledge.";
+
+Irosu.fo("Text Analysis:");
+Irosu.fo("Original text: " + sample_text);
+Irosu.fo("");
+
+// Word frequency
+ayanmo word_freq = word_frequency(sample_text);
+Irosu.fo("Word frequency:");
+fun (word, count) ninu word_freq {
+    Irosu.fo("  " + word + ": " + Obara.to_str(count));
+}
+
+// Character frequency
+ayanmo char_freq = char_frequency(sample_text);
+Irosu.fo("");
+Irosu.fo("Character frequency:");
+fun (char, count) ninu char_freq {
+    Irosu.fo("  '" + char + "': " + Obara.to_str(count));
+}
+
+// Text statistics
+ayanmo stats = text_statistics(sample_text);
+Irosu.fo("");
+Irosu.fo("Text statistics:");
+Irosu.fo("Character count: " + Obara.to_str(stats.get("char_count")));
+Irosu.fo("Word count: " + Obara.to_str(stats.get("word_count")));
+Irosu.fo("Line count: " + Obara.to_str(stats.get("line_count")));
+Irosu.fo("Sentence count: " + Obara.to_str(stats.get("sentence_count")));
+Irosu.fo("Average word length: " + Obara.format(stats.get("avg_word_length"), 2));
+Irosu.fo("Reading time: " + Obara.format(stats.get("reading_time_minutes"), 1) + " minutes");</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>File Processing</h2>
+            
+            <h3>Text File Operations</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">File Text Processing</span>
+                </div>
+                <pre><code>// Read and process text file
+se process_text_file(file_path: Str) -> Map<Str, Any> {
+    gbiyanju {
+        ayanmo content = Ogbe.file_read(file_path);
+        ayanmo lines = Ika.split(content, "\n");
+        
+        ayanmo results = Map::<Str, Any>::new();
+        results.insert("total_lines", lines.length());
+        results.insert("total_chars", Ika.char_count(content));
+        results.insert("total_words", word_frequency(content).keys().length());
+        
+        // Find longest line
+        ayanmo longest_line = "";
+        ayanmo longest_length = 0;
+        fun line ninu lines {
+            if Ika.length(line) > longest_length {
+                longest_line = line;
+                longest_length = Ika.length(line);
+            }
+        }
+        results.insert("longest_line", longest_line);
+        results.insert("longest_line_length", longest_length);
+        
+        // Count empty lines
+        ayanmo empty_lines = 0;
+        fun line ninu lines {
+            if Ika.trim(line).length() == 0 {
+                empty_lines += 1;
+            }
+        }
+        results.insert("empty_lines", empty_lines);
+        
+        pada results;
+    } gba (error) {
+        Irosu.kigbe("Error processing file: " + error.message);
+        pada Map::<Str, Any>::new();
+    }
+}
+
+// Search and replace in file
+se search_replace_in_file(file_path: Str, search: Str, replace: Str, backup: Bool) -> Bool {
+    gbiyanju {
+        ayanmo content = Ogbe.file_read(file_path);
+        
+        if !Ika.contains(content, search) {
+            Irosu.fo("Search pattern not found in file");
+            pada eke;
+        }
+        
+        // Create backup if requested
+        if backup {
+            ayanmo backup_path = file_path + ".backup";
+            Ogbe.file_write(backup_path, content);
+            Irosu.fo("Backup created: " + backup_path);
+        }
+        
+        // Perform replacement
+        ayanmo new_content = Ika.replace_all(content, search, replace);
+        Ogbe.file_write(file_path, new_content);
+        
+        ayanmo replacements = (Ika.count(content, search) - Ika.count(new_content, search)) / 
+                           (Ika.length(search) - Ika.length(replace));
+        
+        Irosu.fo("Replaced " + Obara.to_str(replacements) + " occurrences");
+        pada otito;
+        
+    } gba (error) {
+        Irosu.kigbe("Error processing file: " + error.message);
+        pada eke;
+    }
+}
+
+// Split large text file
+se split_text_file(file_path: Str, lines_per_file: u32, output_prefix: Str) -> Bool {
+    gbiyanju {
+        ayanmo content = Ogbe.file_read(file_path);
+        ayanmo lines = Ika.split(content, "\n");
+        
+        ayanmo total_lines = lines.length();
+        ayanmo file_count = (total_lines + lines_per_file - 1) / lines_per_file;
+        
+        Irosu.fo("Splitting " + Obara.to_str(total_lines) + " lines into " + 
+                 Obara.to_str(file_count) + " files");
+        
+        fun file_index ninu 0..file_count {
+            ayanmo start_line = file_index * lines_per_file;
+            ayanmo end_line = Obara.min(start_line + lines_per_file, total_lines);
+            
+            ayanmo file_lines = Vec::<Str>::new();
+            fun i ninu start_line..end_line {
+                file_lines.push(lines[i]);
+            }
+            
+            ayanmo file_content = Ika.join(file_lines, "\n");
+            ayanmo output_file = output_prefix + Obara.to_str(file_index + 1) + ".txt";
+            
+            Ogbe.file_write(output_file, file_content);
+            Irosu.fo("Created: " + output_file + " (" + Obara.to_str(end_line - start_line) + " lines)");
+        }
+        
+        pada otito;
+        
+    } gba (error) {
+        Irosu.kigbe("Error splitting file: " + error.message);
+        pada eke;
+    }
+}
+
+// Example file operations (would use actual file in real usage)
+Irosu.fo("File Processing Examples:");
+Irosu.fo("1. Process text file: process_text_file('document.txt')");
+Irosu.fo("2. Search and replace: search_replace_in_file('file.txt', 'old', 'new', otito)");
+Irosu.fo("3. Split file: split_text_file('large.txt', 1000, 'output_')");</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>Unicode Handling</h3>
+            <ul>
+                <li><strong>Unicode-Aware:</strong> Always use Unicode-aware functions for text processing</li>
+                <li><strong>Normalization:</strong> Normalize Unicode strings before comparison</li>
+                <li><strong>Encoding:</strong> Specify encoding when reading/writing files</li>
+                <li><strong>Diacritics:</strong> Handle diacritics properly for Yoruba text</li>
+            </ul>
+
+            <h3>Performance</h3>
+            <ul>
+                <li><strong>Avoid Repeated Operations:</strong> Cache string lengths and positions</li>
+                <li><strong>Use Builders:</strong> Use string builders for concatenation</li>
+                <li><strong>Minimize Allocations:</strong> Reuse string buffers when possible</li>
+                <li><strong>Lazy Evaluation:</strong> Process large text files line by line</li>
+            </ul>
+
+            <h3>Cultural Sensitivity</h3>
+            <ul>
+                <li><strong>Tonal Marks:</strong> Preserve Yoruba tonal marks in processing</li>
+                <li><strong>Proverbs:</strong> Handle proverbs and cultural expressions appropriately</li>
+                <li><strong>Context:</strong> Consider cultural context in text analysis</li>
+                <li><strong>Respect:</strong> Handle sacred texts with appropriate care</li>
+            </ul>
+
+            <h3>Error Handling</h3>
+            <ul>
+                <li><strong>Validation:</strong> Validate input strings before processing</li>
+                <li><strong>Encoding Errors:</strong> Handle encoding conversion errors gracefully</li>
+                <li><strong>Pattern Errors:</strong> Validate regex patterns before use</li>
+                <li><strong>File Errors:</strong> Handle file I/O errors with proper messages</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Use Cases Documentation</a></p>
         </footer>
     </div>
-    <script src="../../js/nav.js"></script>
+
     <script src="../../js/common.js"></script>
 </body>
 
 </html>
-

@@ -419,7 +419,10 @@ impl FetchBuilder {
     /// Returns status 0 and an error body so callers can detect the non-functional path.
     pub fn send(&self) -> FetchResponse {
         // Log the outbound intent for debugging.
-        println!("[FETCH] {} {} (simulation — no real HTTP sent)", self.method, self.url);
+        println!(
+            "[FETCH] {} {} (simulation — no real HTTP sent)",
+            self.method, self.url
+        );
         if let Some(ref body) = self.body {
             println!("[FETCH] Body: {}", body);
         }
@@ -450,7 +453,10 @@ impl LocalStorage {
     /// When compiled for WASM, replace with a `web_sys::window()?.local_storage()?` call.
     /// Always returns `None` outside of a browser context.
     pub fn get(key: &str) -> Option<String> {
-        println!("[STORAGE] Get: {} (simulation — no browser storage available)", key);
+        println!(
+            "[STORAGE] Get: {} (simulation — no browser storage available)",
+            key
+        );
         None
     }
 

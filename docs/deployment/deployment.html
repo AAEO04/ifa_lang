@@ -4,113 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deployment Targets - If�-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-        }
-
-        th,
-        td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid var(--bg-card);
-        }
-
-        th {
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Deployment Targets - Ifá-Lang</title>
+    <meta name="description" content="Complete deployment guide for Ifá-Lang across native, web, embedded, and sandboxed platforms">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -118,209 +20,741 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
-            <h1>?? Deployment Targets</h1>
-            <p style="color: var(--text-dim);">Deploy If�-Lang to any platform</p>
+            <h1>Deployment Targets</h1>
+            <p class="subtitle">Multi-Platform Runtime Architecture</p>
         </header>
 
-        <h2>Build Targets</h2>
-        <table>
-            <tr>
-                <th>Flag</th>
-                <th>Target</th>
-                <th>Output</th>
-            </tr>
-            <tr>
-                <td><code>--backend</code></td>
-                <td>Server applications</td>
-                <td>Native binary</td>
-            </tr>
-            <tr>
-                <td><code>--frontend</code></td>
-                <td>Browser (WASM)</td>
-                <td>.wasm + .js</td>
-            </tr>
-            <tr>
-                <td><code>--fullstack</code></td>
-                <td>Backend + Frontend</td>
-                <td>Hybrid bundle</td>
-            </tr>
-            <tr>
-                <td><code>--game</code></td>
-                <td>Game development</td>
-                <td>Native with GPU</td>
-            </tr>
-            <tr>
-                <td><code>--iot</code></td>
-                <td>Embedded devices</td>
-                <td>no_std binary</td>
-            </tr>
-            <tr>
-                <td><code>--ml</code></td>
-                <td>Machine learning</td>
-                <td>Python interop + GPU</td>
-            </tr>
-            <tr>
-                <td><code>--crypto</code></td>
-                <td>Security-critical</td>
-                <td>Constant-time binary</td>
-            </tr>
-        </table>
+        <div class="step">
+            <h2>Overview</h2>
+            <p>Ifá-Lang supports multiple deployment targets through a unified codebase with platform-specific optimizations. The three-tier runtime architecture (AST Interpreter, Bytecode VM, Transpiler) adapts to different environments while maintaining language consistency.</p>
+        </div>
 
-        <h2>Native Binary</h2>
-        <pre><code># Default backend build
-ifa build myapp.ifa
+        <div class="step">
+            <h2>Native Deployment (ifa-cli)</h2>
+            
+            <h3>Full-Featured Runtime</h3>
+            <p>The native CLI provides the complete Ifá-Lang experience with all features enabled:</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Core Features</h4>
+                    <ul>
+                        <li>Complete 16 Odù domains</li>
+                        <li>Three-tier runtime</li>
+                        <li>Full standard library</li>
+                        <li>REPL and LSP integration</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Performance</h4>
+                    <ul>
+                        <li>JIT compilation</li>
+                        <li>Native code generation</li>
+                        <li>Optimized VM</li>
+                        <li>Multi-threading support</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Development Tools</h4>
+                    <ul>
+                        <li>Babalawo LSP server</li>
+                        <li>Self-updating installer</li>
+                        <li>Debugging support</li>
+                        <li>Profiling tools</li>
+                    </ul>
+                </div>
+            </div>
 
-# Cross-compile for platforms
-ifa build --target x86_64-unknown-linux-gnu myapp.ifa
-ifa build --target x86_64-pc-windows-msvc myapp.ifa
-ifa build --target aarch64-apple-darwin myapp.ifa
-ifa build --target x86_64-unknown-linux-musl myapp.ifa  # Static binary</code></pre>
+            <h3>Installation</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Native Installation</span>
+                </div>
+                <pre><code># Cross-platform installer
+curl -sSL https://install.ifa-lang.org | sh
 
-        <h3>Supported Targets</h3>
-        <table>
-            <tr>
-                <th>Platform</th>
-                <th>Target Triple</th>
-            </tr>
-            <tr>
-                <td>Linux (x64)</td>
-                <td><code>x86_64-unknown-linux-gnu</code></td>
-            </tr>
-            <tr>
-                <td>Linux (ARM64)</td>
-                <td><code>aarch64-unknown-linux-gnu</code></td>
-            </tr>
-            <tr>
-                <td>Linux (static)</td>
-                <td><code>x86_64-unknown-linux-musl</code></td>
-            </tr>
-            <tr>
-                <td>Windows (x64)</td>
-                <td><code>x86_64-pc-windows-msvc</code></td>
-            </tr>
-            <tr>
-                <td>macOS (Intel)</td>
-                <td><code>x86_64-apple-darwin</code></td>
-            </tr>
-            <tr>
-                <td>macOS (Apple Silicon)</td>
-                <td><code>aarch64-apple-darwin</code></td>
-            </tr>
-        </table>
+# Package managers (planned)
+brew install ifa-lang
+apt install ifa-lang
+winget install ifa-lang
 
-        <h2>WebAssembly (Frontend)</h2>
-        <pre><code># Build for browser
-ifa build --frontend myapp.ifa
+# Manual installation
+git clone https://github.com/ifa-lang/ifa-lang
+cd ifa-lang
+cargo install --path ifa-cli</code></pre>
+            </div>
 
-# Output:
-# - myapp.wasm
-# - myapp.js (glue code)
-# - myapp.d.ts (TypeScript types)
+            <h3>Runtime Configuration</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Runtime Configuration</span>
+                </div>
+                <pre><code># Environment variables
+export IFA_RUNTIME=native
+export IFA_MEMORY=medium
+export IFA_LOG_LEVEL=info
 
-# Serve locally
-python -m http.server 8000</code></pre>
+# Configuration file (~/.ifa/config.toml)
+[runtime]
+mode = "native"
+memory = "medium"
+optimization = "speed"
 
-        <h3>Usage in HTML</h3>
-        <pre><code>&lt;script type="module"&gt;
-    import init, { run } from './myapp.js';
+[domains]
+odi = true    # File operations
+otura = true  # Networking
+irete = true  # Crypto
+ose = true    # Graphics
+
+[features]
+parallel = true
+gpu = true
+persistence = true</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>WebAssembly Deployment (ifa-wasm)</h2>
+            
+            <h3>Browser Runtime</h3>
+            <p>WebAssembly target for browser deployment with optimized feature set:</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Core Domains</h4>
+                    <ul>
+                        <li>Ogbe (System)</li>
+                        <li>Irosu (Console)</li>
+                        <li>Obara/Oturupon (Math)</li>
+                        <li>Ika (Strings)</li>
+                        <li>Ogunda (Arrays)</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Limited Features</h4>
+                    <ul>
+                        <li>No native file I/O</li>
+                        <li>Browser networking only</li>
+                        <li>GPU via WebGPU</li>
+                        <li>Sandboxed execution</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Performance</h4>
+                    <ul>
+                        <li>WASM optimization</li>
+                        <li>Browser memory limits</li>
+                        <li>Async/await support</li>
+                        <li>Web Workers support</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Web Deployment</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">WASM Build</span>
+                </div>
+                <pre><code># Build for WebAssembly
+cargo build --target wasm32-unknown-unknown --package ifa-wasm
+
+# Webpack configuration
+module.exports = {
+  experiments: {
+    asyncWebAssembly: true,
+  },
+  module: {
+    rules: [
+      {
+        test: /\.wasm$/,
+        type: "webassembly/async",
+      },
+    ],
+  },
+};
+
+# JavaScript integration
+import init, { run_ifa_code } from './ifa-wasm.js';
+
+const instance = await init();
+const result = await run_ifa_code(`
+  Irosu.fo("Hello from WASM!");
+  ayanmo sum = Obara.fikun(10, 20);
+  pada sum;
+`);</code></pre>
+            </div>
+
+            <h3>Playground Integration</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Browser Playground</span>
+                </div>
+                <pre><code>// HTML playground setup
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.ifa-lang.org/ifa-wasm.js"></script>
+</head>
+<body>
+    <textarea id="code" placeholder="Enter Ifá-Lang code..."></textarea>
+    <button onclick="runCode()">Run</button>
+    <pre id="output"></pre>
     
-    async function main() {
-        await init();
-        run();
+    <script>
+        async function runCode() {
+            const code = document.getElementById('code').value;
+            const output = document.getElementById('output');
+            
+            try {
+                const result = await run_ifa_code(code);
+                output.textContent = result;
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html></code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Embedded Deployment (ifa-embedded)</h2>
+            
+            <h3>no_std Runtime</h3>
+            <p>Embedded target for microcontrollers and IoT devices with memory constraints:</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Minimal Domains</h4>
+                    <ul>
+                        <li>Ogbe (System)</li>
+                        <li>Irosu (Console - serial)</li>
+                        <li>Obara (Basic math)</li>
+                        <li>Owọn (Random - hardware)</li>
+                        <li>Oyeku (Exit)</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Memory Constraints</h4>
+                    <ul>
+                        <li>Bounded collections</li>
+                        <li>No heap allocation</li>
+                        <li>Static memory pools</li>
+                        <li>Stack-based execution</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Hardware Integration</h4>
+                    <ul>
+                        <li>GPIO support</li>
+                        <li>I2C/SPI interfaces</li>
+                        <li>Timer interrupts</li>
+                        <li>Real-time constraints</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Embedded Configuration</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Embedded Setup</span>
+                </div>
+                <pre><code>// Cargo.toml for embedded target
+[dependencies]
+ifa-embedded = { version = "1.3.0", default-features = false }
+heapless = "0.8"
+cortex-m = "0.7"
+
+// Memory configuration
+const HEAP_SIZE: usize = 1024;  // 1KB heap
+const STACK_SIZE: usize = 2048; // 2KB stack
+
+// Bounded collections
+use heapless::{Vec, String};
+
+fn embedded_main() -> ! {
+    // Initialize embedded runtime
+    let runtime = IfaEmbedded::new()
+        .with_heap_size(HEAP_SIZE)
+        .with_stack_size(STACK_SIZE)
+        .with_gpio_pins(13);  // LED pin
+    
+    // Run Ifá-Lang code
+    runtime.run(`
+        opon: kekere;
+        Irosu.fo("Embedded Ifá-Lang!");
+        
+        // Blink LED
+        nigita otito {
+            Ogbe.gpio_set(13, otito);
+            Iwori.delay(1000);
+            Ogbe.gpio_set(13, eke);
+            Iwori.delay(1000);
+        }
+    `);
+    
+    loop {}
+}</code></pre>
+            </div>
+
+            <h3>Platform Support</h3>
+            <ul>
+                <li><strong>ARM Cortex-M:</strong> STM32, nRF52, ESP32</li>
+                <li><strong>RISC-V:</strong> ESP32-C3, custom designs</li>
+                <li><strong>AVR:</strong> Arduino Uno/Mega</li>
+                <li><strong>x86:</strong> Embedded PC systems</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Sandboxed Deployment (ifa-sandbox)</h2>
+            
+            <h3>Capability-Based Security</h3>
+            <p>WASM-based sandbox for safe execution of untrusted Ifá-Lang code:</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Security Model</h4>
+                    <ul>
+                        <li>Capability-based access</li>
+                        <li>Resource limits</li>
+                        <li>Memory isolation</li>
+                        <li>Time boxing</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Safe Domains</h4>
+                    <ul>
+                        <li>Ogbe (System - limited)</li>
+                        <li>Irosu (Console - controlled)</li>
+                        <li>Obara (Math - safe)</li>
+                        <li>Ika (Strings - safe)</li>
+                        <li>Ogunda (Arrays - bounded)</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Restricted Features</h4>
+                    <ul>
+                        <li>No file system access</li>
+                        <li>No network access</li>
+                        <li>No native FFI</li>
+                        <li>Limited memory</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Sandbox Configuration</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Sandbox Setup</span>
+                </div>
+                <pre><code>// Create sandbox instance
+let sandbox = IfaSandbox::new()
+    .with_memory_limit(10 * 1024 * 1024)  // 10MB
+    .with_time_limit(Duration::from_secs(30))
+    .with_capabilities(&[
+        Capability::Console,
+        Capability::Math,
+        Capability::Strings,
+    ])
+    .deny_capabilities(&[
+        Capability::FileSystem,
+        Capability::Network,
+        Capability::NativeFFI,
+    ]);
+
+// Execute untrusted code
+let result = sandbox.execute(`
+    // This code runs safely
+    Irosu.fo("Hello from sandbox!");
+    ayanmo result = Obara.fikun(5, 3);
+    pada result;
+    
+    // This would be blocked
+    // Odi.si("sensitive_file.txt");  // Denied!
+    // Otura.so("evil.com", 4444);   // Denied!
+`);</code></pre>
+            </div>
+
+            <h3>Use Cases</h3>
+            <ul>
+                <li><strong>Code Execution Platforms:</strong> Online judges, coding challenges</li>
+                <li><strong>Plugin Systems:</strong> Safe third-party extensions</li>
+                <li><strong>Education:</strong> Classroom code execution</li>
+                <li><strong>Microservices:</strong> Isolated function execution</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Platform Comparison</h2>
+            
+            <div class="comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Native</th>
+                            <th>WebAssembly</th>
+                            <th>Embedded</th>
+                            <th>Sandbox</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Performance</strong></td>
+                            <td>Maximum</td>
+                            <td>High</td>
+                            <td>Low</td>
+                            <td>Medium</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Memory</strong></td>
+                            <td>Unlimited</td>
+                            <td>Limited</td>
+                            <td>Very Limited</td>
+                            <td>Limited</td>
+                        </tr>
+                        <tr>
+                            <td><strong>16 Odù Domains</strong></td>
+                            <td>Full</td>
+                            <td>Core (8)</td>
+                            <td>Minimal (5)</td>
+                            <td>Safe (5)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>File System</strong></td>
+                            <td>Full</td>
+                            <td>Browser API</td>
+                            <td>None</td>
+                            <td>None</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Networking</strong></td>
+                            <td>Full</td>
+                            <td>Browser API</td>
+                            <td>Limited</td>
+                            <td>None</td>
+                        </tr>
+                        <tr>
+                            <td><strong>GPU/Graphics</strong></td>
+                            <td>Full</td>
+                            <td>WebGPU</td>
+                            <td>None</td>
+                            <td>None</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Security</strong></td>
+                            <td>OS-level</td>
+                            <td>Browser sandbox</td>
+                            <td>Hardware isolation</td>
+                            <td>Capability-based</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Development Tools</strong></td>
+                            <td>Full</td>
+                            <td>Limited</td>
+                            <td>Minimal</td>
+                            <td>None</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Build System Integration</h2>
+            
+            <h3>Cargo Features</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Feature Configuration</span>
+                </div>
+                <pre><code># Cargo.toml
+[features]
+default = ["native", "full-domains"]
+
+# Platform features
+native = ["tokio", "gpu", "audio"]
+wasm = ["web-sys", "webgpu"]
+embedded = ["heapless", "cortex-m"]
+sandbox = ["wasmtime"]
+
+# Domain features
+full-domains = ["odi", "otura", "irete", "ose", "ofun"]
+core-domains = []
+
+# Stacks and infrastructure
+backend = ["persistence", "database"]
+frontend = ["graphics", "ui"]
+game = ["graphics", "audio", "physics"]
+ml = ["blas", "linear-algebra"]
+iot = ["gpio", "i2c", "spi"]
+
+# Build commands
+cargo build --features native,full-domains,backend
+cargo build --target wasm32-unknown-unknown --features wasm,core-domains
+cargo build --target thumbv7m-none-eabi --features embedded,core-domains</code></pre>
+            </div>
+
+            <h3>Conditional Compilation</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Platform-Specific Code</span>
+                </div>
+                <pre><code>// Platform-specific implementations
+#[cfg(feature = "native")]
+mod native_runtime {
+    pub fn create_runtime() -> NativeRuntime {
+        NativeRuntime::new()
+            .with_full_domains()
+            .with_gpu_support()
+            .with_audio_support()
     }
-    main();
-&lt;/script&gt;</code></pre>
+}
 
-        <h2>Embedded / IoT</h2>
-        <pre><code># Build for embedded
-ifa build --iot myapp.ifa --target thumbv7em-none-eabihf
+#[cfg(feature = "wasm")]
+mod wasm_runtime {
+    pub fn create_runtime() -> WasmRuntime {
+        WasmRuntime::new()
+            .with_core_domains()
+            .with_webgpu_support()
+    }
+}
 
-# Flash to device
-ifa flash --target esp32 --port COM3 myapp.ifa
-ifa flash --target stm32f4 --port /dev/ttyUSB0 myapp.ifa</code></pre>
+#[cfg(feature = "embedded")]
+mod embedded_runtime {
+    pub fn create_runtime() -> EmbeddedRuntime {
+        EmbeddedRuntime::new()
+            .with_minimal_domains()
+            .with_bounded_memory(1024)
+    }
+}
 
-        <h3>Supported Devices</h3>
-        <table>
-            <tr>
-                <th>Device</th>
-                <th>Target</th>
-            </tr>
-            <tr>
-                <td>ESP32</td>
-                <td><code>esp32</code></td>
-            </tr>
-            <tr>
-                <td>STM32F4</td>
-                <td><code>stm32f4</code></td>
-            </tr>
-            <tr>
-                <td>Raspberry Pi Pico</td>
-                <td><code>rp2040</code></td>
-            </tr>
-            <tr>
-                <td>Arduino (AVR)</td>
-                <td><code>avr-atmega328p</code></td>
-            </tr>
-        </table>
+// Unified interface
+pub trait IfaRuntime {
+    fn run(&self, code: &str) -> Result<IfaValue, IfaError>;
+    fn get_domains(&self) -> &[OduDomain];
+}</code></pre>
+            </div>
+        </div>
 
-        <h2>Fullstack Hybrid</h2>
-        <pre><code># Build server + client bundle
-ifa build --fullstack myapp.ifa
+        <div class="step">
+            <h2>Deployment Strategies</h2>
+            
+            <h3>Production Deployment</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Production Configuration</span>
+                </div>
+                <pre><code># Dockerfile for native deployment
+FROM rust:1.70 as builder
+WORKDIR /app
+COPY . .
+RUN cargo build --release --package ifa-cli
 
-# Deploy to container
-docker build -t myapp .
-docker run -p 8080:8080 myapp</code></pre>
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates
+COPY --from=builder /app/target/release/ifa-cli /usr/local/bin/
+EXPOSE 8080
+CMD ["ifa-cli", "server", "--port", "8080"]
 
-        <h2>Zero-Config Deployment</h2>
-        <pre><code># Auto-detect project type and deploy target
-ifa deploy
+# Kubernetes deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ifa-lang-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ifa-lang-service
+  template:
+    metadata:
+      labels:
+        app: ifa-lang-service
+    spec:
+      containers:
+      - name: ifa-lang
+        image: ifa-lang:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: IFA_RUNTIME
+          value: "native"
+        - name: IFA_MEMORY
+          value: "large"
+        - name: IFA_OPTIMIZATION
+          value: "throughput"</code></pre>
+            </div>
 
-# Analyzes:
-# - oja.toml dependencies
-# - Stack usage (Backend, Frontend, etc.)
-# - Resource requirements
-# - Suggests optimal deployment strategy</code></pre>
+            <h3>CI/CD Pipeline</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">GitHub Actions</span>
+                </div>
+                <pre><code># .github/workflows/build.yml
+name: Build and Deploy
 
-        <h2>Bytecode Distribution</h2>
-        <pre><code># Compile to bytecode (platform-independent)
-ifa bytecode myapp.ifa -o myapp.ifab
+on: [push, pull_request]
 
-# Run bytecode on any platform with ifa installed
-ifa runb myapp.ifab</code></pre>
+jobs:
+  build:
+    strategy:
+      matrix:
+        target: [native, wasm, embedded]
+        include:
+          - target: native
+            os: ubuntu-latest
+            features: full-domains
+          - target: wasm
+            os: ubuntu-latest
+            features: core-domains
+          - target: embedded
+            os: ubuntu-latest
+            features: core-domains
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: ${{ matrix.target }}
+    
+    - name: Build
+      run: |
+        cargo build --target ${{ matrix.target }} --features ${{ matrix.features }}
+    
+    - name: Test
+      run: |
+        cargo test --target ${{ matrix.target }} --features ${{ matrix.features }}
+    
+    - name: Deploy
+      if: github.ref == 'refs/heads/main'
+      run: |
+        # Deploy to appropriate platform
+        ./scripts/deploy.sh ${{ matrix.target }}</code></pre>
+            </div>
+        </div>
 
-        <h2>Platform-Specific Notes</h2>
+        <div class="step">
+            <h2>Performance Optimization</h2>
+            
+            <h3>Platform-Specific Optimizations</h3>
+            <ul>
+                <li><strong>Native:</strong> JIT compilation, native code generation, SIMD</li>
+                <li><strong>WebAssembly:</strong> WASM optimizations, browser caching, Web Workers</li>
+                <li><strong>Embedded:</strong> Stack allocation, no heap, compile-time evaluation</li>
+                <li><strong>Sandbox:</strong> Pre-compilation, capability caching, fast startup</li>
+            </ul>
 
-        <h3>Windows</h3>
-        <ul style="margin-left: 1.5rem;">
-            <li>Binaries are automatically named <code>.exe</code></li>
-            <li>PowerShell/CMD compatible scripts</li>
-            <li>Windows Defender may flag new binaries (click Allow)</li>
-        </ul>
+            <h3>Memory Optimization</h3>
+            <ul>
+                <li><strong>String Interning:</strong> Shared string data across platforms</li>
+                <li><strong>Object Pooling:</strong> Reuse of frequently allocated objects</li>
+                <li><strong>Memory Pools:</strong> Platform-specific memory management</li>
+                <li><strong>Garbage Collection:</strong> Generational GC for native platforms</li>
+            </ul>
 
-        <h3>macOS</h3>
-        <ul style="margin-left: 1.5rem;">
-            <li>Unsigned binaries need approval (Settings → Security)</li>
-            <li>Or: <code>xattr -cr ./myapp</code> to remove quarantine</li>
-            <li>Universal binaries: <code>lipo</code> to combine Intel + ARM</li>
-        </ul>
+            <h3>Compilation Optimization</h3>
+            <ul>
+                <li><strong>AOT Compilation:</strong> Pre-compile hot paths</li>
+                <li><strong>Bytecode Optimization:</strong> Peephole optimizations</li>
+                <li><strong>Inline Caching:</strong> Cache method lookups</li>
+                <li><strong>Dead Code Elimination:</strong> Remove unused domains</li>
+            </ul>
+        </div>
 
-        <h3>Linux</h3>
-        <ul style="margin-left: 1.5rem;">
-            <li>Set executable: <code>chmod +x myapp</code></li>
-            <li>Static builds (<code>-musl</code>) have no libc dependency</li>
-            <li>AppImage/Flatpak packaging via standard tools</li>
-        </ul>
+        <div class="step">
+            <h2>Monitoring and Debugging</h2>
+            
+            <h3>Runtime Metrics</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Performance Monitoring</span>
+                </div>
+                <pre><code>// Runtime metrics collection
+let metrics = runtime.get_metrics();
 
-        <footer class="doc-footer">
-            <p><a href="../examples/use-cases/cloud.html">← Cloud Deployment</a> · <a href="../deployment/deployment.html">Embedded →</a></p>
-            <p><a href="../index.html">Documentation Home</a></p>
+Irosu.fo("=== Runtime Metrics ===");
+Irosu.fo("Memory usage: " + metrics.memory_used + " bytes");
+Irosu.fo("CPU usage: " + metrics.cpu_usage + "%");
+Irosu.fo("Instructions executed: " + metrics.instruction_count);
+Irosu.fo("Domain calls: " + metrics.domain_calls);
+Irosu.fo("GC collections: " + metrics.gc_collections);
+
+// Domain-specific metrics
+for (domain, stats) in metrics.domain_stats {
+    Irosu.fo(domain + ": " + stats.call_count + " calls, " + stats.total_time + "ms");
+}</code></pre>
+            </div>
+
+            <h3>Debugging Support</h3>
+            <ul>
+                <li><strong>Source Maps:</strong> Map bytecode to source code</li>
+                <li><strong>Breakpoints:</strong> Set breakpoints in Ifá-Lang code</li>
+                <li><strong>Variable Inspection:</strong> Examine variable values</li>
+                <li><strong>Call Stack:</strong> View execution context</li>
+            </ul>
+
+            <h3>Profiling Tools</h3>
+            <ul>
+                <li><strong>CPU Profiler:</strong> Identify hot spots</li>
+                <li><strong>Memory Profiler:</strong> Detect memory leaks</li>
+                <li><strong>Domain Profiler:</strong> Analyze domain usage</li>
+                <li><strong>Network Profiler:</strong> Monitor network operations</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>Target Selection</h3>
+            <ul>
+                <li><strong>Native:</strong> Desktop applications, servers, CLI tools</li>
+                <li><strong>WebAssembly:</strong> Web applications, browser extensions</li>
+                <li><strong>Embedded:</strong> IoT devices, microcontrollers</li>
+                <li><strong>Sandbox:</strong> Code execution platforms, plugins</li>
+            </ul>
+
+            <h3>Feature Management</h3>
+            <ul>
+                <li><strong>Minimal Builds:</strong> Only enable required domains</li>
+                <li><strong>Conditional Features:</strong> Use feature flags appropriately</li>
+                <li><strong>Platform Testing:</strong> Test on all target platforms</li>
+                <li><strong>Performance Testing:</strong> Benchmark each target</li>
+            </ul>
+
+            <h3>Security Considerations</h3>
+            <ul>
+                <li><strong>Sandbox Untrusted Code:</strong> Use ifa-sandbox for user code</li>
+                <li><strong>Resource Limits:</strong> Set appropriate memory/time limits</li>
+                <li><strong>Capability Control:</strong> Restrict domain access</li>
+                <li><strong>Input Validation:</strong> Validate all external inputs</li>
+            </ul>
+
+            <h3>Deployment Automation</h3>
+            <ul>
+                <li><strong>CI/CD Pipeline:</strong> Automated builds and testing</li>
+                <li><strong>Multi-Target Builds:</strong> Build for all platforms</li>
+                <li><strong>Automated Testing:</strong> Test on all deployment targets</li>
+                <li><strong>Rollback Strategy:</strong> Plan for deployment failures</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Deployment Documentation</a></p>
         </footer>
     </div>
-    <script src="../js/nav.js"></script>
+
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

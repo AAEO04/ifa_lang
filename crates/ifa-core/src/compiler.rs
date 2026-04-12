@@ -1,32 +1,87 @@
 //! # Bytecode Compiler
 //!
 //! Compiles AST to bytecode for the Ifá-Lang VM.
+//!
+//! ### 🚀 ARCHITECTURAL STATUS (String Interpolation)
+//! Interpolated strings now compile to dedicated `OpCode::ToString` + `OpCode::Concat`
+//! sequences instead of overloading the arithmetic hot path through `OpCode::Add`.
+//!
+//! General `+` expressions remain source-compatible; this hardening pass isolates
+//! interpolation without forcing a language-wide string-operator redesign.
 
 use crate::ast::*;
 use crate::bytecode::{Bytecode, OpCode};
-use crate::error::IfaResult;
+use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Bytecode compiler - transforms AST to executable bytecode
 pub struct Compiler {
     bytecode: Bytecode,
     /// Local variables: name -> stack slot
-    locals: Vec<HashMap<String, usize>>,
-    /// Current scope depth
-    scope_depth: usize,
+    functions: Vec<FunctionContext>,
     /// Label counter for jumps
     _label_counter: usize,
     /// Compile-time constants
     constants: HashMap<String, Expression>,
 }
 
+#[derive(Debug, Clone)]
+struct Upvalue {
+    name: String,
+    index: usize,
+    is_local: bool,
+}
+
+#[derive(Debug)]
+struct FunctionContext {
+    locals: Vec<HashMap<String, usize>>,
+    const_locals: Vec<HashSet<String>>,
+    scope_depth: usize,
+    upvalues: Vec<Upvalue>,
+}
+
+impl FunctionContext {
+    fn new() -> Self {
+        Self {
+            locals: vec![HashMap::new()],
+            const_locals: vec![HashSet::new()],
+            scope_depth: 0,
+            upvalues: Vec::new(),
+        }
+    }
+
+    fn resolve_local(&self, name: &str) -> Option<usize> {
+        for scope in self.locals.iter().rev() {
+            if let Some(&slot) = scope.get(name) {
+                return Some(slot);
+            }
+        }
+        None
+    }
+
+    fn add_upvalue(&mut self, name: &str, index: usize, is_local: bool) -> usize {
+        if let Some(pos) = self
+            .upvalues
+            .iter()
+            .position(|u| u.name == name && u.index == index && u.is_local == is_local)
+        {
+            return pos;
+        }
+        self.upvalues.push(Upvalue {
+            name: name.to_string(),
+            index,
+            is_local,
+        });
+        self.upvalues.len() - 1
+    }
+}
+
 impl Compiler {
     pub fn new(source_name: &str) -> Self {
         Compiler {
             bytecode: Bytecode::new(source_name),
-            locals: vec![HashMap::new()],
-            scope_depth: 0,
+            functions: vec![FunctionContext::new()],
             _label_counter: 0,
             constants: HashMap::new(),
         }
@@ -38,6 +93,7 @@ impl Compiler {
             self.compile_statement(stmt)?;
         }
         self.emit(OpCode::Halt);
+        self.bytecode.exports = collect_exports(program);
         Ok(self.bytecode)
     }
 
@@ -64,8 +120,8 @@ impl Compiler {
     fn emit_string(&mut self, s: &str) {
         self.bytecode.strings.push(s.to_string());
         let idx = (self.bytecode.strings.len() - 1) as u16;
-        self.emit_byte((idx >> 8) as u8);
         self.emit_byte((idx & 0xff) as u8);
+        self.emit_byte((idx >> 8) as u8);
     }
 
     fn current_offset(&self) -> usize {
@@ -75,56 +131,101 @@ impl Compiler {
     fn emit_jump(&mut self, op: OpCode) -> usize {
         self.emit(op);
         let offset = self.current_offset();
-        // Placeholder for 16-bit offset
-        self.emit_byte(0);
-        self.emit_byte(0);
+        // Placeholder for 32-bit absolute offset (little-endian)
+        self.emit_u32(0);
         offset
     }
 
     fn patch_jump(&mut self, offset: usize) {
-        let jump = (self.current_offset() - offset - 2) as u16;
-        self.bytecode.code[offset] = (jump & 0xff) as u8;
-        self.bytecode.code[offset + 1] = ((jump >> 8) & 0xff) as u8;
+        let target = self.current_offset() as u32;
+        let bytes = target.to_le_bytes();
+        self.bytecode.code[offset..offset + 4].copy_from_slice(&bytes);
     }
 
     fn begin_scope(&mut self) {
-        self.scope_depth += 1;
-        self.locals.push(HashMap::new());
+        let ctx = self.current_fn_mut();
+        ctx.scope_depth += 1;
+        ctx.locals.push(HashMap::new());
+        ctx.const_locals.push(HashSet::new());
     }
 
     fn end_scope(&mut self) {
-        self.scope_depth -= 1;
-        if let Some(scope) = self.locals.pop() {
-            let count = scope.len();
-            for _ in 0..count {
-                self.emit(OpCode::Pop);
-            }
+        let count = {
+            let ctx = self.current_fn_mut();
+            ctx.scope_depth -= 1;
+            let count = ctx.locals.pop().map(|scope| scope.len()).unwrap_or(0);
+            let _ = ctx.const_locals.pop();
+            count
+        };
+        for _ in 0..count {
+            self.emit(OpCode::Pop);
         }
     }
 
+    fn is_const_binding(&self, name: &str) -> bool {
+        self.current_fn()
+            .const_locals
+            .iter()
+            .rev()
+            .any(|s| s.contains(name))
+    }
+
     fn declare_local(&mut self, name: &str) -> usize {
-        let slot = self.locals.iter().map(|m| m.len()).sum();
-        if let Some(scope) = self.locals.last_mut() {
+        let ctx = self.current_fn_mut();
+        let slot = ctx.locals.iter().map(|m| m.len()).sum();
+        if let Some(scope) = ctx.locals.last_mut() {
             scope.insert(name.to_string(), slot);
         }
         slot
     }
 
     fn resolve_local(&self, name: &str) -> Option<usize> {
-        for scope in self.locals.iter().rev() {
-            if let Some(&slot) = scope.get(name) {
-                return Some(slot);
-            }
+        self.current_fn().resolve_local(name)
+    }
+
+    fn resolve_upvalue(&mut self, name: &str) -> Option<usize> {
+        let depth = self.functions.len();
+        if depth <= 1 {
+            return None;
+        }
+        self.resolve_upvalue_in(depth - 1, name)
+    }
+
+    fn resolve_upvalue_in(&mut self, func_index: usize, name: &str) -> Option<usize> {
+        if func_index == 0 {
+            return None;
+        }
+        let parent_index = func_index - 1;
+        if let Some(local) = self.functions[parent_index].resolve_local(name) {
+            let idx = self.functions[func_index].add_upvalue(name, local, true);
+            return Some(idx);
+        }
+        if let Some(parent_up) = self.resolve_upvalue_in(parent_index, name) {
+            let idx = self.functions[func_index].add_upvalue(name, parent_up, false);
+            return Some(idx);
         }
         None
+    }
+
+    fn current_fn(&self) -> &FunctionContext {
+        self.functions.last().expect("no function context")
+    }
+
+    fn current_fn_mut(&mut self) -> &mut FunctionContext {
+        self.functions.last_mut().expect("no function context")
     }
 
     fn compile_statement(&mut self, stmt: &Statement) -> IfaResult<()> {
         match stmt {
             Statement::VarDecl { name, value, .. } => {
                 self.compile_expression(value)?;
-                self.declare_local(name);
-                // Value remains on stack as the local variable
+                if self.current_fn().scope_depth > 0 {
+                    self.declare_local(name);
+                    // Value remains on stack as the local variable
+                } else {
+                    self.emit(OpCode::StoreGlobal);
+                    self.emit_string(name);
+                }
             }
 
             Statement::Const { name, value, .. } => {
@@ -140,14 +241,28 @@ impl Compiler {
                 // This is fine. It acts like a macro.
                 // For literals, it's just `Push 3`.
                 self.constants.insert(name.clone(), value.clone());
+                if let Some(scope) = self.current_fn_mut().const_locals.last_mut() {
+                    scope.insert(name.clone());
+                }
             }
 
             Statement::Assignment { target, value, .. } => {
                 self.compile_expression(value)?;
                 match target {
                     AssignTarget::Variable(name) => {
+                        if self.is_const_binding(name) {
+                            return Err(IfaError::TypeError {
+                                expected: "Mutable binding".into(),
+                                got: format!("const {name}"),
+                            });
+                        }
                         if let Some(slot) = self.resolve_local(name) {
                             self.emit(OpCode::StoreLocal);
+                            let s = slot as u16;
+                            self.emit_byte((s & 0xff) as u8);
+                            self.emit_byte((s >> 8) as u8);
+                        } else if let Some(slot) = self.resolve_upvalue(name) {
+                            self.emit(OpCode::StoreUpvalue);
                             let s = slot as u16;
                             self.emit_byte((s & 0xff) as u8);
                             self.emit_byte((s >> 8) as u8);
@@ -160,6 +275,11 @@ impl Compiler {
                         // Push container, index, value
                         if let Some(slot) = self.resolve_local(name) {
                             self.emit(OpCode::LoadLocal);
+                            let s = slot as u16;
+                            self.emit_byte((s & 0xff) as u8);
+                            self.emit_byte((s >> 8) as u8);
+                        } else if let Some(slot) = self.resolve_upvalue(name) {
+                            self.emit(OpCode::LoadUpvalue);
                             let s = slot as u16;
                             self.emit_byte((s & 0xff) as u8);
                             self.emit_byte((s >> 8) as u8);
@@ -222,9 +342,6 @@ impl Compiler {
             } => {
                 let loop_start = self.current_offset();
 
-                // Debug to confirm new compiler version
-                println!("COMPILER: Compiling While Loop");
-
                 self.compile_expression(condition)?;
                 let exit_jump = self.emit_jump(OpCode::JumpIfFalse);
 
@@ -236,9 +353,7 @@ impl Compiler {
 
                 // Jump back to start
                 self.emit(OpCode::Jump);
-                let back_offset = (self.current_offset() - loop_start + 2) as i16;
-                self.emit_byte((-back_offset as u16 & 0xff) as u8);
-                self.emit_byte(((-back_offset as u16 >> 8) & 0xff) as u8);
+                self.emit_u32(loop_start as u32);
 
                 self.patch_jump(exit_jump);
             }
@@ -326,20 +441,47 @@ impl Compiler {
 
                 // 7. Jump Back
                 self.emit(OpCode::Jump);
-                let back_offset = (self.current_offset() - loop_start + 2) as i16;
-                self.emit_byte((-back_offset as u16 & 0xff) as u8);
-                self.emit_byte(((-back_offset as u16 >> 8) & 0xff) as u8);
+                self.emit_u32(loop_start as u32);
 
                 self.patch_jump(exit_jump);
             }
 
             Statement::Return { value, .. } => {
                 if let Some(expr) = value {
-                    self.compile_expression(expr)?;
+                    // Tail-call optimization: if we're returning a direct function call, emit TailCall
+                    // so the VM can reuse the current frame.
+                    if let Expression::Call { name, args } = expr {
+                        // Push function
+                        if let Some(slot) = self.resolve_local(name) {
+                            self.emit(OpCode::LoadLocal);
+                            let s = slot as u16;
+                            self.emit_byte((s & 0xff) as u8);
+                            self.emit_byte((s >> 8) as u8);
+                        } else if let Some(slot) = self.resolve_upvalue(name) {
+                            self.emit(OpCode::LoadUpvalue);
+                            let s = slot as u16;
+                            self.emit_byte((s & 0xff) as u8);
+                            self.emit_byte((s >> 8) as u8);
+                        } else {
+                            self.emit(OpCode::LoadGlobal);
+                            self.emit_string(name);
+                        }
+
+                        // Push arguments
+                        for arg in args {
+                            self.compile_expression(arg)?;
+                        }
+
+                        self.emit(OpCode::TailCall);
+                        self.emit_byte(args.len() as u8);
+                    } else {
+                        self.compile_expression(expr)?;
+                        self.emit(OpCode::Return);
+                    }
                 } else {
                     self.emit(OpCode::PushNull);
+                    self.emit(OpCode::Return);
                 }
-                self.emit(OpCode::Return);
             }
 
             Statement::Ase { .. } => {
@@ -352,92 +494,108 @@ impl Compiler {
             }
 
             Statement::EseDef {
-                name, params, body, ..
+                name,
+                params,
+                body,
+                is_async,
+                ..
             } => {
-                self.compile_function(name, params, body)?;
+                self.compile_function(name, params, body, *is_async)?;
 
                 // 8. Store in variable
-                // If name is found in local scope...
-                if let Some(slot) = self.resolve_local(name) {
-                    self.emit(OpCode::StoreLocal);
-                    let s = slot as u16;
-                    self.emit_byte((s & 0xff) as u8);
-                    self.emit_byte((s >> 8) as u8);
+                // If inside a local scope, bind as a local (or reuse existing).
+                if self.current_fn().scope_depth > 0 {
+                    if let Some(slot) = self.resolve_local(name) {
+                        self.emit(OpCode::StoreLocal);
+                        let s = slot as u16;
+                        self.emit_byte((s & 0xff) as u8);
+                        self.emit_byte((s >> 8) as u8);
+                    } else {
+                        self.declare_local(name);
+                    }
                 } else {
                     // Otherwise Global
                     self.bytecode.strings.push(name.clone());
                     let name_idx = (self.bytecode.strings.len() - 1) as u16;
                     self.emit(OpCode::StoreGlobal);
-                    self.emit_byte((name_idx >> 8) as u8);
                     self.emit_byte((name_idx & 0xff) as u8);
+                    self.emit_byte((name_idx >> 8) as u8);
                 }
             }
 
-            Statement::OduDef {
-                name,
-                body,
-                visibility: _,
-                ..
-            } => {
-                let mut method_count = 0;
-                let mut field_names = Vec::new();
+            Statement::OduDef { name, .. } => {
+                // DESIGN DECISION (2026-04-07): Class-based OOP is formally removed from Ifá-Lang.
+                // Rationale:
+                //   1. OOP inheritance hierarchies contradict the sibling-domain philosophy of the 16 Odù.
+                //   2. Class vtables require runtime dynamic dispatch, violating the Zero-Cost Architecture.
+                //   3. `ifa-babalawo` structural subtyping already provides polymorphism via shape-checking.
+                //
+                // MIGRATION PATH: Replace class definitions with Maps + Domain functions.
+                //   Instead of:  class Dog { ... }
+                //   Use:         ayanmo dog = { name: "Fido", bark: ese() { ... } }
+                //
+                // See ROADMAP.md §Phase 2 "Protocol-Oriented Design" for the full specification.
+                return Err(IfaError::Custom(format!(
+                    "Class/OOP syntax ('{name}') is not supported. \
+                     Ifá-Lang uses Protocol-Oriented design: data is a Map, behaviour is a Domain function. \
+                     See ROADMAP.md §Phase 2 for the migration guide."
+                )));
+            }
 
-                for stmt in body {
-                    match stmt {
-                        Statement::EseDef {
-                            name, params, body, ..
-                        } => {
-                            // Compile function but don't store yet
-                            self.compile_function(name, params, body)?;
-                            method_count += 1;
+            Statement::Import { path, names, .. } => {
+                let is_std = path.first().map(|p| p == "std").unwrap_or(false);
+                let import_path = path.join(".");
+
+                let bind_name = |this: &mut Compiler, name: &str| {
+                    if this.current_fn().scope_depth > 0 {
+                        if let Some(slot) = this.resolve_local(name) {
+                            this.emit(OpCode::StoreLocal);
+                            let s = slot as u16;
+                            this.emit_byte((s & 0xff) as u8);
+                            this.emit_byte((s >> 8) as u8);
+                        } else {
+                            this.declare_local(name);
                         }
-                        Statement::VarDecl { name, .. } => {
-                            field_names.push(name.clone());
+                    } else {
+                        this.emit(OpCode::StoreGlobal);
+                        this.emit_string(name);
+                    }
+                };
+
+                if is_std {
+                    // For std imports, bind module marker or named function markers.
+                    if let Some(names) = names {
+                        let domain = path.last().cloned().unwrap_or_default();
+                        for name in names {
+                            let marker = format!("__odu_fn__:{}:{}", domain, name);
+                            self.emit(OpCode::PushStr);
+                            self.emit_string(&marker);
+                            bind_name(self, name);
                         }
-                        _ => {}
+                    } else {
+                        self.emit(OpCode::Import);
+                        self.emit_string(&import_path);
+                        let module_name = path.last().cloned().unwrap_or_else(|| "module".into());
+                        bind_name(self, &module_name);
+                    }
+                } else {
+                    self.emit(OpCode::Import);
+                    self.emit_string(&import_path);
+
+                    if let Some(names) = names {
+                        for name in names {
+                            self.emit(OpCode::Dup);
+                            self.emit(OpCode::PushStr);
+                            self.emit_string(name);
+                            self.emit(OpCode::GetIndex);
+                            bind_name(self, name);
+                        }
+                        self.emit(OpCode::Pop);
+                    } else {
+                        let module_name = path.last().cloned().unwrap_or_else(|| "module".into());
+                        bind_name(self, &module_name);
                     }
                 }
-
-                // Emit DefineClass
-                self.emit(OpCode::DefineClass);
-
-                // Name
-                self.bytecode.strings.push(name.clone());
-                let name_idx = (self.bytecode.strings.len() - 1) as u16;
-                self.emit_byte((name_idx >> 8) as u8);
-                self.emit_byte((name_idx & 0xff) as u8);
-
-                // Fields
-                self.emit_byte(field_names.len() as u8);
-                for f_name in field_names {
-                    self.bytecode.strings.push(f_name);
-                    let idx = (self.bytecode.strings.len() - 1) as u16;
-                    self.emit_byte((idx >> 8) as u8);
-                    self.emit_byte((idx & 0xff) as u8);
-                }
-
-                // Methods
-                self.emit_byte(method_count as u8);
-
-                // Store class globally
-                self.bytecode.strings.push(name.clone());
-                let name_idx = (self.bytecode.strings.len() - 1) as u16;
-                self.emit(OpCode::StoreGlobal);
-                self.emit_byte((name_idx >> 8) as u8);
-                self.emit_byte((name_idx & 0xff) as u8);
-            }
-
-            Statement::Import { path, .. } => {
-                // path is Vec<String> e.g. ["std", "io"]
-                let import_path = path.join("/");
-
-                // Add to strings pool
-                self.bytecode.strings.push(import_path);
-                let path_idx = (self.bytecode.strings.len() - 1) as u16;
-
-                self.emit(OpCode::Import);
-                self.emit_byte((path_idx >> 8) as u8);
-                self.emit_byte((path_idx & 0xff) as u8);
             }
 
             Statement::Taboo { source, target, .. } => {
@@ -457,15 +615,98 @@ impl Compiler {
             }
 
             Statement::Opon { size, .. } => {
-                // Opon is a compile-time directive, no bytecode emitted
-                // Memory size is configured at VM initialization
-                let _ = size;
+                // Set the memory configuration directive on the bytecode header
+                let opon_size = match size.as_str() {
+                    "kekere" => crate::bytecode::OponSize::Kekere,
+                    "arinrin" => crate::bytecode::OponSize::Arinrin,
+                    "nla" => crate::bytecode::OponSize::Nla,
+                    "ailopin" => crate::bytecode::OponSize::Ailopin,
+                    _ => crate::bytecode::OponSize::Arinrin, // default fallback
+                };
+                self.bytecode.opon_size = opon_size;
             }
 
             Statement::Match { .. } => {
-                return Err(crate::error::IfaError::Runtime(
-                    "Bytecode compilation for 'match' not yet implemented".to_string(),
-                ));
+                let Statement::Match {
+                    condition, arms, ..
+                } = stmt
+                else {
+                    unreachable!("match arm destructuring failed");
+                };
+
+                self.begin_scope();
+                self.compile_expression(condition)?;
+                let cond_slot = self.declare_local(".match_cond");
+
+                let mut end_jumps = Vec::new();
+
+                for arm in arms {
+                    match &arm.pattern {
+                        MatchPattern::Literal(expr) => {
+                            self.emit(OpCode::LoadLocal);
+                            let s = cond_slot as u16;
+                            self.emit_byte((s & 0xff) as u8);
+                            self.emit_byte((s >> 8) as u8);
+                            self.compile_expression(expr)?;
+                            self.emit(OpCode::Eq);
+
+                            let skip_arm = self.emit_jump(OpCode::JumpIfFalse);
+
+                            self.begin_scope();
+                            for s in &arm.body {
+                                self.compile_statement(s)?;
+                            }
+                            self.end_scope();
+
+                            end_jumps.push(self.emit_jump(OpCode::Jump));
+                            self.patch_jump(skip_arm);
+                        }
+                        MatchPattern::Range { start, end } => {
+                            // cond >= start
+                            self.emit(OpCode::LoadLocal);
+                            let s = cond_slot as u16;
+                            self.emit_byte((s & 0xff) as u8);
+                            self.emit_byte((s >> 8) as u8);
+                            self.compile_expression(start)?;
+                            self.emit(OpCode::Ge);
+                            let skip_arm_1 = self.emit_jump(OpCode::JumpIfFalse);
+
+                            // cond <= end
+                            self.emit(OpCode::LoadLocal);
+                            let s = cond_slot as u16;
+                            self.emit_byte((s & 0xff) as u8);
+                            self.emit_byte((s >> 8) as u8);
+                            self.compile_expression(end)?;
+                            self.emit(OpCode::Le);
+                            let skip_arm_2 = self.emit_jump(OpCode::JumpIfFalse);
+
+                            self.begin_scope();
+                            for s in &arm.body {
+                                self.compile_statement(s)?;
+                            }
+                            self.end_scope();
+
+                            end_jumps.push(self.emit_jump(OpCode::Jump));
+                            self.patch_jump(skip_arm_1);
+                            self.patch_jump(skip_arm_2);
+                        }
+                        MatchPattern::Wildcard => {
+                            self.begin_scope();
+                            for s in &arm.body {
+                                self.compile_statement(s)?;
+                            }
+                            self.end_scope();
+
+                            end_jumps.push(self.emit_jump(OpCode::Jump));
+                        }
+                    }
+                }
+
+                for jump in end_jumps {
+                    self.patch_jump(jump);
+                }
+
+                self.end_scope();
             }
 
             Statement::Ebo { .. } => {
@@ -489,52 +730,112 @@ impl Compiler {
                 self.emit(OpCode::Yield);
             }
 
-            Statement::Try { try_body, catch_var, catch_body, .. } => {
-                // 1. Emit TryBegin with placeholder offset
-                // TryBegin requires u32 offset to catch handler
+            Statement::Try {
+                try_body,
+                catch_var,
+                catch_body,
+                finally_body,
+                ..
+            } => {
+                // === Code layout ===
+                // TryBegin(catch_ip)
+                // FinallyBegin(finally_ip)  <-- only emitted if finally_body is Some
+                // ... try body ...
+                // TryEnd
+                // ... finally body (happy path inline copy) ...
+                // Jump(after_catch)
+                //
+                // [catch_ip]:
+                // ... catch body ...
+                // ... finally body (error path inline copy) ...
+                //
+                // [after_catch]: ...
+
+                // 1. Emit TryBegin with placeholder catch offset
                 self.emit(OpCode::TryBegin);
                 let try_begin_offset = self.current_offset();
-                self.emit_u32(0); // Placeholder
-                
-                // 2. Compile Try Body
+                self.emit_u32(0); // Placeholder: offset to catch handler
+
+                // 2. Emit FinallyBegin if there is a finally body
+                let finally_begin_offset = if finally_body.is_some() {
+                    self.emit(OpCode::FinallyBegin);
+                    let off = self.current_offset();
+                    self.emit_u32(0); // Placeholder: absolute IP of finally block
+                    Some(off)
+                } else {
+                    None
+                };
+
+                // 3. Compile Try Body
                 self.begin_scope();
                 for s in try_body {
                     self.compile_statement(s)?;
                 }
                 self.end_scope();
-                
-                // 3. Emit TryEnd (Happy Path)
+
+                // 4. Emit TryEnd (happy path — no error)
                 self.emit(OpCode::TryEnd);
-                
-                // 4. Jump over catch block
+
+                // 5. Emit finally body inline (happy path)
+                if let Some(fb) = finally_body {
+                    self.begin_scope();
+                    for s in fb {
+                        self.compile_statement(s)?;
+                    }
+                    self.end_scope();
+                }
+
+                // 6. Jump over catch block
                 let skip_catch_jump = self.emit_jump(OpCode::Jump);
-                
-                // 5. Patch TryBegin offset
-                // Current offset is where catch handler starts
+
+                // 7. Patch TryBegin offset → current position is catch handler start
                 let catch_start_offset = self.current_offset();
                 let jump_distance = (catch_start_offset - try_begin_offset - 4) as u32;
-                // Patch the u32 at try_begin_offset
                 let bytes = jump_distance.to_le_bytes();
                 self.bytecode.code[try_begin_offset] = bytes[0];
                 self.bytecode.code[try_begin_offset + 1] = bytes[1];
                 self.bytecode.code[try_begin_offset + 2] = bytes[2];
                 self.bytecode.code[try_begin_offset + 3] = bytes[3];
-                
-                // 6. Compile Catch Block
+
+                // 8. Patch FinallyBegin → absolute IP of the finally code
+                //    The finally code lives after the catch block (see below).
+                //    We store the offset placeholder here, actual patch happens after
+                //    we know where the finally code starts (step 11).
+                // (placeholder already written; we'll patch after catch body)
+
+                // 9. Compile Catch Block
                 self.begin_scope();
-                // Error value is on stack. Bind it to catch_var.
-                // Since attempts_recovery restores stack and pushes error, 
-                // the error IS the new local at the top of the stack.
-                // So we just declare it (mapping name -> slot index).
-                // We DO NOT emit StoreLocal, because StoreLocal pops and would underflow/overwrite.
+                // The error value is already on the stack (pushed by attempt_recovery).
+                // Declare a local slot for it without emitting StoreLocal.
                 self.declare_local(catch_var);
-                
                 for s in catch_body {
                     self.compile_statement(s)?;
                 }
                 self.end_scope();
-                
-                // 7. Patch Jump over catch
+
+                // 10. Emit finally body after catch, and patch FinallyBegin
+                if let Some(fb) = finally_body {
+                    // Patch FinallyBegin operand → absolute IP of this finally block
+                    let finally_ip = self.current_offset() as u32;
+                    if let Some(fb_off) = finally_begin_offset {
+                        let bytes = finally_ip.to_le_bytes();
+                        self.bytecode.code[fb_off] = bytes[0];
+                        self.bytecode.code[fb_off + 1] = bytes[1];
+                        self.bytecode.code[fb_off + 2] = bytes[2];
+                        self.bytecode.code[fb_off + 3] = bytes[3];
+                    }
+
+                    self.begin_scope();
+                    for s in fb {
+                        self.compile_statement(s)?;
+                    }
+                    self.end_scope();
+
+                    // Signal end of the shared finally block
+                    self.emit(OpCode::FinallyEnd);
+                }
+
+                // 11. Patch jump over catch
                 self.patch_jump(skip_catch_jump);
             }
         }
@@ -546,12 +847,16 @@ impl Compiler {
         name: &str,
         params: &[Param],
         body: &[Statement],
+        is_async: bool,
     ) -> IfaResult<()> {
         // 1. Emit Jump over the body
         let jump = self.emit_jump(OpCode::Jump);
 
         // 2. Record Start IP
         let start_ip = self.current_offset();
+
+        // 2.5. New function context
+        self.functions.push(FunctionContext::new());
 
         // 3. Begin Scope & Bind Params
         self.begin_scope();
@@ -570,6 +875,10 @@ impl Compiler {
 
         self.end_scope();
 
+        // Capture upvalues before popping the context
+        let upvalues = self.current_fn().upvalues.clone();
+        self.functions.pop();
+
         // 6. Patch Jump
         self.patch_jump(jump);
 
@@ -578,17 +887,27 @@ impl Compiler {
         // name index
         self.bytecode.strings.push(name.to_string());
         let name_idx = (self.bytecode.strings.len() - 1) as u16;
-        self.emit_byte((name_idx >> 8) as u8);
         self.emit_byte((name_idx & 0xff) as u8);
+        self.emit_byte((name_idx >> 8) as u8);
 
-        // start_ip (u32)
-        self.emit_byte((start_ip >> 24) as u8);
-        self.emit_byte((start_ip >> 16) as u8);
-        self.emit_byte(((start_ip >> 8) & 0xff) as u8);
-        self.emit_byte((start_ip & 0xff) as u8);
+        // start_ip (u32, little-endian)
+        self.emit_u32(start_ip as u32);
 
         // arity (u8)
         self.emit_byte(params.len() as u8);
+        self.emit_byte(if is_async { 1 } else { 0 });
+
+        // 8. If needed, wrap in a closure with captured upvalues
+        if !upvalues.is_empty() {
+            self.emit(OpCode::MakeClosure);
+            self.emit_byte(upvalues.len() as u8);
+            for up in upvalues {
+                self.emit_byte(if up.is_local { 0 } else { 1 });
+                let idx = up.index as u16;
+                self.emit_byte((idx & 0xff) as u8);
+                self.emit_byte((idx >> 8) as u8);
+            }
+        }
 
         Ok(())
     }
@@ -634,6 +953,11 @@ impl Compiler {
                     let s = slot as u16;
                     self.emit_byte((s & 0xff) as u8);
                     self.emit_byte((s >> 8) as u8);
+                } else if let Some(slot) = self.resolve_upvalue(name) {
+                    self.emit(OpCode::LoadUpvalue);
+                    let s = slot as u16;
+                    self.emit_byte((s & 0xff) as u8);
+                    self.emit_byte((s >> 8) as u8);
                 } else {
                     self.emit(OpCode::LoadGlobal);
                     self.emit_string(name);
@@ -641,31 +965,61 @@ impl Compiler {
             }
 
             Expression::BinaryOp { left, op, right } => {
-                self.compile_expression(left)?;
-                self.compile_expression(right)?;
+                match op {
+                    // R4: Short-circuit + operand-return semantics for logical AND/OR
+                    BinaryOperator::And => {
+                        self.compile_expression(left)?;
+                        self.emit(OpCode::Dup);
+                        let end_jump = self.emit_jump(OpCode::JumpIfFalse);
+                        self.emit(OpCode::Pop);
+                        self.compile_expression(right)?;
+                        self.patch_jump(end_jump);
+                    }
+                    BinaryOperator::Or => {
+                        self.compile_expression(left)?;
+                        self.emit(OpCode::Dup);
+                        let end_jump = self.emit_jump(OpCode::JumpIfTrue);
+                        self.emit(OpCode::Pop);
+                        self.compile_expression(right)?;
+                        self.patch_jump(end_jump);
+                    }
+                    _ => {
+                        self.compile_expression(left)?;
+                        self.compile_expression(right)?;
 
-                let opcode = match op {
-                    BinaryOperator::Add => OpCode::Add,
-                    BinaryOperator::Sub => OpCode::Sub,
-                    BinaryOperator::Mul => OpCode::Mul,
-                    BinaryOperator::Div => OpCode::Div,
-                    BinaryOperator::Mod => OpCode::Mod,
-                    BinaryOperator::Eq => OpCode::Eq,
-                    BinaryOperator::NotEq => OpCode::Ne,
-                    BinaryOperator::Lt => OpCode::Lt,
-                    BinaryOperator::LtEq => OpCode::Le,
-                    BinaryOperator::Gt => OpCode::Gt,
-                    BinaryOperator::GtEq => OpCode::Ge,
-                    BinaryOperator::And => OpCode::And,
-                    BinaryOperator::Or => OpCode::Or,
-                };
-                self.emit(opcode);
+                        let opcode = match op {
+                            BinaryOperator::Add => OpCode::Add,
+                            BinaryOperator::Sub => OpCode::Sub,
+                            BinaryOperator::Mul => OpCode::Mul,
+                            BinaryOperator::Div => OpCode::Div,
+                            BinaryOperator::Mod => OpCode::Mod,
+                            BinaryOperator::Eq => OpCode::Eq,
+                            BinaryOperator::NotEq => OpCode::Ne,
+                            BinaryOperator::Lt => OpCode::Lt,
+                            BinaryOperator::LtEq => OpCode::Le,
+                            BinaryOperator::Gt => OpCode::Gt,
+                            BinaryOperator::GtEq => OpCode::Ge,
+                            BinaryOperator::And | BinaryOperator::Or => {
+                                unreachable!("handled above")
+                            }
+                        };
+                        self.emit(opcode);
+                    }
+                }
             }
 
             Expression::UnaryOp { op, expr } => {
                 match op {
-                    UnaryOperator::Neg => self.emit(OpCode::Neg),
-                    UnaryOperator::Not => self.emit(OpCode::Not),
+                    UnaryOperator::Neg => {
+                        self.compile_expression(expr)?;
+                        self.emit(OpCode::Neg);
+                    }
+                    UnaryOperator::Not => {
+                        // Spec: `!x` is truthiness-based (not Bool-only). Use ToBool + Not.
+                        self.compile_expression(expr)?;
+                        self.emit(OpCode::ToBool);
+                        self.emit(OpCode::Not);
+                    }
                     UnaryOperator::AddressOf => {
                         // Only support literal addresses for now: &0x4000
                         if let Expression::Int(addr) = *expr.clone() {
@@ -717,7 +1071,14 @@ impl Compiler {
                 // Push function
                 if let Some(slot) = self.resolve_local(name) {
                     self.emit(OpCode::LoadLocal);
-                    self.emit_byte(slot as u8);
+                    let s = slot as u16;
+                    self.emit_byte((s & 0xff) as u8);
+                    self.emit_byte((s >> 8) as u8);
+                } else if let Some(slot) = self.resolve_upvalue(name) {
+                    self.emit(OpCode::LoadUpvalue);
+                    let s = slot as u16;
+                    self.emit_byte((s & 0xff) as u8);
+                    self.emit_byte((s >> 8) as u8);
                 } else {
                     self.emit(OpCode::LoadGlobal);
                     self.emit_string(name);
@@ -732,6 +1093,20 @@ impl Compiler {
                 self.emit_byte(args.len() as u8);
             }
 
+            Expression::Await(expr) => {
+                self.compile_expression(expr)?;
+                self.emit(OpCode::Await);
+            }
+
+            Expression::Try(expr) => {
+                // §12.3: Error propagation operator `?`.
+                // Compile the inner expression, then emit PropagateError.
+                // The VM will pop the value: if it's a UserError it re-raises;
+                // otherwise it pushes the unwrapped value back.
+                self.compile_expression(expr)?;
+                self.emit(OpCode::PropagateError);
+            }
+
             Expression::MethodCall {
                 object,
                 method,
@@ -744,6 +1119,29 @@ impl Compiler {
                 self.emit(OpCode::CallMethod);
                 self.emit_string(method);
                 self.emit_byte(args.len() as u8);
+            }
+
+            Expression::InterpolatedString { parts } => {
+                if parts.is_empty() {
+                    self.emit(OpCode::PushStr);
+                    self.emit_string("");
+                } else {
+                    for (i, part) in parts.iter().enumerate() {
+                        match part {
+                            InterpolatedPart::Literal(s) => {
+                                self.emit(OpCode::PushStr);
+                                self.emit_string(s);
+                            }
+                            InterpolatedPart::Expression(expr) => {
+                                self.compile_expression(expr)?;
+                                self.emit(OpCode::ToString);
+                            }
+                        }
+                        if i > 0 {
+                            self.emit(OpCode::Concat);
+                        }
+                    }
+                }
             }
         }
         Ok(())
@@ -860,4 +1258,34 @@ mod tests {
         let bytecode = compile(r#"Irosu.fo("Hello");"#).unwrap();
         assert!(!bytecode.code.is_empty());
     }
+}
+
+fn collect_exports(program: &Program) -> Vec<String> {
+    let mut out = Vec::new();
+    for stmt in &program.statements {
+        match stmt {
+            Statement::VarDecl {
+                name,
+                visibility: Visibility::Public,
+                ..
+            } => out.push(name.clone()),
+            Statement::Const {
+                name,
+                visibility: Visibility::Public,
+                ..
+            } => out.push(name.clone()),
+            Statement::EseDef {
+                name,
+                visibility: Visibility::Public,
+                ..
+            } => out.push(name.clone()),
+            Statement::OduDef {
+                name,
+                visibility: Visibility::Public,
+                ..
+            } => out.push(name.clone()),
+            _ => {}
+        }
+    }
+    out
 }

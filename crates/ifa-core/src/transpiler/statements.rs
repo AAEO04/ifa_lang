@@ -2,18 +2,31 @@
 //!
 //! Transpiles Ifá-Lang statements to Rust code.
 
-use super::core::RustTranspiler;
+use super::core::{RustTranspiler, std_domain_from_name};
 use crate::ast::*;
 
 impl RustTranspiler {
     /// Transpile the entire program
     pub fn transpile_program(&mut self, program: &Program) -> String {
+        self.prepare_imports(program);
         let mut body = String::new();
 
         for stmt in &program.statements {
             body.push_str(&self.transpile_statement(stmt));
             body.push('\n');
         }
+
+        let module_defs = if self.module_defs.is_empty() {
+            String::new()
+        } else {
+            format!("{}\n", self.module_defs.join("\n"))
+        };
+
+        let uses = if self.uses.is_empty() {
+            String::new()
+        } else {
+            self.uses.join("\n") + "\n"
+        };
 
         // Build conditional imports
         let rand_import = if self.needs_rand {
@@ -35,6 +48,8 @@ impl RustTranspiler {
 
 use std::collections::HashMap;
 {rand_import}
+{uses}
+{module_defs}
 /// Ifá Value type for dynamic typing
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum IfaValue {{
@@ -66,7 +81,8 @@ impl IfaValue {{
         match self {{
             IfaValue::Bool(b) => *b,
             IfaValue::Int(n) => *n != 0,
-            IfaValue::Float(f) => *f != 0.0,
+            // Spec: Float(0.0) is falsy; NaN is falsy; all other floats are truthy.
+            IfaValue::Float(f) => *f != 0.0 && !f.is_nan(),
             IfaValue::Str(s) => !s.is_empty(),
             IfaValue::List(l) => !l.is_empty(),
             IfaValue::Map(m) => !m.is_empty(),
@@ -167,17 +183,53 @@ impl std::ops::Not for IfaValue {{
         let indent = self.indent_str();
 
         match stmt {
-            Statement::VarDecl { name, value, .. } => {
+            Statement::VarDecl {
+                name,
+                value,
+                visibility,
+                ..
+            } => {
                 let m_name = self.mangle_identifier(name);
                 let val = self.transpile_expression(value);
-                format!("{}let mut {} = {};", indent, m_name, val)
+                if self.in_module {
+                    format!(
+                        "{}compile_error!(\"ifa build: module-level variables are not supported yet\");",
+                        indent
+                    )
+                } else {
+                    format!(
+                        "{}{}let mut {} = {};",
+                        indent,
+                        self.visibility_prefix(*visibility),
+                        m_name,
+                        val
+                    )
+                }
             }
 
-            Statement::Const { name, value, .. } => {
+            Statement::Const {
+                name,
+                value,
+                visibility,
+                ..
+            } => {
                 let m_name = self.mangle_identifier(name);
                 let val = self.transpile_expression(value);
                 // Use let (immutable) for constants in transpiled code
-                format!("{}let {} = {};", indent, m_name, val)
+                if self.in_module {
+                    format!(
+                        "{}compile_error!(\"ifa build: module-level constants are not supported yet\");",
+                        indent
+                    )
+                } else {
+                    format!(
+                        "{}{}let {} = {};",
+                        indent,
+                        self.visibility_prefix(*visibility),
+                        m_name,
+                        val
+                    )
+                }
             }
 
             Statement::Assignment { target, value, .. } => {
@@ -315,20 +367,25 @@ impl std::ops::Not for IfaValue {{
                 params,
                 body,
                 visibility,
+                is_async,
                 ..
             } => {
-                let vis = match visibility {
-                    Visibility::Public => "pub ",
-                    _ => "",
+                let vis = self.visibility_prefix(*visibility);
+                let async_kw = if *is_async {
+                    self.has_async = true;
+                    "async "
+                } else {
+                    ""
                 };
                 let params_str: Vec<String> = params
                     .iter()
                     .map(|p| format!("{}: IfaValue", p.name))
                     .collect();
                 let mut result = format!(
-                    "{}{}fn {}({}) -> IfaValue {{\n",
+                    "{}{}{}fn {}({}) -> IfaValue {{\n",
                     indent,
                     vis,
+                    async_kw,
                     self.mangle_identifier(name),
                     params_str.join(", ")
                 );
@@ -352,62 +409,26 @@ impl std::ops::Not for IfaValue {{
                 result
             }
 
-            Statement::OduDef {
-                name,
-                body,
-                visibility,
-                ..
-            } => {
-                let vis = match visibility {
-                    Visibility::Public => "pub ",
-                    _ => "",
-                };
-                let mut struct_fields = Vec::new();
-                let mut methods = Vec::new();
-
-                for stmt in body {
-                    match stmt {
-                        Statement::VarDecl {
-                            name, type_hint, ..
-                        } => {
-                            let type_str = match type_hint {
-                                Some(TypeHint::Int) => "i64",
-                                Some(TypeHint::Float) => "f64",
-                                Some(TypeHint::Str) => "String",
-                                Some(TypeHint::Bool) => "bool",
-                                _ => "IfaValue",
-                            };
-                            struct_fields.push(format!("    pub {}: {},", name, type_str));
-                        }
-                        Statement::EseDef { .. } => {
-                            methods.push(stmt.clone());
-                        }
-                        _ => {}
-                    }
-                }
-
-                let m_name = self.mangle_identifier(name);
-                let mut result = format!("{}{}struct {} {{\n", indent, vis, m_name);
-                for field in struct_fields {
-                    result.push_str(&format!("{}{}\n", indent, field));
-                }
-                result.push_str(&format!("{}}}\n\n", indent));
-
-                if !methods.is_empty() {
-                    result.push_str(&format!("{}{}impl {} {{\n", indent, vis, m_name));
-                    self.indent += 1;
-                    for method in methods {
-                        result.push_str(&self.transpile_statement(&method));
-                        result.push('\n');
-                    }
-                    self.indent -= 1;
-                    result.push_str(&format!("{}}}\n", indent));
-                }
-                result
+            Statement::OduDef { name, .. } => {
+                // DESIGN DECISION (2026-04-07): Class-based OOP is formally removed from Ifá-Lang.
+                // Both the AST interpreter and Bytecode VM already reject this syntax.
+                // For native builds, we emit a hard compile_error! to prevent stale code execution.
+                format!(
+                    "{}compile_error!(\"Class/OOP syntax ('{}') is not supported. See ROADMAP.md §Phase 2 for migration to Map+Protocol design.\");",
+                    indent, name
+                )
             }
 
-            Statement::Import { path, .. } => {
-                format!("{}// use {};", indent, path.join("::"))
+
+            Statement::Import { path, names, .. } => {
+                if self.handle_import(path, names) {
+                    format!("{}// import handled", indent)
+                } else {
+                    format!(
+                        "{}compile_error!(\"ifa build: module imports are not supported yet\");",
+                        indent
+                    )
+                }
             }
 
             Statement::Ase { .. } => {
@@ -429,7 +450,23 @@ impl std::ops::Not for IfaValue {{
             }
 
             Statement::Opon { size, .. } => {
-                format!("{}// OPON: Memory size = {}", indent, size)
+                // Emit Rust constants from the #opon directive
+                let (stack_limit, frame_limit) = match size.as_str() {
+                    "kekere" => ("256", "64"),
+                    "arinrin" => ("4_096", "512"),
+                    "nla" => ("65_536", "4_096"),
+                    "ailopin" => ("usize::MAX", "usize::MAX"),
+                    _ => ("4_096", "512"), // default = arinrin
+                };
+                format!(
+                    r#"{indent}// #opon {size} — memory constraints
+{indent}const IFA_OPON_STACK_LIMIT: usize = {stack_limit};
+{indent}const IFA_OPON_FRAME_LIMIT: usize = {frame_limit};"#,
+                    indent = indent,
+                    size = size,
+                    stack_limit = stack_limit,
+                    frame_limit = frame_limit,
+                )
             }
 
             Statement::Expr { expr, .. } => {
@@ -463,16 +500,25 @@ impl std::ops::Not for IfaValue {{
                 result
             }
 
-            Statement::Yield { .. } => {
+            Statement::Yield { duration, .. } => {
+                let dur = self.transpile_expression(duration);
                 format!(
-                    "{}// yield operation not supported in Rust transpiler target yet",
-                    indent
+                    r#"{indent}{{
+{indent}    let __ifa_yield_duration = {dur};
+{indent}    match __ifa_yield_duration {{
+{indent}        IfaValue::Int(micros) if micros > 0 => std::thread::sleep(std::time::Duration::from_micros(micros as u64)),
+{indent}        IfaValue::Int(_) => (), // jowo 0: yield immediately / no duration hint
+{indent}        _ => eprintln!("Runtime Error: Yield duration must be an Int (microseconds)"),
+{indent}    }}
+{indent}}}"#,
+                    indent = indent,
+                    dur = dur
                 )
             }
 
             Statement::Try { .. } => {
                 format!(
-                    "{}// try/catch not fully supported in Rust transpiler target yet",
+                    "{}compile_error!(\"Ifá transpiler: gbiyanju/gba (try/catch) is not supported yet\");",
                     indent
                 )
             }
@@ -491,8 +537,39 @@ impl std::ops::Not for IfaValue {{
                 )
             }
             AssignTarget::Dereference(_) => {
-                panic!("Dereference assignment not supported in transpiler yet");
+                // Conformance: never crash the transpiler on valid input.
+                // Emit a Rust compile-time error instead.
+                "compile_error!(\"Ifá transpiler: dereference assignment (*p = v) is not supported yet\");".to_string()
             }
+        }
+    }
+
+    fn prepare_imports(&mut self, program: &Program) {
+        for stmt in &program.statements {
+            if let Statement::Import { path, names, .. } = stmt {
+                let _ = self.handle_import(path, names);
+            }
+        }
+    }
+
+    fn handle_import(&mut self, path: &[String], names: &Option<Vec<String>>) -> bool {
+        let is_std = path.first().map(|p| p == "std").unwrap_or(false);
+        if !is_std {
+            return false;
+        }
+        let domain_name = path.last().cloned().unwrap_or_default();
+        if let Some(domain) = std_domain_from_name(&domain_name) {
+            if let Some(names) = names {
+                for name in names {
+                    self.std_named.insert(name.clone(), domain);
+                }
+            } else {
+                let module_name = path.last().cloned().unwrap_or_else(|| "module".into());
+                self.std_modules.insert(module_name, domain);
+            }
+            true
+        } else {
+            false
         }
     }
 }

@@ -357,7 +357,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert("key".into(), IfaValue::Str("value".into()));
         map.insert("number".into(), IfaValue::Int(42));
-        let val = IfaValue::Map(map);
+        let val = IfaValue::Map(map.into());
 
         let json = ika.yi_si_json(&val).unwrap();
         // Skip brittle string containment checks (order/spacing varies)
@@ -375,14 +375,16 @@ mod tests {
     #[test]
     fn test_csv_serialization() {
         let ika = Ika;
-        let rows = IfaValue::List(vec![
-            IfaValue::List(vec![
-                IfaValue::Str("Name".into()),
-                IfaValue::Str("Age".into()),
-            ]),
-            IfaValue::List(vec![IfaValue::Str("Alice".into()), IfaValue::Int(30)]),
-            IfaValue::List(vec![IfaValue::Str("Bob".into()), IfaValue::Int(25)]),
-        ]);
+        let rows = IfaValue::List(
+            vec![
+                IfaValue::List(
+                    vec![IfaValue::Str("Name".into()), IfaValue::Str("Age".into())].into(),
+                ),
+                IfaValue::List(vec![IfaValue::Str("Alice".into()), IfaValue::Int(30)].into()),
+                IfaValue::List(vec![IfaValue::Str("Bob".into()), IfaValue::Int(25)].into()),
+            ]
+            .into(),
+        );
 
         let csv = ika.yi_si_csv(&rows).unwrap();
         assert!(csv.contains("Name,Age"));

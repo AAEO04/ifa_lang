@@ -7,7 +7,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 
 /// Handler for Ọ̀gbè (System/Lifecycle) domain.
 pub struct OgbeHandler;
@@ -21,10 +21,9 @@ impl OduHandler for OgbeHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
-
         let arg0 = args.first();
 
         match method {
@@ -36,13 +35,15 @@ impl OduHandler for OgbeHandler {
 
             // Length
             "len" | "gigun" => {
-                let len = arg0.map(|v| match v {
-                    IfaValue::Str(s) => s.len() as i64,
-                    IfaValue::List(l) => l.len() as i64,
-                    #[cfg(feature = "std")]
-                    IfaValue::Map(m) => m.len() as i64,
-                    _ => 0
-                }).unwrap_or(0);
+                let len = arg0
+                    .map(|v| match v {
+                        IfaValue::Str(s) => s.len() as i64,
+                        IfaValue::List(l) => l.len() as i64,
+                        #[cfg(feature = "std")]
+                        IfaValue::Map(m) => m.len() as i64,
+                        _ => 0,
+                    })
+                    .unwrap_or(0);
                 Ok(IfaValue::int(len))
             }
 
@@ -70,15 +71,16 @@ impl OduHandler for OgbeHandler {
             // Parse integer
             "parse_int" => {
                 let val = if let Some(v) = arg0 {
-                     match v {
+                    match v {
                         IfaValue::Str(s) => s.trim().parse::<i64>().ok(),
                         IfaValue::Int(n) => Some(*n),
                         IfaValue::Float(f) => Some(*f as i64),
                         _ => None,
-                     }
+                    }
                 } else {
                     None
-                }.unwrap_or(0);
+                }
+                .unwrap_or(0);
                 Ok(IfaValue::int(val))
             }
 
@@ -93,7 +95,8 @@ impl OduHandler for OgbeHandler {
                     }
                 } else {
                     None
-                }.unwrap_or(0.0);
+                }
+                .unwrap_or(0.0);
                 Ok(IfaValue::float(val))
             }
 

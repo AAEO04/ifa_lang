@@ -4,105 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grammar Reference - If·-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-            font-size: 0.85rem;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-        }
-
-        th,
-        td {
-            padding: 0.5rem;
-            text-align: left;
-            border-bottom: 1px solid var(--bg-card);
-            font-size: 0.9rem;
-        }
-
-        th {
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Grammar Reference - If√°-Lang</title>
+    <meta name="description" content="Complete grammar reference for If√°-Lang based on Pest grammar implementation">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -110,201 +20,743 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
-        <h1>?? Grammar Reference</h1>
-        <p>Formal grammar specification for If·-Lang (PEST format).</p>
-        <p><strong>Source:</strong> <code>crates/ifa-core/src/grammar.pest</code> (233 lines)</p>
+        <header>
+            <h1>Grammar Reference</h1>
+            <p class="subtitle">Complete Language Grammar Specification</p>
+        </header>
 
-        <h2>Program Structure</h2>
-        <pre><code>program = { SOI ~ statement* ~ EOI }</code></pre>
+        <div class="step">
+            <h2>Overview</h2>
+            <p>If√°-Lang uses a Pest grammar definition for parsing. The grammar supports bilingual keywords (Yoruba/English) and implements the full language specification including the 16 Od√π domains.</p>
+        </div>
 
-        <h2>Statements</h2>
-        <pre><code>statement = {
-    import_stmt     // iba std.otura;
-    | opon_stmt     // opon: nla;
-    | ebo_stmt      // ?b? file;
-    | var_decl      // ayanmo x = 5;
-    | assignment    // x = 10;
-    | odu_def       // odu Server { }
-    | ese_def       // ese start() { }
-    | if_stmt       // ti condition { }
-    | while_stmt    // nigba condition { }
-    | for_stmt      // fun i ninu items { }
-    | return_stmt   // pada value;
-    | taboo_stmt    // ËËw?`: Ose -> Odi;
-    | ewo_stmt      // ewo x > 0;
-    | match_stmt    // y‡n(x) { }
-    | instruction   // Obara.fikun(10);
-    | ase_stmt      // ase;
+        <div class="step">
+            <h2>Program Structure</h2>
+            
+            <div class="grammar-section">
+                <h3>Top-Level Structure</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Program Grammar</span>
+                    </div>
+                    <pre><code>program = { SOI ~ statement* ~ EOI }
+
+// A program is zero or more statements
+statement = {
+    import_stmt
+    | from_import_stmt
+    | opon_stmt
+    | ebo_stmt
+    | ailewu_stmt
+    | var_decl
+    | const_stmt
+    | assignment_stmt
+    | odu_def
+    | ese_def
+    | if_stmt
+    | while_stmt
+    | for_stmt
+    | return_stmt
+    | taboo_stmt
+    | ewo_stmt
+    | instruction
+    | ase_stmt
+    | match_stmt
+    | try_stmt
+    | yield_stmt
+    | COMMENT
 }</code></pre>
+                </div>
+            </div>
+        </div>
 
-        <h2>Keywords (Bilingual)</h2>
-        <table>
-            <tr>
-                <th>Yoruba</th>
-                <th>English</th>
-                <th>Purpose</th>
-            </tr>
-            <tr>
-                <td><code>ayanmo</code>, <code>‡y‡nm?¥</code></td>
-                <td><code>let</code>, <code>var</code></td>
-                <td>Variable declaration</td>
-            </tr>
-            <tr>
-                <td><code>iba</code>, <code>Ïb‡</code></td>
-                <td><code>import</code></td>
-                <td>Module import</td>
-            </tr>
-            <tr>
-                <td><code>odu</code>, <code>od˘</code></td>
-                <td><code>class</code></td>
-                <td>Class definition</td>
-            </tr>
-            <tr>
-                <td><code>ese</code>, <code>?s?</code></td>
-                <td><code>fn</code>, <code>function</code>, <code>def</code></td>
-                <td>Function</td>
-            </tr>
-            <tr>
-                <td><code>ti</code>, <code>bÌ</code></td>
-                <td><code>if</code></td>
-                <td>Conditional</td>
-            </tr>
-            <tr>
-                <td><code>bib?k?</code></td>
-                <td><code>else</code></td>
-                <td>Else branch</td>
-            </tr>
-            <tr>
-                <td><code>nigba</code></td>
-                <td><code>while</code></td>
-                <td>While loop</td>
-            </tr>
-            <tr>
-                <td><code>fun</code></td>
-                <td><code>for</code></td>
-                <td>For loop</td>
-            </tr>
-            <tr>
-                <td><code>ninu</code></td>
-                <td><code>in</code></td>
-                <td>Iterator</td>
-            </tr>
-            <tr>
-                <td><code>pada</code></td>
-                <td><code>return</code></td>
-                <td>Return value</td>
-            </tr>
-            <tr>
-                <td><code>ase</code>, <code>‡??</code></td>
-                <td><code>end</code></td>
-                <td>End block</td>
-            </tr>
-            <tr>
-                <td><code>y‡n</code></td>
-                <td><code>match</code></td>
-                <td>Pattern match</td>
-            </tr>
-            <tr>
-                <td><code>otito</code></td>
-                <td><code>true</code></td>
-                <td>Boolean true</td>
-            </tr>
-            <tr>
-                <td><code>iro</code></td>
-                <td><code>false</code></td>
-                <td>Boolean false</td>
-            </tr>
-            <tr>
-                <td><code>ati</code></td>
-                <td><code>and</code>, <code>&&</code></td>
-                <td>Logical AND</td>
-            </tr>
-            <tr>
-                <td><code>tabi</code></td>
-                <td><code>or</code>, <code>||</code></td>
-                <td>Logical OR</td>
-            </tr>
-            <tr>
-                <td><code>kii</code></td>
-                <td><code>not</code>, <code>!</code></td>
-                <td>Logical NOT</td>
-            </tr>
-        </table>
+        <div class="step">
+            <h2>Statements</h2>
+            
+            <div class="grammar-section">
+                <h3>Variable Declarations</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Variable Grammar</span>
+                    </div>
+                    <pre><code>// Variable declaration
+var_decl = { public_mod? ~ var_kw ~ ident ~ type_hint? ~ "=" ~ expression ~ ";" }
 
-        <h2>Od˘ Domain Names</h2>
-        <pre><code>odu_name = {
-    "Ogbe" | "OgbË" |         // System
-    "Oyeku" | "?`y?`k˙" |       // Process
-    "Iwori" | "ÃwÚrÏ" |       // Time
-    "Odi" | "“dÌ" |           // Files
-    "Irosu" | "Ãros˘" |       // Console
-    "Owonrin" | "?`w?¥nrÌn" |   // Random
-    "Obara" | "?`b‡r‡" |       // Math (add)
-    "Okanran" | "?`k‡nr‡n" |   // Errors
-    "Ogunda" | "“g˙nd·" |     // Arrays
-    "Osa" | "?`s·" |           // Async
-    "Ika" | "Ãk·" |           // Strings
-    "Oturupon" | "“t˙˙r˙p?`n" | // Math (sub)
-    "Otura" | "“t˙r·" |       // Network
-    "Irete" | "Ãr?t?`" |       // Crypto
-    "Ose" | "?`??¥" |           // UI
-    "Ofun" | "“f˙n"           // Permissions
+// Type hint
+type_hint = { ":" ~ type_name }
+
+// Variable keywords
+var_kw = { "ayanmo" | "let" }
+
+// Public modifier
+public_mod = { "public" }
+
+// Examples:
+ayanmo x = 5;
+public let name: Str = "Alice";</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Constants</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Constant Grammar</span>
+                    </div>
+                    <pre><code>// Constant declaration
+const_stmt = { public_mod? ~ const_kw ~ ident ~ "=" ~ expression ~ ";" }
+
+// Constant keywords
+const_kw = { "const" | "loruko" | "ka" | "ayanfe" | "√†y√†nf√™" }
+
+// Examples:
+const PI = 3.14159;
+public loruko VERSION = "1.3.0";</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Assignments</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Assignment Grammar</span>
+                    </div>
+                    <pre><code>// Assignment statement
+assignment_stmt = { lvalue ~ "=" ~ expression ~ ";" }
+
+// Left-hand values
+lvalue = { deref_lvalue | index_lvalue | ident }
+deref_lvalue = { "*" ~ expression }        // *ptr
+index_lvalue = { ident ~ "[" ~ expression ~ "]" }  // arr[0]
+
+// Examples:
+x = 10;
+*ptr = 20;
+arr[0] = 30;</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Functions and Classes</h2>
+            
+            <div class="grammar-section">
+                <h3>Function Definitions</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Function Grammar</span>
+                    </div>
+                    <pre><code>// Function definition
+ese_def = { public_mod? ~ async_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ "{" ~ statement* ~ "}" }
+
+// Parameters
+params = { param ~ ("," ~ param)* }
+param = { ident ~ (":" ~ type_name)? }
+
+// Function keywords
+ese_kw = { "ese" | "fn" }
+async_mod = { "async" }
+
+// Examples:
+ese add(a, b) { pada a + b; }
+public async fetch(url: Str) { ... }
+fn greet(name: Str) -> Str { ... }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Od√π Definitions</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Od√π Grammar</span>
+                    </div>
+                    <pre><code>// Od√π (class) definition
+odu_def = { public_mod? ~ odu_kw ~ ident ~ "{" ~ odu_body ~ "}" }
+
+odu_body = { (ese_def | var_decl)* }
+
+// Od√π keyword
+odu_kw = { "odu" | "class" }
+
+// Examples:
+odu Server {
+    ayanmo host: Str;
+    ese start() { ... }
+}
+
+class Database {
+    let connection: Resource;
+    fn query(sql: Str) { ... }
 }</code></pre>
+                </div>
+            </div>
+        </div>
 
-        <h2>Expressions</h2>
-        <pre><code>expression = { or_expr }
-or_expr    = { and_expr ~ (or_op ~ and_expr)* }
-and_expr   = { not_expr ~ (and_op ~ not_expr)* }
-not_expr   = { not_op? ~ comparison }
-comparison = { arith_expr ~ (comp_op ~ arith_expr)? }
-arith_expr = { term ~ ((add_op | sub_op) ~ term)* }
-term       = { factor ~ ((mul_op | div_op | mod_op) ~ factor)* }
-factor     = { unary_op? ~ atom }
+        <div class="step">
+            <h2>Control Flow</h2>
+            
+            <div class="grammar-section">
+                <h3>If Statements</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">If Grammar</span>
+                    </div>
+                    <pre><code>// If statement
+if_stmt = { if_kw ~ expression ~ "{" ~ statement* ~ "}" ~ else_clause? }
 
-atom = {
-    odu_call      // Obara.fikun(x)
-    | method_call // obj.method()
-    | list_literal // [1, 2, 3]
-    | map_literal  // {"key": value}
-    | index_access // arr[0]
-    | number       // 42, 3.14
-    | string       // "hello"
-    | boolean      // otito, iro
-    | ident        // variable_name
-    | "(" ~ expression ~ ")"
+// Else clause
+else_clause = { else_kw ~ "{" ~ statement* ~ "}" }
+
+// Keywords
+if_kw = { "bi" | "if" }
+else_kw = { "bi kosi" | "else" }
+
+// Examples:
+bi x > 0 {
+    Irosu.fo("Positive");
+} bi kosi {
+    Irosu.fo("Non-positive");
+}
+
+if condition {
+    // then block
+} else {
+    // else block
 }</code></pre>
+                </div>
+            </div>
 
-        <h2>Operators</h2>
-        <pre><code>// Arithmetic
-add_op = { "+" }
-sub_op = { "-" }
-mul_op = { "*" }
-div_op = { "/" }
-mod_op = { "%" }
+            <div class="grammar-section">
+                <h3>Loops</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Loop Grammar</span>
+                    </div>
+                    <pre><code>// While loop
+while_stmt = { while_kw ~ expression ~ "{" ~ statement* ~ "}" }
 
-// Comparison
-comp_op = { "==" | "!=" | "<=" | ">=" | "<" | ">" }
+// For loop
+for_stmt = { for_kw ~ ident ~ in_kw ~ expression ~ "{" ~ statement* ~ "}" }
 
-// Logical (bilingual)
-and_op = { "&&" | "ati" | "and" }
-or_op  = { "||" | "tabi" | "or" }
-not_op = { "!" | "kii" | "not" }</code></pre>
+// Keywords
+while_kw = { "nigita" | "while" }
+for_kw = { "fun" | "for" }
+in_kw = { "ninu" | "in" }
 
-        <h2>Comments</h2>
-        <pre><code>// Single-line (C-style)
-# Single-line (Python-style)
-/* Multi-line block */
+// Examples:
+nigita x < 10 {
+    x = x + 1;
+}
+
+fun i ninu 0..10 {
+    Irosu.fo(i);
+}
+
+while condition {
+    // loop body
+}
+
+for item in collection {
+    // loop body
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Match Statements</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Match Grammar</span>
+                    </div>
+                    <pre><code>// Match statement
+match_stmt = { match_kw ~ "(" ~ expression ~ ")" ~ "{" ~ match_arm* ~ "}" }
+
+// Match arms
+match_arm = { match_pattern ~ "=>" ~ (statement | ("{" ~ statement* ~ "}")) }
+
+// Patterns
+match_pattern = { range_pattern | literal_pattern | wildcard_pattern }
+range_pattern = { expression ~ ".." ~ expression }
+literal_pattern = { expression }
+wildcard_pattern = { "_" }
+
+// Keywords
+match_kw = { "match" }
+
+// Examples:
+match (x) {
+    0 => Irosu.fo("Zero"),
+    1..10 => Irosu.fo("Small"),
+    _ => Irosu.fo("Large")
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Imports and Modules</h2>
+            
+            <div class="grammar-section">
+                <h3>Import Statements</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Import Grammar</span>
+                    </div>
+                    <pre><code>// Import statement
+import_stmt = { import_kw ~ module_path ~ ";" }
+
+// Named import
+from_import_stmt = { import_kw ~ "{" ~ ident ~ ("," ~ ident)* ~ "}" ~ from_kw ~ module_path ~ ";" }
+
+// Module path
+module_path = { ident ~ ("." ~ ident)* }
+
+// Keywords
+import_kw = { "iba" | "import" }
+from_kw = { "lati" | "from" }
+
+// Examples:
+iba std.irosu;
+import std.utils;
+
+iba { fo, ka } from std.irosu;
+import { println, read } from std.irosu;</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Error Handling</h2>
+            
+            <div class="grammar-section">
+                <h3>Try-Catch-Finally</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Try Grammar</span>
+                    </div>
+                    <pre><code>// Try statement
+try_stmt = { try_kw ~ "{" ~ statement* ~ "}" ~ catch_clause ~ nipari_clause? }
+
+// Catch clause
+catch_clause = { catch_kw ~ "(" ~ ident ~ ")" ~ "{" ~ statement* ~ "}" }
+
+// Finally clause
+nipari_clause = { nipari_kw ~ "{" ~ statement* ~ "}" }
+
+// Keywords
+try_kw = { "gbiyanju" | "gb√¨y√†nj√∫" | "try" }
+catch_kw = { "gba" | "gb√†" | "catch" }
+nipari_kw = { "nipari" | "n√≠p√†r√≠" | "finally" }
+
+// Examples:
+gbiyanju {
+    risky_operation();
+} gba (error) {
+    Irosu.fo("Error: " + error.message);
+} nipari {
+    cleanup();
+}
+
+try {
+    // try block
+} catch (error) {
+    // catch block
+} finally {
+    // finally block
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Assertions</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Assert Grammar</span>
+                    </div>
+                    <pre><code>// Assertion statement
+ewo_stmt = { ewo_kw ~ expression ~ ("," ~ string)? ~ ";" }
+
+// Keywords
+ewo_kw = { "ewo" | "ewo" | "assert" | "verify" }
+
+// Examples:
+ewo x >= 0, "x must be non-negative";
+ewo balance >= 0;
+
+assert x >= 0, "x must be non-negative";
+verify balance >= 0;</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Domain Calls</h2>
+            
+            <div class="grammar-section">
+                <h3>Od√π Domain Instructions</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Domain Grammar</span>
+                    </div>
+                    <pre><code>// Domain instruction
+instruction = { odu_call ~ ";" }
+
+// Od√π call
+odu_call = { odu_name ~ "." ~ ident ~ "(" ~ arguments? ~ ")" }
+
+// Arguments
+arguments = { expression ~ ("," ~ expression)* }
+
+// Od√π names (16 core domains)
+odu_name = {
+    "Ogbe" | "Oyeku" | "Iwori" | "Odi" | "Irosu" | "Owonrin"
+    | "Obara" | "Okanran" | "Ogunda" | "Osa" | "Ika" | "Oturupon"
+    | "Otura" | "Irete" | "Ose" | "Ofun"
+}
+
+// Examples:
+Irosu.fo("Hello, World!");
+Obara.fikun(10, 20);
+Irete.sha256("data");
+Ogbe.args();</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Memory Management</h2>
+            
+            <div class="grammar-section">
+                <h3>Opon Directives</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Opon Grammar</span>
+                    </div>
+                    <pre><code>// Opon (memory) directive
+opon_stmt = { opon_kw ~ ":"? ~ opon_size ~ ";"? }
+
+// Opon keywords
+opon_kw = { "#opon" | "opon" | "#Opon" | "Opon" | "#mem" | "mem" }
+
+// Memory sizes
+opon_size = {
+    "kekere" | "k√©k√©r√©" | "small" | "tiny" | "embedded"
+    | "arinrin" | "√†r√≠nrin" | "medium" | "standard" | "default"
+    | "nla" | "nl√°" | "large" | "big"
+    | "ailopin" | "√†√¨l√≥pin" | "unlimited" | "dynamic" | "max"
+}
+
+// Examples:
+opon: kekere;
+#opon arinrin;
+mem: nla;
+#mem ailopin;</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Resource Management ( )</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Ebo Grammar</span>
+                    </div>
+                    <pre><code>// Ebo (offering/initiation) statement
+ebo_stmt = { ebo_kw ~ expression ~ ";"? }
+
+// Ebo keywords
+ebo_kw = { "ebo" | "√©b" | "sacrifice" }
+
+// Examples:
+ebo "server_config.json";
+sacrifice file = Odi.open("data.txt");</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Special Constructs</h2>
+            
+            <div class="grammar-section">
+                <h3>Unsafe Code</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Unsafe Grammar</span>
+                    </div>
+                    <pre><code>// Ailewu (unsafe) block
+ailewu_stmt = { ailewu_kw ~ "{" ~ statement* ~ "}" }
+
+// Keywords
+ailewu_kw = { "ailewu" | "√†√¨l√©wu" | "unsafe" }
+
+// Examples:
+ailewu {
+    // Unsafe operations here
+    // Direct memory manipulation
+    // FFI calls
+}
+
+unsafe {
+    // Unsafe operations here
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Yield and Return</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Control Flow Grammar</span>
+                    </div>
+                    <pre><code>// Return statement
+return_stmt = { return_kw ~ expression? ~ ";" }
+
+// Yield statement
+yield_stmt = { yield_kw ~ expression ~ ";" }
+
+// End statement
+ase_stmt = { ase_kw ~ ";"? }
+
+// Keywords
+return_kw = { "pada" | "return" }
+yield_kw = { "jowo" | "jw√≥" | "yield" }
+ase_kw = { "ase" | "end" }
+
+// Examples:
+pada result;
+return 42;
+
+jowo 1000;
+yield 1000;
+
+ase;
+end;</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Taboo Declarations</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Taboo Grammar</span>
+                    </div>
+                    <pre><code>// Taboo declaration
+taboo_stmt = { taboo_kw ~ ":" ~ odu_name ~ "->" ~ odu_name ~ ";" }
+
+// Keywords
+taboo_kw = { "√®√®w" | "ew" | "taboo" }
+
+// Examples:
+√®√®w: Ose -> Odi;
+taboo: Otura -> Irete;</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Expressions</h2>
+            
+            <div class="grammar-section">
+                <h3>Literals</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Literal Grammar</span>
+                    </div>
+                    <pre><code>// Various literal types
+expression = { literal | ... }
+
+literal = {
+    int_literal
+    | float_literal
+    | string_literal
+    | char_literal
+    | boolean_literal
+    | list_literal
+    | map_literal
+}
+
+// Integer literals
+int_literal = { "-"? ~ ASCII_DIGIT+ }
+
+// Float literals
+float_literal = { "-"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
+
+// String literals
+string_literal = { "\"" ~ (~"\"" ~ ANY)* ~ "\"" }
+
+// Boolean literals
+boolean_literal = { "otito" | "true" | "eke" | "false" }
+
+// Examples:
+42
+-100
+3.14159
+-2.5
+"Hello, World!"
+'c'
+otito / true
+eke / false</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Collections</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Collection Grammar</span>
+                    </div>
+                    <pre><code>// List literal
+list_literal = { "[" ~ expression ~ ("," ~ expression)* ~ "]" }
+
+// Map literal
+map_literal = {
+    "{" ~ string_literal ~ ":" ~ expression ~ ("," ~ string_literal ~ ":" ~ expression)* ~ "}"
+}
+
+// Examples:
+[1, 2, 3, 4, 5]
+["hello", "world", 42, otito]
+
+{
+    "name": "Alice",
+    "age": 30,
+    "active": otito
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Operators</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Operator Grammar</span>
+                    </div>
+                    <pre><code>// Arithmetic operators (high precedence)
+expression = { term ~ (("+" | "-") ~ term)* }
+term = { factor ~ (("*" | "/" | "%") ~ factor)* }
+
+// Comparison operators
+comparison = { expression ~ (("==" | "!=" | "<" | ">" | "<=" | ">=") ~ expression) }
+
+// Logical operators
+logical = { comparison ~ (("&&" | "||") ~ comparison)* }
+
+// Unary operators
+factor = { ("!" | "-") ~ primary }
+
+// Examples:
+x + y * z
+a == b && c != d
+!condition
+-value</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Type Names</h2>
+            
+            <div class="grammar-section">
+                <h3>Supported Types</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Type Grammar</span>
+                    </div>
+                    <pre><code>// Type names in type hints
+type_name = {
+    // Basic types
+    "Int" | "Float" | "Str" | "Bool" | "List" | "Map" | "Any"
+    | "int" | "float" | "str" | "bool" | "list" | "map" | "any"
+    
+    // Numeric types
+    | "i8" | "i16" | "i32" | "i64"
+    | "u8" | "u16" | "u32" | "u64"
+    | "f32" | "f64"
+    
+    // Special types
+    | "void"
+}
+
+// Examples:
+ayanmo x: Int = 42;
+ayanmo name: Str = "Alice";
+ayanmo items: List[Int] = [1, 2, 3];
+ayanmo data: Map[Str, Any] = {"key": "value"};</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Comments</h2>
+            
+            <div class="grammar-section">
+                <h3>Comment Grammar</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Comment Grammar</span>
+                    </div>
+                    <pre><code>// Comment patterns
+COMMENT = {
+    // Single line comment
+    | "/*" ~ (!"*/" ~ ANY)* ~ "*/"  // Multi-line comment
+}
+
+// Examples:
+// This is a single line comment
+
+/*
+   This is a
+   multi-line comment
+*/
+
 /// Documentation comment</code></pre>
+                </div>
+            </div>
+        </div>
 
-        <footer class="doc-footer">
-            <p><a href="types.html">? Types</a> ∑ <a href="memory.html">Memory Model ?</a></p>
-            <p><a href="../index.html">Documentation Home</a></p>
+        <div class="step">
+            <h2>Grammar Implementation Notes</h2>
+            
+            <h3>Pest Features Used</h3>
+            <ul>
+                <li><strong>PEG Grammar:</strong> Parsing Expression Grammar for unambiguous parsing</li>
+                <li><strong>Unicode Support:</strong> Full Unicode support for Yoruba characters</li>
+                <li><strong>Error Recovery:</strong> Built-in error recovery for better error messages</li>
+                <li><strong>Whitespace Handling:</strong> Automatic whitespace skipping between tokens</li>
+            </ul>
+
+            <h3>Bilingual Support</h3>
+            <ul>
+                <li><strong>Yoruba Keywords:</strong> Full Yoruba keyword support with diacritics</li>
+                <li><strong>English Keywords:</strong> English alternatives for accessibility</li>
+                <li><strong>Mixed Usage:</strong> Can mix Yoruba and English in same program</li>
+                <li><strong>Cultural Integration:</strong> Keywords reflect Yoruba philosophical concepts</li>
+            </ul>
+
+            <h3>Od√π Domain Integration</h3>
+            <ul>
+                <li><strong>16 Core Domains:</strong> All traditional Od√π domains supported</li>
+                <li><strong>Method Calls:</strong> Domain.method() syntax for operations</li>
+                <li><strong>Built-in Access:</strong> No imports required for core domains</li>
+                <li><strong>Type Safety:</strong> Domain methods are type-checked</li>
+            </ul>
+
+            <h3>Performance Considerations</h3>
+            <ul>
+                <li><strong>Left Recursion:</strong> Avoided for better parsing performance</li>
+                <li><strong>Operator Precedence:</strong> Clear precedence rules for expressions</li>
+                <li><strong>Lookahead:</strong> Minimal lookahead for efficient parsing</li>
+                <li><strong>Error Messages:</strong> Contextual error messages for debugging</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Reference Documentation</a></p>
         </footer>
     </div>
-    <script src="../js/nav.js"></script>
+
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

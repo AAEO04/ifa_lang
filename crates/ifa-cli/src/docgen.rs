@@ -350,7 +350,7 @@ pub fn generate_index_html(user_doc: &UserDoc) -> String {
     let timestamp = Local::now().format("%Y-%m-%d %H:%M").to_string();
 
     let mut odu_cards = String::new();
-    
+
     // Standard Odù
     for odu in ODU_DOMAINS {
         odu_cards.push_str(&format!(r#"
@@ -373,20 +373,21 @@ pub fn generate_index_html(user_doc: &UserDoc) -> String {
     let mut user_odu_cards = String::new();
     if !user_doc.odus.is_empty() {
         for odu in &user_doc.odus {
-             user_odu_cards.push_str(&format!(r#"
+            user_odu_cards.push_str(&format!(
+                r#"
             <a href="user_{slug}.html" class="odu-card" style="border-color: var(--gold);">
                 <h3>📘 {name}</h3>
                 <p class="meaning">User Domain</p>
                 <p>{desc}</p>
             </a>
         "#,
-            slug = odu.slug,
-            name = odu.name,
-            desc = odu.description
-        ));
+                slug = odu.slug,
+                name = odu.name,
+                desc = odu.description
+            ));
         }
     }
-    
+
     // User Orphans (Globals)
     let mut orphan_html = String::new();
     if !user_doc.orphans.is_empty() {
@@ -394,11 +395,12 @@ pub fn generate_index_html(user_doc: &UserDoc) -> String {
         for item in &user_doc.orphans {
             let icon = match item.kind.as_str() {
                 "ese" => "📜",
-                "const" => "💎", 
+                "const" => "💎",
                 "ayanmo" => "📦",
-                _ => "📄"
+                _ => "📄",
             };
-            orphan_html.push_str(&format!(r#"
+            orphan_html.push_str(&format!(
+                r#"
                 <div class="odu-card">
                     <h3>{icon} {name}</h3>
                     <p><code>{sig}</code></p>
@@ -413,7 +415,6 @@ pub fn generate_index_html(user_doc: &UserDoc) -> String {
         }
         orphan_html.push_str("</div>");
     }
-
 
     format!(
         r#"<!DOCTYPE html>
@@ -753,8 +754,13 @@ pub fn generate_index_html(user_doc: &UserDoc) -> String {
         timestamp = timestamp,
         odu_cards = odu_cards,
         user_section = if !user_odu_cards.is_empty() {
-            format!("<h2>Your Project Odù</h2><div class=\"odu-grid\">{}</div>", user_odu_cards)
-        } else { String::new() },
+            format!(
+                "<h2>Your Project Odù</h2><div class=\"odu-grid\">{}</div>",
+                user_odu_cards
+            )
+        } else {
+            String::new()
+        },
         orphan_section = orphan_html
     )
 }
@@ -870,6 +876,7 @@ pub fn get_stdlib_methods() -> HashMap<&'static str, Vec<(&'static str, &'static
         "odi",
         vec![
             ("ka", "Read data from file"),
+            ("ka_mmap", "Memory map file for zero-copy access"),
             ("ko", "Write data to file"),
             ("fi", "Append data to file"),
             ("si", "Open file handle"),
@@ -981,6 +988,11 @@ pub fn get_stdlib_methods() -> HashMap<&'static str, Vec<(&'static str, &'static
             ("tu", "Decompress data"),
             ("base64_si", "Encode to base64"),
             ("base64_lati", "Decode from base64"),
+            ("chacha20_encrypt", "Encrypt data using ChaCha20-Poly1305"),
+            ("chacha20_decrypt", "Decrypt data using ChaCha20-Poly1305"),
+            ("ed25519_generate", "Generate Ed25519 Keypair"),
+            ("ed25519_sign", "Sign data with Ed25519"),
+            ("ed25519_verify", "Verify Ed25519 Signature"),
         ],
     );
 
@@ -1009,15 +1021,15 @@ pub fn get_stdlib_methods() -> HashMap<&'static str, Vec<(&'static str, &'static
 /// Generate a page for a User Odù
 pub fn generate_user_odu_page(odu: &UserOdu) -> String {
     let mut methods_html = String::new();
-    
+
     for item in &odu.items {
         let icon = match item.kind.as_str() {
             "ese" => "📜",
-            "const" => "💎", 
+            "const" => "💎",
             "ayanmo" => "📦",
-             _ => "📄"
+            _ => "📄",
         };
-        
+
         methods_html.push_str(&format!(
             r#"
             <div class="verse">
@@ -1100,11 +1112,11 @@ fn walk_dir(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
 fn parse_file(path: &Path, doc: &mut UserDoc) -> Result<()> {
     let content = fs::read_to_string(path)?;
     let mut current_docs = String::new();
-    
+
     // Simple state machine
     for line in content.lines() {
         let trimmed = line.trim();
-        
+
         if trimmed.starts_with("///") {
             let doc_line = trimmed[3..].trim();
             if !current_docs.is_empty() {
@@ -1113,137 +1125,153 @@ fn parse_file(path: &Path, doc: &mut UserDoc) -> Result<()> {
             current_docs.push_str(doc_line);
             continue;
         }
-        
-        // Ignore empty lines between docs and definition? 
+
+        // Ignore empty lines between docs and definition?
         // For now, strict adjacency or single empty line.
         if trimmed.is_empty() {
             // Keep docs for one empty line? No, let's reset to avoid wrong attribution
             // Actually, usually doc comments must immediately precede.
             if !current_docs.is_empty() {
-               // allow one blank line? Let's strictly require adjacency for V1
-               // current_docs.clear();
+                // allow one blank line? Let's strictly require adjacency for V1
+                // current_docs.clear();
             }
             continue;
         }
-        
+
         // Check for definitions
         if !current_docs.is_empty() {
             // ODÙ Definition
             // odu Calculator {
-            if trimmed.starts_with("odu ") || trimmed.starts_with("odù ") || trimmed.starts_with("class ") {
-                 let parts: Vec<&str> = trimmed.split_whitespace().collect();
-                 if parts.len() >= 2 {
-                     let name = parts[1].trim_matches('{');
-                     doc.add_odu(name.to_string(), current_docs.clone());
-                 }
-                 current_docs.clear();
-                 continue;
+            if trimmed.starts_with("odu ")
+                || trimmed.starts_with("odù ")
+                || trimmed.starts_with("class ")
+            {
+                let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let name = parts[1].trim_matches('{');
+                    doc.add_odu(name.to_string(), current_docs.clone());
+                }
+                current_docs.clear();
+                continue;
             }
-            
+
             // ESE Definition
             // ese add(a, b) {
-            if trimmed.starts_with("ese ") || trimmed.starts_with("ẹsẹ ") || trimmed.starts_with("fn ") {
+            if trimmed.starts_with("ese ")
+                || trimmed.starts_with("ẹsẹ ")
+                || trimmed.starts_with("fn ")
+            {
                 // Extract name and signature
-                 let open_paren = trimmed.find('(');
-                 let name_end = open_paren.unwrap_or(trimmed.len());
-                 // "ese add"
-                 let decl_part = &trimmed[0..name_end];
-                 let parts: Vec<&str> = decl_part.split_whitespace().collect();
-                 let name = if parts.len() >= 2 { parts[1] } else { "unknown" };
-                 
-                 let signature = if let Some(idx) = open_paren {
-                     let close_paren = trimmed.find(')').unwrap_or(trimmed.len());
-                     if close_paren > idx {
-                         let params = &trimmed[idx..=close_paren]; 
-                         format!("{}{}", name, params)
-                     } else {
-                         name.to_string()
-                     }
-                 } else {
-                     name.to_string()
-                 };
-                 
-                 let item = DocItem {
-                     name: name.to_string(),
-                     kind: "ese".to_string(),
-                     signature,
-                     description: current_docs.clone(),
-                 };
-                 
-                 // If we have a current Odù (from context), we should add to it.
-                 // But we are parsing line-by-line without full context stack here (simple parser).
-                 // For V1, let's just add to last added Odù if exists, or orphans.
-                 if let Some(last_odu) = doc.odus.last_mut() {
-                     last_odu.items.push(item);
-                 } else {
-                     doc.orphans.push(item);
-                 }
-                 
-                 current_docs.clear();
-                 continue;
+                let open_paren = trimmed.find('(');
+                let name_end = open_paren.unwrap_or(trimmed.len());
+                // "ese add"
+                let decl_part = &trimmed[0..name_end];
+                let parts: Vec<&str> = decl_part.split_whitespace().collect();
+                let name = if parts.len() >= 2 {
+                    parts[1]
+                } else {
+                    "unknown"
+                };
+
+                let signature = if let Some(idx) = open_paren {
+                    let close_paren = trimmed.find(')').unwrap_or(trimmed.len());
+                    if close_paren > idx {
+                        let params = &trimmed[idx..=close_paren];
+                        format!("{}{}", name, params)
+                    } else {
+                        name.to_string()
+                    }
+                } else {
+                    name.to_string()
+                };
+
+                let item = DocItem {
+                    name: name.to_string(),
+                    kind: "ese".to_string(),
+                    signature,
+                    description: current_docs.clone(),
+                };
+
+                // If we have a current Odù (from context), we should add to it.
+                // But we are parsing line-by-line without full context stack here (simple parser).
+                // For V1, let's just add to last added Odù if exists, or orphans.
+                if let Some(last_odu) = doc.odus.last_mut() {
+                    last_odu.items.push(item);
+                } else {
+                    doc.orphans.push(item);
+                }
+
+                current_docs.clear();
+                continue;
             }
-            
+
             // CONST/AYANMO Definition
             // const PI = 3.14; or loruko PI = 3.14; or ka PI = ...
-            let is_const = trimmed.starts_with("const ") || trimmed.starts_with("loruko ") || trimmed.starts_with("ka ");
+            let is_const = trimmed.starts_with("const ")
+                || trimmed.starts_with("loruko ")
+                || trimmed.starts_with("ka ");
             if is_const || trimmed.starts_with("ayanmo ") || trimmed.starts_with("let ") {
-                 let kind = if is_const { "const" } else { "ayanmo" };
-                 let parts: Vec<&str> = trimmed.split_whitespace().collect();
-                 // const Name = ...
-                 if parts.len() >= 2 {
-                     let name = parts[1];
-                     // signature is the whole line up to semicolon
-                     let signature = trimmed.trim_matches(';').to_string();
-                     
-                     let item = DocItem {
-                         name: name.to_string(),
-                         kind: kind.to_string(),
-                         signature,
-                         description: current_docs.clone(),
-                     };
-                     
-                     if let Some(last_odu) = doc.odus.last_mut() {
-                         last_odu.items.push(item);
-                     } else {
-                         doc.orphans.push(item);
-                     }
-                 }
-                 current_docs.clear();
-                 continue;
+                let kind = if is_const { "const" } else { "ayanmo" };
+                let parts: Vec<&str> = trimmed.split_whitespace().collect();
+                // const Name = ...
+                if parts.len() >= 2 {
+                    let name = parts[1];
+                    // signature is the whole line up to semicolon
+                    let signature = trimmed.trim_matches(';').to_string();
+
+                    let item = DocItem {
+                        name: name.to_string(),
+                        kind: kind.to_string(),
+                        signature,
+                        description: current_docs.clone(),
+                    };
+
+                    if let Some(last_odu) = doc.odus.last_mut() {
+                        last_odu.items.push(item);
+                    } else {
+                        doc.orphans.push(item);
+                    }
+                }
+                current_docs.clear();
+                continue;
             }
-            
+
             // If unrelated line, clear docs
             current_docs.clear();
         }
     }
-    
+
     Ok(())
 }
 
 /// Generate all documentation files to the output directory
 pub fn generate_docs(input_path: &Path, output_dir: &Path) -> Result<()> {
     fs::create_dir_all(output_dir)?;
-    
+
     // 1. Scan User Code
     let mut user_doc = UserDoc::new();
     let mut files = Vec::new();
-    
+
     if input_path.is_file() {
         files.push(input_path.to_path_buf());
     } else {
         walk_dir(input_path, &mut files)?;
     }
-    
+
     for file in files {
         if let Err(e) = parse_file(&file, &mut user_doc) {
-             eprintln!("Warning: Failed to parse {}: {}", file.display(), e);
+            eprintln!("Warning: Failed to parse {}: {}", file.display(), e);
         }
     }
 
     // 2. Generate Index
     let index_html = generate_index_html(&user_doc);
     fs::write(output_dir.join("index.html"), index_html)?;
-    println!("  Generated: index.html (with {} User Odùs, {} Global verses)", user_doc.odus.len(), user_doc.orphans.len());
+    println!(
+        "  Generated: index.html (with {} User Odùs, {} Global verses)",
+        user_doc.odus.len(),
+        user_doc.orphans.len()
+    );
 
     // 3. Generate StdLib Pages
     let stdlib = get_stdlib_methods();
@@ -1252,8 +1280,8 @@ pub fn generate_docs(input_path: &Path, output_dir: &Path) -> Result<()> {
         let filepath = output_dir.join(&filename);
 
         if filepath.exists() {
-             // For standard libs, we might skip to preserve overrides, or always overwrite
-             // Let's overwrite for consistency if version changed
+            // For standard libs, we might skip to preserve overrides, or always overwrite
+            // Let's overwrite for consistency if version changed
         }
 
         let methods: Vec<(String, String)> = stdlib
@@ -1268,7 +1296,7 @@ pub fn generate_docs(input_path: &Path, output_dir: &Path) -> Result<()> {
         let page_html = generate_odu_page(odu, &methods);
         fs::write(&filepath, page_html)?;
     }
-    
+
     // 4. Generate User Odù Pages
     for odu in &user_doc.odus {
         let filename = format!("user_{}.html", odu.slug);

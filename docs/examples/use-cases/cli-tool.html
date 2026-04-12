@@ -4,117 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Build a CLI Tool - If�-Lang Use Cases</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-            --success: #4ade80;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-            margin: 2.5rem 0 1rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        .step {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            border-left: 4px solid var(--accent);
-        }
-
-        .step-number {
-            display: inline-block;
-            background: var(--accent);
-            color: white;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 28px;
-            font-weight: bold;
-            margin-right: 0.5rem;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>CLI Tool - Ifá-Lang</title>
+    <meta name="description" content="Complete command-line interface tool example using Ifá-Lang">
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -122,160 +20,2050 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
-            <p style="color: var(--text-dim); margin-bottom: 0.5rem;">USE CASE</p>
-            <h1>?? Build a CLI Tool</h1>
-            <p style="color: var(--text-dim);">Create command-line applications with argument parsing</p>
+            <h1>CLI Tool</h1>
+            <p class="subtitle">Command-Line Interface Development</p>
         </header>
 
-        <h2>What You'll Build</h2>
-        <p>A file statistics tool that counts lines, words, and characters:</p>
-        <pre><code>filestat myfile.txt
-# Lines: 42
-# Words: 256
-# Characters: 1847</code></pre>
-
         <div class="step">
-            <h3><span class="step-number">1</span> Create the Script</h3>
-            <pre><code>// filestat.ifa - File statistics tool
-
-// Get command line arguments
-ayanmo args = Ogbe.args();
-
-// Check if file was provided
-ti (Ogunda.len(args) < 2) {
-    Irosu.fo("Usage: filestat <filename>");
-    Oyeku.exit(1);
-}
-
-ayanmo filename = Ogunda.get(args, 1);
-
-// Check if file exists
-ti (!Odi.exists(filename)) {
-    Irosu.kigbe("Error: File not found: " + filename);
-    Oyeku.exit(1);
-}
-
-// Read the file
-ayanmo content = Odi.read(filename);
-
-// Count statistics
-ayanmo lines = Ika.split(content, "\n");
-ayanmo line_count = Ogunda.len(lines);
-
-ayanmo words = Ika.split(content, " ");
-ayanmo word_count = Ogunda.len(words);
-
-ayanmo char_count = Ika.len(content);
-
-// Display results
-Irosu.fo("?? File Statistics for: " + filename);
-Irosu.fo("-------------------------");
-Irosu.fo("Lines:      " + line_count);
-Irosu.fo("Words:      " + word_count);
-Irosu.fo("Characters: " + char_count);</code></pre>
+            <h2>Overview</h2>
+            <p>This example demonstrates building a comprehensive command-line interface tool using Ifá-Lang's CLI capabilities. The tool includes argument parsing, subcommands, configuration management, interactive features, and proper error handling with cultural Yoruba proverbs.</p>
         </div>
 
         <div class="step">
-            <h3><span class="step-number">2</span> Run Your Tool</h3>
-            <pre><code>ifa run filestat.ifa README.md</code></pre>
-            <p>Output:</p>
-            <pre><code>?? File Statistics for: README.md
--------------------------
-Lines:      156
-Words:      892
-Characters: 5437</code></pre>
+            <h2>Project Structure</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Project Layout</span>
+                </div>
+                <pre><code>ifa-cli-tool/
+|-- src/
+|   |-- main.ifa              # Application entry point
+|   |-- commands.ifa          # Command implementations
+|   |-- config.ifa            # Configuration management
+|   |-- utils.ifa             # Utility functions
+|   `-- interactive.ifa       # Interactive mode
+|-- tests/
+|   |-- command_tests.ifa     # Command tests
+|   `-- integration_tests.ifa # Integration tests
+|-- config/
+|   |-- default.toml          # Default configuration
+|   `-- user.toml.example     # User configuration example
+|-- ifa.toml                  # Project configuration
+`-- README.md                 # Project documentation</code></pre>
+            </div>
         </div>
 
         <div class="step">
-            <h3><span class="step-number">3</span> Add Flags and Options</h3>
-            <pre><code>// filestat.ifa - Enhanced version with flags
+            <h2>Main Application</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/main.ifa</span>
+                </div>
+                <pre><code>// CLI tool main application
+import ifa-cli;
+import commands;
+import config;
+import utils;
 
-ayanmo args = Ogbe.args();
+// Application metadata
+struct AppInfo {
+    name: Str,
+    version: Str,
+    description: Str,
+    author: Str,
+    license: Str
+}
 
-// Parse flags
-ayanmo show_lines = otito;
-ayanmo show_words = otito;
-ayanmo show_chars = otito;
-ayanmo filename = nil;
+// Global app info
+static mut APP_INFO: AppInfo = AppInfo {
+    name: "ifa-tool",
+    version: "1.3.0",
+    description: "Ifá-Lang command-line tool for system management",
+    author: "Ifá-Lang Community",
+    license: "MIT"
+};
 
-fun arg ninu args {
-    ti (arg == "-l") {
-        ayanmo show_words = iro;
-        ayanmo show_chars = iro;
-    } bib?k? ti (arg == "-w") {
-        ayanmo show_lines = iro;
-        ayanmo show_chars = iro;
-    } bib?k? ti (arg == "-c") {
-        ayanmo show_lines = iro;
-        ayanmo show_words = iro;
-    } bib?k? ti (arg != Ogunda.get(args, 0)) {
-        ayanmo filename = arg;
+// Main entry point
+ese main() {
+    ayanmo args = Ogbe.parse_args();
+    
+    // Handle empty arguments
+    if args.length() == 0 {
+        show_help();
+        Oyeku.exit(0);
+    }
+    
+    // Parse global options
+    ayanmo config = parse_global_options(args);
+    
+    // Execute command
+    gbiyanju {
+        execute_command(config, args);
+    } gba (error) {
+        Irosu.kigbe("Error: " + error.message);
+        if config.verbose {
+            Irosu.kigbe("Stack trace: " + error.stack_trace);
+        }
+        Oyeku.exit(1);
     }
 }
 
-ti (filename == nil) {
-    Irosu.fo("Usage: filestat [-l] [-w] [-c] <filename>");
-    Irosu.fo("  -l  Show only line count");
-    Irosu.fo("  -w  Show only word count");
-    Irosu.fo("  -c  Show only character count");
-    Oyeku.exit(1);
+// Parse global options
+se parse_global_options(args: Vec<Str>) -> Config {
+    ayanmo mut config = Config::load_default();
+    
+    fun i ninu 0..args.length() {
+        ayanmo arg = args[i];
+        
+        if arg == "--help" or arg == "-h" {
+            show_help();
+            Oyeku.exit(0);
+        } else if arg == "--version" or arg == "-V" {
+            show_version();
+            Oyeku.exit(0);
+        } else if arg == "--verbose" or arg == "-v" {
+            config.verbose = otito;
+        } else if arg == "--quiet" or arg == "-q" {
+            config.quiet = otito;
+        } else if arg == "--config" {
+            if i + 1 < args.length() {
+                config.config_file = args[i + 1];
+                config = Config::load_file(config.config_file);
+            } else {
+                Irosu.kigbe("Error: --config requires a file path");
+                Oyeku.exit(1);
+            }
+        } else if arg == "--color" {
+            if i + 1 < args.length() {
+                ayanmo color_mode = args[i + 1];
+                if color_mode == "auto" or color_mode == "always" or color_mode == "never" {
+                    config.color_mode = color_mode;
+                } else {
+                    Irosu.kigbe("Error: --color must be auto, always, or never");
+                    Oyeku.exit(1);
+                }
+            } else {
+                Irosu.kigbe("Error: --color requires a mode");
+                Oyeku.exit(1);
+            }
+        }
+    }
+    
+    pada config;
 }
 
-// ... rest of the code</code></pre>
+// Execute command
+se execute_command(config: Config, args: Vec<Str>) {
+    if args.length() == 0 {
+        show_help();
+        return;
+    }
+    
+    ayanmo command = args[0];
+    ayanmo command_args = args.slice(1, args.length());
+    
+    match command {
+        "system" => commands::system_command(config, command_args),
+        "file" => commands::file_command(config, command_args),
+        "network" => commands::network_command(config, command_args),
+        "process" => commands::process_command(config, command_args),
+        "config" => commands::config_command(config, command_args),
+        "interactive" => commands::interactive_command(config, command_args),
+        "help" => show_help(),
+        "version" => show_version(),
+        _ => {
+            Irosu.kigbe("Unknown command: " + command);
+            Irosu.fo("Use 'ifa-tool help' for available commands");
+            Oyeku.exit(1);
+        }
+    }
+}
+
+// Show help
+se show_help() {
+    unsafe {
+        Irosu.fo(APP_INFO.name + " " + APP_INFO.version + " - " + APP_INFO.description);
+        Irosu.fo("");
+        Irosu.fo("USAGE:");
+        Irosu.fo("    ifa-tool [OPTIONS] <COMMAND> [ARGS]");
+        Irosu.fo("");
+        Irosu.fo("OPTIONS:");
+        Irosu.fo("    -h, --help              Show this help message");
+        Irosu.fo("    -V, --version           Show version information");
+        Irosu.fo("    -v, --verbose           Enable verbose output");
+        Irosu.fo("    -q, --quiet              Suppress non-error output");
+        Irosu.fo("        --config <FILE>     Use specified config file");
+        Irosu.fo("        --color <MODE>       Color output (auto, always, never)");
+        Irosu.fo("");
+        Irosu.fo("COMMANDS:");
+        Irosu.fo("    system      System information and management");
+        Irosu.fo("    file        File operations and management");
+        Irosu.fo("    network     Network diagnostics and tools");
+        Irosu.fo("    process     Process management and monitoring");
+        Irosu.fo("    config      Configuration management");
+        Irosu.fo("    interactive  Interactive mode");
+        Irosu.fo("    help        Show this help message");
+        Irosu.fo("    version     Show version information");
+        Irosu.fo("");
+        Irosu.fo("EXAMPLES:");
+        Irosu.fo("    ifa-tool system info");
+        Irosu.fo("    ifa-tool file list /home/user");
+        Irosu.fo("    ifa-tool network ping google.com");
+        Irosu.fo("    ifa-tool process list --sort=cpu");
+        Irosu.fo("    ifa-tool config set theme dark");
+        Irosu.fo("");
+        Irosu.fo("For more help on a specific command:");
+        Irosu.fo("    ifa-tool <command> --help");
+    }
+}
+
+// Show version
+se show_version() {
+    unsafe {
+        Irosu.fo(APP_INFO.name + " " + APP_INFO.version);
+        Irosu.fo(APP_INFO.description);
+        Irosu.fo("Author: " + APP_INFO.author);
+        Irosu.fo("License: " + APP_INFO.license);
+        Irosu.fo("Build: " + Ogbe.build_info());
+        Irosu.fo("Runtime: " + Ogbe.runtime_version());
+    }
+}</code></pre>
+            </div>
         </div>
 
-        <h2>Interactive Input</h2>
-        <p>Get input from the user:</p>
+        <div class="step">
+            <h2>Command Implementations</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/commands.ifa</span>
+                </div>
+                <pre><code>// Command implementations
+use config;
+use utils;
+use interactive;
 
-        <pre><code>// greeting.ifa - Interactive greeter
+// System command
+se system_command(config: Config, args: Vec<Str>) {
+    if args.length() == 0 or args[0] == "--help" {
+        show_system_help();
+        return;
+    }
+    
+    ayanmo subcommand = args[0];
+    ayanmo sub_args = args.slice(1, args.length());
+    
+    match subcommand {
+        "info" => system_info(config, sub_args),
+        "health" => system_health(config, sub_args),
+        "monitor" => system_monitor(config, sub_args),
+        "cleanup" => system_cleanup(config, sub_args),
+        _ => {
+            Irosu.kigbe("Unknown system subcommand: " + subcommand);
+            Irosu.fo("Use 'ifa-tool system --help' for available subcommands");
+        }
+    }
+}
 
-Irosu.so("What is your name? ");
-ayanmo name = Irosu.ka();
+// System information
+se system_info(config: Config, args: Vec<Str>) {
+    ayanmo detailed = args.contains("--detailed") or args.contains("-d");
+    
+    if !config.quiet {
+        Irosu.fo("=== System Information ===");
+        Irosu.fo("");
+    }
+    
+    // Basic system info
+    ayanmo sys_info = Ogbe.get_system_info();
+    
+    Irosu.fo("Operating System:");
+    Irosu.fo("  Name: " + sys_info.os_name + " " + sys_info.os_version);
+    Irosu.fo("  Architecture: " + sys_info.os_arch);
+    Irosu.fo("  Uptime: " + utils::format_duration(sys_info.uptime));
+    Irosu.fo("");
+    
+    Irosu.fo("Hardware:");
+    Irosu.fo("  CPU: " + sys_info.cpu_model);
+    Irosu.fo("  Cores: " + Obara.to_str(sys_info.cpu_cores));
+    Irosu.fo("  Frequency: " + Obara.to_str(sys_info.cpu_frequency()) + " MHz");
+    Irosu.fo("");
+    
+    Irosu.fo("Memory:");
+    Irosu.fo("  Total: " + utils::format_bytes(sys_info.memory_total));
+    Irosu.fo("  Used: " + utils::format_bytes(sys_info.memory_used) + 
+             " (" + Obara.to_str(sys_info.memory_usage) + "%)");
+    Irosu.fo("  Free: " + utils::format_bytes(sys_info.memory_free));
+    Irosu.fo("");
+    
+    Irosu.fo("Disk:");
+    ayanmo disk_info = Ogbe.disk_info("/");
+    Irosu.fo("  Total: " + utils::format_bytes(disk_info.total));
+    Irosu.fo("  Used: " + utils::format_bytes(disk_info.used) + 
+             " (" + Obara.to_str(disk_info.usage) + "%)");
+    Irosu.fo("  Free: " + utils::format_bytes(disk_info.free));
+    Irosu.fo("");
+    
+    if detailed {
+        // Network interfaces
+        Irosu.fo("Network Interfaces:");
+        ayanmo interfaces = Ogbe.network_interfaces();
+        fun iface ninu interfaces {
+            Irosu.fo("  " + iface.name + ":");
+            Irosu.fo("    Status: " + iface.status);
+            Irosu.fo("    Type: " + iface.type);
+            if iface.ip_addresses.length() > 0 {
+                Irosu.fo("    IP: " + Ika.join(iface.ip_addresses, ", "));
+            }
+            if iface.mac_address != "" {
+                Irosu.fo("    MAC: " + iface.mac_address);
+            }
+        }
+        Irosu.fo("");
+        
+        // Environment variables
+        Irosu.fo("Environment Variables:");
+        ayanmo env_vars = ["PATH", "HOME", "USER", "SHELL", "LANG"];
+        fun var ninu env_vars {
+            ayanmo value = Ogbe.get_env(var);
+            if value.is_some() {
+                Irosu.fo("  " + var + "=" + value.unwrap());
+            }
+        }
+    }
+}
 
-Irosu.so("What is your favorite color? ");
-ayanmo color = Irosu.ka();
+// System health check
+se system_health(config: Config, args: Vec<Str>) {
+    ayanmo verbose = args.contains("--verbose") or args.contains("-v");
+    
+    if !config.quiet {
+        Irosu.fo("=== System Health Check ===");
+        Irosu.fo("");
+    }
+    
+    ayanmo health = utils::check_system_health();
+    ayanmo issues = Vec::<Str>::new();
+    
+    // Check each component
+    fun (component, status) ninu health {
+        ayanmo status_icon = match status {
+            "ok" => "otito",
+            "warning" => "warning",
+            "critical" => "CRITICAL",
+            _ => "unknown"
+        };
+        
+        if verbose {
+            Irosu.fo(component + ": " + status_icon);
+        }
+        
+        if status == "critical" or status == "warning" {
+            issues.push(component + " (" + status + ")");
+        }
+    }
+    
+    if !verbose {
+        ayanmo overall = health.get("overall");
+        ayanmo overall_icon = match overall {
+            "ok" => "otito",
+            "warning" => "warning", 
+            "critical" => "CRITICAL",
+            _ => "unknown"
+        };
+        
+        Irosu.fo("Overall Status: " + overall_icon);
+        
+        if issues.length() > 0 {
+            Irosu.fo("");
+            Irosu.fo("Issues:");
+            fun issue ninu issues {
+                Irosu.fo("  - " + issue);
+            }
+        }
+    }
+    
+    // Exit with appropriate code
+    if health.get("overall") == "critical" {
+        Oyeku.exit(2);
+    } else if health.get("overall") == "warning" {
+        Oyeku.exit(1);
+    }
+}
 
-Irosu.fo("");
-Irosu.fo("Hello, " + name + "!");
-Irosu.fo("I see you like " + color + ". Great choice!");</code></pre>
+// System monitor
+se system_monitor(config: Config, args: Vec<Str>) {
+    ayanmo interval = 1000; // Default 1 second
+    
+    // Parse interval argument
+    fun i ninu 0..args.length() {
+        if args[i] == "--interval" and i + 1 < args.length() {
+            interval = Obara.parse_u32(args[i + 1]).unwrap_or(1000);
+        }
+    }
+    
+    Irosu.fo("=== System Monitor (Press Ctrl+C to stop) ===");
+    Irosu.fo("Interval: " + Obara.to_str(interval) + "ms");
+    Irosu.fo("");
+    
+    while ototo {
+        // Clear screen
+        Irosu.fo("\x1b[2J\x1b[H", flush=otito);
+        
+        // Show timestamp
+        Irosu.fo("Ifá-Lang System Monitor - " + Iwori.format_time(Iwori.timestamp()));
+        Irosu.fo("");
+        
+        // CPU usage
+        ayanmo cpu_usage = Ogbe.cpu_usage();
+        ayanmo cpu_color = if cpu_usage > 80 { Color::Red } 
+                          else if cpu_usage > 60 { Color::Yellow } 
+                          else { Color::Green };
+        
+        Irosu.fo("CPU Usage: " + cpu_color + Obara.to_str(cpu_usage) + "%" + Color::Reset);
+        
+        // Memory usage
+        ayanmo mem_info = Ogbe.memory_info();
+        ayanmo mem_usage = (mem_info.used * 100) / mem_info.total;
+        ayanmo mem_color = if mem_usage > 90 { Color::Red }
+                          else if mem_usage > 70 { Color::Yellow }
+                          else { Color::Green };
+        
+        Irosu.fo("Memory Usage: " + mem_color + Obara.to_str(mem_usage) + "%" + Color::Reset + 
+                 " (" + utils::format_bytes(mem_info.used) + "/" + utils::format_bytes(mem_info.total) + ")");
+        
+        // Disk usage
+        ayanmo disk_info = Ogbe.disk_info("/");
+        ayanmo disk_usage = (disk_info.used * 100) / disk_info.total;
+        ayanmo disk_color = if disk_usage > 95 { Color::Red }
+                          else if disk_usage > 85 { Color::Yellow }
+                          else { Color::Green };
+        
+        Irosu.fo("Disk Usage: " + disk_color + Obara.to_str(disk_usage) + "%" + Color::Reset + 
+                 " (" + utils::format_bytes(disk_info.used) + "/" + utils::format_bytes(disk_info.total) + ")");
+        
+        // Top processes
+        Irosu.fo("");
+        Irosu.fo("Top Processes:");
+        ayanmo processes = Ogbe.get_top_processes(5);
+        fun i ninu 0..processes.length() {
+            ayanmo proc = processes[i];
+            Irosu.fo("  " + Obara.to_str(i + 1) + ". " + proc.name + 
+                     " (PID: " + Obara.to_str(proc.pid) + ", CPU: " + 
+                     Obara.to_str(proc.cpu_percent) + "%, Mem: " + 
+                     utils::format_bytes(proc.memory_mb * 1024 * 1024) + ")");
+        }
+        
+        Iwori.sleep(interval);
+    }
+}
 
-        <h2>Colored Output</h2>
-        <p>Use Ose (Terminal UI) for colors:</p>
+// File command
+se file_command(config: Config, args: Vec<Str>) {
+    if args.length() == 0 or args[0] == "--help" {
+        show_file_help();
+        return;
+    }
+    
+    ayanmo subcommand = args[0];
+    ayanmo sub_args = args.slice(1, args.length());
+    
+    match subcommand {
+        "list" => file_list(config, sub_args),
+        "info" => file_info(config, sub_args),
+        "search" => file_search(config, sub_args),
+        "clean" => file_clean(config, sub_args),
+        _ => {
+            Irosu.kigbe("Unknown file subcommand: " + subcommand);
+            Irosu.fo("Use 'ifa-tool file --help' for available subcommands");
+        }
+    }
+}
 
-        <pre><code>// colored.ifa - Colorful CLI output
+// File listing
+se file_list(config: Config, args: Vec<Str>) {
+    ayanmo path = if args.length() > 0 { args[0] } else { "." };
+    ayanmo detailed = args.contains("--detailed") or args.contains("-l");
+    ayanmo all = args.contains("--all") or args.contains("-a");
+    ayanmo recursive = args.contains("--recursive") or args.contains("-r");
+    
+    if !Ogbe.dir_exists(path) {
+        Irosu.kigbe("Directory not found: " + path);
+        return;
+    }
+    
+    list_directory(path, detailed, all, recursive, 0);
+}
 
-Ose.color("green");
-Irosu.fo("? Success: Operation completed");
+// Recursive directory listing
+se list_directory(path: Str, detailed: Bool, all: Bool, recursive: Bool, depth: u32) {
+    if depth > 0 and !recursive {
+        return;
+    }
+    
+    ayanmo entries = Ogbe.dir_list(path);
+    
+    // Sort entries
+    entries.sort_by(|a, b| {
+        if a.is_dir and !b.is_dir { -1 }
+        else if !a.is_dir and b.is_dir { 1 }
+        else { Ika.compare(a.name, b.name) }
+    });
+    
+    fun entry ninu entries {
+        ayanmo full_path = path + "/" + entry.name;
+        
+        if !all and entry.name.starts_with(".") {
+            continue;
+        }
+        
+        if detailed {
+            ayanmo permissions = Ogbe.file_permissions(full_path);
+            ayanmo size = if entry.is_dir { "0" } else { Obara.to_str(entry.size) };
+            ayanmo modified = Iwori.format_date(entry.modified);
+            
+            Irosu.fo(permissions + " " + 
+                     Ika.pad_right(size, 10) + " " +
+                     Ika.pad_right(modified, 20) + " " +
+                     (if entry.is_dir { Color::Blue + entry.name + "/" } else { entry.name }) +
+                     Color::Reset);
+        } else {
+            Irosu.fo((if entry.is_dir { Color::Blue + entry.name + "/" } else { entry.name }) + Color::Reset);
+        }
+        
+        if recursive and entry.is_dir and depth < 10 { // Limit depth to prevent infinite loops
+            Irosu.fo("");
+            list_directory(full_path, detailed, all, recursive, depth + 1);
+        }
+    }
+}
 
-Ose.color("yellow");
-Irosu.fo("? Warning: File is large");
+// File information
+se file_info(config: Config, args: Vec<Str>) {
+    if args.length() == 0 {
+        Irosu.kigbe("Error: file info requires a file path");
+        return;
+    }
+    
+    ayanmo file_path = args[0];
+    
+    if !Ogbe.file_exists(file_path) and !Ogbe.dir_exists(file_path) {
+        Irosu.kigbe("File or directory not found: " + file_path);
+        return;
+    }
+    
+    Irosu.fo("=== File Information ===");
+    Irosu.fo("Path: " + file_path);
+    Irosu.fo("Type: " + (if Ogbe.dir_exists(file_path) { "Directory" } else { "File" }));
+    
+    if Ogbe.file_exists(file_path) {
+        ayanmo file_info = Ogbe.file_info(file_path);
+        Irosu.fo("Size: " + utils::format_bytes(file_info.size));
+        Irosu.fo("Created: " + Iwori.format_date(file_info.created));
+        Irosu.fo("Modified: " + Iwori.format_date(file_info.modified));
+        Irosu.fo("Accessed: " + Iwori.format_date(file_info.accessed));
+        Irosu.fo("Permissions: " + file_info.permissions);
+        Irosu.fo("Owner: " + file_info.owner);
+        Irosu.fo("Group: " + file_info.group);
+        
+        // File type detection
+        ayanmo mime_type = Ogbe.file_mime_type(file_path);
+        if mime_type != "" {
+            Irosu.fo("MIME Type: " + mime_type);
+        }
+        
+        // Checksums
+        if args.contains("--checksums") {
+            Irosu.fo("MD5: " + Ogbe.file_checksum(file_path, "md5"));
+            Irosu.fo("SHA1: " + Ogbe.file_checksum(file_path, "sha1"));
+            Irosu.fo("SHA256: " + Ogbe.file_checksum(file_path, "sha256"));
+        }
+    } else {
+        ayanmo dir_info = Ogbe.dir_info(file_path);
+        Irosu.fo("Files: " + Obara.to_str(dir_info.file_count));
+        Irosu.fo("Directories: " + Obara.to_str(dir_info.dir_count));
+        Irosu.fo("Total Size: " + utils::format_bytes(dir_info.total_size));
+        Irosu.fo("Created: " + Iwori.format_date(dir_info.created));
+        Irosu.fo("Permissions: " + dir_info.permissions);
+    }
+}
 
-Ose.color("red");
-Irosu.fo("? Error: Could not connect");
+// File search
+se file_search(config: Config, args: Vec<Str>) {
+    if args.length() < 2 {
+        Irosu.kigbe("Usage: ifa-tool file search <pattern> <directory>");
+        return;
+    }
+    
+    ayanmo pattern = args[0];
+    ayanmo directory = args[1];
+    ayanmo case_sensitive = args.contains("--case-sensitive");
+    ayanmo recursive = args.contains("--recursive") or args.contains("-r");
+    
+    Irosu.fo("Searching for: " + pattern);
+    Irosu.fo("Directory: " + directory);
+    Irosu.fo("Case sensitive: " + Obara.to_str(case_sensitive));
+    Irosu.fo("Recursive: " + Obara.to_str(recursive));
+    Irosu.fo("");
+    
+    ayanmo results = search_files(directory, pattern, case_sensitive, recursive, 0);
+    
+    if results.length() == 0 {
+        Irosu.fo("No matches found.");
+    } else {
+        Irosu.fo("Found " + Obara.to_str(results.length()) + " matches:");
+        fun result ninu results {
+            Irosu.fo("  " + result);
+        }
+    }
+}
 
-Ose.reset();
-Irosu.fo("Back to normal text");</code></pre>
+// Recursive file search
+se search_files(directory: Str, pattern: Str, case_sensitive: Bool, recursive: Bool, depth: u32) -> Vec<Str> {
+    ayanmo results = Vec::<Str>::new();
+    
+    if depth > 0 and !recursive {
+        pada results;
+    }
+    
+    gbiyanju {
+        ayanmo entries = Ogbe.dir_list(directory);
+        
+        fun entry ninu entries {
+            ayanmo full_path = directory + "/" + entry.name;
+            
+            // Check if name matches pattern
+            ayanmo name_matches = if case_sensitive {
+                Ika.contains(entry.name, pattern)
+            } else {
+                Ika.contains(Ika.to_lower(entry.name), Ika.to_lower(pattern))
+            };
+            
+            if name_matches {
+                results.push(full_path);
+            }
+            
+            // Search in file contents if it's a text file
+            if entry.is_file and utils::is_text_file(entry.name) {
+                ayanmo content = Ogbe.file_read(full_path);
+                ayanmo content_matches = if case_sensitive {
+                    Ika.contains(content, pattern)
+                } else {
+                    Ika.contains(Ika.to_lower(content), Ika.to_lower(pattern))
+                };
+                
+                if content_matches {
+                    results.push(full_path + " (content match)");
+                }
+            }
+            
+            // Recursively search subdirectories
+            if recursive and entry.is_dir and depth < 10 {
+                ayanmo sub_results = search_files(full_path, pattern, case_sensitive, recursive, depth + 1);
+                fun sub_result ninu sub_results {
+                    results.push(sub_result);
+                }
+            }
+        }
+    } gba (error) {
+        // Skip directories we can't access
+        if config.verbose {
+            Irosu.kigbe("Cannot access " + directory + ": " + error.message);
+        }
+    }
+    
+    pada results;
+}
 
-        <h2>Building for Distribution</h2>
-        <p>Compile your CLI tool for distribution:</p>
+// Network command
+se network_command(config: Config, args: Vec<Str>) {
+    if args.length() == 0 or args[0] == "--help" {
+        show_network_help();
+        return;
+    }
+    
+    ayanmo subcommand = args[0];
+    ayanmo sub_args = args.slice(1, args.length());
+    
+    match subcommand {
+        "ping" => network_ping(config, sub_args),
+        "scan" => network_scan(config, sub_args),
+        "interfaces" => network_interfaces(config, sub_args),
+        "speed" => network_speed(config, sub_args),
+        _ => {
+            Irosu.kigbe("Unknown network subcommand: " + subcommand);
+            Irosu.fo("Use 'ifa-tool network --help' for available subcommands");
+        }
+    }
+}
 
-        <pre><code># Build to standalone executable
-ifa build filestat.ifa -o filestat
+// Network ping
+se network_ping(config: Config, args: Vec<Str>) {
+    if args.length() == 0 {
+        Irosu.kigbe("Usage: ifa-tool network ping <host>");
+        return;
+    }
+    
+    ayanmo host = args[0];
+    ayanmo count = 4;
+    ayanmo timeout = 1000;
+    
+    // Parse optional arguments
+    fun i ninu 0..args.length() {
+        if args[i] == "--count" and i + 1 < args.length() {
+            count = Obara.parse_u32(args[i + 1]).unwrap_or(4);
+        } else if args[i] == "--timeout" and i + 1 < args.length() {
+            timeout = Obara.parse_u32(args[i + 1]).unwrap_or(1000);
+        }
+    }
+    
+    Irosu.fo("PING " + host + " (" + count + " packets)");
+    Irosu.fo("");
+    
+    ayanmo total_time = 0;
+    ayanmo received = 0;
+    
+    fun i ninu 1..count + 1 {
+        ayanmo start_time = Iwori.timestamp();
+        
+        gbiyanju {
+            ayanmo result = Otura.ping(host, timeout);
+            ayanmo end_time = Iwori.timestamp();
+            ayanmo rtt = (end_time - start_time) * 1000; // Convert to milliseconds
+            
+            if result.success {
+                Irosu.fo("Reply from " + host + ": bytes=" + result.bytes + 
+                         " time=" + Obara.to_str(rtt) + "ms TTL=" + Obara.to_str(result.ttl));
+                total_time += rtt;
+                received += 1;
+            } else {
+                Irosu.kigbe("Request timeout.");
+            }
+        } gba (error) {
+            Irosu.kigbe("Ping failed: " + error.message);
+        }
+        
+        if i < count {
+            Iwori.sleep(1000); // Wait 1 second between pings
+        }
+    }
+    
+    Irosu.fo("");
+    
+    // Statistics
+    ayanmo loss = ((count - received) * 100) / count;
+    ayanmo avg_time = if received > 0 { total_time / received } else { 0 };
+    
+    Irosu.fo("Ping statistics for " + host + ":");
+    Irosu.fo("    Packets: Sent = " + Obara.to_str(count) + 
+             ", Received = " + Obara.to_str(received) + 
+             ", Lost = " + Obara.to_str(count - received) + 
+             " (" + Obara.to_str(loss) + "% loss)");
+    
+    if received > 0 {
+        Irosu.fo("Approximate round trip times:");
+        Irosu.fo("    Minimum = 0ms, Maximum = " + Obara.to_str(total_time) + "ms, Average = " + Obara.to_str(avg_time) + "ms");
+    }
+}
 
-# Now users can run without ifa installed
-./filestat myfile.txt</code></pre>
+// Process command
+se process_command(config: Config, args: Vec<Str>) {
+    if args.length() == 0 or args[0] == "--help" {
+        show_process_help();
+        return;
+    }
+    
+    ayanmo subcommand = args[0];
+    ayanmo sub_args = args.slice(1, args.length());
+    
+    match subcommand {
+        "list" => process_list(config, sub_args),
+        "kill" => process_kill(config, sub_args),
+        "info" => process_info(config, sub_args),
+        "tree" => process_tree(config, sub_args),
+        _ => {
+            Irosu.kigbe("Unknown process subcommand: " + subcommand);
+            Irosu.fo("Use 'ifa-tool process --help' for available subcommands");
+        }
+    }
+}
 
-        <footer class="doc-footer">
-            <p><a href="rest-api.html">? Previous: REST API</a> � <a href="data-pipeline.html">Next: Data Pipeline ?</a>
-            </p>
-            <p><a href="../../index.html">Documentation Home</a></p>
+// Process listing
+se process_list(config: Config, args: Vec<Str>) {
+    ayanmo sort_by = "cpu";
+    ayanmo limit = 20;
+    
+    // Parse arguments
+    fun i ninu 0..args.length() {
+        if args[i] == "--sort" and i + 1 < args.length() {
+            sort_by = args[i + 1];
+        } else if args[i] == "--limit" and i + 1 < args.length() {
+            limit = Obara.parse_u32(args[i + 1]).unwrap_or(20);
+        }
+    }
+    
+    ayanmo processes = Ogbe.get_all_processes();
+    
+    // Sort processes
+    match sort_by {
+        "cpu" => processes.sort_by(|a, b| Obara.compare(b.cpu_percent, a.cpu_percent)),
+        "memory" => processes.sort_by(|a, b| Obara.compare(b.memory_mb, a.memory_mb)),
+        "name" => processes.sort_by(|a, b| Ika.compare(a.name, b.name)),
+        "pid" => processes.sort_by(|a, b| Obara.compare(a.pid, b.pid)),
+        _ => {}
+    }
+    
+    // Limit results
+    if processes.length() > limit {
+        processes = processes.slice(0, limit);
+    }
+    
+    // Display header
+    Irosu.fo("PID     NAME                    CPU%    MEMORY");
+    Irosu.fo("----    --------------------  -----   -------");
+    
+    // Display processes
+    fun proc ninu processes {
+        Irosu.fo(Ika.pad_left(Obara.to_str(proc.pid), 8) + "  " +
+                 Ika.pad_right(proc.name, 20) + "  " +
+                 Ika.pad_left(Obara.to_str(proc.cpu_percent), 5) + "%  " +
+                 utils::format_bytes(proc.memory_mb * 1024 * 1024));
+    }
+}
+
+// Interactive command
+se interactive_command(config: Config, args: Vec<Str>) {
+    Irosu.fo("=== Ifá-Lang Interactive Mode ===");
+    Irosu.fo("Type 'help' for available commands or 'exit' to quit");
+    Irosu.fo("");
+    
+    while ototo {
+        ayanmo input = Irosu.gbo("ifa-tool> ");
+        
+        if input == "exit" or input == "quit" {
+            break;
+        } else if input == "help" {
+            show_interactive_help();
+        } else if input == "" {
+            continue;
+        } else {
+            // Parse and execute command
+            ayanmo command_args = Ika.split(input, " ");
+            if command_args.length() > 0 {
+                gbiyanju {
+                    execute_command(config, command_args);
+                } gba (error) {
+                    Irosu.kigbe("Error: " + error.message);
+                }
+            }
+        }
+    }
+    
+    Irosu.fo("Goodbye!");
+}
+
+// Help functions for commands
+se show_system_help() {
+    Irosu.fo("USAGE:");
+    Irosu.fo("    ifa-tool system <SUBCOMMAND> [OPTIONS]");
+    Irosu.fo("");
+    Irosu.fo("SUBCOMMANDS:");
+    Irosu.fo("    info        Show system information");
+    Irosu.fo("    health      Check system health");
+    Irosu.fo("    monitor     Monitor system resources");
+    Irosu.fo("    cleanup     System cleanup and maintenance");
+    Irosu.fo("");
+    Irosu.fo("OPTIONS:");
+    Irosu.fo("    -d, --detailed    Show detailed information");
+    Irosu.fo("    -v, --verbose     Show verbose output");
+    Irosu.fo("    --interval <ms>   Monitor refresh interval");
+}
+
+se show_file_help() {
+    Irosu.fo("USAGE:");
+    Irosu.fo("    ifa-tool file <SUBCOMMAND> [OPTIONS]");
+    Irosu.fo("");
+    Irosu.fo("SUBCOMMANDS:");
+    Irosu.fo("    list        List directory contents");
+    Irosu.fo("    info        Show file/directory information");
+    Irosu.fo("    search      Search for files");
+    Irosu.fo("    clean       Clean temporary files");
+    Irosu.fo("");
+    Irosu.fo("OPTIONS:");
+    Irosu.fo("    -l, --detailed      Show detailed listing");
+    Irosu.fo("    -a, --all           Show hidden files");
+    Irosu.fo("    -r, --recursive    Recursive listing");
+    Irosu.fo("    --case-sensitive   Case-sensitive search");
+    Irosu.fo("    --checksums        Show file checksums");
+}
+
+se show_network_help() {
+    Irosu.fo("USAGE:");
+    Irosu.fo("    ifa-tool network <SUBCOMMAND> [OPTIONS]");
+    Irosu.fo("");
+    Irosu.fo("SUBCOMMANDS:");
+    Irosu.fo("    ping         Ping a host");
+    Irosu.fo("    scan         Scan network ports");
+    Irosu.fo("    interfaces   List network interfaces");
+    Irosu.fo("    speed        Test network speed");
+    Irosu.fo("");
+    Irosu.fo("OPTIONS:");
+    Irosu.fo("    --count <n>        Number of ping packets");
+    Irosu.fo("    --timeout <ms>     Ping timeout in milliseconds");
+}
+
+se show_process_help() {
+    Irosu.fo("USAGE:");
+    Irosu.fo("    ifa-tool process <SUBCOMMAND> [OPTIONS]");
+    Irosu.fo("");
+    Irosu.fo("SUBCOMMANDS:");
+    Irosu.fo("    list        List running processes");
+    Irosu.fo("    kill        Terminate a process");
+    Irosu.fo("    info        Show process information");
+    Irosu.fo("    tree        Show process tree");
+    Irosu.fo("");
+    Irosu.fo("OPTIONS:");
+    Irosu.fo("    --sort <field>     Sort by field (cpu, memory, name, pid)");
+    Irosu.fo("    --limit <n>        Limit number of processes");
+}
+
+se show_interactive_help() {
+    Irosu.fo("Available commands in interactive mode:");
+    Irosu.fo("  system <command>    System management");
+    Irosu.fo("  file <command>      File operations");
+    Irosu.fo("  network <command>   Network tools");
+    Irosu.fo("  process <command>   Process management");
+    Irosu.fo("  config <command>     Configuration");
+    Irosu.fo("  help                Show this help");
+    Irosu.fo("  exit                Exit interactive mode");
+    Irosu.fo("");
+    Irosu.fo("Use '<command> --help' for specific command help");
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Configuration Management</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/config.ifa</span>
+                </div>
+                <pre><code>// Configuration management
+use std;
+use Ogbe;
+
+// Configuration structure
+struct Config {
+    // General settings
+    verbose: Bool,
+    quiet: Bool,
+    color_mode: Str,
+    config_file: Str,
+    
+    // System settings
+    default_shell: Str,
+    editor: Str,
+    pager: Str,
+    
+    // Network settings
+    default_timeout: u32,
+    dns_servers: Vec<Str>,
+    
+    // Display settings
+    date_format: Str,
+    time_format: Str,
+    number_format: Str,
+    
+    // Security settings
+    checksum_algorithm: Str,
+    encryption_enabled: Bool,
+    
+    // Performance settings
+    thread_pool_size: u32,
+    cache_size: u64,
+    
+    // Custom settings
+    custom: Map<Str, Str>
+}
+
+// Default configuration
+se default_config() -> Config {
+    Config {
+        verbose: eke,
+        quiet: eke,
+        color_mode: "auto",
+        config_file: utils::get_config_dir() + "/config.toml",
+        
+        default_shell: Ogbe.get_env("SHELL").unwrap_or("/bin/bash"),
+        editor: Ogbe.get_env("EDITOR").unwrap_or("nano"),
+        pager: Ogbe.get_env("PAGER").unwrap_or("less"),
+        
+        default_timeout: 5000,
+        dns_servers: ["8.8.8.8", "8.8.4.4"],
+        
+        date_format: "%Y-%m-%d",
+        time_format: "%H:%M:%S",
+        number_format: "en_US",
+        
+        checksum_algorithm: "sha256",
+        encryption_enabled: eke,
+        
+        thread_pool_size: 4,
+        cache_size: 100 * 1024 * 1024, // 100MB
+        
+        custom: Map::<Str, Str>::new()
+    }
+}
+
+// Load configuration from file
+se load_file(config_file: Str) -> Config {
+    ayanmo mut config = default_config();
+    config.config_file = config_file;
+    
+    if !Ogbe.file_exists(config_file) {
+        // Create default config file
+        save_config(config);
+        return config;
+    }
+    
+    gbiyanju {
+        ayanmo content = Ogbe.file_read(config_file);
+        ayanmo toml_data = std::toml::from_str(content);
+        
+        // Parse TOML and update config
+        if toml_data.contains("verbose") {
+            config.verbose = toml_data.get("verbose").unwrap_or(eke);
+        }
+        
+        if toml_data.contains("quiet") {
+            config.quiet = toml_data.get("quiet").unwrap_or(eke);
+        }
+        
+        if toml_data.contains("color_mode") {
+            config.color_mode = toml_data.get("color_mode").unwrap_or("auto");
+        }
+        
+        if toml_data.contains("default_shell") {
+            config.default_shell = toml_data.get("default_shell").unwrap_or("/bin/bash");
+        }
+        
+        if toml_data.contains("editor") {
+            config.editor = toml_data.get("editor").unwrap_or("nano");
+        }
+        
+        if toml_data.contains("pager") {
+            config.pager = toml_data.get("pager").unwrap_or("less");
+        }
+        
+        if toml_data.contains("default_timeout") {
+            config.default_timeout = toml_data.get("default_timeout").unwrap_or(5000);
+        }
+        
+        if toml_data.contains("dns_servers") {
+            config.dns_servers = toml_data.get("dns_servers").unwrap_or(Vec::<Str>::new());
+        }
+        
+        if toml_data.contains("date_format") {
+            config.date_format = toml_data.get("date_format").unwrap_or("%Y-%m-%d");
+        }
+        
+        if toml_data.contains("time_format") {
+            config.time_format = toml_data.get("time_format").unwrap_or("%H:%M:%S");
+        }
+        
+        if toml_data.contains("number_format") {
+            config.number_format = toml_data.get("number_format").unwrap_or("en_US");
+        }
+        
+        if toml_data.contains("checksum_algorithm") {
+            config.checksum_algorithm = toml_data.get("checksum_algorithm").unwrap_or("sha256");
+        }
+        
+        if toml_data.contains("encryption_enabled") {
+            config.encryption_enabled = toml_data.get("encryption_enabled").unwrap_or(eke);
+        }
+        
+        if toml_data.contains("thread_pool_size") {
+            config.thread_pool_size = toml_data.get("thread_pool_size").unwrap_or(4);
+        }
+        
+        if toml_data.contains("cache_size") {
+            config.cache_size = toml_data.get("cache_size").unwrap_or(100 * 1024 * 1024);
+        }
+        
+        if toml_data.contains("custom") {
+            config.custom = toml_data.get("custom").unwrap_or(Map::<Str, Str>::new());
+        }
+        
+    } gba (error) {
+        Irosu.kigbe("Warning: Failed to parse config file: " + error.message);
+        Irosu.fo("Using default configuration");
+    }
+    
+    pada config;
+}
+
+// Save configuration to file
+se save_config(config: Config) {
+    gbiyanju {
+        // Create config directory if it doesn't exist
+        ayanmo config_dir = utils::get_config_dir();
+        if !Ogbe.dir_exists(config_dir) {
+            Ogbe.dir_create(config_dir);
+        }
+        
+        // Build TOML content
+        ayanmo toml_content = build_toml_content(config);
+        
+        // Write to file
+        Ogbe.file_write(config.config_file, toml_content);
+        
+    } gba (error) {
+        Irosu.kigbe("Failed to save config: " + error.message);
+    }
+}
+
+// Build TOML content from config
+se build_toml_content(config: Config) -> Str {
+    ayanmo mut content = "";
+    
+    content += "# Ifá-Lang CLI Tool Configuration\n";
+    content += "# Generated automatically - modify with care\n\n";
+    
+    content += "[general]\n";
+    content += "verbose = " + Obara.to_str(config.verbose) + "\n";
+    content += "quiet = " + Obara.to_str(config.quiet) + "\n";
+    content += "color_mode = \"" + config.color_mode + "\"\n\n";
+    
+    content += "[system]\n";
+    content += "default_shell = \"" + config.default_shell + "\"\n";
+    content += "editor = \"" + config.editor + "\"\n";
+    content += "pager = \"" + config.pager + "\"\n\n";
+    
+    content += "[network]\n";
+    content += "default_timeout = " + Obara.to_str(config.default_timeout) + "\n";
+    content += "dns_servers = [";
+    fun i ninu 0..config.dns_servers.length() {
+        if i > 0 { content += ", "; }
+        content += "\"" + config.dns_servers[i] + "\"";
+    }
+    content += "]\n\n";
+    
+    content += "[display]\n";
+    content += "date_format = \"" + config.date_format + "\"\n";
+    content += "time_format = \"" + config.time_format + "\"\n";
+    content += "number_format = \"" + config.number_format + "\"\n\n";
+    
+    content += "[security]\n";
+    content += "checksum_algorithm = \"" + config.checksum_algorithm + "\"\n";
+    content += "encryption_enabled = " + Obara.to_str(config.encryption_enabled) + "\n\n";
+    
+    content += "[performance]\n";
+    content += "thread_pool_size = " + Obara.to_str(config.thread_pool_size) + "\n";
+    content += "cache_size = " + Obara.to_str(config.cache_size) + "\n\n";
+    
+    if config.custom.length() > 0 {
+        content += "[custom]\n";
+        fun (key, value) ninu config.custom {
+            content += key + " = \"" + value + "\"\n";
+        }
+        content += "\n";
+    }
+    
+    pada content;
+}
+
+// Config command implementation
+se config_command(config: Config, args: Vec<Str>) {
+    if args.length() == 0 or args[0] == "--help" {
+        show_config_help();
+        return;
+    }
+    
+    ayanmo subcommand = args[0];
+    ayanmo sub_args = args.slice(1, args.length());
+    
+    match subcommand {
+        "show" => config_show(config, sub_args),
+        "set" => config_set(config, sub_args),
+        "get" => config_get(config, sub_args),
+        "reset" => config_reset(config, sub_args),
+        "edit" => config_edit(config, sub_args),
+        _ => {
+            Irosu.kigbe("Unknown config subcommand: " + subcommand);
+            Irosu.fo("Use 'ifa-tool config --help' for available subcommands");
+        }
+    }
+}
+
+// Show configuration
+se config_show(config: Config, args: Vec<Str>) {
+    ayanmo section = if args.length() > 0 { args[0] } else { "all" };
+    
+    match section {
+        "all" => {
+            Irosu.fo("=== Current Configuration ===");
+            Irosu.fo("");
+            
+            Irosu.fo("[general]");
+            Irosu.fo("verbose = " + Obara.to_str(config.verbose));
+            Irosu.fo("quiet = " + Obara.to_str(config.quiet));
+            Irosu.fo("color_mode = " + config.color_mode);
+            Irosu.fo("");
+            
+            Irosu.fo("[system]");
+            Irosu.fo("default_shell = " + config.default_shell);
+            Irosu.fo("editor = " + config.editor);
+            Irosu.fo("pager = " + config.pager);
+            Irosu.fo("");
+            
+            Irosu.fo("[network]");
+            Irosu.fo("default_timeout = " + Obara.to_str(config.default_timeout));
+            Irosu.fo("dns_servers = [" + Ika.join(config.dns_servers, ", ") + "]");
+            Irosu.fo("");
+            
+            Irosu.fo("[display]");
+            Irosu.fo("date_format = " + config.date_format);
+            Irosu.fo("time_format = " + config.time_format);
+            Irosu.fo("number_format = " + config.number_format);
+            Irosu.fo("");
+            
+            Irosu.fo("[security]");
+            Irosu.fo("checksum_algorithm = " + config.checksum_algorithm);
+            Irosu.fo("encryption_enabled = " + Obara.to_str(config.encryption_enabled));
+            Irosu.fo("");
+            
+            Irosu.fo("[performance]");
+            Irosu.fo("thread_pool_size = " + Obara.to_str(config.thread_pool_size));
+            Irosu.fo("cache_size = " + Obara.to_str(config.cache_size));
+            Irosu.fo("");
+            
+            if config.custom.length() > 0 {
+                Irosu.fo("[custom]");
+                fun (key, value) ninu config.custom {
+                    Irosu.fo(key + " = " + value);
+                }
+                Irosu.fo("");
+            }
+        }
+        
+        "general" => {
+            Irosu.fo("verbose = " + Obara.to_str(config.verbose));
+            Irosu.fo("quiet = " + Obara.to_str(config.quiet));
+            Irosu.fo("color_mode = " + config.color_mode);
+        }
+        
+        "system" => {
+            Irosu.fo("default_shell = " + config.default_shell);
+            Irosu.fo("editor = " + config.editor);
+            Irosu.fo("pager = " + config.pager);
+        }
+        
+        "network" => {
+            Irosu.fo("default_timeout = " + Obara.to_str(config.default_timeout));
+            Irosu.fo("dns_servers = [" + Ika.join(config.dns_servers, ", ") + "]");
+        }
+        
+        "display" => {
+            Irosu.fo("date_format = " + config.date_format);
+            Irosu.fo("time_format = " + config.time_format);
+            Irosu.fo("number_format = " + config.number_format);
+        }
+        
+        "security" => {
+            Irosu.fo("checksum_algorithm = " + config.checksum_algorithm);
+            Irosu.fo("encryption_enabled = " + Obara.to_str(config.encryption_enabled));
+        }
+        
+        "performance" => {
+            Irosu.fo("thread_pool_size = " + Obara.to_str(config.thread_pool_size));
+            Irosu.fo("cache_size = " + Obara.to_str(config.cache_size));
+        }
+        
+        "custom" => {
+            if config.custom.length() == 0 {
+                Irosu.fo("No custom configuration values.");
+            } else {
+                fun (key, value) ninu config.custom {
+                    Irosu.fo(key + " = " + value);
+                }
+            }
+        }
+        
+        _ => {
+            Irosu.kigbe("Unknown config section: " + section);
+            Irosu.fo("Available sections: all, general, system, network, display, security, performance, custom");
+        }
+    }
+}
+
+// Set configuration value
+se config_set(config: Config, args: Vec<Str>) {
+    if args.length() < 2 {
+        Irosu.kigbe("Usage: ifa-tool config set <key> <value>");
+        return;
+    }
+    
+    ayanmo key = args[0];
+    ayanmo value = args[1];
+    
+    // Update configuration
+    ayanmo mut updated_config = config;
+    
+    match key {
+        "verbose" => {
+            if value == "true" or value == "1" {
+                updated_config.verbose = otito;
+            } else if value == "false" or value == "0" {
+                updated_config.verbose = eke;
+            } else {
+                Irosu.kigbe("Invalid value for verbose: " + value);
+                return;
+            }
+        }
+        
+        "quiet" => {
+            if value == "true" or value == "1" {
+                updated_config.quiet = otito;
+            } else if value == "false" or value == "0" {
+                updated_config.quiet = eke;
+            } else {
+                Irosu.kigbe("Invalid value for quiet: " + value);
+                return;
+            }
+        }
+        
+        "color_mode" => {
+            if value == "auto" or value == "always" or value == "never" {
+                updated_config.color_mode = value;
+            } else {
+                Irosu.kigbe("Invalid color_mode: " + value + " (must be auto, always, or never)");
+                return;
+            }
+        }
+        
+        "default_shell" => {
+            updated_config.default_shell = value;
+        }
+        
+        "editor" => {
+            updated_config.editor = value;
+        }
+        
+        "pager" => {
+            updated_config.pager = value;
+        }
+        
+        "default_timeout" => {
+            ayanmo timeout = Obara.parse_u32(value);
+            if timeout.is_ok() {
+                updated_config.default_timeout = timeout.unwrap();
+            } else {
+                Irosu.kigbe("Invalid timeout value: " + value);
+                return;
+            }
+        }
+        
+        "checksum_algorithm" => {
+            if value == "md5" or value == "sha1" or value == "sha256" or value == "sha512" {
+                updated_config.checksum_algorithm = value;
+            } else {
+                Irosu.kigbe("Invalid checksum algorithm: " + value);
+                return;
+            }
+        }
+        
+        _ => {
+            // Custom setting
+            updated_config.custom.insert(key, value);
+        }
+    }
+    
+    // Save updated configuration
+    save_config(updated_config);
+    
+    Irosu.fo("Set " + key + " = " + value);
+}
+
+// Get configuration value
+se config_get(config: Config, args: Vec<Str>) {
+    if args.length() == 0 {
+        Irosu.kigbe("Usage: ifa-tool config get <key>");
+        return;
+    }
+    
+    ayanmo key = args[0];
+    
+    match key {
+        "verbose" => Irosu.fo(Obara.to_str(config.verbose)),
+        "quiet" => Irosu.fo(Obara.to_str(config.quiet)),
+        "color_mode" => Irosu.fo(config.color_mode),
+        "default_shell" => Irosu.fo(config.default_shell),
+        "editor" => Irosu.fo(config.editor),
+        "pager" => Irosu.fo(config.pager),
+        "default_timeout" => Irosu.fo(Obara.to_str(config.default_timeout)),
+        "checksum_algorithm" => Irosu.fo(config.checksum_algorithm),
+        "encryption_enabled" => Irosu.fo(Obara.to_str(config.encryption_enabled)),
+        "thread_pool_size" => Irosu.fo(Obara.to_str(config.thread_pool_size)),
+        "cache_size" => Irosu.fo(Obara.to_str(config.cache_size)),
+        _ => {
+            if config.custom.contains_key(key) {
+                Irosu.fo(config.custom.get(key));
+            } else {
+                Irosu.kigbe("Unknown configuration key: " + key);
+            }
+        }
+    }
+}
+
+// Reset configuration
+se config_reset(config: Config, args: Vec<Str>) {
+    ayanmo section = if args.length() > 0 { args[0] } else { "all" };
+    
+    match section {
+        "all" => {
+            ayanmo default_config = default_config();
+            save_config(default_config);
+            Irosu.fo("Configuration reset to defaults");
+        }
+        
+        "general" => {
+            // Reset general settings
+            ayanmo mut reset_config = config;
+            reset_config.verbose = eke;
+            reset_config.quiet = eke;
+            reset_config.color_mode = "auto";
+            save_config(reset_config);
+            Irosu.fo("General settings reset to defaults");
+        }
+        
+        _ => {
+            Irosu.kigbe("Cannot reset section: " + section);
+            Irosu.fo("Available sections: all, general");
+        }
+    }
+}
+
+// Edit configuration
+se config_edit(config: Config, args: Vec<Str>()) {
+    ayanmo editor = config.editor;
+    if args.length() > 0 {
+        editor = args[0];
+    }
+    
+    Irosu.fo("Opening configuration file in " + editor);
+    
+    gbiyanju {
+        Ogbe.process_run(editor + " " + config.config_file);
+    } gba (error) {
+        Irosu.kigbe("Failed to open editor: " + error.message);
+    }
+}
+
+se show_config_help() {
+    Irosu.fo("USAGE:");
+    Irosu.fo("    ifa-tool config <SUBCOMMAND> [OPTIONS]");
+    Irosu.fo("");
+    Irosu.fo("SUBCOMMANDS:");
+    Irosu.fo("    show        Show configuration values");
+    Irosu.fo("    set         Set configuration value");
+    Irosu.fo("    get         Get configuration value");
+    Irosu.fo("    reset       Reset configuration to defaults");
+    Irosu.fo("    edit        Edit configuration file");
+    Irosu.fo("");
+    Irosu.fo("EXAMPLES:");
+    Irosu.fo("    ifa-tool config show");
+    Irosu.fo("    ifa-tool config show general");
+    Irosu.fo("    ifa-tool config set verbose true");
+    Irosu.fo("    ifa-tool config set editor vim");
+    Irosu.fo("    ifa-tool config get color_mode");
+    Irosu.fo("    ifa-tool config reset all");
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Utility Functions</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/utils.ifa</span>
+                </div>
+                <pre><code>// Utility functions
+use Iwori;
+use Ogbe;
+use Ika;
+
+// Format bytes to human readable format
+se format_bytes(bytes: u64) -> Str {
+    ayanmo units = ["B", "KB", "MB", "GB", "TB", "PB"];
+    ayanmo mut size = bytes as f64;
+    ayanmo mut unit_index = 0;
+    
+    while size >= 1024.0 and unit_index < units.length() - 1 {
+        size /= 1024.0;
+        unit_index += 1;
+    }
+    
+    if unit_index == 0 {
+        pada Obara.to_str(bytes) + " " + units[unit_index];
+    } else {
+        pada Obara.format(size, 2) + " " + units[unit_index];
+    }
+}
+
+// Format duration to human readable format
+se format_duration(milliseconds: u64) -> Str {
+    ayanmo seconds = milliseconds / 1000;
+    ayanmo minutes = seconds / 60;
+    ayanmo hours = minutes / 60;
+    ayanmo days = hours / 24;
+    
+    if days > 0 {
+        ayanmo remaining_hours = hours % 24;
+        ayanmo remaining_minutes = minutes % 60;
+        pada Obara.to_str(days) + "d " + 
+             Obara.to_str(remaining_hours) + "h " + 
+             Obara.to_str(remaining_minutes) + "m";
+    } else if hours > 0 {
+        ayanmo remaining_minutes = minutes % 60;
+        ayanmo remaining_seconds = seconds % 60;
+        pada Obara.to_str(hours) + "h " + 
+             Obara.to_str(remaining_minutes) + "m " + 
+             Obara.to_str(remaining_seconds) + "s";
+    } else if minutes > 0 {
+        ayanmo remaining_seconds = seconds % 60;
+        pada Obara.to_str(minutes) + "m " + 
+             Obara.to_str(remaining_seconds) + "s";
+    } else {
+        pada Obara.to_str(seconds) + "s";
+    }
+}
+
+// Check if file is text file based on extension
+se is_text_file(filename: Str) -> Bool {
+    ayanmo text_extensions = [
+        ".txt", ".md", ".json", ".xml", ".html", ".css", ".js", ".ts",
+        ".py", ".rs", ".go", ".java", ".c", ".cpp", ".h", ".hpp",
+        ".sh", ".bash", ".zsh", ".fish", ".ps1", ".bat", ".cmd",
+        ".log", ".cfg", ".conf", ".ini", ".toml", ".yaml", ".yml",
+        ".ifa", ".ifab", ".csv", ".tsv"
+    ];
+    
+    ayanmo extension = "";
+    ayanmo dot_index = Ika.last_index_of(filename, ".");
+    if dot_index != -1 {
+        extension = Ika.substring(filename, dot_index);
+    }
+    
+    if extension == "" {
+        return eke; // No extension, assume binary
+    }
+    
+    fun text_ext ninu text_extensions {
+        if extension == text_ext {
+            pada otito;
+        }
+    }
+    
+    pada eke;
+}
+
+// Get configuration directory
+se get_config_dir() -> Str {
+    ayanmo home_dir = Ogbe.get_env("HOME").unwrap_or(Ogbe.get_env("USERPROFILE").unwrap_or("."));
+    
+    // Check for XDG_CONFIG_HOME first (Linux standard)
+    ayanmo xdg_config = Ogbe.get_env("XDG_CONFIG_HOME");
+    if xdg_config.is_some() {
+        pada xdg_config.unwrap() + "/ifa-tool";
+    }
+    
+    // Fall back to ~/.config
+    ayanmo config_dir = home_dir + "/.config/ifa-tool";
+    
+    // On Windows, use AppData
+    if Ogbe.os_name().contains("Windows") {
+        ayanmo app_data = Ogbe.get_env("APPDATA");
+        if app_data.is_some() {
+            config_dir = app_data.unwrap() + "/IfaTool";
+        }
+    }
+    
+    pada config_dir;
+}
+
+// Check system health
+se check_system_health() -> Map<Str, Str> {
+    ayanmo health = Map::<Str, Str>::new();
+    
+    // CPU health
+    ayanmo cpu_usage = Ogbe.cpu_usage();
+    if cpu_usage > 90 {
+        health.insert("cpu", "critical");
+    } else if cpu_usage > 70 {
+        health.insert("cpu", "warning");
+    } else {
+        health.insert("cpu", "ok");
+    }
+    
+    // Memory health
+    ayanmo mem_info = Ogbe.memory_info();
+    ayanmo mem_usage = (mem_info.used * 100) / mem_info.total;
+    if mem_usage > 95 {
+        health.insert("memory", "critical");
+    } else if mem_usage > 85 {
+        health.insert("memory", "warning");
+    } else {
+        health.insert("memory", "ok");
+    }
+    
+    // Disk health
+    ayanmo disk_info = Ogbe.disk_info("/");
+    ayanmo disk_usage = (disk_info.used * 100) / disk_info.total;
+    if disk_usage > 98 {
+        health.insert("disk", "critical");
+    } else if disk_usage > 90 {
+        health.insert("disk", "warning");
+    } else {
+        health.insert("disk", "ok");
+    }
+    
+    // Network health
+    gbiyanju {
+        ayanmo ping_result = Otura.ping("8.8.8.8", 5000);
+        if ping_result.success {
+            health.insert("network", "ok");
+        } else {
+            health.insert("network", "critical");
+        }
+    } gba (error) {
+        health.insert("network", "warning");
+    }
+    
+    // Overall health
+    ayanmo critical_count = 0;
+    ayanmo warning_count = 0;
+    
+    fun (component, status) ninu health {
+        if status == "critical" {
+            critical_count += 1;
+        } else if status == "warning" {
+            warning_count += 1;
+        }
+    }
+    
+    if critical_count > 0 {
+        health.insert("overall", "critical");
+    } else if warning_count > 0 {
+        health.insert("overall", "warning");
+    } else {
+        health.insert("overall", "ok");
+    }
+    
+    health.insert("timestamp", Obara.to_str(Iwori.timestamp()));
+    
+    pada health;
+}
+
+// Validate file path
+se validate_file_path(path: Str) -> Result<(), Str> {
+    if path == "" {
+        pada Err("Path cannot be empty");
+    }
+    
+    // Check for invalid characters
+    ayanmo invalid_chars = ["<", ">", ":", "\"", "|", "?", "*"];
+    fun char ninu invalid_chars {
+        if Ika.contains(path, char) {
+            pada Err("Path contains invalid character: " + char);
+        }
+    }
+    
+    // Check path length (platform dependent)
+    ayanmo max_length = if Ogbe.os_name().contains("Windows") { 260 } else { 4096 };
+    if Ika.length(path) > max_length {
+        pada Err("Path too long (max " + Obara.to_str(max_length) + " characters)");
+    }
+    
+    // Check if parent directory exists
+    ayanmo parent_dir = Ika.substring(path, 0, Ika.last_index_of(path, "/"));
+    if parent_dir != "" and !Ogbe.dir_exists(parent_dir) {
+        pada Err("Parent directory does not exist: " + parent_dir);
+    }
+    
+    pada Ok(());
+}
+
+// Parse size string (e.g., "1GB", "500MB")
+se parse_size(size_str: Str) -> Result<u64, Str> {
+    ayanmo units = Map::<Str, u64>::new();
+    units.insert("B", 1);
+    units.insert("KB", 1024);
+    units.insert("MB", 1024 * 1024);
+    units.insert("GB", 1024 * 1024 * 1024);
+    units.insert("TB", 1024 * 1024 * 1024 * 1024);
+    
+    // Find unit at end of string
+    ayanmo unit = "";
+    fun (unit_str, multiplier) ninu units {
+        if Ika.ends_with(size_str, unit_str) {
+            unit = unit_str;
+            break;
+        }
+    }
+    
+    if unit == "" {
+        pada Err("Invalid size format. Use units like B, KB, MB, GB, TB");
+    }
+    
+    ayanmo number_part = Ika.substring(size_str, 0, Ika.length(size_str) - Ika.length(unit));
+    ayanmo number = Obara.parse_f64(number_part);
+    
+    if number.is_err() {
+        pada Err("Invalid number: " + number_part);
+    }
+    
+    ayanmo bytes = (number.unwrap() * units.get(unit).unwrap() as f64) as u64;
+    pada Ok(bytes);
+}
+
+// Generate progress bar
+se progress_bar(current: u64, total: u64, width: u32) -> Str {
+    ayanmo percentage = (current * 100) / total;
+    ayanmo filled = (current * width) / total;
+    ayanmo empty = width - filled;
+    
+    ayanmo bar = Ika.repeat("=", filled) + Ika.repeat("-", empty);
+    
+    "[" + bar + "] " + Obara.to_str(percentage) + "% (" + 
+    Obara.to_str(current) + "/" + Obara.to_str(total) + ")";
+}
+
+// Color constants
+enum Color {
+    Reset = "\x1b[0m",
+    Red = "\x1b[31m",
+    Green = "\x1b[32m",
+    Yellow = "\x1b[33m",
+    Blue = "\x1b[34m",
+    Magenta = "\x1b[35m",
+    Cyan = "\x1b[36m",
+    White = "\x1b[37m",
+    BrightRed = "\x1b[91m",
+    BrightGreen = "\x1b[92m",
+    BrightYellow = "\x1b[93m",
+    BrightBlue = "\x1b[94m",
+    BrightMagenta = "\x1b[95m",
+    BrightCyan = "\x1b[96m",
+    BrightWhite = "\x1b[97m"
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Testing</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">tests/command_tests.ifa</span>
+                </div>
+                <pre><code>// Command tests
+test_suite "System Command Tests" {
+    test "system info command" {
+        ayanmo config = Config::default();
+        ayanmo args = ["info"];
+        
+        // This would normally print to stdout
+        // In tests, we capture the output
+        ayanmo output = capture_output(|| {
+            system_command(config, args);
+        });
+        
+        ewo Ika.contains(output, "Operating System"), "Should show OS info";
+        ewo Ika.contains(output, "Hardware"), "Should show hardware info";
+        ewo Ika.contains(output, "Memory"), "Should show memory info";
+    }
+    
+    test "system health check" {
+        ayanmo config = Config::default();
+        ayanmo args = [];
+        
+        ayanmo output = capture_output(|| {
+            system_health(config, args);
+        });
+        
+        ewo Ika.contains(output, "Overall Status"), "Should show overall status";
+        // The actual status depends on the system, so we just check the format
+    }
+    
+    test "file list command" {
+        ayanmo config = Config::default();
+        ayanmo temp_dir = create_temp_dir();
+        
+        // Create some test files
+        Ogbe.file_write(temp_dir + "/test1.txt", "test content");
+        Ogbe.file_write(temp_dir + "/test2.txt", "more content");
+        Ogbe.dir_create(temp_dir + "/subdir");
+        
+        ayanmo args = [temp_dir];
+        
+        ayanmo output = capture_output(|| {
+            file_list(config, args);
+        });
+        
+        ewo Ika.contains(output, "test1.txt"), "Should list test1.txt";
+        ewo Ika.contains(output, "test2.txt"), "Should list test2.txt";
+        ewo Ika.contains(output, "subdir/"), "Should list subdir";
+        
+        // Cleanup
+        Ogbe.remove_dir_all(temp_dir);
+    }
+    
+    test "file info command" {
+        ayanmo config = Config::default();
+        ayanmo temp_file = create_temp_file();
+        Ogbe.file_write(temp_file, "test content");
+        
+        ayanmo args = [temp_file];
+        
+        ayanmo output = capture_output(|| {
+            file_info(config, args);
+        });
+        
+        ewo Ika.contains(output, "File Information"), "Should show file info header";
+        ewo Ika.contains(output, "Size:"), "Should show file size";
+        ewo Ika.contains(output, "Created:"), "Should show creation time";
+        
+        // Cleanup
+        Ogbe.remove_file(temp_file);
+    }
+    
+    test "network ping command" {
+        ayanmo config = Config::default();
+        ayanmo args = ["127.0.0.1", "--count", "1", "--timeout", "1000"];
+        
+        ayanmo output = capture_output(|| {
+            network_ping(config, args);
+        });
+        
+        ewo Ika.contains(output, "PING 127.0.0.1"), "Should show ping header";
+        // Ping results depend on network, so we just check the format
+    }
+    
+    test "config show command" {
+        ayanmo config = Config::default();
+        ayanmo args = [];
+        
+        ayanmo output = capture_output(|| {
+            config_show(config, args);
+        });
+        
+        ewo Ika.contains(output, "Current Configuration"), "Should show config header";
+        ewo Ika.contains(output, "[general]"), "Should show general section";
+        ewo Ika.contains(output, "verbose ="), "Should show verbose setting";
+    }
+    
+    test "config set and get commands" {
+        ayanmo config = Config::default();
+        ayanmo temp_config = create_temp_file();
+        
+        // Set a value
+        ayanmo set_args = ["verbose", "true"];
+        config_set(config, set_args);
+        
+        // Load the updated config
+        ayanmo updated_config = Config::load_file(temp_config);
+        
+        // Get the value
+        ayanmo get_args = ["verbose"];
+        ayanmo output = capture_output(|| {
+            config_get(updated_config, get_args);
+        });
+        
+        ewo Ika.contains(output, "true"), "Should get the set value";
+        
+        // Cleanup
+        Ogbe.remove_file(temp_config);
+    }
+}
+
+test_suite "Utility Function Tests" {
+    test "format_bytes function" {
+        ewo format_bytes(1024) == "1.00 KB", "Should format KB correctly";
+        ewo format_bytes(1024 * 1024) == "1.00 MB", "Should format MB correctly";
+        ewo format_bytes(1024 * 1024 * 1024) == "1.00 GB", "Should format GB correctly";
+        ewo format_bytes(500) == "500 B", "Should format bytes correctly";
+    }
+    
+    test "format_duration function" {
+        ewo format_duration(1000) == "1s", "Should format seconds correctly";
+        ewo format_duration(60 * 1000) == "1m 0s", "Should format minutes correctly";
+        ewo format_duration(3600 * 1000) == "1h 0m 0s", "Should format hours correctly";
+        ewo format_duration(24 * 3600 * 1000) == "1d 0h 0m", "Should format days correctly";
+    }
+    
+    test "is_text_file function" {
+        ewo is_text_file("test.txt") == otito, "Should recognize .txt as text";
+        ewo is_text_file("test.md") == otito, "Should recognize .md as text";
+        ewo is_text_file("test.ifa") == otito, "Should recognize .ifa as text";
+        ewo is_text_file("test.exe") == eke, "Should not recognize .exe as text";
+        ewo is_text_file("test") == eke, "Should not recognize extensionless as text";
+    }
+    
+    test "parse_size function" {
+        ewo parse_size("1B") == Ok(1), "Should parse bytes correctly";
+        ewo parse_size("1KB") == Ok(1024), "Should parse KB correctly";
+        ewo parse_size("1MB") == Ok(1024 * 1024), "Should parse MB correctly";
+        ewo parse_size("1GB") == Ok(1024 * 1024 * 1024), "Should parse GB correctly";
+        ewo parse_size("invalid") == Err("Invalid size format"), "Should reject invalid format";
+        ewo parse_size("1XB") == Err("Invalid size format"), "Should reject invalid unit";
+    }
+}
+
+// Helper functions for tests
+se create_temp_dir() -> Str {
+    ayanmo temp_dir = "/tmp/ifa_test_" + Obara.to_str(Iwori.timestamp());
+    Ogbe.dir_create(temp_dir);
+    temp_dir
+}
+
+se create_temp_file() -> Str {
+    ayanmo temp_file = "/tmp/ifa_test_" + Obara.to_str(Iwori.timestamp()) + ".txt";
+    Ogbe.file_write(temp_file, "");
+    temp_file
+}
+
+se capture_output(fn: ese () -> ()) -> Str {
+    // In a real implementation, this would capture stdout
+    // For now, we'll return a placeholder
+    "captured_output_placeholder"
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Building and Deployment</h2>
+            
+            <h3>Build Configuration</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">ifa.toml</span>
+                </div>
+                <pre><code>[package]
+name = "ifa-cli-tool"
+version = "1.3.0"
+description = "Ifá-Lang command-line tool for system management"
+authors = ["Ifá-Lang Community <community@ifa-lang.org>"]
+license = "MIT"
+repository = "https://github.com/ifa-lang/ifa-cli-tool"
+homepage = "https://ifa-lang.org/tools/cli"
+keywords = ["cli", "system", "management", "ifa-lang"]
+categories = ["command-line-utilities", "system-tools"]
+
+[dependencies]
+ifa-cli = "1.3.0"
+ifa-core = "1.3.0"
+ifa-std = "1.3.0"
+
+[dev-dependencies]
+ifa-testing = "0.5.0"
+
+[[bin]]
+name = "ifa-tool"
+path = "src/main.ifa"
+
+[features]
+default = ["system", "network", "process"]
+system = []
+network = ["ifa-std/otura"]
+process = ["ifa-std/ogbe"]
+file = ["ifa-std/odi"]
+interactive = []
+config = ["serde", "toml"]
+
+# Platform-specific features
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["winuser", "fileapi", "handleapi"] }</code></pre>
+            </div>
+
+            <h3>Installation</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Installation Methods</span>
+                </div>
+                <pre><code># Install from source
+git clone https://github.com/ifa-lang/ifa-cli-tool
+cd ifa-cli-tool
+cargo install --path .
+
+# Install from package manager (when available)
+brew install ifa-cli-tool
+apt install ifa-cli-tool
+winget install ifa-cli-tool
+
+# Download pre-compiled binary
+curl -L https://github.com/ifa-lang/ifa-cli-tool/releases/latest/download/ifa-tool-linux-x64 -o ifa-tool
+chmod +x ifa-tool
+sudo mv ifa-tool /usr/local/bin/
+
+# Using Ifá-Lang installer
+curl -sSL https://install.ifa-lang.org | sh
+ifa-tool --version</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>CLI Design</h3>
+            <ul>
+                <li><strong>Consistent Interface:</strong> Follow standard CLI conventions</li>
+                <li><strong>Clear Help:</strong> Provide comprehensive help for all commands</li>
+                <li><strong>Error Messages:</strong> Use culturally appropriate Yoruba proverbs</li>
+                <li><strong>Exit Codes:</strong> Use standard exit codes (0=success, 1=error, 2=critical)</li>
+            </ul>
+
+            <h3>Performance</h3>
+            <ul>
+                <li><strong>Lazy Loading:</strong> Load modules only when needed</li>
+                <li><strong>Caching:</strong> Cache expensive operations</li>
+                <li><strong>Parallel Processing:</strong> Use Osa domain for concurrent operations</li>
+                <li><strong>Memory Management:</strong> Use Opon system efficiently</li>
+            </ul>
+
+            <h3>Security</h3>
+            <ul>
+                <li><strong>Input Validation:</strong> Validate all user input</li>
+                <li><strong>Path Traversal:</strong> Prevent directory traversal attacks</li>
+                <li><strong>Command Injection:</strong> Sanitize shell commands</li>
+                <li><strong>Privilege Separation:</strong> Use minimum required privileges</li>
+            </ul>
+
+            <h3>Testing</h3>
+            <ul>
+                <li><strong>Unit Tests:</strong> Test individual functions</li>
+                <li><strong>Integration Tests:</strong> Test command workflows</li>
+                <li><strong>Property Tests:</strong> Test with random inputs</li>
+                <li><strong>Manual Testing:</strong> Test on different platforms</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Use Cases Documentation</a></p>
         </footer>
     </div>
-        <script src="../../js/nav.js"></script>
+
     <script src="../../js/common.js"></script>
 </body>
 
 </html>
-

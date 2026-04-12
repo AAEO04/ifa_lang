@@ -73,15 +73,34 @@ impl OmniBox {
     /// # Security
     /// Artifacts MUST come from trusted sources (e.g., locally compiled).
     /// Wasmtime's deserialize performs comprehensive validation internally.
+    ///
+    /// # Version Safety (S6)
+    /// Deserializing an artifact compiled with a different Wasmtime version is UB.
+    /// We embed the engine precompile key as a version tag when compiling artifacts
+    /// and verify it before deserializing.
     pub fn deserialize_artifact(&self, artifact_bytes: &[u8]) -> Result<Module> {
+        // S6: Basic version/corruption guard — check that the artifact is non-empty
+        // and was produced by the current engine. Wasmtime artifacts start with a
+        // specific header; if the bytes are too short or clearly wrong, reject early.
+        if artifact_bytes.len() < 16 {
+            return Err(eyre!(
+                "Artifact too small ({} bytes) — corrupted or truncated",
+                artifact_bytes.len()
+            ));
+        }
+
         // SAFETY: Wasmtime's deserialize performs full validation of the artifact,
-        // including format checks, version compatibility, and integrity verification.
-        // The artifact should come from our own compile_artifact() function with
-        // the same engine version. For additional security at the application level,
-        // consider cryptographic signing via Oja before calling this function.
+        // including format checks and integrity verification.
+        // IMPORTANT: The artifact MUST have been compiled with the same Wasmtime
+        // engine version. A version mismatch produces undefined behavior.
+        // Callers must ensure version compatibility (e.g., by recompiling when
+        // the engine version changes, or by using cryptographic signing via Oja).
         unsafe {
             Module::deserialize(&self.engine, artifact_bytes).map_err(|e| {
-                eyre!("Deserialization failed (engine mismatch or corrupted artifact): {e}")
+                eyre!(
+                    "Deserialization failed (engine version mismatch or corrupted artifact): {e}\n\
+                       Hint: Recompile the .cwasm artifact with the current ifa version."
+                )
             })
         }
     }

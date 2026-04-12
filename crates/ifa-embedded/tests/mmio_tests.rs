@@ -69,7 +69,7 @@ fn test_mmio_write() {
         0xFF,
     ];
 
-    vm.run(&bytecode).unwrap();
+    vm.start(&bytecode).unwrap();
 
     // Since scope issues prevent checking mock after run if VM holds borrow,
     // we use a scoped test in test_mmio_write_scoped.
@@ -91,7 +91,7 @@ fn test_mmio_write_scoped() {
             0xFF,
         ];
 
-        vm.run(&bytecode).unwrap();
+        vm.start(&bytecode).unwrap();
     } // vm drops here, releasing mock borrow
 
     assert_eq!(mock.last_write_addr, 0x4000_1000);
@@ -117,9 +117,9 @@ fn test_mmio_read() {
             0xFF,
         ];
 
-        let res = vm.run(&bytecode).unwrap();
+        let res = vm.start(&bytecode).unwrap();
 
-        if let EmbeddedValue::Int(val) = res {
+        if let ifa_embedded::VmExit::Halted(EmbeddedValue::Int(val)) = res {
             // 0xDEAD_BEEF as i32 is -559038737
             assert_eq!(val as u32, 0xDEAD_BEEF);
         } else {
@@ -141,7 +141,7 @@ fn test_mmio_sized_write() {
             0x01, 0x78, 0x56, 0x34, 0x12, 0xA0, 0x00, 0x00, 0x00, 0x40, 0xA3, // Store8
             0xFF,
         ];
-        vm.run(&code).unwrap();
+        vm.start(&code).unwrap();
     }
     assert_eq!(mock.last_write_width, 8);
     assert_eq!(mock.last_write_val, 0x78);
@@ -155,7 +155,7 @@ fn test_mmio_sized_write() {
             0x01, 0x78, 0x56, 0x34, 0x12, 0xA0, 0x00, 0x00, 0x00, 0x40, 0xA4, // Store16
             0xFF,
         ];
-        vm.run(&code).unwrap();
+        vm.start(&code).unwrap();
     }
     assert_eq!(mock.last_write_width, 16);
     assert_eq!(mock.last_write_val, 0x5678);

@@ -120,8 +120,29 @@ impl Sandbox {
 
     /// Set process limit (for fork bomb prevention)
     pub fn set_process_limit(&mut self, _count: usize) {
-        // Note: Process limiting would require OS-specific implementation
-        // This is a placeholder for the API
+        #[cfg(unix)]
+        {
+            unsafe {
+                let limit = libc::rlimit {
+                    rlim_cur: _count as libc::rlim_t,
+                    rlim_max: _count as libc::rlim_t,
+                };
+                if libc::setrlimit(libc::RLIMIT_NPROC, &limit) != 0 {
+                    eprintln!("[Sandbox] Failed to enforce RLIMIT_NPROC cgroup constraint.");
+                }
+            }
+        }
+        #[cfg(windows)]
+        {
+            // Windows Job Object enforcement (System Engineering policy)
+            // A true production integration calls CreateJobObject / SetInformationJobObject
+            // with JOBOBJECT_BASIC_LIMIT_INFORMATION (ActiveProcessLimit = _count).
+            // For zero-cost build speed, we emit a warning if the host attempts native fork-control
+            // on Windows without a supervisor.
+            eprintln!(
+                "[Sandbox] Note: Native Windows Job Object process limiting requires the supervisor wrapper. Relying on Wasmtime limits."
+            );
+        }
     }
 
     // =========================================================================

@@ -7,7 +7,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 
 // Import real crypto libraries
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
@@ -26,12 +26,11 @@ impl OduHandler for IreteHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
-
         let arg0 = args.get(0);
-        
+
         match method {
             // SHA256 hash
             "sha256" | "fọwọsi" => {
@@ -73,7 +72,10 @@ impl OduHandler for IreteHandler {
                                 }
                             },
                             Err(e) => {
-                                return Err(IfaError::Runtime(format!("Base64 decode failed: {}", e)));
+                                return Err(IfaError::Runtime(format!(
+                                    "Base64 decode failed: {}",
+                                    e
+                                )));
                             }
                         }
                     }
@@ -136,7 +138,10 @@ impl OduHandler for IreteHandler {
                         // Generate salt
                         let mut salt = [0u8; 16];
                         if let Err(e) = getrandom::getrandom(&mut salt) {
-                            return Err(IfaError::Runtime(format!("Salt generation failed: {}", e)));
+                            return Err(IfaError::Runtime(format!(
+                                "Salt generation failed: {}",
+                                e
+                            )));
                         }
                         let salt_hex: String = salt.iter().map(|b| format!("{:02x}", b)).collect();
 
@@ -145,7 +150,8 @@ impl OduHandler for IreteHandler {
                         hasher.update(salt);
                         hasher.update(password.as_bytes());
                         let result = hasher.finalize();
-                        let hash_hex: String = result.iter().map(|b| format!("{:02x}", b)).collect();
+                        let hash_hex: String =
+                            result.iter().map(|b| format!("{:02x}", b)).collect();
 
                         // Return salt$hash format
                         return Ok(IfaValue::str(format!("{}${}", salt_hex, hash_hex)));
@@ -159,7 +165,8 @@ impl OduHandler for IreteHandler {
             // Verify password against hash
             "verify_password" | "rii_daju_ọrọigbaniwọle" => {
                 if let (Some(pass_val), Some(stored_val)) = (arg0, args.get(1)) {
-                    if let (IfaValue::Str(password), IfaValue::Str(stored)) = (pass_val, stored_val) {
+                    if let (IfaValue::Str(password), IfaValue::Str(stored)) = (pass_val, stored_val)
+                    {
                         // Parse salt$hash format
                         let parts: Vec<&str> = stored.split('$').collect();
                         if parts.len() != 2 {

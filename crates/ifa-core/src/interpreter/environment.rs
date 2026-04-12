@@ -5,7 +5,12 @@
 //! by walking up from child → parent → grandparent scopes.
 
 use crate::value::IfaValue;
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
+
+/// Shared reference to an environment node.
+pub type EnvRef = Rc<RefCell<Environment>>;
 
 /// Runtime environment (scope) - implements GPC pattern
 ///
@@ -15,41 +20,65 @@ use std::collections::HashMap;
 pub struct Environment {
     /// Variables defined in this scope
     pub values: HashMap<String, IfaValue>,
+    /// Constant bindings (ayanfe) defined in this scope.
+    pub consts: HashSet<String>,
     /// Parent scope (if any) - walking up the chain
-    pub parent: Option<Box<Environment>>,
+    pub parent: Option<EnvRef>,
 }
 
 impl Environment {
-    /// Create a new root environment (no parent)
-    pub fn new() -> Self {
-        Environment {
+    /// Create a new root environment (no parent).
+    pub fn new() -> EnvRef {
+        Rc::new(RefCell::new(Environment {
             values: HashMap::new(),
+            consts: HashSet::new(),
             parent: None,
-        }
+        }))
     }
 
-    /// Create a child environment with the given parent
-    /// Used for function calls, blocks, and closures
-    pub fn with_parent(parent: Environment) -> Self {
-        Environment {
+    /// Create a child environment with the given parent.
+    /// Used for function calls, blocks, and closures.
+    pub fn with_parent(parent: EnvRef) -> EnvRef {
+        Rc::new(RefCell::new(Environment {
             values: HashMap::new(),
-            parent: Some(Box::new(parent)),
-        }
+            consts: HashSet::new(),
+            parent: Some(parent),
+        }))
     }
 
     /// Define a variable in the current scope
-    pub fn define(&mut self, name: &str, value: IfaValue) {
-        self.values.insert(name.to_string(), value);
+    pub fn define(env: &EnvRef, name: &str, value: IfaValue) {
+        env.borrow_mut().values.insert(name.to_string(), value);
+    }
+
+    /// Define a constant binding in the current scope.
+    pub fn define_const(env: &EnvRef, name: &str, value: IfaValue) {
+        let mut env = env.borrow_mut();
+        env.values.insert(name.to_string(), value);
+        env.consts.insert(name.to_string());
+    }
+
+    /// Returns true if `name` resolves to a constant binding in any active scope.
+    pub fn is_const(env: &EnvRef, name: &str) -> bool {
+        let env_ref = env.borrow();
+        if env_ref.consts.contains(name) {
+            true
+        } else if let Some(ref parent) = env_ref.parent {
+            Environment::is_const(parent, name)
+        } else {
+            false
+        }
     }
 
     /// Get a variable by walking up the scope chain (GPC resolution)
     ///
     /// Resolution order: Child → Parent → Grandparent → ... → Root
-    pub fn get(&self, name: &str) -> Option<IfaValue> {
-        if let Some(value) = self.values.get(name) {
+    pub fn get(env: &EnvRef, name: &str) -> Option<IfaValue> {
+        let env_ref = env.borrow();
+        if let Some(value) = env_ref.values.get(name) {
             Some(value.clone())
-        } else if let Some(ref parent) = self.parent {
-            parent.get(name) // Recursive walk up the chain
+        } else if let Some(ref parent) = env_ref.parent {
+            Environment::get(parent, name) // Recursive walk up the chain
         } else {
             None
         }
@@ -57,31 +86,26 @@ impl Environment {
 
     /// Set a variable in the scope where it's defined
     /// Returns true if found and updated, false if not found
-    pub fn set(&mut self, name: &str, value: IfaValue) -> bool {
-        if self.values.contains_key(name) {
-            self.values.insert(name.to_string(), value);
+    pub fn set(env: &EnvRef, name: &str, value: IfaValue) -> bool {
+        let mut env_ref = env.borrow_mut();
+        if env_ref.values.contains_key(name) {
+            env_ref.values.insert(name.to_string(), value);
             true
-        } else if let Some(parent) = &mut self.parent {
-            parent.set(name, value) // Recursive walk up
+        } else if let Some(parent) = &mut env_ref.parent {
+            Environment::set(parent, name, value) // Recursive walk up
         } else {
             false
         }
     }
 
     /// Get all variable names in the current scope (not parents)
-    pub fn local_names(&self) -> Vec<&String> {
-        self.values.keys().collect()
+    pub fn local_names(env: &EnvRef) -> Vec<String> {
+        env.borrow().values.keys().cloned().collect()
     }
 
     /// Check if a variable exists in any scope
-    pub fn contains(&self, name: &str) -> bool {
-        self.get(name).is_some()
-    }
-}
-
-impl Default for Environment {
-    fn default() -> Self {
-        Self::new()
+    pub fn contains(env: &EnvRef, name: &str) -> bool {
+        Environment::get(env, name).is_some()
     }
 }
 
@@ -92,31 +116,31 @@ mod tests {
     #[test]
     fn test_gpc_resolution() {
         // Grandparent scope
-        let mut grandparent = Environment::new();
-        grandparent.define("x", IfaValue::Int(1));
+        let grandparent = Environment::new();
+        Environment::define(&grandparent, "x", IfaValue::Int(1));
 
         // Parent scope
-        let mut parent = Environment::with_parent(grandparent);
-        parent.define("y", IfaValue::Int(2));
+        let parent = Environment::with_parent(grandparent);
+        Environment::define(&parent, "y", IfaValue::Int(2));
 
         // Child scope
-        let mut child = Environment::with_parent(parent);
-        child.define("z", IfaValue::Int(3));
+        let child = Environment::with_parent(parent);
+        Environment::define(&child, "z", IfaValue::Int(3));
 
         // Child can access all: x, y, z
-        assert_eq!(child.get("x"), Some(IfaValue::Int(1)));
-        assert_eq!(child.get("y"), Some(IfaValue::Int(2)));
-        assert_eq!(child.get("z"), Some(IfaValue::Int(3)));
+        assert_eq!(Environment::get(&child, "x"), Some(IfaValue::Int(1)));
+        assert_eq!(Environment::get(&child, "y"), Some(IfaValue::Int(2)));
+        assert_eq!(Environment::get(&child, "z"), Some(IfaValue::Int(3)));
     }
 
     #[test]
     fn test_shadowing() {
-        let mut parent = Environment::new();
-        parent.define("x", IfaValue::Int(1));
+        let parent = Environment::new();
+        Environment::define(&parent, "x", IfaValue::Int(1));
 
-        let mut child = Environment::with_parent(parent);
-        child.define("x", IfaValue::Int(2)); // Shadow parent's x
+        let child = Environment::with_parent(parent);
+        Environment::define(&child, "x", IfaValue::Int(2)); // Shadow parent's x
 
-        assert_eq!(child.get("x"), Some(IfaValue::Int(2)));
+        assert_eq!(Environment::get(&child, "x"), Some(IfaValue::Int(2)));
     }
 }

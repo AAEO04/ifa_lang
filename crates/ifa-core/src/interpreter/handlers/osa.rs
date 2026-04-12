@@ -10,7 +10,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
@@ -56,7 +56,7 @@ impl OduHandler for OsaHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         let arg0 = args.first();
@@ -74,11 +74,14 @@ impl OduHandler for OsaHandler {
             // Parallel sum - converts to i64, uses par_iter, real parallelism
             "afikun_afiwe" | "parallel_sum" | "sum" => {
                 if let Some(IfaValue::List(list)) = arg0 {
-                    let sum: i64 = list.par_iter().map(|v| match v {
-                        IfaValue::Int(n) => *n,
-                        IfaValue::Float(f) => *f as i64,
-                        _ => 0,
-                    }).sum();
+                    let sum: i64 = list
+                        .par_iter()
+                        .map(|v| match v {
+                            IfaValue::Int(n) => *n,
+                            IfaValue::Float(f) => *f as i64,
+                            _ => 0,
+                        })
+                        .sum();
                     return Ok(IfaValue::int(sum));
                 }
                 Err(IfaError::Runtime("sum requires a list of numbers".into()))
@@ -86,14 +89,17 @@ impl OduHandler for OsaHandler {
 
             // Parallel product
             "isoro_afiwe" | "parallel_product" | "product" => {
-                 if let Some(IfaValue::List(list)) = arg0 {
-                        let product: i64 = list.par_iter().map(|v| match v {
+                if let Some(IfaValue::List(list)) = arg0 {
+                    let product: i64 = list
+                        .par_iter()
+                        .map(|v| match v {
                             IfaValue::Int(n) => *n,
                             IfaValue::Float(f) => *f as i64,
                             _ => 1,
-                        }).product();
-                        return Ok(IfaValue::int(product));
-                    }
+                        })
+                        .product();
+                    return Ok(IfaValue::int(product));
+                }
                 Err(IfaError::Runtime(
                     "product requires a list of numbers".into(),
                 ))
@@ -101,33 +107,39 @@ impl OduHandler for OsaHandler {
 
             // Parallel min
             "kekere_afiwe" | "parallel_min" | "min" => {
-                 if let Some(IfaValue::List(list)) = arg0 {
-                        let min = list.par_iter().filter_map(|v| match v {
+                if let Some(IfaValue::List(list)) = arg0 {
+                    let min = list
+                        .par_iter()
+                        .filter_map(|v| match v {
                             IfaValue::Int(n) => Some(*n),
                             IfaValue::Float(f) => Some(*f as i64),
                             _ => None,
-                        }).min();
-                        return Ok(min.map(IfaValue::int).unwrap_or(IfaValue::null()));
-                    }
+                        })
+                        .min();
+                    return Ok(min.map(IfaValue::int).unwrap_or(IfaValue::null()));
+                }
                 Err(IfaError::Runtime("min requires a list of numbers".into()))
             }
 
             // Parallel max
             "tobi_afiwe" | "parallel_max" | "max" => {
-                 if let Some(IfaValue::List(list)) = arg0 {
-                        let max = list.par_iter().filter_map(|v| match v {
+                if let Some(IfaValue::List(list)) = arg0 {
+                    let max = list
+                        .par_iter()
+                        .filter_map(|v| match v {
                             IfaValue::Int(n) => Some(*n),
                             IfaValue::Float(f) => Some(*f as i64),
                             _ => None,
-                        }).max();
-                        return Ok(max.map(IfaValue::int).unwrap_or(IfaValue::null()));
-                    }
+                        })
+                        .max();
+                    return Ok(max.map(IfaValue::int).unwrap_or(IfaValue::null()));
+                }
                 Err(IfaError::Runtime("max requires a list of numbers".into()))
             }
 
             // Parallel sort - real parallelism on f64 primitives
             "tọ_afiwe" | "parallel_sort" | "sort" => {
-                 if let Some(IfaValue::List(list)) = arg0 {
+                if let Some(IfaValue::List(list)) = arg0 {
                     // Extract as (index, f64) for parallel sort
                     let mut indexed: Vec<(usize, f64)> = list
                         .iter()
@@ -137,7 +149,8 @@ impl OduHandler for OsaHandler {
                                 IfaValue::Int(n) => *n as f64,
                                 IfaValue::Float(f) => *f,
                                 _ => 0.0, // Default for non-numbers in sort?
-                            }; (i, val)
+                            };
+                            (i, val)
                         })
                         .collect();
 
@@ -157,41 +170,42 @@ impl OduHandler for OsaHandler {
 
             // Sequential any/all (no need for parallelism on bools)
             "eyikeyi_afiwe" | "parallel_any" | "any" => {
-                 if let Some(IfaValue::List(list)) = arg0 {
-                        let any = list.iter().any(|v| match v {
-                            IfaValue::Bool(b) => *b,
-                            IfaValue::Int(n) => *n != 0,
-                            IfaValue::Str(s) => !s.is_empty(),
-                            IfaValue::List(l) => !l.is_empty(),
-                            IfaValue::Null => false,
-                            _ => true,
-                        });
-                        return Ok(IfaValue::bool(any));
-                    }
+                if let Some(IfaValue::List(list)) = arg0 {
+                    let any = list.iter().any(|v| match v {
+                        IfaValue::Bool(b) => *b,
+                        IfaValue::Int(n) => *n != 0,
+                        IfaValue::Str(s) => !s.is_empty(),
+                        IfaValue::List(l) => !l.is_empty(),
+                        IfaValue::Null => false,
+                        _ => true,
+                    });
+                    return Ok(IfaValue::bool(any));
+                }
                 Err(IfaError::Runtime("any requires a list".into()))
             }
 
             "gbogbo_afiwe" | "parallel_all" | "all" => {
-                 if let Some(IfaValue::List(list)) = arg0 {
-                        let all = list.iter().all(|v| match v {
-                            IfaValue::Bool(b) => *b,
-                            IfaValue::Int(n) => *n != 0,
-                            IfaValue::Null => false,
-                            _ => true,
-                        });
-                        return Ok(IfaValue::bool(all));
-                    }
+                if let Some(IfaValue::List(list)) = arg0 {
+                    let all = list.iter().all(|v| match v {
+                        IfaValue::Bool(b) => *b,
+                        IfaValue::Int(n) => *n != 0,
+                        IfaValue::Null => false,
+                        _ => true,
+                    });
+                    return Ok(IfaValue::bool(all));
+                }
                 Err(IfaError::Runtime("all requires a list".into()))
             }
 
-            // Sleep (blocking)
+            // Sleep (was blocking, now intent-captured)
             "sun" | "sleep" => {
-                 if let Some(IfaValue::Int(ms)) = arg0 {
-                        std::thread::sleep(std::time::Duration::from_millis(*ms as u64));
-                        return Ok(IfaValue::null());
-                    }
+                if let Some(IfaValue::Int(ms)) = arg0 {
+                    _output.push(format!("[sleep] requested {} ms", ms));
+                    return Ok(IfaValue::null());
+                }
                 Err(IfaError::Runtime("sleep requires milliseconds".into()))
             }
+
 
             // Async operations - explain limitation
             "bẹrẹ" | "spawn" | "duro" | "await" | "fi" | "send" | "gba" | "recv" => {

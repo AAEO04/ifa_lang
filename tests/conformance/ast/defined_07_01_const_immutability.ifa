@@ -1,0 +1,12 @@
+# expect: 1
+# spec: §7.1 ayanfe is immutable (reassignment TypeError)
+
+ayanfe PI = 3;
+
+gbiyanju {
+    PI = 4;
+    pada 0;
+} gba (e) {
+    pada 1;
+}
+

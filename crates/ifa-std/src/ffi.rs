@@ -6,6 +6,16 @@
 //! - Simple types, clear mappings
 //! - No fancy abstractions - just get the job done
 //! - Security by default (whitelist, not blacklist)
+//!
+//! ### ⚠️ SECURITY ADVISORIES (Open Bugs)
+//!
+//! This module has identified vulnerabilities requiring remediation:
+//! - **BUG-018**: Thread-unsafe `std::env::set_var` used in Python bridge initialization.
+//! - **BUG-019**: Lack of capability-based isolation within guest interpreters (Python/JS).
+//! - **BUG-020**: Memory leak in native string (`char*`) return ownership handling.
+//! - **BUG-021**: Potential TOCTOU race in library path validation.
+//!
+//! Refer to `patch.md` at the project root for the architectural hardening blueprint.
 
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
@@ -49,6 +59,7 @@ pub enum IfaType {
     I64,
     F64,
     Str,
+    OwnedStr,
     Ptr,
     Void,
 }
@@ -61,6 +72,7 @@ impl IfaType {
             "i64" => Some(IfaType::I64),
             "f64" => Some(IfaType::F64),
             "str" => Some(IfaType::Str),
+            "owned_str" | "str_owned" | "cstring" => Some(IfaType::OwnedStr),
             "ptr" => Some(IfaType::Ptr),
             "void" => Some(IfaType::Void),
             _ => None,
@@ -74,6 +86,7 @@ impl IfaType {
             IfaType::I64 => "int64_t",
             IfaType::F64 => "double",
             IfaType::Str => "const char*",
+            IfaType::OwnedStr => "char*",
             IfaType::Ptr => "void*",
             IfaType::Void => "void",
         }
@@ -86,6 +99,7 @@ impl IfaType {
             IfaType::I64 => "i64",
             IfaType::F64 => "f64",
             IfaType::Str => "*const c_char",
+            IfaType::OwnedStr => "*mut c_char",
             IfaType::Ptr => "*mut c_void",
             IfaType::Void => "()",
         }
@@ -145,6 +159,105 @@ pub struct BoundFunction {
     pub sig: FfiSignature,
 }
 
+#[derive(Debug, Clone, Default)]
+struct GuestAuditPolicy {
+    allow_read_files: bool,
+    allow_write_files: bool,
+    allow_network: bool,
+    allow_spawn: bool,
+    allow_env: bool,
+}
+
+impl GuestAuditPolicy {
+    fn from_ofun(ofun: &crate::ofun::Ofun) -> Self {
+        Self {
+            allow_read_files: ofun.le("read"),
+            allow_write_files: ofun.le("write"),
+            allow_network: ofun.le("network"),
+            allow_spawn: ofun.le("spawn"),
+            allow_env: ofun.le("env"),
+        }
+    }
+
+    fn audit_python_call(&self, module: &str, func: &str) -> FfiResult<()> {
+        let module = module.to_ascii_lowercase();
+        let func = func.to_ascii_lowercase();
+
+        if matches!(module.as_str(), "os" | "subprocess")
+            && matches!(
+                func.as_str(),
+                "system" | "popen" | "spawn" | "spawnl" | "spawnlp" | "spawnv" | "spawnvp"
+                    | "exec" | "execv" | "execve" | "run" | "call"
+            )
+            && !self.allow_spawn
+        {
+            return Err(FfiError::SecurityViolation(format!(
+                "Guest call '{}.{}' requires spawn capability",
+                module, func
+            )));
+        }
+
+        if matches!(module.as_str(), "socket" | "urllib" | "urllib.request" | "requests" | "http.client")
+            && !self.allow_network
+        {
+            return Err(FfiError::SecurityViolation(format!(
+                "Guest call '{}.{}' requires network capability",
+                module, func
+            )));
+        }
+
+        if matches!(module.as_str(), "builtins" | "io" | "pathlib" | "os")
+            && matches!(
+                func.as_str(),
+                "open" | "read_text" | "read_bytes" | "write_text" | "write_bytes" | "remove"
+                    | "unlink" | "rename" | "replace" | "mkdir" | "rmdir" | "listdir"
+                    | "scandir"
+            )
+        {
+            let needs_write = matches!(
+                func.as_str(),
+                "write_text" | "write_bytes" | "remove" | "unlink" | "rename" | "replace"
+                    | "mkdir" | "rmdir"
+            );
+            if needs_write && !self.allow_write_files {
+                return Err(FfiError::SecurityViolation(format!(
+                    "Guest call '{}.{}' requires write capability",
+                    module, func
+                )));
+            }
+            if !needs_write && !self.allow_read_files {
+                return Err(FfiError::SecurityViolation(format!(
+                    "Guest call '{}.{}' requires read capability",
+                    module, func
+                )));
+            }
+        }
+
+        if module == "os"
+            && matches!(func.as_str(), "getenv" | "putenv" | "unsetenv")
+            && !self.allow_env
+        {
+            return Err(FfiError::SecurityViolation(format!(
+                "Guest call '{}.{}' requires env capability",
+                module, func
+            )));
+        }
+
+        Ok(())
+    }
+
+    fn audit_js_call(&self, func: &str) -> FfiResult<()> {
+        let func = func.to_ascii_lowercase();
+        if matches!(func.as_str(), "eval" | "function") && !self.allow_spawn {
+            return Err(FfiError::SecurityViolation(format!(
+                "Guest call '{}' requires spawn capability",
+                func
+            )));
+        }
+        Ok(())
+    }
+}
+
 // =============================================================================
 // POLYGLOT BACKENDS
 // =============================================================================
@@ -154,6 +267,7 @@ pub enum Backend {
     #[cfg(feature = "js")]
     JavaScript {
         context: Box<boa_engine::Context<'static>>,
+        audit: GuestAuditPolicy,
     },
     #[cfg(feature = "python")]
     Python {
@@ -161,6 +275,7 @@ pub enum Backend {
         interpreter_path: Option<std::path::PathBuf>,
         /// Module name or script path
         module_name: String,
+        audit: GuestAuditPolicy,
     },
 }
 
@@ -179,6 +294,8 @@ pub struct FfiConfig {
 pub struct IfaFfi {
     backends: HashMap<String, Backend>,
     functions: HashMap<String, BoundFunction>,
+    bridge_configs: HashMap<String, FfiConfig>,
+    bridge_audits: HashMap<String, GuestAuditPolicy>,
 }
 
 impl IfaFfi {
@@ -186,6 +303,8 @@ impl IfaFfi {
         IfaFfi {
             backends: HashMap::new(),
             functions: HashMap::new(),
+            bridge_configs: HashMap::new(),
+            bridge_audits: HashMap::new(),
         }
     }
 
@@ -206,6 +325,12 @@ impl IfaFfi {
         }
 
         let config = config.unwrap_or_default();
+        self.bridge_configs
+            .insert(language.to_ascii_lowercase(), config.clone());
+        self.bridge_audits.insert(
+            language.to_ascii_lowercase(),
+            GuestAuditPolicy::from_ofun(ofun),
+        );
         let _timeout = if config.timeout_sec > 0 {
             config.timeout_sec
         } else {
@@ -237,15 +362,6 @@ impl IfaFfi {
                         )));
                     }
                     println!("[FFI] Using isolated Python at: {:?}", path);
-
-                    // On Unix, we set PYTHONHOME to the venv root
-                    // This is a global operation and should be handled with care
-                    #[cfg(unix)]
-                    if let Some(parent) = path.parent() {
-                        if let Some(venv_root) = parent.parent() {
-                            std::env::set_var("PYTHONHOME", venv_root);
-                        }
-                    }
                 }
 
                 Ok(())
@@ -270,6 +386,16 @@ impl IfaFfi {
 
     /// Load a shared library (C/Rust) with security validation
     pub fn load_native(&mut self, name: &str, path: Option<&str>) -> FfiResult<()> {
+        self.load_native_verified(name, path, None)
+    }
+
+    /// Load a shared library and optionally pin it to a SHA-256 digest.
+    pub fn load_native_verified(
+        &mut self,
+        name: &str,
+        path: Option<&str>,
+        expected_sha256: Option<&str>,
+    ) -> FfiResult<()> {
         let lib_path = path.map(String::from).unwrap_or_else(|| {
             #[cfg(windows)]
             {
@@ -287,6 +413,9 @@ impl IfaFfi {
 
         // Security validation
         let validated_path = self.validate_library_path(&lib_path)?;
+        if let Some(expected_sha256) = expected_sha256 {
+            self.verify_library_hash(&validated_path, expected_sha256)?;
+        }
 
         unsafe {
             let lib = libloading::Library::new(&validated_path)
@@ -298,7 +427,7 @@ impl IfaFfi {
 
     /// Validate library path for security
     fn validate_library_path(&self, path: &str) -> FfiResult<std::path::PathBuf> {
-        use std::path::{Path, PathBuf};
+        use std::path::PathBuf;
 
         let path_buf = PathBuf::from(path);
 
@@ -309,18 +438,87 @@ impl IfaFfi {
             ));
         }
 
-        // 2. Canonicalize the path to resolve all symlinks and relative components
-        // This ensures the file exists and gives us the absolute physical path.
+        // 2. Reject symlinks (S2: attacker-controlled symlink at whitelisted path
+        //    can redirect to a malicious library). Check BEFORE canonicalize.
+        if path_buf.is_symlink() {
+            return Err(FfiError::SecurityViolation(format!(
+                "Symlinks are forbidden in library paths: '{}'",
+                path
+            )));
+        }
+
+        // 3. Canonicalize the path to resolve relative components.
+        //    Since we rejected symlinks above, canonicalize now only resolves '.' components.
         let canonical_path = path_buf.canonicalize().map_err(|e| {
             FfiError::LibraryNotFound(format!("Failed to resolve library path '{}': {}", path, e))
         })?;
 
-        // 3. Optional: In a future "hardened" mode, we could check if canonical_path
-        // starts with a trusted root (e.g. current working dir + "/deps").
-        // For now, canonicalization + existence check (implied by canonicalize) prevents
-        // loading from arbitrary relative paths that don't resolve to real files.
+        // 4. Double-check: the canonical path must match what we expect.
+        //    If canonicalize changed more than just making it absolute, something is wrong
+        //    (e.g. a symlink in a parent directory component).
+        let abs_path = std::env::current_dir()
+            .map(|cwd| cwd.join(&path_buf))
+            .unwrap_or_else(|_| path_buf.clone());
+        if canonical_path != abs_path && canonical_path != path_buf {
+            // canonicalize resolved something unexpected — likely a symlink in a parent dir
+            return Err(FfiError::SecurityViolation(format!(
+                "Library path resolves unexpectedly: '{}' -> '{}'. Possible symlink in path.",
+                path,
+                canonical_path.display()
+            )));
+        }
 
         Ok(canonical_path)
+    }
+
+    fn verify_library_hash(
+        &self,
+        path: &std::path::Path,
+        expected_sha256: &str,
+    ) -> FfiResult<()> {
+        use ring::digest::{Context, SHA256};
+        use std::io::Read;
+
+        let mut file = std::fs::File::open(path).map_err(|e| {
+            FfiError::LibraryNotFound(format!(
+                "Failed to open library '{}' for hashing: {}",
+                path.display(),
+                e
+            ))
+        })?;
+
+        let mut context = Context::new(&SHA256);
+        let mut buffer = [0u8; 8192];
+        loop {
+            let read = file.read(&mut buffer).map_err(|e| {
+                FfiError::CallFailed(format!(
+                    "Failed to read library '{}' for hashing: {}",
+                    path.display(),
+                    e
+                ))
+            })?;
+            if read == 0 {
+                break;
+            }
+            context.update(&buffer[..read]);
+        }
+
+        let digest = context.finish();
+        let actual_sha256 = digest
+            .as_ref()
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect::<String>();
+        if actual_sha256 != expected_sha256.to_ascii_lowercase() {
+            return Err(FfiError::SecurityViolation(format!(
+                "Library hash mismatch for '{}': expected {}, got {}",
+                path.display(),
+                expected_sha256,
+                actual_sha256
+            )));
+        }
+
+        Ok(())
     }
 
     /// Load a JavaScript script
@@ -330,11 +528,18 @@ impl IfaFfi {
         context
             .eval(boa_engine::Source::from_bytes(code.as_bytes()))
             .map_err(|e| FfiError::CallFailed(format!("JS Init failed: {}", e)))?;
+        let audit = self
+            .bridge_audits
+            .get("js")
+            .cloned()
+            .or_else(|| self.bridge_audits.get("javascript").cloned())
+            .unwrap_or_default();
 
         self.backends.insert(
             name.to_string(),
             Backend::JavaScript {
                 context: Box::new(context),
+                audit,
             },
         );
         Ok(())
@@ -348,11 +553,18 @@ impl IfaFfi {
         module: &str,
         interpreter_path: Option<std::path::PathBuf>,
     ) -> FfiResult<()> {
+        let configured_path = interpreter_path.or_else(|| {
+            self.bridge_configs
+                .get("python")
+                .and_then(|cfg| cfg.interpreter_path.clone())
+        });
+        let audit = self.bridge_audits.get("python").cloned().unwrap_or_default();
         self.backends.insert(
             name.to_string(),
             Backend::Python {
                 module_name: module.to_string(),
-                interpreter_path,
+                interpreter_path: configured_path,
+                audit,
             },
         );
         Ok(())
@@ -431,7 +643,8 @@ impl IfaFfi {
                 }
             }
             #[cfg(feature = "js")]
-            Backend::JavaScript { context } => {
+            Backend::JavaScript { context, audit } => {
+                audit.audit_js_call(func)?;
                 // Convert FfiValue to JsValue
                 let mut js_args = Vec::new();
                 for arg in args {
@@ -447,7 +660,9 @@ impl IfaFfi {
                 Ok(self.js_to_ffi(result))
             }
             #[cfg(feature = "python")]
-            Backend::Python { module_name, .. } => {
+            Backend::Python {
+                module_name, audit, ..
+            } => {
                 use pyo3::prelude::*;
                 use pyo3::types::PyTuple;
 
@@ -455,6 +670,9 @@ impl IfaFfi {
                 let module_name = module_name.clone();
                 let func_name = func.to_string();
                 let args_cloned: Vec<FfiValue> = args.to_vec();
+                let audit = audit.clone();
+
+                audit.audit_python_call(&module_name, &func_name)?;
 
                 Python::attach(|py| {
                     // Pre-check: Ensure the module is discoverable
@@ -524,7 +742,7 @@ impl IfaFfi {
                 (FfiValue::I64(v), IfaType::I64) => i64_args.push(*v),
                 (FfiValue::I32(v), IfaType::I64) => i64_args.push(*v as i64),
                 (FfiValue::F64(v), IfaType::F64) => f64_args.push(*v),
-                (FfiValue::Str(s), IfaType::Str) => {
+                (FfiValue::Str(s), IfaType::Str | IfaType::OwnedStr) => {
                     str_args.push(
                         std::ffi::CString::new(s.as_str()).map_err(|_| {
                             FfiError::TypeMismatch("String contains null byte".into())
@@ -561,7 +779,7 @@ impl IfaFfi {
                     ffi_args.push(Arg::new(&f64_args[f64_idx]));
                     f64_idx += 1;
                 }
-                (FfiValue::Str(_), IfaType::Str) => {
+                (FfiValue::Str(_), IfaType::Str | IfaType::OwnedStr) => {
                     ffi_args.push(Arg::new(&str_args[str_idx].as_ptr()));
                     str_idx += 1;
                 }
@@ -606,6 +824,17 @@ impl IfaFfi {
                     } else {
                         let c_str = std::ffi::CStr::from_ptr(result);
                         Ok(FfiValue::Str(c_str.to_string_lossy().into_owned()))
+                    }
+                }
+                IfaType::OwnedStr => {
+                    let result: *mut std::os::raw::c_char = call(code_ptr, ffi_args.as_slice());
+                    if result.is_null() {
+                        Ok(FfiValue::Null)
+                    } else {
+                        let c_str = std::ffi::CStr::from_ptr(result);
+                        let owned = c_str.to_string_lossy().into_owned();
+                        libc::free(result.cast());
+                        Ok(FfiValue::Str(owned))
                     }
                 }
             }
@@ -705,6 +934,7 @@ pub struct SecureFfi {
     inner: IfaFfi,
     whitelist: HashSet<String>,
     blocked_symbols: HashSet<String>,
+    sanctified_hashes: HashMap<String, String>,
 }
 
 impl SecureFfi {
@@ -722,12 +952,20 @@ impl SecureFfi {
             inner: IfaFfi::new(),
             whitelist: HashSet::new(),
             blocked_symbols: blocked,
+            sanctified_hashes: HashMap::new(),
         }
     }
 
     /// Add library to whitelist
     pub fn allow(&mut self, lib: &str) {
         self.whitelist.insert(lib.to_string());
+    }
+
+    /// Add library to whitelist with a pinned SHA-256 digest.
+    pub fn allow_with_hash(&mut self, lib: &str, sha256: &str) {
+        self.allow(lib);
+        self.sanctified_hashes
+            .insert(lib.to_string(), sha256.to_ascii_lowercase());
     }
 
     /// Load library (only if whitelisted)
@@ -738,7 +976,8 @@ impl SecureFfi {
                 name
             )));
         }
-        self.inner.load_native(name, path)
+        let expected_hash = self.sanctified_hashes.get(name).map(String::as_str);
+        self.inner.load_native_verified(name, path, expected_hash)
     }
 
     /// Bind function (blocks dangerous symbols)
@@ -1318,6 +1557,7 @@ mod tests {
     fn test_type_mapping() {
         assert_eq!(IfaType::I32.c_name(), "int32_t");
         assert_eq!(IfaType::Str.rust_name(), "*const c_char");
+        assert_eq!(IfaType::OwnedStr.c_name(), "char*");
     }
 
     #[test]
@@ -1335,6 +1575,13 @@ mod tests {
         // Should fail - system is blocked
         let result = ffi.bind("libc", "system", &["str"], "i32");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_guest_audit_policy_blocks_python_spawn_without_capability() {
+        let policy = GuestAuditPolicy::default();
+        let result = policy.audit_python_call("os", "system");
+        assert!(matches!(result, Err(FfiError::SecurityViolation(_))));
     }
 
     #[test]

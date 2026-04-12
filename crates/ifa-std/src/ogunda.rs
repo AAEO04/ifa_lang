@@ -153,19 +153,18 @@ impl Ogunda {
     /// Remove key from map and return value (yọ)
     pub fn yo(&self, map: &mut IfaValue, key: &str) -> IfaResult<IfaValue> {
         match map {
-
             IfaValue::Map(map_arc) => {
-                 // Clone-on-Write for Map mutation
-                 let map = std::sync::Arc::make_mut(map_arc);
-                 // Need to handle key type (Arc<str>)
-                 // This is tricky if we don't have the exact key instance.
-                 // We iterate to find matching key string? Efficient? No.
-                 // But HashMap keys are Strings/Arc<str>. 
-                 // We can simply remove by strict equality if the map key is `String` or `Arc<str>`.
-                 // IfaValue::Map uses `HashMap<Arc<str>, IfaValue>`.
-                 // `remove` takes `&Q` where `Arc<str>: Borrow<Q>`.
-                 // `str` works.
-                 Ok(map.remove(key).unwrap_or(IfaValue::Null))
+                // Clone-on-Write for Map mutation
+                let map = std::sync::Arc::make_mut(map_arc);
+                // Need to handle key type (Arc<str>)
+                // This is tricky if we don't have the exact key instance.
+                // We iterate to find matching key string? Efficient? No.
+                // But HashMap keys are Strings/Arc<str>.
+                // We can simply remove by strict equality if the map key is `String` or `Arc<str>`.
+                // IfaValue::Map uses `HashMap<Arc<str>, IfaValue>`.
+                // `remove` takes `&Q` where `Arc<str>: Borrow<Q>`.
+                // `str` works.
+                Ok(map.remove(key).unwrap_or(IfaValue::Null))
             }
             _ => Err(IfaError::TypeError {
                 expected: "Map or Object".into(),
@@ -348,7 +347,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert("a".into(), IfaValue::Int(1));
         map.insert("b".into(), IfaValue::Int(2));
-        let mut val = IfaValue::Map(map);
+        let mut val = IfaValue::Map(map.into());
 
         // Keys
         let keys = ogunda.keys(&val).unwrap();

@@ -444,7 +444,10 @@ impl Drop for SecretStore {
 ///
 /// Use [`password::hash`] and [`password::verify`] for production password storage.
 /// Those use Argon2id with a random salt via the `argon2` crate.
-#[deprecated(since = "0.1.0", note = "Use password::hash / password::verify (Argon2id) instead")]
+#[deprecated(
+    since = "0.1.0",
+    note = "Use password::hash / password::verify (Argon2id) instead"
+)]
 pub fn hash_password(password: &[u8], salt: &[u8]) -> [u8; 32] {
     // Iterating HMAC-SHA256 provides some key-stretching but lacks the
     // memory-hardness and parallelism resistance of Argon2.

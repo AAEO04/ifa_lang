@@ -4,144 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Error Reference - If�-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-            --success: #4ade80;
-            --error: #ef4444;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-            margin: 2.5rem 0 1rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        .error-card {
-            background: var(--bg-card);
-            border-radius: 12px;
-            margin: 1.5rem 0;
-            overflow: hidden;
-        }
-
-        .error-header {
-            background: rgba(239, 68, 68, 0.2);
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--error);
-        }
-
-        .error-header h3 {
-            color: var(--error);
-            margin: 0;
-            font-family: monospace;
-        }
-
-        .error-body {
-            padding: 1.5rem;
-        }
-
-        .error-body h4 {
-            color: var(--gold);
-            margin: 1rem 0 0.5rem;
-        }
-
-        .error-body h4:first-child {
-            margin-top: 0;
-        }
-
-        .fix-box {
-            background: rgba(74, 222, 128, 0.1);
-            border: 1px solid var(--success);
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        .fix-title {
-            color: var(--success);
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Error Reference - Ifá-Lang</title>
+    <meta name="description" content="Complete error reference for Ifá-Lang with Yoruba proverbs and error codes">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -149,238 +20,488 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
-            <h1>?? Error Reference</h1>
-            <p style="color: var(--text-dim);">Common errors and how to fix them</p>
+            <h1>Error Reference</h1>
+            <p class="subtitle">IfáError System with Cultural Wisdom</p>
         </header>
 
-        <h2>Syntax Errors</h2>
+        <div class="step">
+            <h2>Overview</h2>
+            <p>Ifá-Lang uses a unified error system through <code>IfaError</code> with Yoruba proverbs and structured error codes. All runtime components use the same error type, ensuring consistency across the entire ecosystem.</p>
+        </div>
 
-        <div class="error-card">
-            <div class="error-header">
-                <h3>ParseError: Unexpected token</h3>
-            </div>
-            <div class="error-body">
-                <h4>What It Means</h4>
-                <p>The parser encountered something unexpected. Usually a typo or missing punctuation.</p>
+        <div class="step">
+            <h2>Error Categories</h2>
+            
+            <h3>Math Errors (Obara / Oturupon) - ErrorCode 0x03XX</h3>
+            <div class="error-grid">
+                <div class="error-card">
+                    <h4>DivisionByZero</h4>
+                    <p><strong>Proverb:</strong> "Obara rejects: {context}"</p>
+                    <p><strong>Code:</strong> 0x0301</p>
+                    <div class="code-example">
+                        <pre><code>// Causes error
+ayanmo result = 10 / 0;
 
-                <h4>Example</h4>
-                <pre><code>ayanmo x = 5
-Irosu.fo(x)  // Error: expected ';'</code></pre>
+// Error message
+// DivisionByZero - Obara rejects: Cannot divide by zero</code></pre>
+                    </div>
+                </div>
 
-                <div class="fix-box">
-                    <div class="fix-title">? Fix</div>
-                    <pre style="margin: 0;"><code>ayanmo x = 5;
-Irosu.fo(x);</code></pre>
+                <div class="error-card">
+                    <h4>Overflow</h4>
+                    <p><strong>Proverb:</strong> "Numeric overflow: {context}"</p>
+                    <p><strong>Code:</strong> 0x0302</p>
+                    <div class="code-example">
+                        <pre><code>// Causes error
+ayanmo big = i64::MAX + 1;
+
+// Error message  
+// Overflow - Numeric overflow: Addition exceeds maximum value</code></pre>
+                    </div>
+                </div>
+
+                <div class="error-card">
+                    <h4>Underflow</h4>
+                    <p><strong>Proverb:</strong> "Numeric underflow: {context}"</p>
+                    <p><strong>Code:</strong> 0x0303</p>
+                    <div class="code-example">
+                        <pre><code>// Causes error
+ayanmo small = i64::MIN - 1;
+
+// Error message
+// Underflow - Numeric underflow: Subtraction below minimum value</code></pre>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="error-card">
-            <div class="error-header">
-                <h3>ParseError: Unterminated string</h3>
-            </div>
-            <div class="error-body">
-                <h4>What It Means</h4>
-                <p>A string literal wasn't closed with a matching quote.</p>
+        <div class="step">
+            <h2>Type Errors - ErrorCode 0x02XX</h2>
+            
+            <div class="error-grid">
+                <div class="error-card">
+                    <h4>ArityMismatch</h4>
+                    <p><strong>Proverb:</strong> "Wrong number of arguments"</p>
+                    <p><strong>Code:</strong> 0x0201</p>
+                    <div class="code-example">
+                        <pre><code>// Function expects 2 args, gets 1
+ese add(a, b) { pada a + b; }
+ayanmo result = add(5);
 
-                <h4>Example</h4>
-                <pre><code>ayanmo msg = "Hello world;  // Missing closing quote</code></pre>
+// Error message
+// ArityMismatch: expected 2 arguments, got 1</code></pre>
+                    </div>
+                </div>
 
-                <div class="fix-box">
-                    <div class="fix-title">? Fix</div>
-                    <pre style="margin: 0;"><code>ayanmo msg = "Hello world";</code></pre>
+                <div class="error-card">
+                    <h4>ArgumentError</h4>
+                    <p><strong>Proverb:</strong> "Invalid argument: {context}"</p>
+                    <p><strong>Code:</strong> 0x0202</p>
+                    <div class="code-example">
+                        <pre><code>// Invalid argument value
+ayanmo result = Obara.akako(-5);
+
+// Error message
+// ArgumentError: Cannot calculate square root of negative number</code></pre>
+                    </div>
+                </div>
+
+                <div class="error-card">
+                    <h4>TypeError</h4>
+                    <p><strong>Proverb:</strong> "Expected {expected}, got {got}"</p>
+                    <p><strong>Code:</strong> 0x0203</p>
+                    <div class="code-example">
+                        <pre><code>// Type mismatch in operation
+ayanmo result = "hello" * 5;
+
+// Error message
+// TypeError: expected Number, got String</code></pre>
+                    </div>
+                </div>
+
+                <div class="error-card">
+                    <h4>ConversionError</h4>
+                    <p><strong>Proverb:</strong> "Cannot convert {from} to {to}"</p>
+                    <p><strong>Code:</strong> 0x0204</p>
+                    <div class="code-example">
+                        <pre><code>// Invalid conversion
+ayanmo num = Ika.nomba("not_a_number");
+
+// Error message
+// ConversionError: Cannot convert String to Int</code></pre>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <h2>Runtime Errors</h2>
+        <div class="step">
+            <h2>Index/Key Errors (Ogunda / Ika) - ErrorCode 0x01XX</h2>
+            
+            <div class="error-grid">
+                <div class="error-card">
+                    <h4>IndexOutOfBounds</h4>
+                    <p><strong>Proverb:</strong> "Index {index} out of bounds (length: {length})"</p>
+                    <p><strong>Code:</strong> 0x0101</p>
+                    <div class="code-example">
+                        <pre><code>// Array index error
+ayanmo list = [1, 2, 3];
+ayanmo item = list[5];
 
-        <div class="error-card">
-            <div class="error-header">
-                <h3>NameError: Undefined variable 'x'</h3>
-            </div>
-            <div class="error-body">
-                <h4>What It Means</h4>
-                <p>You're using a variable that hasn't been declared.</p>
+// Error message
+// IndexOutOfBounds: index 5 out of bounds (length: 3)</code></pre>
+                    </div>
+                </div>
 
-                <h4>Example</h4>
-                <pre><code>Irosu.fo(count);  // Error: count not defined</code></pre>
+                <div class="error-card">
+                    <h4>KeyNotFound</h4>
+                    <p><strong>Proverb:</strong> "Key '{key}' not found in map"</p>
+                    <p><strong>Code:</strong> 0x0102</p>
+                    <div class="code-example">
+                        <pre><code>// Map key error
+ayanmo map = {"name": "Alice"};
+ayanmo age = map["age"];
 
-                <div class="fix-box">
-                    <div class="fix-title">? Fix</div>
-                    <pre style="margin: 0;"><code>ayanmo count = 0;
-Irosu.fo(count);</code></pre>
+// Error message
+// KeyNotFound: Key 'age' not found in map</code></pre>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="error-card">
-            <div class="error-header">
-                <h3>TypeError: Invalid operands for '+'</h3>
-            </div>
-            <div class="error-body">
-                <h4>What It Means</h4>
-                <p>You're trying to add incompatible types.</p>
+        <div class="step">
+            <h2>Runtime Errors - ErrorCode 0x04XX</h2>
+            
+            <div class="error-grid">
+                <div class="error-card">
+                    <h4>RuntimeError</h4>
+                    <p><strong>Proverb:</strong> "Runtime failure: {context}"</p>
+                    <p><strong>Code:</strong> 0x0401</p>
+                    <div class="code-example">
+                        <pre><code>// General runtime failure
+Osa.spawn(invalid_function);
 
-                <h4>Example</h4>
-                <pre><code>ayanmo result = [1, 2] + 3;  // Can't add list and number</code></pre>
-
-                <div class="fix-box">
-                    <div class="fix-title">? Fix</div>
-                    <pre style="margin: 0;"><code>// Use Ogunda.push to add to list
-ayanmo result = Ogunda.push([1, 2], 3);  // [1, 2, 3]</code></pre>
+// Error message
+// RuntimeError: Runtime failure: Failed to spawn task</code></pre>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="error-card">
-            <div class="error-header">
-                <h3>DivisionByZero: Cannot divide by zero</h3>
-            </div>
-            <div class="error-body">
-                <h4>What It Means</h4>
-                <p>Mathematical division by zero.</p>
+                <div class="error-card">
+                    <h4>MemoryError</h4>
+                    <p><strong>Proverb:</strong> "Memory allocation failed: {context}"</p>
+                    <p><strong>Code:</strong> 0x0402</p>
+                    <div class="code-example">
+                        <pre><code>// Memory allocation failure
+ayanmo huge_array = Ogunda.create(1000000000);
 
-                <h4>Example</h4>
-                <pre><code>ayanmo result = 10 / 0;  // Error!</code></pre>
-
-                <div class="fix-box">
-                    <div class="fix-title">? Fix</div>
-                    <pre style="margin: 0;"><code>ayanmo divisor = get_divisor();
-ti (divisor != 0) {
-    ayanmo result = 10 / divisor;
-} bib?k? {
-    Irosu.fo("Cannot divide by zero");
-}</code></pre>
+// Error message
+// MemoryError: Memory allocation failed: Cannot allocate array</code></pre>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="error-card">
-            <div class="error-header">
-                <h3>IndexError: Index out of bounds</h3>
-            </div>
-            <div class="error-body">
-                <h4>What It Means</h4>
-                <p>You're accessing a list index that doesn't exist.</p>
-
-                <h4>Example</h4>
-                <pre><code>ayanmo items = [1, 2, 3];
-ayanmo x = Ogunda.get(items, 10);  // Only indices 0-2 exist</code></pre>
-
-                <div class="fix-box">
-                    <div class="fix-title">? Fix</div>
-                    <pre style="margin: 0;"><code>ayanmo items = [1, 2, 3];
-ti (10 < Ogunda.len(items)) {
-    ayanmo x = Ogunda.get(items, 10);
-} bib?k? {
-    Irosu.fo("Index out of range");
-}</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <h2>Domain Errors</h2>
-
-        <div class="error-card">
-            <div class="error-header">
-                <h3>FunctionNotFound: Unknown method 'xyz'</h3>
-            </div>
-            <div class="error-body">
-                <h4>What It Means</h4>
-                <p>You're calling a method that doesn't exist on the domain.</p>
-
-                <h4>Example</h4>
-                <pre><code>Irosu.write("hello");  // No such method</code></pre>
-
-                <div class="fix-box">
-                    <div class="fix-title">? Fix</div>
-                    <pre style="margin: 0;"><code>Irosu.fo("hello");  // Use correct method name
-// Or for files:
-Odi.write("file.txt", "hello");</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="error-card">
-            <div class="error-header">
-                <h3>IOError: File not found</h3>
-            </div>
-            <div class="error-body">
-                <h4>What It Means</h4>
-                <p>Trying to read a file that doesn't exist.</p>
-
-                <h4>Example</h4>
-                <pre><code>ayanmo data = Odi.read("missing.txt");</code></pre>
-
-                <div class="fix-box">
-                    <div class="fix-title">? Fix</div>
-                    <pre style="margin: 0;"><code>// Check if file exists first
-ti (Odi.exists("missing.txt")) {
-    ayanmo data = Odi.read("missing.txt");
-} bib?k? {
-    Irosu.fo("File not found");
-}</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <h2>Assertion Errors</h2>
-
-        <div class="error-card">
-            <div class="error-header">
-                <h3>TabooViolation: Assertion failed</h3>
-            </div>
-            <div class="error-body">
-                <h4>What It Means</h4>
-                <p>An <code>ewo</code> (taboo/assertion) condition was false.</p>
-
-                <h4>Example</h4>
-                <pre><code>ayanmo age = -5;
-ewo age >= 0, "Age cannot be negative";  // PANIC!</code></pre>
-
-                <div class="fix-box">
-                    <div class="fix-title">? Fix</div>
-                    <pre style="margin: 0;"><code>// Validate data before asserting
-ayanmo age = get_age();
-ti (age < 0) {
-    ayanmo age = 0;  // Set default
-}
-ewo age >= 0, "Age cannot be negative";  // Now safe</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <h2>Handling Errors Gracefully</h2>
-        <p>Use <code>Okanran</code> (Error Handling domain) for recoverable errors:</p>
-
-        <pre><code>// Try an operation that might fail
-ayanmo result = Okanran.try(|| {
-    padap? Odi.read("config.txt");
-});
-
-// Check if it's an error
-ti (Okanran.is_error(result)) {
-    Irosu.fo("Could not read config, using defaults");
-    ayanmo result = default_config();
+                <div class="error-card">
+                    <h4>StackOverflow</h4>
+                    <p><strong>Proverb:</strong> "Call stack exceeded: {context}"</p>
+                    <p><strong>Code:</strong> 0x0403</p>
+                    <div class="code-example">
+                        <pre><code>// Infinite recursion
+ese infinite() {
+    infinite();
 }
 
-// Or use unwrap_or for default value
-ayanmo data = Okanran.unwrap_or(
-    Okanran.try(|| Odi.read("config.txt")),
-    "default value"
-);</code></pre>
+// Error message
+// StackOverflow: Call stack exceeded: Maximum recursion depth reached</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <footer class="doc-footer">
-            <p><a href="types.html">? Type System</a> � <a href="../api/api.html">API Reference</a></p>
-            <p><a href="../index.html">Documentation Home</a></p>
+        <div class="step">
+            <h2>Domain-Specific Errors</h2>
+            
+            <h3>File/Storage Errors (Odi) - ErrorCode 0x05XX</h3>
+            <div class="error-grid">
+                <div class="error-card">
+                    <h4>FileNotFound</h4>
+                    <p><strong>Proverb:</strong> "File not found: {path}"</p>
+                    <p><strong>Code:</strong> 0x0501</p>
+                    <div class="code-example">
+                        <pre><code>// File access error
+ayanmo file = Odi.si("nonexistent.txt");
+
+// Error message
+// FileNotFound: File not found: nonexistent.txt</code></pre>
+                    </div>
+                </div>
+
+                <div class="error-card">
+                    <h4>PermissionDenied</h4>
+                    <p><strong>Proverb:</strong> "Permission denied: {operation}"</p>
+                    <p><strong>Code:</strong> 0x0502</p>
+                    <div class="code-example">
+                        <pre><code>// Permission error
+ayanmo file = Odi.si("/root/secret.txt");
+
+// Error message
+// PermissionDenied: Permission denied: Cannot read file</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Network Errors (Otura) - ErrorCode 0x06XX</h3>
+            <div class="error-grid">
+                <div class="error-card">
+                    <h4>ConnectionFailed</h4>
+                    <p><strong>Proverb:</strong> "Connection failed: {host}:{port}"</p>
+                    <p><strong>Code:</strong> 0x0601</p>
+                    <div class="code-example">
+                        <pre><code>// Network connection error
+ayanmo conn = Otura.so("invalid-host", 80);
+
+// Error message
+// ConnectionFailed: Connection failed: invalid-host:80</code></pre>
+                    </div>
+                </div>
+
+                <div class="error-card">
+                    <h4>TimeoutError</h4>
+                    <p><strong>Proverb:</strong> "Operation timed out: {context}"</p>
+                    <p><strong>Code:</strong> 0x0602</p>
+                    <div class="code-example">
+                        <pre><code>// Network timeout
+ayanmo response = Otura.beere_with_timeout("http://slow.com", 1000);
+
+// Error message
+// TimeoutError: Operation timed out: HTTP request exceeded 1000ms</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Crypto Errors (Irete) - ErrorCode 0x07XX</h3>
+            <div class="error-grid">
+                <div class="error-card">
+                    <h4>InvalidKey</h4>
+                    <p><strong>Proverb:</strong> "Invalid cryptographic key: {context}"</p>
+                    <p><strong>Code:</strong> 0x0701</p>
+                    <div class="code-example">
+                        <pre><code>// Crypto key error
+ayanmo encrypted = Irete.hmac("data", "short");
+
+// Error message
+// InvalidKey: Invalid cryptographic key: Key too short for HMAC</code></pre>
+                    </div>
+                </div>
+
+                <div class="error-card">
+                    <h4>CorruptedData</h4>
+                    <p><strong>Proverb:</strong> "Data corrupted: {context}"</p>
+                    <p><strong>Code:</strong> 0x0702</p>
+                    <div class="code-example">
+                        <pre><code>// Data corruption error
+ayanmo decrypted = Irete.base64_decode("invalid_base64");
+
+// Error message
+// CorruptedData: Data corrupted: Invalid base64 encoding</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Error Handling Patterns</h2>
+            
+            <h3>Try-Catch-Finally</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Error Handling</span>
+                </div>
+                <pre><code>// Yoruba style
+gbiyanju {
+    ayanmo result = risky_operation();
+} gba (error) {
+    Irosu.fo("Error occurred: " + error.message);
+    // Handle specific error types
+    if error.code == 0x0301 {
+        Irosu.fo("Division by zero detected");
+    }
+} nipari {
+    cleanup_resources();
+}
+
+// English style
+try {
+    ayanmo result = risky_operation();
+} catch (error) {
+    Irosu.fo("Error occurred: " + error.message);
+} finally {
+    cleanup_resources();
+}</code></pre>
+            </div>
+
+            <h3>Result Types</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Result Pattern</span>
+                </div>
+                <pre><code>// Function that returns Result
+ese safe_divide(a, b) -> IfaResult {
+    if b == 0 {
+        ku(IfaError::DivisionByZero("Cannot divide by zero".to_string()));
+    }
+    pada a / b;
+}
+
+// Using Result
+match safe_divide(10, 2) {
+    Ok(result) => Irosu.fo("Result: " + result),
+    Ku(error) => Irosu.fo("Error: " + error.message),
+}</code></pre>
+            </div>
+
+            <h3>Assertions</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Debug Assertions</span>
+                </div>
+                <pre><code>// Yoruba assertions
+ewo x >= 0, "x must be non-negative";
+ewo balance >= 0;
+
+// English assertions
+assert x >= 0, "x must be non-negative";
+verify balance >= 0;</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Error Prevention</h2>
+            
+            <h3>Ìwà Pélé Balance Checking</h3>
+            <p>Compile-time resource balance checking prevents resource leaks:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Balance Checking</span>
+                </div>
+                <pre><code>#[iwa_pele]
+fn network_task() {
+    let conn = Otura.so("example.com", 80);  // open
+    // ... work with connection
+    conn.pa();  // close - REQUIRED or compile error
+}
+
+// This would cause compile error:
+#[iwa_pele]
+fn bad_function() {
+    let file = Odi.si("data.txt");  // open file
+    // Missing: file.ti() - compile error!
+    // Ìwà Pélé violation: Block leaks resource
+}</code></pre>
+            </div>
+
+            <h3>Type Safe Operations</h3>
+            <p>Use type checking to prevent runtime errors:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Type Safety</span>
+                </div>
+                <pre><code>ese safe_operation(value) {
+    // Check types before operations
+    if Oka.is_num(value) {
+        // Safe numeric operation
+        pada value * 2;
+    } else if Oka.is_str(value) {
+        // Safe string operation
+        pada Ika.length(value);
+    } else {
+        // Clear error message
+        ku(IfaError::TypeError(
+            "Expected Number or String, got ".to_string() + Oka.type_name(value)
+        ));
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Error Codes Reference</h2>
+            
+            <h3>Code Ranges</h3>
+            <ul>
+                <li><strong>0x01XX:</strong> Index/Key errors (Ogunda/Ika)</li>
+                <li><strong>0x02XX:</strong> Type errors (General)</li>
+                <li><strong>0x03XX:</strong> Math errors (Obara/Oturupon)</li>
+                <li><strong>0x04XX:</strong> Runtime errors (General)</li>
+                <li><strong>0x05XX:</strong> File/Storage errors (Odi)</li>
+                <li><strong>0x06XX:</strong> Network errors (Otura)</li>
+                <li><strong>0x07XX:</strong> Crypto errors (Irete)</li>
+                <li><strong>0x08XX:</strong> Graphics errors (Ose)</li>
+                <li><strong>0x09XX:</strong> Permission errors (Ofun)</li>
+            </ul>
+
+            <h3>Error Structure</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">IfaError Structure</span>
+                </div>
+                <pre><code>// Error structure
+struct IfaError {
+    // Error type enumeration
+    kind: ErrorKind,
+    
+    // Human-readable message with proverb
+    message: String,
+    
+    // Error code for programmatic handling
+    code: u16,
+    
+    // Source location information
+    span: Option<Span>,
+    
+    // Additional context
+    context: HashMap<String, String>,
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>Error Handling Guidelines</h3>
+            <ul>
+                <li><strong>Be Specific:</strong> Use appropriate error types</li>
+                <li><strong>Provide Context:</strong> Include relevant information in error messages</li>
+                <li><strong>Handle Early:</strong> Handle errors as close to source as possible</li>
+                <li><strong>Log Errors:</strong> Use Irosu for error logging</li>
+                <li><strong>Recover Gracefully:</strong> Provide fallback behavior when possible</li>
+            </ul>
+
+            <h3>Error Message Style</h3>
+            <ul>
+                <li><strong>Yoruba Proverbs:</strong> Include cultural wisdom when appropriate</li>
+                <li><strong>Clear Context:</strong> Explain what went wrong and why</li>
+                <li><strong>Actionable:</strong> Suggest how to fix the error</li>
+                <li><strong>Consistent:</strong> Follow established patterns</li>
+            </ul>
+
+            <h3>Performance Considerations</h3>
+            <ul>
+                <li><strong>Zero Cost:</strong> Use compile-time checks when possible</li>
+                <li><strong>Early Returns:</strong> Fail fast to avoid wasted work</li>
+                <li><strong>Error Pooling:</strong> Reuse error objects in hot paths</li>
+                <li><strong>Structured Errors:</strong> Use error codes for efficient handling</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Reference Documentation</a></p>
         </footer>
     </div>
-        <script src="../js/nav.js"></script>
+
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

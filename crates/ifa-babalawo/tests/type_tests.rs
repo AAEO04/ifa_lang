@@ -116,3 +116,17 @@ fn test_hybrid_assign_static_to_dynamic() {
         "Assigning static to dynamic should pass"
     );
 }
+
+#[test]
+fn test_unsafe_ffi_bridge_is_flagged() {
+    let src = r#"
+    Coop.itumo("python");
+    "#;
+    let baba = check(src);
+    assert!(baba.has_errors(), "unsafe FFI bridge summon should be flagged");
+    assert!(
+        baba.diagnostics
+            .iter()
+            .any(|d| d.error.code == "TABOO_UNSAFE_FFI")
+    );
+}

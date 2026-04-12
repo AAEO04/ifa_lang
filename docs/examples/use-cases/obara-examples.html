@@ -4,81 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obara & Oturupon Use Cases - Math Examples</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Obara Domain Examples - If√°-Lang</title>
+    <meta name="description" content="Examples of Obara (1000) domain operations for mathematical operations in If√°-Lang">
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -86,204 +20,986 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
-        <h1>?? Obara & Oturupon: Mathematics</h1>
-        <p>Obara handles addition/multiplication, Oturupon handles subtraction/division.</p>
+        <header>
+            <h1>Obara Domain Examples</h1>
+            <p class="subtitle">Mathematical Operations and Accumulation (1000)</p>
+        </header>
 
-        <h2>Use Case 1: Financial Calculator</h2>
-        <pre><code>// finance.ifa - Compound interest and loan calculations
+        <div class="step">
+            <h2>Overview</h2>
+            <p>Obara (1000) is the mathematical domain representing addition, multiplication, accumulation, and growth. It provides comprehensive arithmetic operations, mathematical functions, and numerical analysis capabilities following If√°-Lang's cultural and architectural principles.</p>
+            
+            <div class="domain-info">
+                <div class="domain-card">
+                    <h3>Domain Characteristics</h3>
+                    <ul>
+                        <li><strong>Binary Pattern:</strong> 1000 (addition and accumulation)</li>
+                        <li><strong>Yoruba Meaning:</strong> "The accumulator" or "The gatherer"</li>
+                        <li><strong>System Role:</strong> Mathematical operations and calculations</li>
+                        <li><strong>Element:</strong> Earth (foundation and accumulation)</li>
+                    </ul>
+                </div>
+                
+                <div class="domain-card">
+                    <h3>Core Capabilities</h3>
+                    <ul>
+                        <li><strong>Basic Arithmetic:</strong> Addition, multiplication, exponentiation</li>
+                        <li><strong>Aggregation:</strong> Sum, product, maximum, minimum</li>
+                        <li><strong>Statistical Functions:</strong> Mean, median, mode, standard deviation</li>
+                        <li><strong>Mathematical Constants:</strong> Pi, e, golden ratio</li>
+                        <li><strong>Number Theory:</strong> Prime numbers, factors, GCD, LCM</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-// Compound Interest: A = P(1 + r/n)^(nt)
-ise compound_interest(principal, rate, years, compounds_per_year) {
-    ayanmo r = rate / 100;
-    ayanmo n = compounds_per_year;
-    ayanmo t = years;
+        <div class="step">
+            <h2>Basic Arithmetic Operations</h2>
+            
+            <h3>Addition and Multiplication</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Fundamental Operations</span>
+                </div>
+                <pre><code>// Basic addition
+ayanmo a = 10;
+ayanmo b = 25;
+ayanmo sum = Obara.fikun(a, b);  // 35
+Irosu.fo("Sum of " + a + " and " + b + " = " + sum);
+
+// Chain addition
+ayanmo numbers = [1, 2, 3, 4, 5];
+ayanmo total = 0;
+fun num ninu numbers {
+    total = Obara.fikun(total, num);
+}
+Irosu.fo("Total sum: " + total);  // 15
+
+// Multiplication
+ayanmo x = 6;
+ayanmo y = 7;
+ayanmo product = Obara.isodipupo(x, y);  // 42
+Irosu.fo("Product of " + x + " and " + y + " = " + product);
+
+// Chain multiplication
+ayanmo factorial = 1;
+fun i ninu 1..6 {
+    factorial = Obara.isodipupo(factorial, i);
+}
+Irosu.fo("5! = " + factorial);  // 120
+
+// Mixed operations
+ayanmo result = Obara.fikun(Obara.isodipupo(3, 4), 5);  // (3 * 4) + 5 = 17
+Irosu.fo("(3 * 4) + 5 = " + result);
+
+// Exponentiation
+ayanmo base = 2;
+ayanmo exponent = 8;
+ayanmo power = Obara.isodipupo(base, base, exponent);  // 2^8 = 256
+Irosu.fo(base + "^" + exponent + " = " + power);</code></pre>
+            </div>
+
+            <h3>Advanced Arithmetic</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Complex Calculations</span>
+                </div>
+                <pre><code>// Calculate compound interest
+se calculate_compound_interest(principal: Float, rate: Float, time: u32, compound_freq: u32) -> Float {
+    ayanmo effective_rate = rate / compound_freq;
+    ayanmo periods = time * compound_freq;
     
-    ayanmo base = Obara.add(1, Oturupon.div(r, n));
-    ayanmo exponent = Obara.mul(n, t);
-    ayanmo multiplier = Obara.pow(base, exponent);
+    // A = P(1 + r/n)^(nt)
+    ayanmo amount = principal * Obara.pow(1 + effective_rate, periods);
+    pada amount;
+}
+
+// Example: $1000 at 5% annual interest compounded monthly for 2 years
+ayanmo final_amount = calculate_compound_interest(1000.0, 0.05, 2, 12);
+Irosu.fo("Final amount: $" + Obara.format(final_amount, 2));  // $1104.94
+
+// Calculate loan payment
+se calculate_loan_payment(principal: Float, annual_rate: Float, years: u32) -> Float {
+    ayanmo monthly_rate = annual_rate / 12;
+    ayanmo num_payments = years * 12;
     
-    padap? Obara.mul(principal, multiplier);
-}
-
-// Monthly loan payment: M = P[r(1+r)^n]/[(1+r)^n-1]
-ise monthly_payment(principal, annual_rate, years) {
-    ayanmo monthly_rate = Oturupon.div(annual_rate / 100, 12);
-    ayanmo n = Obara.mul(years, 12);
+    // M = P * r(1+r)^n / ((1+r)^n - 1)
+    ayanmo numerator = principal * monthly_rate * Obara.pow(1 + monthly_rate, num_payments);
+    ayanmo denominator = Obara.pow(1 + monthly_rate, num_payments) - 1;
     
-    ayanmo pow_term = Obara.pow(Obara.add(1, monthly_rate), n);
-    ayanmo numerator = Obara.mul(monthly_rate, pow_term);
-    ayanmo denominator = Oturupon.sub(pow_term, 1);
-    
-    padap? Obara.mul(principal, Oturupon.div(numerator, denominator));
+    pada numerator / denominator;
 }
 
-// Usage
-Irosu.fo("?? Financial Calculator");
-Irosu.fo("---------------------");
+// Example: $200,000 loan at 4% for 30 years
+ayanmo monthly_payment = calculate_loan_payment(200000.0, 0.04, 30);
+Irosu.fo("Monthly payment: $" + Obara.format(monthly_payment, 2));  // $954.83
 
-ayanmo future_value = compound_interest(10000, 5, 10, 12);
-Irosu.fo("$10,000 at 5% for 10 years = $" + Obara.round(future_value, 2));
-
-ayanmo payment = monthly_payment(200000, 4.5, 30);
-Irosu.fo("$200k mortgage at 4.5% = $" + Obara.round(payment, 2) + "/month");</code></pre>
-
-        <h2>Use Case 2: Unit Converter</h2>
-        <pre><code>// converter.ifa - Temperature and measurement conversions
-
-// Temperature
-ise celsius_to_fahrenheit(c) {
-    padap? Obara.add(Obara.mul(c, 1.8), 32);
+// Calculate BMI (Body Mass Index)
+se calculate_bmi(weight_kg: Float, height_m: Float) -> Float {
+    // BMI = weight / height^2
+    pada weight_kg / Obara.isodipupo(height_m, height_m);
 }
 
-ise fahrenheit_to_celsius(f) {
-    padap? Oturupon.div(Oturupon.sub(f, 32), 1.8);
-}
+// Example: 70kg, 1.75m
+ayanmo bmi = calculate_bmi(70.0, 1.75);
+Irosu.fo("BMI: " + Obara.format(bmi, 1));  // 22.9
 
-// Distance
-ise km_to_miles(km) {
-    padap? Obara.mul(km, 0.621371);
-}
+// BMI categorization
+ayanmo category = if bmi < 18.5 {
+    "Underweight"
+} else if bmi < 25.0 {
+    "Normal weight"
+} else if bmi < 30.0 {
+    "Overweight"
+} else {
+    "Obese"
+};
 
-ise miles_to_km(miles) {
-    padap? Obara.mul(miles, 1.60934);
-}
+Irosu.fo("Category: " + category);  // Normal weight</code></pre>
+            </div>
+        </div>
 
-// Weight
-ise kg_to_pounds(kg) {
-    padap? Obara.mul(kg, 2.20462);
-}
-
-ise pounds_to_kg(lbs) {
-    padap? Oturupon.div(lbs, 2.20462);
-}
-
-// Currency (with exchange rate)
-ise convert_currency(amount, rate) {
-    padap? Obara.mul(amount, rate);
-}
-
-// Usage
-Irosu.fo("?? Unit Converter");
-Irosu.fo("------------------");
-
-Irosu.fo("25∞C = " + celsius_to_fahrenheit(25) + "∞F");
-Irosu.fo("100∞F = " + Obara.round(fahrenheit_to_celsius(100), 1) + "∞C");
-Irosu.fo("100 km = " + Obara.round(km_to_miles(100), 2) + " miles");
-Irosu.fo("75 kg = " + Obara.round(kg_to_pounds(75), 1) + " lbs");
-Irosu.fo("$100 USD = ?" + convert_currency(100, 1500) + " NGN");</code></pre>
-
-        <h2>Use Case 3: Statistics Library</h2>
-        <pre><code>// stats.ifa - Statistical calculations
-
-ise mean(values) {
-    ayanmo sum = Osa.sum(values);
-    padap? Oturupon.div(sum, Ogunda.len(values));
-}
-
-ise median(values) {
-    ayanmo sorted = Osa.sort(values);
-    ayanmo n = Ogunda.len(sorted);
-    ayanmo mid = Oturupon.div(n, 2);
-    
-    ti (Oturupon.mod(n, 2) == 0) {
-        ayanmo a = Ogunda.get(sorted, mid - 1);
-        ayanmo b = Ogunda.get(sorted, mid);
-        padap? Oturupon.div(Obara.add(a, b), 2);
+        <div class="step">
+            <h2>Statistical Functions</h2>
+            
+            <h3>Descriptive Statistics</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Statistical Analysis</span>
+                </div>
+                <pre><code>// Calculate mean (average)
+se calculate_mean(numbers: Vec<Float>) -> Float {
+    if numbers.length() == 0 {
+        pada 0.0;
     }
     
-    padap? Ogunda.get(sorted, mid);
-}
-
-ise variance(values) {
-    ayanmo avg = mean(values);
-    ayanmo sum_sq = 0;
-    
-    fun v ninu values {
-        ayanmo diff = Oturupon.sub(v, avg);
-        ayanmo sum_sq = Obara.add(sum_sq, Obara.mul(diff, diff));
+    ayanmo sum = 0.0;
+    fun num ninu numbers {
+        sum = Obara.fikun(sum, num);
     }
     
-    padap? Oturupon.div(sum_sq, Ogunda.len(values));
+    pada sum / numbers.length() as Float;
 }
 
-ise std_dev(values) {
-    padap? Oturupon.sqrt(variance(values));
+// Calculate median
+se calculate_median(numbers: Vec<Float>) -> Float {
+    if numbers.length() == 0 {
+        pada 0.0;
+    }
+    
+    ayanmo sorted = numbers.clone();
+    sorted.sort();
+    
+    ayanmo n = sorted.length();
+    if n % 2 == 0 {
+        // Even number of elements - average of middle two
+        ayanmo mid1 = sorted[n / 2 - 1];
+        ayanmo mid2 = sorted[n / 2];
+        pada (mid1 + mid2) / 2.0;
+    } else {
+        // Odd number of elements - middle element
+        pada sorted[n / 2];
+    }
 }
 
-ise percentile(values, p) {
-    ayanmo sorted = Osa.sort(values);
-    ayanmo index = Obara.mul(Oturupon.div(p, 100), Ogunda.len(sorted) - 1);
-    padap? Ogunda.get(sorted, Obara.floor(index));
+// Calculate mode (most frequent value)
+se calculate_mode(numbers: Vec<Float>) -> Vec<Float> {
+    if numbers.length() == 0 {
+        pada Vec::<Float>::new();
+    }
+    
+    ayanmo frequency = Map::<Float, u32>::new();
+    
+    // Count frequencies
+    fun num ninu numbers {
+        if frequency.contains_key(num) {
+            frequency.insert(num, frequency.get(num) + 1);
+        } else {
+            frequency.insert(num, 1);
+        }
+    }
+    
+    // Find maximum frequency
+    ayanmo max_freq = 0;
+    fun (_, freq) ninu frequency {
+        if freq > max_freq {
+            max_freq = freq;
+        }
+    }
+    
+    // Collect all values with maximum frequency
+    ayanmo modes = Vec::<Float>::new();
+    fun (value, freq) ninu frequency {
+        if freq == max_freq {
+            modes.push(value);
+        }
+    }
+    
+    pada modes;
 }
 
-// Usage
-ayanmo data = [23, 45, 67, 12, 89, 34, 56, 78, 90, 11, 44, 66];
-
-Irosu.fo("?? Statistics");
-Irosu.fo("-------------");
-Irosu.fo("Data: " + data);
-Irosu.fo("Mean: " + Obara.round(mean(data), 2));
-Irosu.fo("Median: " + median(data));
-Irosu.fo("Std Dev: " + Obara.round(std_dev(data), 2));
-Irosu.fo("25th percentile: " + percentile(data, 25));
-Irosu.fo("75th percentile: " + percentile(data, 75));</code></pre>
-
-        <h2>Use Case 4: Geometry Calculator</h2>
-        <pre><code>// geometry.ifa - Shape area and volume calculations
-
-ayanmo PI = 3.14159265359;
-
-// 2D Shapes
-ise circle_area(radius) {
-    padap? Obara.mul(PI, Obara.pow(radius, 2));
+// Calculate standard deviation
+se calculate_stddev(numbers: Vec<Float>) -> Float {
+    if numbers.length() <= 1 {
+        pada 0.0;
+    }
+    
+    ayanmo mean = calculate_mean(numbers);
+    ayanmo sum_squared_diff = 0.0;
+    
+    fun num ninu numbers {
+        ayanmo diff = num - mean;
+        sum_squared_diff = Obara.fikun(sum_squared_diff, diff * diff);
+    }
+    
+    ayanmo variance = sum_squared_diff / (numbers.length() - 1) as Float;
+    pada Obara.sqrt(variance);
 }
 
-ise rectangle_area(width, height) {
-    padap? Obara.mul(width, height);
+// Example with test data
+ayanmo test_scores = [85.5, 92.0, 78.5, 88.0, 91.5, 82.0, 89.5, 86.5, 90.0, 87.5];
+
+ayanmo mean_score = calculate_mean(test_scores);
+ayanmo median_score = calculate_median(test_scores);
+ayanmo modes = calculate_mode(test_scores);
+ayanmo stddev_score = calculate_stddev(test_scores);
+
+Irosu.fo("Test Scores Analysis:");
+Irosu.fo("Mean: " + Obara.format(mean_score, 2));      // 87.15
+Irosu.fo("Median: " + Obara.format(median_score, 2));    // 87.75
+Irosu.fo("Mode(s): " + Ika.join(modes.map(Obara.format(_, 2)), ", "));  // 85.5, 92.0, 78.5, 88.0, 91.5, 82.0, 89.5, 86.5, 90.0, 87.5 (all unique)
+Irosu.fo("Standard Deviation: " + Obara.format(stddev_score, 2));  // 4.22</code></pre>
+            </div>
+
+            <h3>Data Analysis</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Data Analysis Functions</span>
+                </div>
+                <pre><code>// Calculate correlation coefficient
+se calculate_correlation(x: Vec<Float>, y: Vec<Float>) -> Float {
+    if x.length() != y.length() or x.length() < 2 {
+        pada 0.0;
+    }
+    
+    ayanmo n = x.length() as Float;
+    ayanmo mean_x = calculate_mean(x);
+    ayanmo mean_y = calculate_mean(y);
+    
+    ayanmo sum_xy = 0.0;
+    ayanmo sum_x2 = 0.0;
+    ayanmo sum_y2 = 0.0;
+    
+    fun i ninu 0..x.length() {
+        ayanmo diff_x = x[i] - mean_x;
+        ayanmo diff_y = y[i] - mean_y;
+        
+        sum_xy = Obara.fikun(sum_xy, diff_x * diff_y);
+        sum_x2 = Obara.fikun(sum_x2, diff_x * diff_x);
+        sum_y2 = Obara.fikun(sum_y2, diff_y * diff_y);
+    }
+    
+    ayanmo numerator = sum_xy;
+    ayanmo denominator = Obara.sqrt(sum_x2 * sum_y2);
+    
+    if denominator == 0.0 {
+        pada 0.0;
+    } else {
+        pada numerator / denominator;
+    }
 }
 
-ise triangle_area(base, height) {
-    padap? Oturupon.div(Obara.mul(base, height), 2);
+// Linear regression
+se linear_regression(x: Vec<Float>, y: Vec<Float>) -> Map<Str, Float> {
+    if x.length() != y.length() or x.length() < 2 {
+        return Map::<Str, Float>::new();
+    }
+    
+    ayanmo n = x.length() as Float;
+    ayanmo sum_x = 0.0;
+    ayanmo sum_y = 0.0;
+    ayanmo sum_xy = 0.0;
+    ayanmo sum_x2 = 0.0;
+    
+    fun i ninu 0..x.length() {
+        sum_x = Obara.fikun(sum_x, x[i]);
+        sum_y = Obara.fikun(sum_y, y[i]);
+        sum_xy = Obara.fikun(sum_xy, x[i] * y[i]);
+        sum_x2 = Obara.fikun(sum_x2, x[i] * x[i]);
+    }
+    
+    ayanmo slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
+    ayanmo intercept = (sum_y - slope * sum_x) / n;
+    
+    ayanmo result = Map::<Str, Float>::new();
+    result.insert("slope", slope);
+    result.insert("intercept", intercept);
+    result.insert("correlation", calculate_correlation(x, y));
+    
+    pada result;
 }
 
-// 3D Shapes
-ise sphere_volume(radius) {
-    padap? Obara.mul(Oturupon.div(4, 3), Obara.mul(PI, Obara.pow(radius, 3)));
+// Example: Hours studied vs test scores
+ayanmo hours_studied = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+ayanmo test_scores = [65.0, 70.0, 75.0, 80.0, 85.0, 88.0, 92.0, 95.0];
+
+ayanmo regression = linear_regression(hours_studied, test_scores);
+
+Irosu.fo("Study Hours vs Test Scores Analysis:");
+Irosu.fo("Slope: " + Obara.format(regression.get("slope"), 2));      // 4.21
+Irosu.fo("Intercept: " + Obara.format(regression.get("intercept"), 2));  // 60.71
+Irosu.fo("Correlation: " + Obara.format(regression.get("correlation"), 3)); // 0.996
+
+// Predict score for 10 hours of study
+ayanmo predicted_score = regression.get("slope") * 10.0 + regression.get("intercept");
+Irosu.fo("Predicted score for 10 hours: " + Obara.format(predicted_score, 1)); // 102.8</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Number Theory</h2>
+            
+            <h3>Prime Numbers and Factors</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Number Theory Operations</span>
+                </div>
+                <pre><code>// Check if number is prime
+se is_prime(n: u64) -> Bool {
+    if n <= 1 {
+        pada eke;
+    }
+    if n <= 3 {
+        pada otito;
+    }
+    if n % 2 == 0 or n % 3 == 0 {
+        pada eke;
+    }
+    
+    ayanmo i = 5;
+    while i * i <= n {
+        if n % i == 0 or n % (i + 2) == 0 {
+            pada eke;
+        }
+        i = i + 6;
+    }
+    
+    pada otito;
 }
 
-ise cylinder_volume(radius, height) {
-    padap? Obara.mul(Obara.mul(PI, Obara.pow(radius, 2)), height);
+// Generate prime numbers up to limit
+se generate_primes(limit: u64) -> Vec<u64> {
+    if limit < 2 {
+        pada Vec::<u64>::new();
+    }
+    
+    ayanmo primes = Vec::<u64>::new();
+    primes.push(2);
+    
+    fun num ninu 3..limit + 1 {
+        if is_prime(num) {
+            primes.push(num);
+        }
+    }
+    
+    pada primes;
 }
 
-ise cone_volume(radius, height) {
-    padap? Oturupon.div(cylinder_volume(radius, height), 3);
+// Calculate factors of a number
+se get_factors(n: u64) -> Vec<u64> {
+    if n <= 1 {
+        return [n];
+    }
+    
+    ayanmo factors = Vec::<u64>::new();
+    factors.push(1);
+    
+    fun i ninu 2..(n / 2) + 1 {
+        if n % i == 0 {
+            factors.push(i);
+            if i != n / i {
+                factors.push(n / i);
+            }
+        }
+    }
+    
+    factors.push(n);
+    factors.sort();
+    pada factors;
 }
 
-// Pythagorean theorem
-ise hypotenuse(a, b) {
-    padap? Oturupon.sqrt(Obara.add(Obara.pow(a, 2), Obara.pow(b, 2)));
+// Calculate greatest common divisor (GCD)
+se gcd(a: u64, b: u64) -> u64 {
+    while b != 0 {
+        ayanmo temp = b;
+        b = a % b;
+        a = temp;
+    }
+    pada a;
 }
 
-// Usage
-Irosu.fo("?? Geometry Calculator");
-Irosu.fo("----------------------");
+// Calculate least common multiple (LCM)
+se lcm(a: u64, b: u64) -> u64 {
+    if a == 0 or b == 0 {
+        pada 0;
+    }
+    pada (a * b) / gcd(a, b);
+}
 
-Irosu.fo("Circle (r=5): " + Obara.round(circle_area(5), 2) + " sq units");
-Irosu.fo("Rectangle (4x6): " + rectangle_area(4, 6) + " sq units");
-Irosu.fo("Triangle (base=8, h=5): " + triangle_area(8, 5) + " sq units");
-Irosu.fo("Sphere (r=3): " + Obara.round(sphere_volume(3), 2) + " cubic units");
-Irosu.fo("Cylinder (r=2, h=10): " + Obara.round(cylinder_volume(2, 10), 2) + " cubic units");
-Irosu.fo("Right triangle (3,4): hyp = " + hypotenuse(3, 4));</code></pre>
+// Example usage
+ayanmo number = 84;
+Irosu.fo("Number Theory Analysis for " + Obara.to_str(number) + ":");
 
-        <footer class="doc-footer">
-            <p><a href="domains.html">? All Domain Use Cases</a></p>
-            <p><a href="../../index.html">Documentation Home</a></p>
+Irosu.fo("Is prime: " + Obara.to_str(is_prime(number)));  // false
+Irosu.fo("Factors: " + Ika.join(get_factors(number).map(Obara.to_str), ", "));  // 1, 2, 3, 4, 6, 7, 12, 14, 21, 28, 42, 84
+
+ayanmo a = 48;
+ayanmo b = 180;
+Irosu.fo("GCD(" + Obara.to_str(a) + ", " + Obara.to_str(b) + ") = " + Obara.to_str(gcd(a, b)));  // 12
+Irosu.fo("LCM(" + Obara.to_str(a) + ", " + Obara.to_str(b) + ") = " + Obara.to_str(lcm(a, b)));  // 720
+
+// Generate first 20 primes
+ayanmo primes = generate_primes(71);  // First 20 primes end at 71
+Irosu.fo("First 20 primes: " + Ika.join(primes.map(Obara.to_str), ", "));</code></pre>
+            </div>
+
+            <h3>Advanced Number Theory</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Advanced Mathematical Functions</span>
+                </div>
+                <pre><code>// Calculate Fibonacci sequence
+se fibonacci(n: u64) -> u64 {
+    if n <= 1 {
+        pada n;
+    }
+    
+    ayanmo a = 0;
+    ayanmo b = 1;
+    
+    fun i ninu 2..n + 1 {
+        ayanmo temp = a + b;
+        a = b;
+        b = temp;
+    }
+    
+    pada b;
+}
+
+// Generate Fibonacci sequence
+se fibonacci_sequence(count: u32) -> Vec<u64> {
+    ayanmo sequence = Vec::<u64>::new();
+    
+    fun i ninu 0..count {
+        sequence.push(fibonacci(i));
+    }
+    
+    pada sequence;
+}
+
+// Calculate factorial
+se factorial(n: u64) -> u64 {
+    if n <= 1 {
+        pada 1;
+    }
+    
+    ayanmo result = 1;
+    fun i ninu 2..n + 1 {
+        result = result * i;
+    }
+    
+    pada result;
+}
+
+// Check if number is a perfect square
+se is_perfect_square(n: u64) -> Bool {
+    if n < 0 {
+        pada eke;
+    }
+    
+    ayanmo sqrt_n = Obara.sqrt(n as Float) as u64;
+    pada sqrt_n * sqrt_n == n;
+}
+
+// Calculate digital root (repeated sum of digits)
+se digital_root(n: u64) -> u64 {
+    if n == 0 {
+        pada 0;
+    }
+    
+    ayanmo num = n;
+    while num >= 10 {
+        ayanmo sum = 0;
+        while num > 0 {
+            sum = Obara.fikun(sum, num % 10);
+            num = num / 10;
+        }
+        num = sum;
+    }
+    
+    pada num;
+}
+
+// Example usage
+Irosu.fo("Advanced Number Theory:");
+
+// Fibonacci sequence
+ayanmo fib_seq = fibonacci_sequence(10);
+Irosu.fo("First 10 Fibonacci numbers: " + Ika.join(fib_seq.map(Obara.to_str), ", "));
+// 0, 1, 1, 2, 3, 5, 8, 13, 21, 34
+
+// Factorials
+fun i ninu 0..8 {
+    Irosu.fo(Obara.to_str(i) + "! = " + Obara.to_str(factorial(i)));
+}
+// 0! = 1, 1! = 1, 2! = 2, 3! = 6, 4! = 24, 5! = 120, 6! = 720, 7! = 5040, 8! = 40320
+
+// Perfect squares
+fun i ninu 1..21 {
+    if is_perfect_square(i) {
+        Irosu.fo(Obara.to_str(i) + " is a perfect square");
+    }
+}
+// 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361, 400
+
+// Digital roots
+Irosu.fo("Digital roots:");
+fun i ninu 1..20 {
+    Irosu.fo("Digital root of " + Obara.to_str(i) + " = " + Obara.to_str(digital_root(i)));
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Mathematical Constants</h2>
+            
+            <h3>Mathematical Constants</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Constants and Special Values</span>
+                </div>
+                <pre><code>// Mathematical constants available in Obara domain
+const PI: Float = 3.14159265358979323846;
+const E: Float = 2.71828182845904523536;
+const GOLDEN_RATIO: Float = 1.61803398874989484820;
+const SQRT_2: Float = 1.41421356237309504880;
+const SQRT_3: Float = 1.73205080756887729353;
+const LN_2: Float = 0.69314718055994530942;
+const LN_10: Float = 2.30258509299404568402;
+
+// Circle calculations
+se calculate_circle_properties(radius: Float) -> Map<Str, Float> {
+    ayanmo properties = Map::<Str, Float>::new();
+    
+    properties.insert("radius", radius);
+    properties.insert("diameter", 2.0 * radius);
+    properties.insert("circumference", 2.0 * PI * radius);
+    properties.insert("area", PI * radius * radius);
+    
+    pada properties;
+}
+
+// Sphere calculations
+se calculate_sphere_properties(radius: Float) -> Map<Str, Float> {
+    ayanmo properties = Map::<Str, Float>::new();
+    
+    properties.insert("radius", radius);
+    properties.insert("diameter", 2.0 * radius);
+    properties.insert("surface_area", 4.0 * PI * radius * radius);
+    properties.insert("volume", (4.0 / 3.0) * PI * radius * radius * radius);
+    
+    pada properties;
+}
+
+// Triangle calculations (using Heron's formula)
+se calculate_triangle_area(a: Float, b: Float, c: Float) -> Float {
+    ayanmo s = (a + b + c) / 2.0;  // semi-perimeter
+    pada Obara.sqrt(s * (s - a) * (s - b) * (s - c));
+}
+
+// Example calculations
+ayanmo circle = calculate_circle_properties(5.0);
+Irosu.fo("Circle with radius 5:");
+Irosu.fo("Diameter: " + Obara.format(circle.get("diameter"), 2));      // 10.00
+Irosu.fo("Circumference: " + Obara.format(circle.get("circumference"), 2)); // 31.42
+Irosu.fo("Area: " + Obara.format(circle.get("area"), 2));                 // 78.54
+
+ayanmo sphere = calculate_sphere_properties(3.0);
+Irosu.fo("");
+Irosu.fo("Sphere with radius 3:");
+Irosu.fo("Surface Area: " + Obara.format(sphere.get("surface_area"), 2)); // 113.10
+Irosu.fo("Volume: " + Obara.format(sphere.get("volume"), 2));           // 113.10
+
+ayanmo triangle_area = calculate_triangle_area(3.0, 4.0, 5.0);
+Irosu.fo("");
+Irosu.fo("Triangle area (3, 4, 5): " + Obara.format(triangle_area, 2));    // 6.00
+
+// Golden ratio calculations
+ayanmo golden_rectangle_width = 100.0;
+ayanmo golden_rectangle_height = golden_rectangle_width / GOLDEN_RATIO;
+Irosu.fo("");
+Irosu.fo("Golden Rectangle (width 100):");
+Irosu.fo("Height: " + Obara.format(golden_rectangle_height, 2));    // 61.80
+Irosu.fo("Ratio: " + Obara.format(golden_rectangle_width / golden_rectangle_height, 6)); // 1.618034</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Financial Calculations</h2>
+            
+            <h3>Investment and Return Calculations</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Financial Mathematics</span>
+                </div>
+                <pre><code>// Calculate return on investment (ROI)
+se calculate_roi(initial_investment: Float, final_value: Float) -> Float {
+    if initial_investment == 0.0 {
+        pada 0.0;
+    }
+    pada ((final_value - initial_investment) / initial_investment) * 100.0;
+}
+
+// Calculate annual percentage yield (APY)
+se calculate_apy(nominal_rate: Float, compounding_periods: u32) -> Float {
+    ayanmo periodic_rate = nominal_rate / compounding_periods as Float;
+    pada (Obara.pow(1.0 + periodic_rate, compounding_periods as Float) - 1.0) * 100.0;
+}
+
+// Calculate present value
+se calculate_present_value(future_value: Float, discount_rate: Float, periods: u32) -> Float {
+    pada future_value / Obara.pow(1.0 + discount_rate, periods as Float);
+}
+
+// Calculate future value
+se calculate_future_value(present_value: Float, interest_rate: Float, periods: u32) -> Float {
+    pada present_value * Obara.pow(1.0 + interest_rate, periods as Float);
+}
+
+// Calculate annuity payment
+se calculate_annuity_payment(principal: Float, interest_rate: Float, periods: u32) -> Float {
+    if interest_rate == 0.0 {
+        pada principal / periods as Float;
+    }
+    
+    ayanmo denominator = 1.0 - Obara.pow(1.0 + interest_rate, -periods as Float);
+    pada (principal * interest_rate) / denominator;
+}
+
+// Example investment scenarios
+Irosu.fo("Financial Calculations:");
+
+// ROI example
+ayanmo initial = 10000.0;
+ayanmo final = 12500.0;
+ayanmo roi = calculate_roi(initial, final);
+Irosu.fo("ROI: $" + Obara.format(initial, 0) + " -> $" + Obara.format(final, 0) + " = " + Obara.format(roi, 2) + "%"); // 25.00%
+
+// APY comparison
+ayanmo nominal_rate = 0.05;  // 5% nominal rate
+ayanmo apy_monthly = calculate_apy(nominal_rate, 12);
+ayanmo apy_daily = calculate_apy(nominal_rate, 365);
+Irosu.fo("APY at 5% nominal rate:");
+Irosu.fo("  Monthly compounding: " + Obara.format(apy_monthly, 4) + "%");  // 5.1162%
+Irosu.fo("  Daily compounding: " + Obara.format(apy_daily, 4) + "%");    // 5.1267%
+
+// Present value calculation
+ayanmo future_value = 50000.0;
+ayanmo discount_rate = 0.08;  // 8% discount rate
+ayanmo years = 10;
+ayanmo present_value = calculate_present_value(future_value, discount_rate, years);
+Irosu.fo("Present value of $" + Obara.format(future_value, 0) + " in " + Obara.to_str(years) + " years at " + Obara.format(discount_rate * 100, 0) + "%: $" + Obara.format(present_value, 2)); // $23159.54
+
+// Annuity calculation
+ayanmo retirement_fund = 1000000.0;
+ayanmo annual_return = 0.07;  // 7% annual return
+ayanmo retirement_years = 25;
+ayanmo annual_payment = calculate_annuity_payment(retirement_fund, annual_return, retirement_years);
+Irosu.fo("Annual payment from $" + Obara.format(retirement_fund, 0) + " over " + Obara.to_str(retirement_years) + " years at " + Obara.format(annual_return * 100, 0) + "%: $" + Obara.format(annual_payment, 2)); // $85810.40</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Scientific Calculations</h2>
+            
+            <h3>Physics and Engineering</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Scientific Applications</span>
+                </div>
+                <pre><code>// Calculate kinetic energy
+se calculate_kinetic_energy(mass: Float, velocity: Float) -> Float {
+    // KE = 1/2 * m * v^2
+    pada 0.5 * mass * velocity * velocity;
+}
+
+// Calculate potential energy
+se calculate_potential_energy(mass: Float, height: Float, gravity: Float) -> Float {
+    // PE = m * g * h
+    pada mass * gravity * height;
+}
+
+// Calculate momentum
+se calculate_momentum(mass: Float, velocity: Float) -> Float {
+    // p = m * v
+    pada mass * velocity;
+}
+
+// Calculate force
+se calculate_force(mass: Float, acceleration: Float) -> Float {
+    // F = m * a
+    pada mass * acceleration;
+}
+
+// Calculate work
+se calculate_work(force: Float, distance: Float) -> Float {
+    // W = F * d
+    pada force * distance;
+}
+
+// Calculate power
+se calculate_power(work: Float, time: Float) -> Float {
+    // P = W / t
+    pada work / time;
+}
+
+// Example physics calculations
+Irosu.fo("Physics Calculations:");
+
+// Car example
+ayanmo car_mass = 1500.0;  // kg
+ayanmo car_velocity = 25.0;  // m/s (about 90 km/h)
+ayanmo car_ke = calculate_kinetic_energy(car_mass, car_velocity);
+Irosu.fo("Car kinetic energy: " + Obara.format(car_ke, 0) + " J"); // 468750 J
+
+// Falling object example
+ayanmo object_mass = 10.0;    // kg
+ayanmo height = 100.0;       // meters
+ayanmo gravity = 9.81;        // m/s^2
+ayanmo pe = calculate_potential_energy(object_mass, height, gravity);
+Irosu.fo("Object potential energy: " + Obara.format(pe, 0) + " J"); // 9810 J
+
+// Force and work example
+ayanmo force = calculate_force(50.0, 2.0);  // 50 kg mass, 2 m/s^2 acceleration
+ayanmo distance = 10.0;  // meters
+ayanmo work = calculate_work(force, distance);
+Irosu.fo("Force: " + Obara.format(force, 0) + " N");  // 100 N
+Irosu.fo("Work: " + Obara.format(work, 0) + " J");   // 1000 J
+
+// Power example
+ayanmo time = 5.0;  // seconds
+ayanmo power = calculate_power(work, time);
+Irosu.fo("Power: " + Obara.format(power, 0) + " W"); // 200 W
+
+// Electrical calculations
+se calculate_electrical_power(voltage: Float, current: Float) -> Float {
+    // P = V * I
+    pada voltage * current;
+}
+
+se calculate_resistance(voltage: Float, current: Float) -> Float {
+    // R = V / I
+    pada voltage / current;
+}
+
+se calculate_current(voltage: Float, resistance: Float) -> Float {
+    // I = V / R
+    pada voltage / resistance;
+}
+
+// Example electrical calculations
+ayanmo circuit_voltage = 12.0;  // volts
+ayanmo circuit_current = 2.0;   // amps
+ayanmo circuit_power = calculate_electrical_power(circuit_voltage, circuit_current);
+ayanmo circuit_resistance = calculate_resistance(circuit_voltage, circuit_current);
+
+Irosu.fo("");
+Irosu.fo("Electrical Calculations:");
+Irosu.fo("Circuit: " + Obara.format(circuit_voltage, 0) + "V, " + Obara.format(circuit_current, 0) + "A");
+Irosu.fo("Power: " + Obara.format(circuit_power, 0) + " W");      // 24 W
+Irosu.fo("Resistance: " + Obara.format(circuit_resistance, 0) + " Ohms"); // 6 Ohms</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Optimization and Algorithms</h2>
+            
+            <h3>Mathematical Optimization</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Optimization Algorithms</span>
+                </div>
+                <pre><code>// Find maximum in array
+se find_max(numbers: Vec<Float>) -> Float {
+    if numbers.length() == 0 {
+        pada 0.0;
+    }
+    
+    ayanmo max_val = numbers[0];
+    fun num ninu numbers {
+        if num > max_val {
+            max_val = num;
+        }
+    }
+    
+    pada max_val;
+}
+
+// Find minimum in array
+se find_min(numbers: Vec<Float>) -> Float {
+    if numbers.length() == 0 {
+        pada 0.0;
+    }
+    
+    ayanmo min_val = numbers[0];
+    fun num ninu numbers {
+        if num < min_val {
+            min_val = num;
+        }
+    }
+    
+    pada min_val;
+}
+
+// Find both min and max in one pass
+se find_min_max(numbers: Vec<Float>) -> Map<Str, Float> {
+    if numbers.length() == 0 {
+        return Map::<Str, Float>::new();
+    }
+    
+    ayanmo min_val = numbers[0];
+    ayanmo max_val = numbers[0];
+    
+    fun num ninu numbers {
+        if num < min_val {
+            min_val = num;
+        }
+        if num > max_val {
+            max_val = num;
+        }
+    }
+    
+    ayanmo result = Map::<Str, Float>::new();
+    result.insert("min", min_val);
+    result.insert("max", max_val);
+    
+    pada result;
+}
+
+// Binary search algorithm
+se binary_search(sorted_array: Vec<Float>, target: Float) -> i32 {
+    ayanmo left = 0;
+    ayanmo right = sorted_array.length() - 1;
+    
+    while left <= right {
+        ayanmo mid = left + (right - left) / 2;
+        
+        if sorted_array[mid] == target {
+            pada mid as i32;
+        } else if sorted_array[mid] < target {
+            left = mid + 1;
+        } else {
+            right = mid - 1;
+        }
+    }
+    
+    pada -1; // not found
+}
+
+// Calculate moving average
+se moving_average(data: Vec<Float>, window_size: u32) -> Vec<Float> {
+    if data.length() < window_size {
+        return Vec::<Float>::new();
+    }
+    
+    ayanmo averages = Vec::<Float>::new();
+    ayanmo window_sum = 0.0;
+    
+    // Initialize first window
+    fun i ninu 0..window_size {
+        window_sum = Obara.fikun(window_sum, data[i]);
+    }
+    averages.push(window_sum / window_size as Float);
+    
+    // Slide window
+    fun i ninu window_size..data.length() {
+        window_sum = window_sum - data[i - window_size] + data[i];
+        averages.push(window_sum / window_size as Float);
+    }
+    
+    pada averages;
+}
+
+// Example usage
+ayanmo test_data = [23.5, 45.2, 12.8, 67.3, 34.9, 89.1, 56.7, 78.4, 41.2, 92.6];
+
+Irosu.fo("Optimization Algorithms:");
+
+// Min/max finding
+ayanmo min_max = find_min_max(test_data);
+Irosu.fo("Min: " + Obara.format(min_max.get("min"), 2));  // 12.80
+Irosu.fo("Max: " + Obara.format(min_max.get("max"), 2));  // 92.60
+
+// Binary search
+ayanmo sorted_data = test_data.clone();
+sorted_data.sort();
+ayanmo target = 56.7;
+ayanmo index = binary_search(sorted_data, target);
+Irosu.fo("Binary search for " + Obara.format(target, 2) + ": index " + Obara.to_str(index)); // 5
+
+// Moving average
+ayanmo moving_avg = moving_average(test_data, 3);
+Irosu.fo("Moving average (window size 3):");
+fun i ninu 0..moving_avg.length() {
+    Irosu.fo("  Window " + Obara.to_str(i + 1) + ": " + Obara.format(moving_avg[i], 2));
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>Numerical Precision</h3>
+            <ul>
+                <li><strong>Floating Point:</strong> Use Float for most calculations, avoid integer division</li>
+                <li><strong>Precision Control:</strong> Use format() for consistent decimal places</li>
+                <li><strong>Comparison:</strong> Use epsilon for floating point comparisons</li>
+                <li><strong>Rounding:</strong> Be consistent with rounding methods</li>
+            </ul>
+
+            <h3>Performance</h3>
+            <ul>
+                <li><strong>Single Pass:</strong> Combine min/max finding in one iteration</li>
+                <li><strong>Caching:</strong> Cache expensive calculations like sqrt, pow</li>
+                <li><strong>Vectorization:</strong> Use array operations when possible</li>
+                <li><strong>Early Exit:</strong> Break loops early when possible</li>
+            </ul>
+
+            <h3>Error Handling</h3>
+            <ul>
+                <li><strong>Input Validation:</strong> Validate numerical inputs before calculations</li>
+                <li><strong>Division by Zero:</strong> Check denominators before division</li>
+                <li><strong>Domain Errors:</strong> Handle sqrt of negative numbers</li>
+                <li><strong>Overflow:</strong> Check for numeric overflow in critical calculations</li>
+            </ul>
+
+            <h3>Cultural Integration</h3>
+            <ul>
+                <li><strong>Proverbs:</strong> Use appropriate Yoruba proverbs in error messages</li>
+                <li><strong>Context:</strong> Apply mathematical concepts to cultural contexts</li>
+                <li><strong>Naming:</strong> Use culturally meaningful variable names</li>
+                <li><strong>Documentation:</strong> Explain mathematical concepts in accessible terms</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Use Cases Documentation</a></p>
         </footer>
     </div>
-    <script src="../../js/nav.js"></script>
+
     <script src="../../js/common.js"></script>
 </body>
 
 </html>
-

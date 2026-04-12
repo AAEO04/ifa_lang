@@ -35,4 +35,18 @@ mod tests {
         assert!(rust_code.contains("let mut x"));
         assert!(rust_code.contains("fn main()"));
     }
+
+    #[test]
+    fn test_file_io_transpile_exposes_errors() {
+        let source = r#"
+        ayanmo contents = Odi.ka("missing.txt");
+        Odi.ko("out.txt", "hello");
+        "#;
+
+        let program = parse(source).unwrap();
+        let rust_code = transpile_to_rust(&program);
+
+        assert!(rust_code.contains("\"IoError\""));
+        assert!(!rust_code.contains("std::fs::write(&p, &c).ok()"));
+    }
 }

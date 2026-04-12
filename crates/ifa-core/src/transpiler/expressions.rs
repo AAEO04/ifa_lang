@@ -27,10 +27,16 @@ impl RustTranspiler {
                     BinaryOperator::Gt => format!("IfaValue::Bool({} > {})", l, r),
                     BinaryOperator::GtEq => format!("IfaValue::Bool({} >= {})", l, r),
                     BinaryOperator::And => {
-                        format!("IfaValue::Bool(({}).is_truthy() && ({}).is_truthy())", l, r)
+                        format!(
+                            "({{ let __ifa_l = {}; if !__ifa_l.is_truthy() {{ __ifa_l }} else {{ {} }} }})",
+                            l, r
+                        )
                     }
                     BinaryOperator::Or => {
-                        format!("IfaValue::Bool(({}).is_truthy() || ({}).is_truthy())", l, r)
+                        format!(
+                            "({{ let __ifa_l = {}; if __ifa_l.is_truthy() {{ __ifa_l }} else {{ {} }} }})",
+                            l, r
+                        )
                     }
                     _ => format!("({} {} {})", l, op, r),
                 }
@@ -71,9 +77,24 @@ impl RustTranspiler {
             Expression::OduCall(call) => self.transpile_odu_call(call),
 
             Expression::Call { name, args } => {
+                if let Some(domain) = self.std_named.get(name) {
+                    let call = OduCall {
+                        domain: *domain,
+                        method: name.clone(),
+                        args: args.clone(),
+                        span: Span::default(),
+                    };
+                    return self.transpile_odu_call(&call);
+                }
                 let args_str: Vec<String> =
                     args.iter().map(|a| self.transpile_expression(a)).collect();
                 format!("{}({})", name, args_str.join(", "))
+            }
+
+            Expression::Await(expr) => {
+                self.has_async = true;
+                let inner = self.transpile_expression(expr);
+                format!("({}).await", inner)
             }
 
             Expression::Index { object, index } => {
@@ -87,10 +108,52 @@ impl RustTranspiler {
                 method,
                 args,
             } => {
+                if let Expression::Identifier(obj_name) = &**object {
+                    if let Some(domain) = self.std_modules.get(obj_name) {
+                        let call = OduCall {
+                            domain: *domain,
+                            method: method.clone(),
+                            args: args.clone(),
+                            span: Span::default(),
+                        };
+                        return self.transpile_odu_call(&call);
+                    }
+                    if self.module_aliases.contains(obj_name) {
+                        let args_str: Vec<String> =
+                            args.iter().map(|a| self.transpile_expression(a)).collect();
+                        return format!("{}::{}({})", obj_name, method, args_str.join(", "));
+                    }
+                }
                 let obj = self.transpile_expression(object);
                 let args_str: Vec<String> =
                     args.iter().map(|a| self.transpile_expression(a)).collect();
                 format!("{}.{}({})", obj, method, args_str.join(", "))
+            }
+            Expression::Try(expr) => {
+                // Desugar to Rust `?` — transpiler targets Rust, so this is exact.
+                let inner = self.transpile_expression(expr);
+                format!("{}?", inner)
+            }
+
+            Expression::InterpolatedString { parts } => {
+                let mut fmt_str = String::new();
+                let mut args = Vec::new();
+                for part in parts {
+                    match part {
+                        InterpolatedPart::Literal(s) => {
+                            fmt_str.push_str(&s.replace("{", "{{").replace("}", "}}").replace("\"", "\\\""));
+                        }
+                        InterpolatedPart::Expression(expr) => {
+                            fmt_str.push_str("{}");
+                            args.push(self.transpile_expression(expr));
+                        }
+                    }
+                }
+                if args.is_empty() {
+                    format!("IfaValue::str(\"{}\")", fmt_str)
+                } else {
+                    format!("IfaValue::str(format!(\"{}\", {}))", fmt_str, args.join(", "))
+                }
             }
         }
     }

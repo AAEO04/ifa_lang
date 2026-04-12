@@ -3,11 +3,19 @@
 //! This module implements `IfaValue` as a safe, reference-counted enum.
 //! No manual memory management. No unsafe unions. pure Rust.
 
-use std::sync::Arc;
+#[cfg(feature = "serde")]
+use serde::de::Error as DeError;
+#[cfg(feature = "serde")]
+use serde::ser::Error as SerError;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
-use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+#[cfg(feature = "vm")]
+use std::sync::Mutex;
 
+#[cfg(feature = "vm")]
+use crate::ast::Statement;
 use crate::token::ResourceToken;
 
 // ============================================================================
@@ -29,28 +37,69 @@ pub enum IfaValue {
     Float(f64),
 
     // 2. Heap Objects (Ref-Counted, Shared)
-    // Using Arc for thread-safety (Send + Sync generally, if T is Send+Sync)
     Str(Arc<str>),
     List(Arc<Vec<IfaValue>>),
-    Map(Arc<HashMap<Arc<str>, IfaValue>>), // Keys are interned strings (Arc<str>)
-    
+    Map(Arc<HashMap<Arc<str>, IfaValue>>),
+
     // 3. Special / VM Objects
     Fn(Arc<BytecodeFnData>),
-    
+
+    /// AST function (interpreter) with captured environment id.
+    #[cfg(feature = "vm")]
+    AstFn(Arc<AstFnData>),
+
+    /// Boxed/captured binding cell (closure upvalue).
+    #[cfg(feature = "vm")]
+    Upvalue(UpvalueCell),
+
+    /// Bytecode closure: function template + captured environment.
+    #[cfg(feature = "vm")]
+    Closure(Arc<ClosureData>),
+    /// Async future value (VM/AST only).
+    #[cfg(feature = "vm")]
+    Future(FutureCell),
+
     // Legacy / Other
     #[allow(dead_code)]
     Resource(Arc<ResourceToken>),
-    
-    // VM Specific (Keeping simplified for now)
+
+    // VM Specific
     #[cfg(feature = "vm")]
-    Class(Arc<String>), // Placeholder
-    #[cfg(feature = "vm")]
-    Return(Arc<IfaValue>), // For returning from functions
-    
+    Return(Arc<IfaValue>),
+
     // 4. Okanran (Error Handling)
-    // flag: true=Ok, false=Err. Payload boxed to reduce enum size variants.
     Result(bool, Box<IfaValue>),
-} 
+}
+
+// ============================================================================
+// VM support types
+// ============================================================================
+
+/// Shared mutable cell used for closure capture (by-reference semantics).
+#[cfg(feature = "vm")]
+pub type UpvalueCell = Arc<Mutex<IfaValue>>;
+
+/// Closure payload for the bytecode VM.
+#[cfg(feature = "vm")]
+#[derive(Clone, Debug)]
+pub struct ClosureData {
+    pub fn_data: Arc<BytecodeFnData>,
+    pub env: Arc<Vec<UpvalueCell>>,
+}
+
+// ========================================================================
+// Async futures (minimal runtime)
+// ========================================================================
+
+#[cfg(feature = "vm")]
+#[derive(Clone, Debug)]
+pub enum FutureState {
+    Pending,
+    Ready(IfaValue),
+}
+
+#[cfg(feature = "vm")]
+pub type FutureCell = Arc<Mutex<FutureState>>;
 
 // ============================================================================
 // 2. Constructors & Helpers
@@ -94,25 +143,41 @@ impl IfaValue {
         }
         IfaValue::Map(Arc::new(internal))
     }
-    
+
     #[cfg(feature = "vm")]
-    pub fn bytecode_fn(name: impl Into<String>, start_ip: usize, arity: u8) -> Self {
+    pub fn bytecode_fn(
+        name: impl Into<String>,
+        start_ip: usize,
+        arity: u8,
+        is_async: bool,
+    ) -> Self {
         IfaValue::Fn(Arc::new(BytecodeFnData {
             name: name.into(),
             start_ip,
-            arity
+            arity,
+            is_async,
         }))
     }
-    
+
     #[cfg(feature = "vm")]
     pub fn return_value(val: IfaValue) -> Self {
         IfaValue::Return(Arc::new(val))
     }
-    
+
+    #[cfg(feature = "vm")]
+    pub fn future_ready(val: IfaValue) -> Self {
+        IfaValue::Future(Arc::new(Mutex::new(FutureState::Ready(val))))
+    }
+
+    #[cfg(feature = "vm")]
+    pub fn future_pending() -> Self {
+        IfaValue::Future(Arc::new(Mutex::new(FutureState::Pending)))
+    }
+
     pub fn ok(val: IfaValue) -> Self {
         IfaValue::Result(true, Box::new(val))
     }
-    
+
     pub fn err(val: IfaValue) -> Self {
         IfaValue::Result(false, Box::new(val))
     }
@@ -128,10 +193,6 @@ impl IfaValue {
         }
     }
 
-    // --- Accessors ---
-
-
-
     pub fn type_name(&self) -> &'static str {
         match self {
             IfaValue::Null => "Null",
@@ -142,7 +203,15 @@ impl IfaValue {
             IfaValue::List(_) => "List",
             IfaValue::Map(_) => "Map",
             IfaValue::Fn(_) => "Fn",
+            #[cfg(feature = "vm")]
+            IfaValue::AstFn(_) => "Fn",
             IfaValue::Result(_, _) => "Result",
+            #[cfg(feature = "vm")]
+            IfaValue::Upvalue(_) => "Upvalue",
+            #[cfg(feature = "vm")]
+            IfaValue::Closure(_) => "Closure",
+            #[cfg(feature = "vm")]
+            IfaValue::Future(_) => "Future",
             _ => "Unknown",
         }
     }
@@ -152,11 +221,32 @@ impl IfaValue {
             IfaValue::Null => false,
             IfaValue::Bool(b) => *b,
             IfaValue::Int(i) => *i != 0,
-            IfaValue::Float(f) => *f != 0.0,
+            IfaValue::Float(f) => *f != 0.0 && !f.is_nan(),
+            IfaValue::Str(s) => !s.is_empty(),
+            IfaValue::List(l) => !l.is_empty(),
+            IfaValue::Map(m) => !m.is_empty(),
+            IfaValue::Fn(_) => true,
+            #[cfg(feature = "vm")]
+            IfaValue::AstFn(_) => true,
+            #[cfg(feature = "vm")]
+            IfaValue::Closure(_) => true,
+            #[cfg(feature = "vm")]
+            IfaValue::Return(v) => v.is_truthy(),
+            IfaValue::Result(_, _) => true,
+            #[cfg(feature = "vm")]
+            IfaValue::Future(_) => true,
+            #[cfg(feature = "vm")]
+            IfaValue::Upvalue(cell) => cell
+                .lock()
+                .ok()
+                .as_deref()
+                .map(IfaValue::is_truthy)
+                .unwrap_or(false),
+            #[allow(unreachable_patterns)]
             _ => true,
         }
     }
-    
+
     pub fn is_equal(&self, other: &Self) -> bool {
         match (self, other) {
             (IfaValue::Null, IfaValue::Null) => true,
@@ -164,21 +254,26 @@ impl IfaValue {
             (IfaValue::Int(a), IfaValue::Int(b)) => a == b,
             (IfaValue::Float(a), IfaValue::Float(b)) => (a - b).abs() < f64::EPSILON,
             (IfaValue::Str(a), IfaValue::Str(b)) => a == b,
-
-            // Arc equality checks pointer equality first usually.
-            // But we derived PartialEq on IfaValue? No, we implemented manual Eq below.
-            // For recursive equality:
             (IfaValue::List(a), IfaValue::List(b)) => {
-                if Arc::ptr_eq(a, b) { return true; }
-                if a.len() != b.len() { return false; }
+                if Arc::ptr_eq(a, b) {
+                    return true;
+                }
+                if a.len() != b.len() {
+                    return false;
+                }
                 a.iter().zip(b.iter()).all(|(x, y)| x.is_equal(y))
             }
-             (IfaValue::Map(a), IfaValue::Map(b)) => {
-                if Arc::ptr_eq(a, b) { return true; }
-                if a.len() != b.len() { return false; }
-                a.iter().all(|(k, v)| b.get(k).map_or(false, |bv| v.is_equal(bv)))
+            (IfaValue::Map(a), IfaValue::Map(b)) => {
+                if Arc::ptr_eq(a, b) {
+                    return true;
+                }
+                if a.len() != b.len() {
+                    return false;
+                }
+                a.iter()
+                    .all(|(k, v)| b.get(k).map_or(false, |bv| v.is_equal(bv)))
             }
-            _ => false
+            _ => false,
         }
     }
 }
@@ -206,13 +301,17 @@ impl fmt::Display for IfaValue {
             IfaValue::List(_) => write!(f, "[List]"),
             IfaValue::Map(_) => write!(f, "{{Map}}"),
             IfaValue::Fn(_) => write!(f, "<fn>"),
+            #[cfg(feature = "vm")]
+            IfaValue::AstFn(data) => write!(f, "<fn {}>", data.name),
             IfaValue::Result(ok, val) => {
                 if *ok {
-                   write!(f, "Ok({})", val)
+                    write!(f, "Ok({})", val)
                 } else {
-                   write!(f, "Err({})", val)
+                    write!(f, "Err({})", val)
                 }
             }
+            #[cfg(feature = "vm")]
+            IfaValue::Future(_) => write!(f, "<future>"),
             _ => write!(f, "<?>"),
         }
     }
@@ -226,33 +325,52 @@ impl std::ops::Not for IfaValue {
     }
 }
 
+// ============================================================================
+// 4. Serde — bincode-safe surrogate enum
+//
+// bincode does NOT support deserialize_any (it is a non-self-describing format).
+// We use a surrogate enum tagged by variant index, which bincode handles fine.
+// ============================================================================
+
+#[cfg(feature = "serde")]
+#[derive(Serialize, Deserialize)]
+enum IfaValueSurrogate {
+    Null,
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    Str(String),
+    List(Vec<IfaValue>),
+    /// Placeholder for non-serializable variants (Fn, Closure, Class, etc.)
+    Unsupported,
+}
+
 #[cfg(feature = "serde")]
 impl Serialize for IfaValue {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        match self {
-            IfaValue::Null => serializer.serialize_unit(),
-            IfaValue::Bool(b) => serializer.serialize_bool(*b),
-            IfaValue::Int(i) => serializer.serialize_i64(*i),
-            IfaValue::Float(f) => serializer.serialize_f64(*f),
-            IfaValue::Str(s) => serializer.serialize_str(s),
+        let surrogate = match self {
+            IfaValue::Null => IfaValueSurrogate::Null,
+            IfaValue::Bool(b) => IfaValueSurrogate::Bool(*b),
+            IfaValue::Int(i) => IfaValueSurrogate::Int(*i),
+            IfaValue::Float(f) => IfaValueSurrogate::Float(*f),
+            IfaValue::Str(s) => IfaValueSurrogate::Str(s.to_string()),
             IfaValue::List(l) => {
-                 use serde::ser::SerializeSeq;
-                 let mut seq = serializer.serialize_seq(Some(l.len()))?;
-                 for item in l.iter() {
-                     seq.serialize_element(item)?;
-                 }
-                 seq.end()
+                let inner = l.iter().cloned().collect();
+                IfaValueSurrogate::List(inner)
             }
-            // ... Map ...
-             _ => serializer.serialize_unit(),
-        }
+            other => {
+                return Err(S::Error::custom(format!(
+                    "IfaValue variant '{}' is not serializable",
+                    other.type_name()
+                )));
+            }
+        };
+        surrogate.serialize(serializer)
     }
 }
-
-
 
 #[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for IfaValue {
@@ -260,81 +378,60 @@ impl<'de> Deserialize<'de> for IfaValue {
     where
         D: serde::Deserializer<'de>,
     {
-        use serde::de::{self, MapAccess, SeqAccess, Visitor};
-        use std::fmt;
-
-        struct IfaValueVisitor;
-
-        impl<'de> Visitor<'de> for IfaValueVisitor {
-            type Value = IfaValue;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("null, bool, integer, float, string, list, or map")
+        let surrogate = IfaValueSurrogate::deserialize(deserializer)?;
+        Ok(match surrogate {
+            IfaValueSurrogate::Null => IfaValue::null(),
+            IfaValueSurrogate::Bool(b) => IfaValue::bool(b),
+            IfaValueSurrogate::Int(i) => IfaValue::Int(i),
+            IfaValueSurrogate::Float(f) => IfaValue::Float(f),
+            IfaValueSurrogate::Str(s) => IfaValue::str(s),
+            IfaValueSurrogate::List(l) => IfaValue::list(l),
+            IfaValueSurrogate::Unsupported => {
+                return Err(D::Error::custom(
+                    "unsupported IfaValue surrogate in serialized data",
+                ));
             }
-
-            fn visit_unit<E: de::Error>(self) -> Result<IfaValue, E> {
-                Ok(IfaValue::Null)
-            }
-
-            fn visit_none<E: de::Error>(self) -> Result<IfaValue, E> {
-                Ok(IfaValue::Null)
-            }
-
-            fn visit_bool<E: de::Error>(self, v: bool) -> Result<IfaValue, E> {
-                Ok(IfaValue::Bool(v))
-            }
-
-            fn visit_i64<E: de::Error>(self, v: i64) -> Result<IfaValue, E> {
-                Ok(IfaValue::Int(v))
-            }
-
-            fn visit_u64<E: de::Error>(self, v: u64) -> Result<IfaValue, E> {
-                // Saturate on overflow rather than error
-                Ok(IfaValue::Int(v.min(i64::MAX as u64) as i64))
-            }
-
-            fn visit_f64<E: de::Error>(self, v: f64) -> Result<IfaValue, E> {
-                Ok(IfaValue::Float(v))
-            }
-
-            fn visit_str<E: de::Error>(self, v: &str) -> Result<IfaValue, E> {
-                Ok(IfaValue::str(v))
-            }
-
-            fn visit_string<E: de::Error>(self, v: String) -> Result<IfaValue, E> {
-                Ok(IfaValue::str(v))
-            }
-
-            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<IfaValue, A::Error> {
-                let mut items = Vec::with_capacity(seq.size_hint().unwrap_or(0));
-                while let Some(item) = seq.next_element::<IfaValue>()? {
-                    items.push(item);
-                }
-                Ok(IfaValue::list(items))
-            }
-
-            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<IfaValue, A::Error> {
-                let mut m = HashMap::with_capacity(map.size_hint().unwrap_or(0));
-                while let Some((key, value)) = map.next_entry::<String, IfaValue>()? {
-                    m.insert(key, value);
-                }
-                Ok(IfaValue::map(m))
-            }
-        }
-
-        deserializer.deserialize_any(IfaValueVisitor)
+        })
     }
 }
 
+#[cfg(all(test, feature = "serde"))]
+mod tests {
+    use super::*;
 
+    #[test]
+    fn unsupported_values_fail_serialization() {
+        let value = IfaValue::Fn(Arc::new(BytecodeFnData {
+            name: "f".to_string(),
+            start_ip: 0,
+            arity: 0,
+            is_async: false,
+        }));
 
-// Ref Definitions
+        let err = bincode::serialize(&value).expect_err("expected serialization failure");
+        let msg = err.to_string();
+        assert!(msg.contains("not serializable"));
+    }
+}
+
+// ============================================================================
+// 5. Supporting Types
+// ============================================================================
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BytecodeFnData {
     pub name: String,
     pub start_ip: usize,
     pub arity: u8,
+    pub is_async: bool,
 }
 
-
+#[cfg(feature = "vm")]
+#[derive(Debug, Clone)]
+pub struct AstFnData {
+    pub name: String,
+    pub params: Vec<String>,
+    pub body: Vec<Statement>,
+    pub closure_id: u64,
+    pub is_async: bool,
+}

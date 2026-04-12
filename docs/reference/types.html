@@ -4,144 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Type System Reference - If·-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-            --success: #4ade80;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-            margin: 2.5rem 0 1rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        table {
-            width: 100%;
-            background: var(--bg-card);
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 1rem 0;
-            border-collapse: collapse;
-        }
-
-        th {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.75rem;
-            text-align: left;
-            color: var(--gold);
-        }
-
-        td {
-            padding: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .type-card {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            border-left: 4px solid var(--accent);
-        }
-
-        .type-card h3 {
-            margin-top: 0;
-        }
-
-        .warning {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid #ef4444;
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        .warning-title {
-            color: #ef4444;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Type System Reference - If√°-Lang</title>
+    <meta name="description" content="Complete type system reference for If√°-Lang based on ifa-types implementation">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -149,224 +20,392 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
-            <h1>?? Type System Reference</h1>
-            <p style="color: var(--text-dim);">Complete guide to If·-Lang data types</p>
+            <h1>Type System Reference</h1>
+            <p class="subtitle">Dynamic Types with Protocol-Oriented Design</p>
         </header>
 
-        <h2>Overview</h2>
-        <p>If·-Lang is <strong>dynamically typed</strong> ó variables can hold any type and types are checked at
-            runtime. The language has 6 fundamental types:</p>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Ogbe.type() Result</th>
-                    <th>Example Values</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><strong>Number</strong></td>
-                    <td><code>"number"</code></td>
-                    <td><code>42</code>, <code>3.14</code>, <code>-100</code></td>
-                </tr>
-                <tr>
-                    <td><strong>String</strong></td>
-                    <td><code>"string"</code></td>
-                    <td><code>"Hello"</code>, <code>"If·"</code></td>
-                </tr>
-                <tr>
-                    <td><strong>Boolean</strong></td>
-                    <td><code>"boolean"</code></td>
-                    <td><code>otito</code>, <code>iro</code></td>
-                </tr>
-                <tr>
-                    <td><strong>List</strong></td>
-                    <td><code>"list"</code></td>
-                    <td><code>[1, 2, 3]</code>, <code>[]</code></td>
-                </tr>
-                <tr>
-                    <td><strong>Map</strong></td>
-                    <td><code>"map"</code></td>
-                    <td><code>{"a": 1}</code></td>
-                </tr>
-                <tr>
-                    <td><strong>Nil</strong></td>
-                    <td><code>"nil"</code></td>
-                    <td><code>nil</code></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h2>Number</h2>
-        <div class="type-card">
-            <h3>Integers and Floats</h3>
-            <p>Numbers in If·-Lang are 64-bit floating point internally (like JavaScript).</p>
-            <pre><code>ayanmo integer = 42;
-ayanmo float = 3.14159;
-ayanmo negative = -100;
-ayanmo scientific = 1e10;  // 10 billion
-
-// All arithmetic works as expected
-ayanmo sum = 10 + 5;      // 15
-ayanmo diff = 10 - 5;     // 5
-ayanmo prod = 10 * 5;     // 50
-ayanmo quot = 10 / 4;     // 2.5
-ayanmo remainder = 10 % 3; // 1</code></pre>
+        <div class="step">
+            <h2>Overview</h2>
+            <p>If√°-Lang uses a dynamic type system with protocol-oriented design. All values are instances of <code>IfaValue</code>, which provides a unified container for different data types while maintaining type safety through structural subtyping.</p>
         </div>
 
-        <h2>String</h2>
-        <div class="type-card">
-            <h3>Text Values</h3>
-            <p>Strings are sequences of Unicode characters, enclosed in double quotes.</p>
-            <pre><code>ayanmo greeting = "Kaabo!";
-ayanmo yoruba = "?l?¥run";  // Supports diacritics
-ayanmo empty = "";
+        <div class="step">
+            <h2>Core Types</h2>
+            
+            <h3>Primitive Types</h3>
+            <div class="type-grid">
+                <div class="type-card">
+                    <h4>Int</h4>
+                    <p>64-bit signed integer</p>
+                    <div class="code-example">
+                        <pre><code>ayanmo x = 42;
+ayanmo negative = -1000;</code></pre>
+                    </div>
+                    <ul>
+                        <li>Range: -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807</li>
+                        <li>Size: 8 bytes</li>
+                        <li>Methods: All Obara math operations</li>
+                    </ul>
+                </div>
 
-// String length
-ayanmo len = Ika.len(greeting);  // 6
+                <div class="type-card">
+                    <h4>Float</h4>
+                    <p>64-bit floating point number</p>
+                    <div class="code-example">
+                        <pre><code>ayanmo pi = 3.14159;
+ayanmo scientific = 1.23e-4;</code></pre>
+                    </div>
+                    <ul>
+                        <li>IEEE 754 double precision</li>
+                        <li>Size: 8 bytes</li>
+                        <li>Methods: All Obara math operations</li>
+                    </ul>
+                </div>
 
-// Concatenation
-ayanmo full = "Hello, " + "World!";  // "Hello, World!"
+                <div class="type-card">
+                    <h4>Bool</h4>
+                    <p>Boolean value</p>
+                    <div class="code-example">
+                        <pre><code>ayanmo truth = otito;
+ayanmo lies = eke;</code></pre>
+                    </div>
+                    <ul>
+                        <li>Values: <code>otito</code> (true), <code>eke</code> (false)</li>
+                        <li>Size: 1 byte</li>
+                        <li>Methods: Logical operations</li>
+                    </ul>
+                </div>
 
-// String to number
-ayanmo num = Ogbe.parse_int("42");  // 42</code></pre>
+                <div class="type-card">
+                    <h4>Str</h4>
+                    <p>Unicode string</p>
+                    <div class="code-example">
+                        <pre><code>ayanmo name = "If√°-Lang";
+ayanmo yoruba = "Kaabo √†wuj√∫!";</code></pre>
+                    </div>
+                    <ul>
+                        <li>UTF-8 encoded</li>
+                        <li>Immutable by default</li>
+                        <li>Methods: Ika string operations</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
-        <h2>Boolean</h2>
-        <div class="type-card">
-            <h3>True and False</h3>
-            <p>Boolean values have Yoruba and English names:</p>
-            <pre><code>// Yoruba
-ayanmo yes = otito;  // true
-ayanmo no = iro;     // false
+        <div class="step">
+            <h2>Collection Types</h2>
+            
+            <div class="type-grid">
+                <div class="type-card">
+                    <h4>List</h4>
+                    <p>Ordered collection of values</p>
+                    <div class="code-example">
+                        <pre><code>ayanmo numbers = [1, 2, 3, 4, 5];
+ayanmo mixed = [1, "hello", otito, 3.14];</code></pre>
+                    </div>
+                    <ul>
+                        <li>Dynamic typing (mixed types allowed)</li>
+                        <li>Zero-based indexing</li>
+                        <li>Methods: Ogunda array operations</li>
+                    </ul>
+                </div>
 
-// English
-ayanmo active = true;
-ayanmo hidden = false;
-
-// Comparison produces booleans
-ayanmo result = 5 > 3;    // otito/true
-ayanmo equal = "a" == "b"; // iro/false</code></pre>
-        </div>
-
-        <h2>List</h2>
-        <div class="type-card">
-            <h3>Ordered Collections</h3>
-            <p>Lists can hold any mix of types and are zero-indexed.</p>
-            <pre><code>// Create lists
-ayanmo numbers = [1, 2, 3, 4, 5];
-ayanmo mixed = [42, "hello", otito, nil];
-ayanmo empty = [];
-
-// Access elements (0-indexed)
-ayanmo first = Ogunda.first(numbers);  // 1
-ayanmo last = Ogunda.last(numbers);    // 5
-ayanmo third = Ogunda.get(numbers, 2); // 3
-
-// List operations
-ayanmo len = Ogunda.len(numbers);      // 5
-ayanmo pushed = Ogunda.push(numbers, 6); // [1,2,3,4,5,6]
-ayanmo reversed = Ogunda.reverse(numbers);</code></pre>
-        </div>
-
-        <h2>Map</h2>
-        <div class="type-card">
-            <h3>Key-Value Collections</h3>
-            <p>Maps (dictionaries/objects) store key-value pairs.</p>
-            <pre><code>// Create map
-ayanmo person = {
-    "name": "AdÈ",
-    "age": 25,
+                <div class="type-card">
+                    <h4>Map</h4>
+                    <p>Key-value dictionary</p>
+                    <div class="code-example">
+                        <pre><code>ayanmo person = {
+    "name": "Alice",
+    "age": 30,
     "active": otito
-};
-
-// Access values
-ayanmo name = person["name"];  // "AdÈ"
-
-// Nested structures
-ayanmo org = {
-    "leader": {"name": "?ba", "title": "Chief"},
-    "members": ["A", "B", "C"]
 };</code></pre>
+                    </div>
+                    <ul>
+                        <li>String keys only</li>
+                        <li>Any value types</li>
+                        <li>Methods: Owonrin map operations</li>
+                    </ul>
+                </div>
+
+                <div class="type-card">
+                    <h4>Object</h4>
+                    <p>Thread-local mutable object ("The Hut")</p>
+                    <div class="code-example">
+                        <pre><code>ayanmo obj = Object();
+obj.field = "value";
+ayanmo value = obj.field;</code></pre>
+                    </div>
+                    <ul>
+                        <li>Thread-local (no atomic overhead)</li>
+                        <li>Mutable fields</li>
+                        <li>Methods: Standard object operations</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
-        <h2>Nil</h2>
-        <div class="type-card">
-            <h3>Absence of Value</h3>
-            <p><code>nil</code> represents "no value" or "nothing".</p>
-            <pre><code>ayanmo empty = nil;
+        <div class="step">
+            <h2>Function Types</h2>
+            
+            <div class="type-grid">
+                <div class="type-card">
+                    <h4>Function</h4>
+                    <p>Callable function reference</p>
+                    <div class="code-example">
+                        <pre><code>ese add(a, b) {
+    pada a + b;
+}
+ayanmo func = add;
+ayanmo result = func(5, 3);</code></pre>
+                    </div>
+                    <ul>
+                        <li>First-class functions</li>
+                        <li>Closure support</li>
+                        <li>Higher-order functions</li>
+                    </ul>
+                </div>
 
-// Check for nil
-ti (value == nil) {
-    Irosu.fo("No value present");
+                <div class="type-card">
+                    <h4>Resource</h4>
+                    <p>Opaque resource handle</p>
+                    <div class="code-example">
+                        <pre><code>ayanmo file = Odi.si("data.txt");
+// file is a ResourceToken</code></pre>
+                    </div>
+                    <ul>
+                        <li>Opaque handles</li>
+                        <li>Automatic cleanup</li>
+                        <li>Domain-specific operations</li>
+                    </ul>
+                </div>
+
+                <div class="type-card">
+                    <h4>Null</h4>
+                    <p>Null/empty value</p>
+                    <div class="code-example">
+                        <pre><code>ayanmo empty = ofo;
+ayanmo optional = get_maybe_null();</code></pre>
+                    </div>
+                    <ul>
+                        <li>Represents absence of value</li>
+                        <li>Used in optional contexts</li>
+                        <li>Methods: Null-safe operations</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Type Annotations</h2>
+            
+            <h3>Type Hints</h3>
+            <p>Optional type hints can be added for clarity:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Type Annotations</span>
+                </div>
+                <pre><code>// With type hints
+ayanmo name: Str = "Alice";
+ayanmo age: Int = 30;
+ayanmo active: Bool = otito;
+
+// Function parameters
+ese greet(name: Str) -> Str {
+    pada "Kaabo, " + name;
 }
 
-// Functions without return give nil
-ise no_return() {
-    Irosu.fo("Hello");
-    // No padap?/return statement
-}
+// Collection types
+ayanmo numbers: List[Int] = [1, 2, 3];
+ayanmo person: Map[Str, Any] = {"name": "Bob"};</code></pre>
+            </div>
 
-ayanmo result = no_return();  // nil</code></pre>
+            <h3>Available Type Names</h3>
+            <ul>
+                <li><strong>Primitives:</strong> <code>Int</code>, <code>Float</code>, <code>Str</code>, <code>Bool</code></li>
+                <li><strong>Collections:</strong> <code>List</code>, <code>Map</code>, <code>Object</code></li>
+                <li><strong>Numeric:</strong> <code>i8</code>, <code>i16</code>, <code>i32</code>, <code>i64</code>, <code>u8</code>, <code>u16</code>, <code>u32</code>, <code>u64</code></li>
+                <li><strong>Float:</strong> <code>f32</code>, <code>f64</code></li>
+                <li><strong>Universal:</strong> <code>Any</code>, <code>void</code></li>
+            </ul>
         </div>
 
-        <h2>Type Coercion</h2>
-        <p>If·-Lang performs automatic type conversion in some contexts:</p>
+        <div class="step">
+            <h2>Type Conversion</h2>
+            
+            <h3>Implicit Conversion</h3>
+            <p>Some conversions happen automatically:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Automatic Conversions</span>
+                </div>
+                <pre><code>// Numeric promotion
+ayanmo result = 5 + 3.14;  // Int -> Float
 
-        <h3>String Concatenation</h3>
-        <pre><code>// Numbers convert to strings when concatenated
-ayanmo msg = "Age: " + 25;  // "Age: 25"
+// String concatenation
+ayanmo message = "Value: " + 42;  // Int -> Str
 
-// Booleans too
-ayanmo status = "Active: " + otito;  // "Active: true"</code></pre>
+// Boolean context
+ayanmo truthy = 42;        // Non-zero -> otito
+ayanmo falsy = 0;          // Zero -> eke</code></pre>
+            </div>
 
-        <h3>Boolean Context</h3>
-        <pre><code>// These are "falsy" (evaluate to false):
-ti (nil) { }       // false
-ti (iro) { }       // false
-ti (0) { }         // false (in some contexts)
-ti ("") { }        // false (empty string)
+            <h3>Explicit Conversion</h3>
+            <p>Use domain methods for explicit conversion:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Explicit Conversions</span>
+                </div>
+                <pre><code>// String to number
+ayanmo num = Ika.nomba("123");
 
-// These are "truthy" (evaluate to true):
-ti (42) { }        // true
-ti ("hello") { }   // true
-ti ([1, 2]) { }    // true</code></pre>
+// Number to string  
+ayanmo str = Ika.kika(42);
 
-        <div class="warning">
-            <div class="warning-title">?? Type Errors</div>
-            <p>Some operations require specific types and will error:</p>
-            <pre style="margin: 0.5rem 0 0 0;"><code>// ERROR: Cannot add string and number directly in math
-ayanmo bad = "5" + 3;  // May error or produce "53"
-
-// Use explicit parsing
-ayanmo good = Ogbe.parse_int("5") + 3;  // 8</code></pre>
+// Type checking
+ayanmo is_int = Oka.is_int(42);
+ayanmo is_str = Oka.is_str("hello");</code></pre>
+            </div>
         </div>
 
-        <h2>Type Checking</h2>
-        <pre><code>// Check type at runtime
-ayanmo value = [1, 2, 3];
-ayanmo t = Ogbe.type(value);
+        <div class="step">
+            <h2>Protocol-Oriented Types</h2>
+            
+            <h3>Type Protocols</h3>
+            <p>Types implement protocols rather than inheritance:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Protocol Implementation</span>
+                </div>
+                <pre><code>// Any type that can be added implements "Addable"
+// Any type that can be printed implements "Printable"
+// Any type that can be indexed implements "Indexable"
 
-ti (t == "list") {
-    Irosu.fo("It's a list with " + Ogunda.len(value) + " items");
-} bib?k? ti (t == "string") {
-    Irosu.fo("It's a string");
-} bib?k? {
-    Irosu.fo("Unknown type: " + t);
+// Usage is based on capability, not type
+ese process(value) {
+    if value.has_capability("Printable") {
+        Irosu.fo(value);
+    }
 }</code></pre>
+            </div>
 
-        <footer class="doc-footer">
-            <p><a href="errors.html">Error Reference ?</a></p>
-            <p><a href="../api/api.html">? API Reference</a> ∑ <a href="../index.html">Documentation Home</a></p>
+            <h3>Structural Subtyping</h3>
+            <p>Types are compatible based on structure, not declaration:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Structural Compatibility</span>
+                </div>
+                <pre><code>// These are structurally the same
+ayanmo person1 = {"name": "Alice", "age": 30};
+ayanmo person2 = {"name": "Bob", "age": 25};
+
+// Can be used interchangeably if they have same fields
+ese display(info) {
+    Irosu.fo(info.name + " (" + info.age + ")");
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Special Types</h2>
+            
+            <h3>VM-Specific Types</h3>
+            <p>Available when VM feature is enabled:</p>
+            
+            <ul>
+                <li><strong>AstFn:</strong> AST function representation</li>
+                <li><strong>BytecodeFn:</strong> Bytecode function representation</li>
+                <li><strong>Ptr:</strong> Raw pointer (unsafe)</li>
+                <li><strong>Ref:</strong> Immutable reference</li>
+            </ul>
+
+            <h3>Return Type</h3>
+            <p>Special type for function return values:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Return Values</span>
+                </div>
+                <pre><code>ese calculate() {
+    if some_condition {
+        pada 42;  // Return(Int)
+    }
+    // Implicit return of ofo
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Type Performance</h2>
+            
+            <h3>Memory Layout</h3>
+            <ul>
+                <li><strong>Tagged Union:</strong> Efficient discriminant-based dispatch</li>
+                <li><strong>Arc&lt;str&gt;:</strong> String interning for shared strings</li>
+                <li><strong>"The Hut":</strong> Thread-local objects with zero atomic overhead</li>
+                <li><strong>Resource Tokens:</strong> Opaque handles for safe resource management</li>
+            </ul>
+
+            <h3>Optimization Tips</h3>
+            <ul>
+                <li><strong>String Interning:</strong> Reuse strings when possible</li>
+                <li><strong>Thread-Local Objects:</strong> Use Object for thread-local data</li>
+                <li><strong>Type Hints:</strong> Help compiler optimize</li>
+                <li><strong>Avoid Mixed Lists:</strong> Homogeneous lists are faster</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Type Safety</h2>
+            
+            <h3>Runtime Type Checking</h3>
+            <p>Dynamic typing with runtime checks:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Type Safety</span>
+                </div>
+                <pre><code>// Type checking
+ayanmo value = get_value();
+if Oka.is_int(value) {
+    // Safe to use as Int
+    ayanmo doubled = value * 2;
+}
+
+// Safe operations with type guards
+ese safe_add(a, b) {
+    if Oka.is_num(a) and Oka.is_num(b) {
+        pada a + b;
+    } else {
+        Okanran.ku("Both arguments must be numbers");
+    }
+}</code></pre>
+            </div>
+
+            <h3>Error Handling</h3>
+            <p>Type errors are caught at runtime:</p>
+            
+            <ul>
+                <li><strong>Type Mismatch:</strong> Wrong type for operation</li>
+                <li><strong>Conversion Error:</strong> Invalid type conversion</li>
+                <li><strong>Index Bounds:</strong> Collection access errors</li>
+                <li><strong>Arity Mismatch:</strong> Wrong number of arguments</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Reference Documentation</a></p>
         </footer>
     </div>
-        <script src="../js/nav.js"></script>
+
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

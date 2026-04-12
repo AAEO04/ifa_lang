@@ -3,6 +3,7 @@
 //! Tests for Odù domain handlers using interpreter-level testing.
 //! Uses ayanmo (variable declaration) statements to capture results.
 
+use ifa_core::interpreter::Environment;
 use ifa_core::{IfaValue, Interpreter, parser::parse};
 
 /// Helper to run Ifá code and get environment value
@@ -10,10 +11,7 @@ fn run_and_get(code: &str, var: &str) -> Result<IfaValue, String> {
     let program = parse(code).map_err(|e| e.to_string())?;
     let mut interp = Interpreter::new();
     interp.execute(&program).map_err(|e| e.to_string())?;
-    interp
-        .env
-        .get(var)
-        .ok_or_else(|| format!("Variable {} not found", var))
+    Environment::get(&interp.env, var).ok_or_else(|| format!("Variable {} not found", var))
 }
 
 // =============================================================================
@@ -96,7 +94,7 @@ fn test_irete_sha256_known() {
     if let IfaValue::Str(hash) = result {
         assert_eq!(
             hash,
-            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824".into()
         );
     } else {
         panic!("Expected Str");
@@ -107,7 +105,7 @@ fn test_irete_sha256_known() {
 fn test_irete_base64_encode() {
     let result = run_and_get(r#"ayanmo e = Irete.encode_base64("hello");"#, "e").unwrap();
     if let IfaValue::Str(encoded) = result {
-        assert_eq!(encoded, "aGVsbG8=");
+        assert_eq!(encoded, "aGVsbG8=".into());
     } else {
         panic!("Expected Str");
     }
@@ -117,7 +115,7 @@ fn test_irete_base64_encode() {
 fn test_irete_base64_decode() {
     let result = run_and_get(r#"ayanmo d = Irete.decode_base64("aGVsbG8=");"#, "d").unwrap();
     if let IfaValue::Str(decoded) = result {
-        assert_eq!(decoded, "hello");
+        assert_eq!(decoded, "hello".into());
     } else {
         panic!("Expected Str");
     }
@@ -203,5 +201,5 @@ fn test_comparison() {
 #[test]
 fn test_string_concat() {
     let result = run_and_get(r#"ayanmo s = "Hello" + " World";"#, "s").unwrap();
-    assert_eq!(result, IfaValue::Str("Hello World".to_string()));
+    assert_eq!(result, IfaValue::Str("Hello World".into()));
 }

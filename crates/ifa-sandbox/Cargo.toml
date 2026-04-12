@@ -24,3 +24,6 @@ tempfile = "3.0"
 default = []
 # Enable network capabilities (requires wasmtime with network support)
 network = []
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

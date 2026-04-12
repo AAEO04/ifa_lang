@@ -57,6 +57,7 @@ ndarray = { version = "0.15", optional = true }
 
 # Database (Òdí)
 rusqlite = { workspace = true, optional = true }
+memmap2 = "0.9"
 
 # Async (Ọ̀sá)
 tokio = { workspace = true, optional = true }
@@ -75,6 +76,7 @@ libloading = { version = "0.8", optional = true }
 libffi = { version = "3.2", optional = true }  # Native dynamic calls
 boa_engine = { version = "0.19", optional = true }
 pyo3 = { version = "0.27", features = ["auto-initialize"], optional = true }
+libc = { version = "0.2", optional = true }
 
 # Kernel / System info
 sysinfo = { version = "0.30", optional = true }
@@ -85,6 +87,7 @@ rodio = { version = "0.17", optional = true }
 
 [dev-dependencies]
 tempfile = "3.10"
+pollster = "0.3"
 
 [dependencies.heapless]
 version = "0.8"
@@ -117,7 +120,7 @@ default = ["backend", "parallel", "dashmap"]
 # Language Features
 js = ["boa_engine"]
 python = ["pyo3"]
-native_ffi = ["libffi", "libloading"]  # Dynamic C calls via libffi (not WASM-compatible)
+native_ffi = ["libffi", "libloading", "libc", "ring"]  # Dynamic C calls via libffi (not WASM-compatible)
 
 # Performance Features
 dashmap = ["ifa-types/dashmap", "dep:dashmap"]

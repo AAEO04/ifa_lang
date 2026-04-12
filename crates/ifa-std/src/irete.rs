@@ -8,7 +8,7 @@ use crate::impl_odu_domain;
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use ifa_core::error::{IfaError, IfaResult};
 use ring::rand::SecureRandom;
-use ring::{digest, hmac, rand as ring_rand};
+use ring::{aead, digest, hmac, rand as ring_rand, signature};
 
 /// Ìrẹtẹ̀ - The Presser (Crypto/Compression)
 pub struct Irete;
@@ -51,6 +51,81 @@ impl Irete {
     pub fn hmac_verify(&self, key: &[u8], data: &[u8], signature: &[u8]) -> bool {
         let key = hmac::Key::new(hmac::HMAC_SHA256, key);
         hmac::verify(&key, data, signature).is_ok()
+    }
+
+    // =========================================================================
+    // SYMMETRIC ENCRYPTION (ChaCha20-Poly1305)
+    // =========================================================================
+
+    /// Encrypt data using ChaCha20-Poly1305 (di_pa)
+    pub fn chacha20_encrypt(&self, key: &[u8], nonce: &[u8], data: &[u8]) -> IfaResult<Vec<u8>> {
+        let unbound_key = aead::UnboundKey::new(&aead::CHACHA20_POLY1305, key)
+            .map_err(|_| IfaError::Custom("Invalid ChaCha20 key length".into()))?;
+        let less_safe_key = aead::LessSafeKey::new(unbound_key);
+        let nonce_obj = aead::Nonce::try_assume_unique_for_key(nonce).map_err(|_| {
+            IfaError::Custom("Invalid ChaCha20 nonce length (must be 12 bytes)".into())
+        })?;
+
+        let mut in_out = data.to_vec();
+        less_safe_key
+            .seal_in_place_append_tag(nonce_obj, aead::Aad::empty(), &mut in_out)
+            .map_err(|e| IfaError::Custom(format!("Encryption failed: {}", e)))?;
+
+        Ok(in_out)
+    }
+
+    /// Decrypt data using ChaCha20-Poly1305 (tu_pa)
+    pub fn chacha20_decrypt(
+        &self,
+        key: &[u8],
+        nonce: &[u8],
+        encrypted_data: &[u8],
+    ) -> IfaResult<Vec<u8>> {
+        let unbound_key = aead::UnboundKey::new(&aead::CHACHA20_POLY1305, key)
+            .map_err(|_| IfaError::Custom("Invalid ChaCha20 key length".into()))?;
+        let less_safe_key = aead::LessSafeKey::new(unbound_key);
+        let nonce_obj = aead::Nonce::try_assume_unique_for_key(nonce).map_err(|_| {
+            IfaError::Custom("Invalid ChaCha20 nonce length (must be 12 bytes)".into())
+        })?;
+
+        let mut in_out = encrypted_data.to_vec();
+        let decrypted_data = less_safe_key
+            .open_in_place(nonce_obj, aead::Aad::empty(), &mut in_out)
+            .map_err(|e| IfaError::Custom(format!("Decryption failed (auth error): {}", e)))?;
+
+        Ok(decrypted_data.to_vec())
+    }
+
+    // =========================================================================
+    // ASYMMETRIC CRYPTOGRAPHY (Ed25519)
+    // =========================================================================
+
+    /// Generate Ed25519 Keypair (Private PKCS#8 bytes, Public bytes)
+    pub fn ed25519_generate(&self) -> IfaResult<(Vec<u8>, Vec<u8>)> {
+        let rng = ring_rand::SystemRandom::new();
+        let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)
+            .map_err(|_| IfaError::Custom("Key generation failed".into()))?;
+        let key_pair = signature::Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref())
+            .map_err(|_| IfaError::Custom("Failed to format keypair".into()))?;
+
+        Ok((
+            pkcs8_bytes.as_ref().to_vec(),
+            key_pair.public_key().as_ref().to_vec(),
+        ))
+    }
+
+    /// Sign data with Ed25519 (fi_o)
+    pub fn ed25519_sign(&self, private_pkcs8: &[u8], message: &[u8]) -> IfaResult<Vec<u8>> {
+        let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_pkcs8)
+            .map_err(|_| IfaError::Custom("Invalid private key format".into()))?;
+        let sig = key_pair.sign(message);
+        Ok(sig.as_ref().to_vec())
+    }
+
+    /// Verify Ed25519 Signature (yewo_fo)
+    pub fn ed25519_verify(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> bool {
+        let unparsed_pub = signature::UnparsedPublicKey::new(&signature::ED25519, public_key);
+        unparsed_pub.verify(message, signature).is_ok()
     }
 
     // =========================================================================
@@ -183,5 +258,32 @@ mod tests {
 
         assert!(compressed.len() < data.len());
         assert_eq!(decompressed, data);
+    }
+
+    #[test]
+    fn test_chacha20_poly1305() {
+        let irete = Irete;
+        let key = b"01234567890123456789012345678901"; // 32 bytes
+        let nonce = b"012345678901"; // 12 bytes
+        let data = b"Secret Ifa message";
+
+        let encrypted = irete.chacha20_encrypt(key, nonce, data).unwrap();
+        // Encrypted length is data + 16 bytes tag
+        assert_eq!(encrypted.len(), data.len() + 16);
+
+        let decrypted = irete.chacha20_decrypt(key, nonce, &encrypted).unwrap();
+        assert_eq!(decrypted, data);
+    }
+
+    #[test]
+    fn test_ed25519() {
+        let irete = Irete;
+        let (priv_key, pub_key) = irete.ed25519_generate().unwrap();
+
+        let message = b"Sign this";
+        let signature = irete.ed25519_sign(&priv_key, message).unwrap();
+
+        assert!(irete.ed25519_verify(&pub_key, message, &signature));
+        assert!(!irete.ed25519_verify(&pub_key, b"Wrong data", &signature));
     }
 }

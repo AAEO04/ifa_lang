@@ -118,7 +118,9 @@ fn scan_statement(stmt: &Statement, caps: &mut CapabilitySet) {
                 scan_statement(s, caps);
             }
         }
-        Statement::EseDef { body, .. } => {
+        Statement::EseDef {
+            body, is_async: _, ..
+        } => {
             for s in body {
                 scan_statement(s, caps);
             }

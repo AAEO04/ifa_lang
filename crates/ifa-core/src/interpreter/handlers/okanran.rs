@@ -7,7 +7,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 
 /// Handler for Ọ̀kànràn (Errors/Assertions) domain.
 pub struct OkanranHandler;
@@ -21,7 +21,7 @@ impl OduHandler for OkanranHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         let arg0 = args.first();
@@ -63,7 +63,7 @@ impl OduHandler for OkanranHandler {
                 if let Some(cond_val) = arg0 {
                     let cond = cond_val.is_truthy();
                     if !cond {
-                         let msg = args.get(1).map(|v| v.to_string()).unwrap_or_default();
+                        let msg = args.get(1).map(|v| v.to_string()).unwrap_or_default();
                         return Err(IfaError::Runtime(format!("[assert] {}", msg)));
                     }
                     return Ok(IfaValue::bool(true));
@@ -91,7 +91,7 @@ impl OduHandler for OkanranHandler {
             // Assert not equal
             "jẹri_yato" | "assert_ne" => {
                 if let (Some(left), Some(right)) = (arg0, args.get(1)) {
-                   if !left.is_equal(right) {
+                    if !left.is_equal(right) {
                         return Ok(IfaValue::bool(true));
                     }
                     let msg = args

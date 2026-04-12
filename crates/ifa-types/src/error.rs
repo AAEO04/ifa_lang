@@ -1,17 +1,23 @@
 //! # Ifá Error Types (Ọ̀kànràn)
 //!
-//! Structured error handling with Yoruba proverbs for educational context.
+//! THE canonical error type for all Ifá-Lang runtimes.
+//! Every other crate re-exports this — do NOT define parallel error enums.
 
+use crate::ErrorCode;
 use thiserror::Error;
 
 /// Result type alias for Ifá operations
 pub type IfaResult<T> = Result<T, IfaError>;
 
 /// Core error type for Ifá-Lang runtime
-#[derive(Error, Debug)]
+///
+/// This is the ONE error type. ifa-core, ifa-std, ifa-cli all re-export it.
+/// If you need a different error shape (lint diagnostics, installer errors),
+/// use a different type name — never another `IfaError`.
+#[derive(Error, Debug, Clone)]
 pub enum IfaError {
     // =========================================================================
-    // MATH ERRORS (Ọ̀bàrà / Òtúúrúpọ̀n)
+    // MATH ERRORS (Ọ̀bàrà / Òtúúrúpọ̀n)  — ErrorCode 0x03XX
     // =========================================================================
     #[error("Division by zero - Ọ̀bàrà rejects: {0}")]
     DivisionByZero(String),
@@ -23,7 +29,7 @@ pub enum IfaError {
     Underflow(String),
 
     // =========================================================================
-    // TYPE ERRORS
+    // TYPE ERRORS  — ErrorCode 0x02XX
     // =========================================================================
     #[error("Arity mismatch: expected {expected} arguments, got {got}")]
     ArityMismatch { expected: usize, got: usize },
@@ -38,7 +44,7 @@ pub enum IfaError {
     ConversionError { from: String, to: String },
 
     // =========================================================================
-    // INDEX/KEY ERRORS (Ògúndá / Ìká)
+    // INDEX/KEY ERRORS (Ògúndá / Ìká)  — ErrorCode 0x01XX
     // =========================================================================
     #[error("Index out of bounds: {index} (length: {length})")]
     IndexOutOfBounds { index: i64, length: usize },
@@ -47,7 +53,7 @@ pub enum IfaError {
     KeyNotFound(String),
 
     // =========================================================================
-    // I/O ERRORS (Òdí / Ìrosù)
+    // I/O ERRORS (Òdí / Ìrosù)  — ErrorCode 0x04XX
     // =========================================================================
     #[error("File not found: {0}")]
     FileNotFound(String),
@@ -56,10 +62,10 @@ pub enum IfaError {
     PermissionDenied(String),
 
     #[error("I/O error: {0}")]
-    IoError(#[from] std::io::Error),
+    IoError(String), // String, not std::io::Error — Clone requires it
 
     // =========================================================================
-    // NETWORK ERRORS (Òtúrá)
+    // NETWORK ERRORS (Òtúrá)  — ErrorCode 0x04XX
     // =========================================================================
     #[error("Connection failed: {0}")]
     ConnectionFailed(String),
@@ -71,16 +77,28 @@ pub enum IfaError {
     SsrfBlocked(String),
 
     // =========================================================================
-    // VM ERRORS
+    // VM ERRORS  — ErrorCode 0x00XX
     // =========================================================================
+    #[error("Native registry is not attached. Cannot invoke FFI: {0}")]
+    RegistryNotAttached(String),
+
+    #[error("Execution yielded")]
+    Yielded,
+
     #[error("Unknown opcode: {0}")]
     UnknownOpcode(u8),
 
     #[error("Stack underflow")]
     StackUnderflow,
 
-    #[error("Stack overflow (limit: {0})")]
-    StackOverflow(usize),
+    #[error("Async not available: {0}")]
+    AsyncNotAvailable(String),
+
+    #[error("stack overflow — program declared #opon {directive:?} (limit: {limit} slots)")]
+    StackOverflow {
+        limit: usize,
+        directive: crate::bytecode::OponSize,
+    },
 
     #[error("Undefined variable: {0}")]
     UndefinedVariable(String),
@@ -89,7 +107,7 @@ pub enum IfaError {
     UndefinedFunction(String),
 
     // =========================================================================
-    // MEMORY ERRORS (Opon)
+    // MEMORY ERRORS (Opon)  — ErrorCode 0x01XX
     // =========================================================================
     #[error("Opon (memory) exhausted: requested {requested}, available {available}")]
     OponExhausted { requested: usize, available: usize },
@@ -106,8 +124,11 @@ pub enum IfaError {
     #[error("{0}")]
     Custom(String),
 
+    /// User-raised error via `ta` (throw). Carries the original thrown value
+    /// unchanged — may be a String, Map, List, or any other IfaValue.
+    /// §12.2: `ta` accepts any expression, not just strings.
     #[error("User error: {0}")]
-    UserError(String),
+    UserError(Box<crate::IfaValue>),
 
     // =========================================================================
     // PARSER/INTERPRETER ERRORS
@@ -122,7 +143,59 @@ pub enum IfaError {
     Runtime(String),
 }
 
+// Preserve `?` from std::io::Error → IfaError (manual impl since we use String)
+impl From<std::io::Error> for IfaError {
+    fn from(e: std::io::Error) -> Self {
+        IfaError::IoError(e.to_string())
+    }
+}
+
 impl IfaError {
+    /// Get the standard numeric error code for this error.
+    ///
+    /// These codes are stable across all runtimes (VM, embedded, FFI).
+    /// See `ifa_bytecode::ErrorCode` for the full taxonomy.
+    pub fn error_code(&self) -> ErrorCode {
+        match self {
+            IfaError::DivisionByZero(_) => ErrorCode::DivByZero,
+            IfaError::Overflow(_) | IfaError::Underflow(_) => ErrorCode::Overflow,
+
+            IfaError::TypeError { .. } => ErrorCode::TypeMismatch,
+            IfaError::ConversionError { .. } => ErrorCode::InvalidCast,
+
+            IfaError::IndexOutOfBounds { .. } => ErrorCode::OutOfBounds,
+            IfaError::KeyNotFound(_) => ErrorCode::OutOfBounds,
+
+            IfaError::FileNotFound(_) => ErrorCode::FileNotFound,
+            IfaError::PermissionDenied(_) | IfaError::SsrfBlocked(_) => ErrorCode::PermissionDenied,
+            IfaError::IoError(_) | IfaError::ConnectionFailed(_) => ErrorCode::IoError,
+            IfaError::Timeout(_) => ErrorCode::Timeout,
+
+            IfaError::UnknownOpcode(_) => ErrorCode::InvalidOpCode,
+            IfaError::StackUnderflow => ErrorCode::StackUnderflow,
+            IfaError::StackOverflow { .. } => ErrorCode::StackOverflow,
+            IfaError::AsyncNotAvailable(_) => ErrorCode::AsyncNotAvailable,
+
+            IfaError::UndefinedVariable(_) | IfaError::UndefinedFunction(_) => {
+                ErrorCode::UndefinedVar
+            }
+            IfaError::OponExhausted { .. } => ErrorCode::OutOfMemory,
+
+            IfaError::Parse(_) | IfaError::Compile(_) => ErrorCode::InvalidBytecode,
+
+            // Generic mappings — these need finer codes in future
+            IfaError::ArityMismatch { .. }
+            | IfaError::ArgumentError(_)
+            | IfaError::AssertionFailed(_)
+            | IfaError::NotImplemented(_)
+            | IfaError::Custom(_)
+            | IfaError::UserError(_)
+            | IfaError::Yielded
+            | IfaError::RegistryNotAttached(_)
+            | IfaError::Runtime(_) => ErrorCode::VmError,
+        }
+    }
+
     /// Get a Yoruba proverb related to this error (for educational context)
     pub fn proverb(&self) -> &'static str {
         match self {
@@ -142,8 +215,20 @@ impl IfaError {
             IfaError::OponExhausted { .. } => {
                 "Ìgbà méjì kì í wọ inú àwo kan. (Two times cannot fit in one calabash.)"
             }
-            IfaError::UserError(_) => "Ọwọ́ ara ẹni la fí tún ìwà ara ẹni ṣe. (One shapes their own character with their own hands.)",
+            IfaError::UserError(_) => {
+                "Ọwọ́ ara ẹni la fí tún ìwà ara ẹni ṣe. (One shapes their own character with their own hands.)"
+            }
             _ => "Gbogbo ìṣòro ní ojúùtù. (Every problem has a solution.)",
+        }
+    }
+
+    /// If this is a `UserError`, extract the inner `IfaValue`.
+    /// Used by the VM's catch handler to bind the error variable.
+    pub fn user_value(&self) -> Option<&crate::IfaValue> {
+        if let IfaError::UserError(v) = self {
+            Some(v)
+        } else {
+            None
         }
     }
 }

@@ -1,0 +1,19 @@
+# VM smoke test: control flow + short-circuit + comparisons
+
+ayanmo x = 0;
+ti x == 0 {
+    x = x + 1;
+}
+
+ayanmo i = 0;
+nigba i < 3 {
+    i = i + 1;
+}
+
+# OR short-circuit returns operand value
+ayanmo a = ofo || "default";
+
+# AND short-circuit prevents RHS evaluation
+ayanmo b = 0 && (1 / 0);
+
+àṣẹ;

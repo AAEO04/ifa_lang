@@ -58,8 +58,6 @@ impl<F: FnOnce()> Drop for Ebo<F> {
     fn drop(&mut self) {
         if let Some(cleanup) = unsafe { ManuallyDrop::take(&mut self.cleanup) } {
             cleanup();
-            #[cfg(debug_assertions)]
-            println!("  🔥 [Ẹbọ] {}", self._name);
         }
     }
 }
@@ -172,16 +170,6 @@ macro_rules! defer {
 #[macro_export]
 macro_rules! ebo {
     ($($body:tt)*) => {{
-        struct _EboBlockGuard;
-        impl Drop for _EboBlockGuard {
-            fn drop(&mut self) {
-                #[cfg(debug_assertions)]
-                println!("╚═══ Ẹbọ ═══╝");
-            }
-        }
-        #[cfg(debug_assertions)]
-        println!("╔═══ Ẹbọ ═══╗");
-        let _guard = _EboBlockGuard;
         $($body)*
     }};
 }

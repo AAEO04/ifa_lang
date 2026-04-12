@@ -33,6 +33,8 @@ pub struct LintContext {
     pub taboo_enforcer: TabooEnforcer,
     /// Whether we're inside an ailewu (unsafe) block
     pub in_ailewu: bool,
+    /// Active #opon directive size (if declared)
+    pub opon_size: Option<String>,
 }
 
 impl Default for LintContext {
@@ -54,6 +56,7 @@ impl LintContext {
             iwa_engine: IwaEngine::new(true),
             taboo_enforcer: TabooEnforcer::new(),
             in_ailewu: false,
+            opon_size: None,
         }
     }
 
@@ -175,6 +178,18 @@ pub fn analyze_program(
         }
     }
 
+    // #opon ailopin check — warn about embedded incompatibility
+    if ctx.opon_size.as_deref() == Some("ailopin") {
+        babalawo.warning(
+            "OPON_AILOPIN_UNBOUNDED",
+            "#opon ailopin declares unbounded memory — this is incompatible with embedded targets (Ilẹ̀ tier). \
+             Use #opon kekere, arinrin, or nla for bare-metal deployments.",
+            filename,
+            1,
+            1,
+        );
+    }
+
     (babalawo, ctx)
 }
 
@@ -257,7 +272,11 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
             }
         }
         Statement::EseDef {
-            name, params, body, ..
+            name,
+            params,
+            body,
+            is_async: _,
+            ..
         } => {
             ctx.define_var(name);
             // Parameters are also definitions within the function
@@ -307,10 +326,9 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
         Statement::Taboo { source, target, .. } => {
             ctx.taboo_enforcer.add_taboo(source, "", target, "", false);
         }
-        // Opon directives - currently informational only
+        // Opon directives — store for cross-check
         Statement::Opon { size, .. } => {
-            // Could store opon size in context for memory limit checks
-            let _ = size;
+            ctx.opon_size = Some(size.clone());
         }
         _ => {}
     }
@@ -410,6 +428,8 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
         }
 
         Statement::Instruction { call, span } => {
+            check_unsafe_ffi_call(call, baba, file, span);
+
             // Check for division by zero
             if (call.method == "pin" || call.method == "div")
                 && let Some(Expression::Int(0)) = call.args.get(1)
@@ -421,6 +441,23 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                     span.line,
                     span.column,
                 );
+            }
+
+            // #opon kekere + async domain call warning
+            if ctx.opon_size.as_deref() == Some("kekere") {
+                let domain_name = format!("{:?}", call.domain).to_lowercase();
+                if domain_name == "osa" || call.method.contains("async") {
+                    baba.warning(
+                        "OPON_KEKERE_ASYNC",
+                        &format!(
+                            "#opon kekere (64 call frames) used with async domain call '{}.{}' — consider #opon arinrin or larger",
+                            domain_name, call.method
+                        ),
+                        file,
+                        span.line,
+                        span.column,
+                    );
+                }
             }
 
             // Track resource lifecycle
@@ -456,6 +493,7 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             body,
             span,
             visibility: _,
+            is_async: _,
             ..
         } => {
             ctx.enter_function(name);
@@ -640,12 +678,28 @@ fn check_expression(
         }
 
         Expression::OduCall(call) => {
+            check_unsafe_ffi_call(call, baba, file, span);
             for arg in &call.args {
                 check_expression(arg, ctx, baba, file, span);
             }
         }
 
         _ => {}
+    }
+}
+
+fn check_unsafe_ffi_call(call: &ifa_core::ast::OduCall, baba: &mut Babalawo, file: &str, span: &Span) {
+    if call.domain == ifa_core::OduDomain::Coop
+        && (call.method.eq_ignore_ascii_case("itumo")
+            || call.method.eq_ignore_ascii_case("summon"))
+    {
+        baba.error(
+            "TABOO_UNSAFE_FFI",
+            "ffi.itumo() requires explicit sanctification; hidden bridges are forbidden",
+            file,
+            span.line,
+            span.column,
+        );
     }
 }
 

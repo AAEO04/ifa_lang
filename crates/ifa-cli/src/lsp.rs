@@ -1,4 +1,4 @@
-use ifa_babalawo::{Severity as IfaSeverity, analyze_program, LintContext, BabalawoConfig};
+use ifa_babalawo::{BabalawoConfig, LintContext, Severity as IfaSeverity, analyze_program};
 use ifa_core::parse;
 use lsp_server::{Connection, Message, Notification, RequestId, Response};
 use lsp_types::{
@@ -47,7 +47,7 @@ fn main_loop(
     let _params: InitializeParams = serde_json::from_value(params)
         .map_err(|e| format!("Failed to parse InitializeParams: {}", e))?;
     eprintln!("Client connected!");
-    
+
     // Track the latest valid analysis context
     let mut context: Option<LintContext> = None;
 
@@ -63,7 +63,9 @@ fn main_loop(
                             "Got completion request for: {}",
                             params.text_document_position.text_document.uri
                         );
-                        let result = Some(lsp_types::CompletionResponse::Array(get_completions(&context)));
+                        let result = Some(lsp_types::CompletionResponse::Array(get_completions(
+                            &context,
+                        )));
                         let result = serde_json::to_value(&result)
                             .map_err(|e| format!("Failed to serialize completion: {}", e))?;
                         let resp = Response {
@@ -313,11 +315,11 @@ fn get_completions(context: &Option<LintContext>) -> Vec<CompletionItem> {
             } else {
                 "Variable".to_string()
             };
-            
+
             items.push(ci(var, &detail, CompletionItemKind::VARIABLE));
         }
     }
-    
+
     items
 }
 

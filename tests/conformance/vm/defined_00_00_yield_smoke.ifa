@@ -1,0 +1,6 @@
+# expect: 1
+# spec: §17.2 `Yield` + §21 Tier 1 control flow
+
+jowo 0;
+pada 1;
+

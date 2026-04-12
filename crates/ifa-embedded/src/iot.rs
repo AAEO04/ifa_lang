@@ -9,9 +9,9 @@
 //! - Networking Stubs
 
 extern crate alloc;
+use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use alloc::format;
 use core::fmt;
 
 // We use the `log` crate which we added to Cargo.toml
@@ -130,9 +130,7 @@ impl GpioPin {
                 self.state = state;
                 Ok(())
             }
-            _ => Err(IotError::PinError(
-                "Pin not configured as output".into(),
-            )),
+            _ => Err(IotError::PinError("Pin not configured as output".into())),
         }
     }
 
@@ -163,9 +161,7 @@ impl GpioPin {
                 // Placeholder - would read actual hardware
                 Ok(self.state)
             }
-            _ => Err(IotError::PinError(
-                "Pin not configured as input".into(),
-            )),
+            _ => Err(IotError::PinError("Pin not configured as input".into())),
         }
     }
 }
@@ -181,7 +177,7 @@ pub struct EmbeddedSerial {
     baud: u32,
     initialized: bool,
     // Buffer for RX
-    buffer: heapless::Deque<u8, 256>, 
+    buffer: heapless::Deque<u8, 256>,
 }
 
 impl EmbeddedSerial {
@@ -247,7 +243,7 @@ impl JsonHelper {
     pub fn parse(json: &str) -> IotResult<serde_json::Value> {
         serde_json::from_str(json).map_err(|e| IotError::SerializationError(e.to_string()))
     }
-    
+
     pub fn stringify<T: serde::Serialize>(value: &T) -> IotResult<String> {
         serde_json::to_string(value).map_err(|e| IotError::SerializationError(e.to_string()))
     }

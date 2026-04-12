@@ -7,7 +7,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 
 /// Handler for Ọ̀bàrà (Math Add/Mul) domain.
 pub struct ObaraHandler;
@@ -21,10 +21,9 @@ impl OduHandler for ObaraHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
-
         let arg0 = args.get(0);
         let arg1 = args.get(1);
 
@@ -57,17 +56,23 @@ impl OduHandler for ObaraHandler {
 
             // Power
             "agbara" | "pow" | "power" => {
-                 if let (Some(base_val), Some(exp_val)) = (arg0, arg1) {
+                if let (Some(base_val), Some(exp_val)) = (arg0, arg1) {
                     match (base_val, exp_val) {
-                        (IfaValue::Int(base), IfaValue::Int(exp)) => Ok(IfaValue::int(base.pow(*exp as u32))),
-                        (IfaValue::Float(base), IfaValue::Int(exp)) => Ok(IfaValue::float(base.powi(*exp as i32))),
-                        (IfaValue::Float(base), IfaValue::Float(exp)) => Ok(IfaValue::float(base.powf(*exp))),
+                        (IfaValue::Int(base), IfaValue::Int(exp)) => {
+                            Ok(IfaValue::int(base.pow(*exp as u32)))
+                        }
+                        (IfaValue::Float(base), IfaValue::Int(exp)) => {
+                            Ok(IfaValue::float(base.powi(*exp as i32)))
+                        }
+                        (IfaValue::Float(base), IfaValue::Float(exp)) => {
+                            Ok(IfaValue::float(base.powf(*exp)))
+                        }
                         _ => Ok(IfaValue::int(0)),
                     }
-                 } else {
-                     Ok(IfaValue::int(0))
-                 }
-            },
+                } else {
+                    Ok(IfaValue::int(0))
+                }
+            }
 
             // Absolute value
             "abs" => {
@@ -80,17 +85,15 @@ impl OduHandler for ObaraHandler {
                 } else {
                     Ok(IfaValue::int(0))
                 }
-            },
+            }
 
             // Maximum
             "max" => {
                 let first = args.first().cloned().unwrap_or(IfaValue::int(0));
-                let max = args.iter().fold(first, |acc, v| {
-                    match (&acc, v) {
-                        (IfaValue::Int(a), IfaValue::Int(b)) if *b > *a => v.clone(),
-                        (IfaValue::Float(a), IfaValue::Float(b)) if *b > *a => v.clone(),
-                        _ => acc
-                    }
+                let max = args.iter().fold(first, |acc, v| match (&acc, v) {
+                    (IfaValue::Int(a), IfaValue::Int(b)) if *b > *a => v.clone(),
+                    (IfaValue::Float(a), IfaValue::Float(b)) if *b > *a => v.clone(),
+                    _ => acc,
                 });
                 Ok(max)
             }
@@ -98,12 +101,10 @@ impl OduHandler for ObaraHandler {
             // Minimum
             "min" => {
                 let first = args.first().cloned().unwrap_or(IfaValue::int(0));
-                let min = args.iter().fold(first, |acc, v| {
-                    match (&acc, v) {
-                        (IfaValue::Int(a), IfaValue::Int(b)) if b < a => v.clone(),
-                        (IfaValue::Float(a), IfaValue::Float(b)) if b < a => v.clone(),
-                        _ => acc
-                    }
+                let min = args.iter().fold(first, |acc, v| match (&acc, v) {
+                    (IfaValue::Int(a), IfaValue::Int(b)) if b < a => v.clone(),
+                    (IfaValue::Float(a), IfaValue::Float(b)) if b < a => v.clone(),
+                    _ => acc,
                 });
                 Ok(min)
             }
@@ -114,7 +115,7 @@ impl OduHandler for ObaraHandler {
             ))),
         }
     }
-    
+
     // ... skipping methods ...
 
     fn methods(&self) -> &'static [&'static str] {

@@ -105,4 +105,18 @@ crates/
 ├── ifa-wasm/          # Browser bindings
 ├── ifa-installer-core/# Installer logic
 └── ifa-installer-gui/ # Installer UI
+
+## Hardening Roadmap & Security Advisories
+
+### ⚠️ FFI Security Context (Shield of Ọ̀kànràn)
+The FFI Bridge in `ifa-std/src/ffi.rs` is currently under a high-priority hardening mandate.
+- **Vulnerabilities**: Thread-unsafe environment manipulation (BUG-018), lack of guest-level sandbox isolation (BUG-019), and native memory leaks (BUG-020).
+- **Hardening Pass**: Future work will implement hash-locked library verification and guest-side audit hooks.
+
+### 🚀 String Interpolation Architectural Tier
+- **Current**: Symmetric String Interpolation is supported via `OpCode::Add` overloading in `ifa-core`.
+- **Planned**: Specialized `OpCode::Concat` and `OpCode::ToString` to remove string-building logic from the arithmetic hot path, improving VM performance for pure numeric operations.
+
+### ⚖️ Babalawo Taboos
+- All FFI `itumo()` summons must be sanctified. The `TABOO_UNSAFE_FFI` rule enforces architectural oversight over polyglot bridges.
 ```

@@ -1,14 +1,12 @@
 //! Binary file format for compiled Ifa bytecode (.ifab files)
 
-
-
 /// Magic bytes identifying an Ifa bytecode file: "IFA\0"
 pub const MAGIC: [u8; 4] = [0x49, 0x46, 0x41, 0x00];
 
 /// Current bytecode format version
-pub const VERSION: u16 = 1;
+pub const VERSION: u16 = 3;
 
-/// Header for .ifab files (14 bytes)
+/// Header for .ifab files (15 bytes)
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BytecodeHeader {
@@ -23,16 +21,20 @@ pub struct BytecodeHeader {
 
     /// Constant pool size in bytes
     pub constant_size: u32,
+
+    /// Opon Size identifier (0=Kekere, 1=Arinrin, 2=Nla, 3=Ailopin)
+    pub opon_size: u8,
 }
 
 impl BytecodeHeader {
     /// Create a new header with the given section sizes.
-    pub fn new(instruction_size: u32, constant_size: u32) -> Self {
+    pub fn new(instruction_size: u32, constant_size: u32, opon_size: u8) -> Self {
         Self {
             magic: MAGIC,
             version: VERSION,
             instruction_size,
             constant_size,
+            opon_size,
         }
     }
 
@@ -41,25 +43,26 @@ impl BytecodeHeader {
         if self.magic != MAGIC {
             return Err(FormatError::InvalidMagic);
         }
-        if self.version != VERSION {
+        if self.version != 2 && self.version != VERSION {
             return Err(FormatError::UnsupportedVersion(self.version));
         }
         Ok(())
     }
 
-    /// Serialize header to 14 bytes (little-endian).
-    pub fn to_bytes(&self) -> [u8; 14] {
-        let mut bytes = [0u8; 14];
+    /// Serialize header to 15 bytes (little-endian).
+    pub fn to_bytes(&self) -> [u8; 15] {
+        let mut bytes = [0u8; 15];
         bytes[0..4].copy_from_slice(&self.magic);
         bytes[4..6].copy_from_slice(&self.version.to_le_bytes());
         bytes[6..10].copy_from_slice(&self.instruction_size.to_le_bytes());
         bytes[10..14].copy_from_slice(&self.constant_size.to_le_bytes());
+        bytes[14] = self.opon_size;
         bytes
     }
 
-    /// Parse header from bytes (min 14 bytes).
+    /// Parse header from bytes (min 15 bytes).
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, FormatError> {
-        if bytes.len() < 14 {
+        if bytes.len() < 15 {
             return Err(FormatError::TooShort);
         }
 
@@ -68,6 +71,7 @@ impl BytecodeHeader {
             version: u16::from_le_bytes([bytes[4], bytes[5]]),
             instruction_size: u32::from_le_bytes([bytes[6], bytes[7], bytes[8], bytes[9]]),
             constant_size: u32::from_le_bytes([bytes[10], bytes[11], bytes[12], bytes[13]]),
+            opon_size: bytes[14],
         };
 
         header.validate()?;
@@ -92,7 +96,7 @@ mod tests {
 
     #[test]
     fn header_roundtrip() {
-        let header = BytecodeHeader::new(100, 200);
+        let header = BytecodeHeader::new(100, 200, 1);
         let bytes = header.to_bytes();
         let decoded = BytecodeHeader::from_bytes(&bytes).unwrap();
 
@@ -100,5 +104,6 @@ mod tests {
         assert_eq!(decoded.version, VERSION);
         assert_eq!(decoded.instruction_size, 100);
         assert_eq!(decoded.constant_size, 200);
+        assert_eq!(decoded.opon_size, 1);
     }
 }

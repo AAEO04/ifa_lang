@@ -13,7 +13,7 @@ use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
 // Import Environment
-use super::environment::Environment;
+pub use super::environment::EnvRef;
 
 // Sub-modules containing domain-specific handlers (16 core Odù)
 mod ika; // 0100 - Strings
@@ -83,7 +83,7 @@ pub trait OduHandler: OduHandlerSendSync {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        env: &mut Environment,
+        env: &EnvRef,
         output: &mut Vec<String>,
     ) -> IfaResult<IfaValue>;
 
@@ -140,7 +140,7 @@ impl HandlerRegistry {
         domain: OduDomain,
         method: &str,
         args: Vec<IfaValue>,
-        env: &mut Environment,
+        env: &EnvRef,
         output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         match self.handlers.get(&domain) {

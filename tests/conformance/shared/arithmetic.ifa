@@ -1,0 +1,4 @@
+# expect: 15
+ayanmo a = 10;
+ayanmo b = 5;
+Irosu.fo(a + b);

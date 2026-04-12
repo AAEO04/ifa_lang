@@ -5,120 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ogbe - System Domain</title>
-    <style>
-        :root {
-            --bg: #0f0f1a;
-            --card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            color: var(--gold);
-        }
-
-        .pattern {
-            font-family: monospace;
-            background: #0d1321;
-            padding: 4px 12px;
-            border-radius: 4px;
-            color: var(--accent);
-            font-size: 1.2rem;
-        }
-
-        .meaning {
-            color: var(--dim);
-            font-style: italic;
-        }
-
-        h2 {
-            color: var(--gold);
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-            margin: 2rem 0 1rem;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', monospace;
-            color: var(--gold);
-        }
-
-        .method {
-            background: var(--card);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            border-left: 4px solid var(--accent);
-        }
-
-        .method h3 {
-            color: var(--accent);
-            margin: 0 0 0.5rem 0;
-        }
-
-        .sig {
-            font-family: monospace;
-            background: #0d1321;
-            padding: 4px 10px;
-            border-radius: 4px;
-            color: var(--gold);
-            display: inline-block;
-            margin-bottom: 0.5rem;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <meta name="description" content="Ogbe system domain for process control, environment variables, and command-line arguments in Ifá-Lang">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -126,76 +20,110 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
-            <h1>?`gb� <span class="pattern">1111</span></h1>
-            <p class="meaning">The Foundation � System/Lifecycle</p>
-            <p style="color: var(--dim);">Type introspection, assertions, parsing</p>
+            <h1><span class="pattern">1111</span> Ogbe</h1>
+            <p class="subtitle">System Domain — Process Control & Environment</p>
         </header>
 
-        <h2>Methods</h2>
-
-        <div class="method">
-            <h3>type / iru</h3>
-            <div class="sig">Ogbe.type(value) ? String</div>
-            <p>Get the type name of a value.</p>
-            <pre><code>ayanmo x = 42;
-Irosu.fo(Ogbe.type(x));    // "int"
-
-ayanmo s = "hello";
-Irosu.fo(Ogbe.type(s));    // "string"
-
-ayanmo list = [1, 2, 3];
-Irosu.fo(Ogbe.type(list)); // "list"</code></pre>
+        <div class="step">
+            <h2>Domain Overview</h2>
+            <p>Ogbe (1111) represents the fully illuminated system — complete control over process execution, environment, and system resources. As the principal Odù with all bits set, Ogbe governs the fundamental interface between Ifá-Lang programs and the host operating system.</p>
         </div>
 
-        <div class="method">
-            <h3>len / gigun</h3>
-            <div class="sig">Ogbe.len(value) ? Int</div>
-            <p>Get the length of a value (string chars, list items, etc.).</p>
-            <pre><code>Irosu.fo(Ogbe.len("If�"));     // 3
-Irosu.fo(Ogbe.len([1,2,3,4])); // 4</code></pre>
+        <div class="step">
+            <h2>Core Methods</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">System Operations</span>
+                </div>
+                <pre><code># Process control
+Ogbe.jade(code)              # Exit with code
+Ogbe.duro()                  # Halt execution
+
+# Environment variables
+Ogbe.gba("PATH")             # Get environment variable
+Ogbe.fi("MY_VAR", "value")    # Set environment variable
+
+# Command line arguments
+Ogbe.args()                  # Get command-line arguments as List
+Ogbe.arg(0)                  # Get specific argument by index</code></pre>
+            </div>
         </div>
 
-        <div class="method">
-            <h3>assert / j?ri</h3>
-            <div class="sig">Ogbe.assert(condition, [message]) ? Bool</div>
-            <p>Assert a condition is true, throw error if false.</p>
-            <pre><code>Ogbe.assert(x > 0, "x must be positive");
-Ogbe.j?ri(list.len() > 0, "List cannot be empty");</code></pre>
+        <div class="step">
+            <h2>Resource Management</h2>
+            <p>Ogbe provides the Ẹbọ (sacrifice) protocol for proper resource lifecycle management. Resources opened with Ogbe methods must be properly closed to prevent resource leaks.</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Resource Example</span>
+                </div>
+                <pre><code># Open a process handle (requires Ẹbọ)
+ayanmo child = Ogbe.bere("ls", ["-la"]);
+
+# Use the process
+Irosu.fo(child.output());
+
+# Properly close the resource
+Ogbe.pa(child);</code></pre>
+            </div>
         </div>
 
-        <div class="method">
-            <h3>format / ??da</h3>
-            <div class="sig">Ogbe.format(values...) ? String</div>
-            <p>Format values into a string.</p>
-            <pre><code>ayanmo msg = Ogbe.format("User:", name, "Age:", age);
-Irosu.fo(msg);</code></pre>
+        <div class="step">
+            <h2>Binary Pattern</h2>
+            <p>Ogbe's binary pattern is <code>1111</code>, representing complete illumination and full system access. In the 256 Odù lattice vision, Ogbe combinations represent:</p>
+            <ul>
+                <li><strong>Ogbe + Ogbe (1111 + 1111):</strong> The fully illuminated — complete, self-consistent values</li>
+                <li><strong>Ogbe + Oyeku (1111 + 0000):</strong> System to void transition — cleanup, finalization</li>
+                <li><strong>Ogbe + Other domains:</strong> System integration with specific domain capabilities</li>
+            </ul>
         </div>
 
-        <div class="method">
-            <h3>parse_int</h3>
-            <div class="sig">Ogbe.parse_int(value) ? Int</div>
-            <p>Parse a string to integer.</p>
-            <pre><code>ayanmo n = Ogbe.parse_int("42");
-Irosu.fo(n + 8);  // 50</code></pre>
+        <div class="step">
+            <h2>Protocol Implementation</h2>
+            <p>Values implement the Ogbe protocol if they provide system-level capabilities:</p>
+            <ul>
+                <li><strong>Process handles:</strong> Can be started, monitored, and terminated</li>
+                <li><strong>Environment access:</strong> Can read and modify system environment</li>
+                <li><strong>Resource management:</strong> Support Ẹbọ lifecycle obligations</li>
+            </ul>
         </div>
 
-        <div class="method">
-            <h3>parse_float</h3>
-            <div class="sig">Ogbe.parse_float(value) ? Float</div>
-            <p>Parse a string to float.</p>
-            <pre><code>ayanmo f = Ogbe.parse_float("3.14");
-Irosu.fo(f * 2);  // 6.28</code></pre>
+        <div class="step">
+            <h2>Usage Examples</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">CLI Tool Example</span>
+                </div>
+                <pre><code># CLI tool that processes files
+ese main() {
+    ayanmo args = Ogbe.args();
+    
+    ti args.length < 2 {
+        Irosu.fo("Usage: " + args[0] + " <file>");
+        Ogbe.jade(1);
+    }
+    
+    ayanmo filename = args[1];
+    ti Ogbe.wa(filename) {
+        ayanmo content = Odi.ka(filename);
+        Irosu.fo("File content: " + content);
+    } bibẹkọ {
+        Irosu.fo("File not found: " + filename);
+        Ogbe.jade(2);
+    }
+}</code></pre>
+            </div>
         </div>
 
         <footer>
-            <p><a href="../language/philosophy.html">? All Domains</a> � <a href="../index.html">Documentation</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
         </footer>
     </div>
-    <script src="../js/nav.js"></script>
+
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

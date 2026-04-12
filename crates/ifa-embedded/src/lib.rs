@@ -228,12 +228,13 @@ pub type IfaInt = i32;
 pub type IfaFloat = f32;
 
 /// Simplified value type for embedded contexts
-#[derive(Debug, Clone, PartialEq, Default)] // Removed Copy if Alloc is used? No, must check.
+#[derive(Debug, Clone, PartialEq, Default)]
+// Removed Copy if Alloc is used? No, must check.
 // If we add String (which is not Copy), EmbeddedValue cannot be Copy.
 // This is a breaking change for stack-only usage if we force it.
 // SOLUTION: Derive Copy only if alloc feature is NOT enabled OR manually manage it?
 // Rust requirement: Enum can only be Copy if all variants are Copy.
-// So if 'alloc' is on, EmbeddedValue is NOT Copy. 
+// So if 'alloc' is on, EmbeddedValue is NOT Copy.
 // This changes semantics of passing by value vs reference.
 // FOR NOW: We keep it Copy-compatible if alloc is off.
 #[cfg_attr(not(feature = "alloc"), derive(Copy))]
@@ -249,7 +250,7 @@ pub enum EmbeddedValue {
     Float(IfaFloat),
     /// Pointer to Opon memory address (index)
     Ptr(u32),
-    
+
     // --- Tier 1 (Alloc) Variants ---
     #[cfg(feature = "alloc")]
     String(String),
@@ -264,8 +265,10 @@ impl EmbeddedValue {
             EmbeddedValue::Null => false,
             EmbeddedValue::Bool(b) => *b,
             EmbeddedValue::Int(n) => *n != 0 as IfaInt,
-            EmbeddedValue::Float(f) => *f != 0.0,
-            EmbeddedValue::Ptr(_) => true,
+            // D8: NaN is falsy per spec §5
+            EmbeddedValue::Float(f) => *f != 0.0 && !f.is_nan(),
+            // D7: Null pointer (0x0) is falsy per spec §5
+            EmbeddedValue::Ptr(p) => *p != 0,
             #[cfg(feature = "alloc")]
             EmbeddedValue::String(s) => !s.is_empty(),
             #[cfg(feature = "alloc")]
@@ -273,7 +276,7 @@ impl EmbeddedValue {
         }
     }
 }
- 
+
 // Need to handle Copy semantics in VM if not Copy
 // Manual Copy implementation removed to avoid conflict with derive(Copy)
 // impl Copy for EmbeddedValue where String: Copy, alloc::vec::Vec<u8>: Copy {}
@@ -751,7 +754,7 @@ impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SI
                         if addr >= self.config.mmio_base {
                             if let Some(bus) = &mut self.mmio {
                                 let val = bus.read(addr);
-                                            self.push(EmbeddedValue::Int(val as IfaInt))?;
+                                self.push(EmbeddedValue::Int(val as IfaInt))?;
                             } else {
                                 return Err(EmbeddedError::HalError(
                                     "MMIO bus not attached".into(),
@@ -975,8 +978,8 @@ mod tests {
             42, 0, 0, 0,    // 42 as i32 little-endian
             0xFF, // Halt
         ];
-        let result = vm.run(&bytecode).unwrap();
-        assert_eq!(result, EmbeddedValue::Int(42));
+        let result = vm.start(&bytecode).unwrap();
+        assert_eq!(result, VmExit::Halted(EmbeddedValue::Int(42)));
     }
 
     #[test]
@@ -989,8 +992,8 @@ mod tests {
             0x20, // Add
             0xFF, // Halt
         ];
-        let result = vm.run(&bytecode).unwrap();
-        assert_eq!(result, EmbeddedValue::Int(42));
+        let result = vm.start(&bytecode).unwrap();
+        assert_eq!(result, VmExit::Halted(EmbeddedValue::Int(42)));
     }
 
     #[test]
@@ -1002,7 +1005,7 @@ mod tests {
             0x01, 0, 0, 0, 0,    // PushInt(0)
             0x23, // Div
         ];
-        let result = vm.run(&bytecode);
+        let result = vm.start(&bytecode);
         assert!(matches!(result, Err(EmbeddedError::DivisionByZero)));
     }
 
@@ -1016,8 +1019,8 @@ mod tests {
             0x32, // Lt
             0xFF, // Halt
         ];
-        let result = vm.run(&bytecode).unwrap();
-        assert_eq!(result, EmbeddedValue::Bool(true));
+        let result = vm.start(&bytecode).unwrap();
+        assert_eq!(result, VmExit::Halted(EmbeddedValue::Bool(true)));
     }
 
     #[test]
@@ -1031,8 +1034,8 @@ mod tests {
             0x50, 0,    // LoadLocal(0)
             0xFF, // Halt
         ];
-        let result = vm.run(&bytecode).unwrap();
-        assert_eq!(result, EmbeddedValue::Int(100));
+        let result = vm.start(&bytecode).unwrap();
+        assert_eq!(result, VmExit::Halted(EmbeddedValue::Int(100)));
     }
 
     #[test]

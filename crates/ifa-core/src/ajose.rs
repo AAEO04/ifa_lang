@@ -429,7 +429,9 @@ impl AjoseBridge {
                     if n <= 20 {
                         return Ok((1..=n).product::<u64>().to_string());
                     }
-                    return Err("factorial: argument too large (max 20 to avoid overflow)".to_string());
+                    return Err(
+                        "factorial: argument too large (max 20 to avoid overflow)".to_string()
+                    );
                 }
                 return Err("factorial: argument must be a non-negative integer".to_string());
             }
@@ -449,13 +451,15 @@ impl AjoseBridge {
                 .unwrap_or("0".to_string()),
 
             // Unknown module or function — explicit error, never a stub string in user data
-            _ => return Err(format!(
-                "Unknown Python module or function: {}.{}. \
+            _ => {
+                return Err(format!(
+                    "Unknown Python module or function: {}.{}. \
                 Supported: math.{{sqrt,pow,sin,cos,tan,log,log10,exp,floor,ceil,abs,factorial,pi,e}}, \
                 json.{{dumps,loads}}, str.{{upper,lower,len}}. \
                 For real Python interop, use ifa_std::ffi::IfaFfi.",
-                module, func
-            )),
+                    module, func
+                ));
+            }
         };
         Ok(result)
     }
@@ -474,36 +478,12 @@ impl AjoseBridge {
     /// SECURITY: Many dangerous commands are blocked by default.
     /// For unrestricted shell access, use ifa_std::ffi with proper capabilities.
     pub fn sh(&self, cmd: &str) -> Result<String, String> {
-        // Security: Block dangerous commands
-        let cmd_lower = cmd.to_lowercase();
-        for blocked in &self.blocked_commands {
-            if cmd_lower.contains(blocked) {
-                return Err(format!(
-                    "Security: '{}' is blocked. Use ifa_std::ffi with Execute capability for unrestricted access.",
-                    blocked
-                ));
-            }
-        }
-
-        // Additional security: limit command length
-        if cmd.len() > 1000 {
-            return Err("Command too long (max 1000 chars)".to_string());
-        }
-
-        // Execute with platform-specific shell
-        #[cfg(windows)]
-        let output = std::process::Command::new("cmd").args(["/C", cmd]).output();
-
-        #[cfg(not(windows))]
-        let output = std::process::Command::new("sh").args(["-c", cmd]).output();
-
-        match output {
-            Ok(o) if o.status.success() => {
-                Ok(String::from_utf8_lossy(&o.stdout).trim().to_string())
-            }
-            Ok(o) => Err(String::from_utf8_lossy(&o.stderr).trim().to_string()),
-            Err(e) => Err(format!("Execution failed: {}", e)),
-        }
+        let _ = cmd;
+        let _ = &self.blocked_commands;
+        Err(
+            "Security: coop.sh is disabled. Use an explicit capability-gated FFI path instead."
+                .to_string(),
+        )
     }
 
     /// Call a built-in integer math function.

@@ -1,0 +1,10 @@
+# expect: 3
+# spec: §5 truthiness: "", [], {}, NaN are falsy
+
+ayanmo a = "" || 1;
+ayanmo b = [] || 1;
+ayanmo c = {} || 1;
+ayanmo d = (0.0 / 0.0) || 0;  # NaN || 0 -> 0
+
+pada a + b + c + d;
+

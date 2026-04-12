@@ -8,9 +8,10 @@
 //! - **Memory limit enforcement** - prevents exceeding configured limits
 
 use crate::value::IfaValue;
-// #[cfg(feature = "std")]
-// use std::sync::{Arc, Mutex};
+use serde::{Deserialize, Serialize};
 use std::fmt;
+
+const AILOPIN_HARD_LIMIT: usize = 1 << 20;
 
 /// Error when memory limit is exceeded
 #[derive(Debug, Clone)]
@@ -124,7 +125,7 @@ impl OponSize {
 }
 
 /// A recorded event in the flight recorder
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OponEvent {
     /// Which Odù domain (e.g., "Ìrosù")
     pub spirit: String,
@@ -137,7 +138,7 @@ pub struct OponEvent {
 /// An Ẹbọ Epoch - a scoped allocation region
 /// All allocations within an epoch are released together when the epoch ends.
 /// This provides deterministic memory management without garbage collection.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EboEpoch {
     /// Epoch ID (monotonically increasing)
     pub id: usize,
@@ -165,6 +166,7 @@ impl EboEpoch {
 
 /// The Opon - Central State Machine with Flight Recorder
 /// Extended with Ẹbọ Epochs for scoped allocation
+#[derive(Serialize, Deserialize)]
 pub struct Opon {
     /// Memory slots
     memory: Vec<IfaValue>,
@@ -172,10 +174,13 @@ pub struct Opon {
     max_slots: usize,
 
     /// Circular buffer for flight recorder
+    #[serde(skip, default)]
     history: Vec<OponEvent>,
     /// Current write position in history
+    #[serde(skip, default)]
     cursor: usize,
     /// History capacity (256 = 16 × 16, sacred number)
+    #[serde(skip, default = "default_history_capacity")]
     history_capacity: usize,
 
     // ═══════════════════════════════════════════════════════════════════
@@ -188,6 +193,10 @@ pub struct Opon {
     next_epoch_id: usize,
     /// High water mark (highest address ever allocated)
     high_water: usize,
+}
+
+fn default_history_capacity() -> usize {
+    256
 }
 
 impl Default for Opon {
@@ -245,7 +254,15 @@ impl Opon {
         // Grow if needed (for unlimited mode)
         if addr >= self.memory.len() {
             if self.max_slots == usize::MAX {
-                // Unlimited mode - grow freely
+                if addr >= AILOPIN_HARD_LIMIT {
+                    return Err(OponError {
+                        kind: OponErrorKind::MemoryLimitExceeded,
+                        limit: AILOPIN_HARD_LIMIT,
+                        requested: addr,
+                        current_usage: self.memory_used(),
+                    });
+                }
+                // Unlimited mode - grow up to a hard host-safety ceiling
                 self.memory.resize(addr + 1, IfaValue::null());
             } else if addr >= self.max_slots {
                 // LIMIT EXCEEDED - return error with helpful message
@@ -294,7 +311,39 @@ impl Opon {
         Ok(addr)
     }
 
-    // ... (rest of implementation) ...
+    // =========================================================================
+    // Ẹbọ EPOCHS (SCOPED ALLOCATION)
+    // =========================================================================
+
+    /// Begin a new scoped allocation epoch.
+    ///
+    /// All allocations performed while the epoch is active are released together
+    /// when the epoch ends.
+    pub fn begin_epoch(&mut self, name: &str) {
+        let id = self.next_epoch_id;
+        self.next_epoch_id = self.next_epoch_id.saturating_add(1);
+        let start_addr = self.memory.len();
+        self.epochs.push(EboEpoch::new(id, name, start_addr));
+    }
+
+    /// Return the current epoch (innermost), if any.
+    pub fn current_epoch(&self) -> Option<&EboEpoch> {
+        self.epochs.last()
+    }
+
+    /// End the current epoch and release all allocations made within it.
+    pub fn end_epoch(&mut self) -> OponResult<()> {
+        let mut epoch = self.epochs.pop().ok_or(OponError {
+            kind: OponErrorKind::InvalidAddress,
+            limit: self.max_slots,
+            requested: 0,
+            current_usage: self.memory_used(),
+        })?;
+
+        epoch.active = false;
+        self.memory.truncate(epoch.start_addr);
+        Ok(())
+    }
 
     /// Get current memory usage
     pub fn memory_used(&self) -> usize {
@@ -341,101 +390,110 @@ impl Opon {
     pub fn record_msg(&mut self, spirit: &str, action: &str, msg: &str) {
         self.record(spirit, action, &IfaValue::str(msg));
     }
-
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
+    #[test]
+    fn test_memory_operations() {
+        let mut opon = Opon::default();
 
-        #[test]
-        fn test_memory_operations() {
-            let mut opon = Opon::default();
-
-            assert!(opon.set(0, IfaValue::int(42)));
-            // Check value using kind()
-            if let Some(val) = opon.get(0) {
-                 match val {
-                     IfaValue::Int(v) => assert_eq!(v, 42),
-                     _ => panic!("Expected Int"),
-                 }
-            } else {
-                 panic!("Value not set");
+        assert!(opon.set(0, IfaValue::int(42)));
+        // Check value using kind()
+        if let Some(val) = opon.get(0) {
+            match val {
+                IfaValue::Int(v) => assert_eq!(*v, 42),
+                _ => panic!("Expected Int"),
             }
-        }
-
-        #[test]
-        fn test_flight_recorder() {
-            let mut opon = Opon::default();
-
-            opon.record("Ìrosù", "fọ̀", &IfaValue::str("Hello"));
-            opon.record("Ọ̀bàrà", "fikun", &IfaValue::int(42));
-
-            let history = opon.get_history();
-            assert_eq!(history.len(), 2);
-            assert_eq!(history[0].spirit, "Ìrosù");
-            assert_eq!(history[1].spirit, "Ọ̀bàrà");
-        }
-
-        #[test]
-        fn test_circular_buffer() {
-            let mut opon = Opon::embedded(); // Small history
-
-            // Fill beyond capacity
-            for i in 0..300 {
-                opon.record_msg("Test", "event", &format!("{}", i));
-            }
-
-            let history = opon.get_history();
-            assert_eq!(history.len(), 256); // Capped at capacity
-        }
-
-        #[test]
-        fn test_ebo_epochs() {
-            let mut opon = Opon::default();
-
-            // Start an epoch
-            opon.begin_epoch("request");
-            let start_used = opon.memory_used();
-
-            // Allocate within epoch
-            opon.allocate(IfaValue::int(1)).unwrap();
-            opon.allocate(IfaValue::int(2)).unwrap();
-
-            // Check usage increased
-            assert_eq!(opon.memory_used(), start_used + 2);
-
-            // Check epoch stats
-            let epoch = opon.current_epoch().unwrap();
-            assert_eq!(epoch.name, "request");
-            assert_eq!(epoch.alloc_count, 2);
-
-            // End epoch
-            opon.end_epoch().unwrap();
-
-            // Check memory released
-            assert_eq!(opon.memory_used(), start_used);
-        }
-
-        #[test]
-        fn test_nested_epochs() {
-            let mut opon = Opon::default();
-
-            opon.begin_epoch("outer");
-            opon.allocate(IfaValue::int(1)).unwrap();
-
-            opon.begin_epoch("inner");
-            opon.allocate(IfaValue::int(2)).unwrap();
-
-            // Check total usage
-            assert_eq!(opon.memory.len(), 2);
-
-            // End inner epoch
-            opon.end_epoch().unwrap();
-            assert_eq!(opon.memory.len(), 1); // Inner released, outer remains
-
-            // End outer epoch
-            opon.end_epoch().unwrap();
-            assert_eq!(opon.memory.len(), 0); // All released
+        } else {
+            panic!("Value not set");
         }
     }
+
+    #[test]
+    fn test_flight_recorder() {
+        let mut opon = Opon::default();
+
+        opon.record("Ìrosù", "fọ̀", &IfaValue::str("Hello"));
+        opon.record("Ọ̀bàrà", "fikun", &IfaValue::int(42));
+
+        let history = opon.get_history();
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].spirit, "Ìrosù");
+        assert_eq!(history[1].spirit, "Ọ̀bàrà");
+    }
+
+    #[test]
+    fn test_circular_buffer() {
+        let mut opon = Opon::embedded(); // Small history
+
+        // Fill beyond capacity
+        for i in 0..300 {
+            opon.record_msg("Test", "event", &format!("{}", i));
+        }
+
+        let history = opon.get_history();
+        assert_eq!(history.len(), 256); // Capped at capacity
+    }
+
+    #[test]
+    fn test_ailopin_has_host_safety_ceiling() {
+        let mut opon = Opon::new(OponSize::Ailopin);
+        let err = opon
+            .try_set(AILOPIN_HARD_LIMIT, IfaValue::int(1))
+            .expect_err("expected hard limit error");
+        assert_eq!(err.kind, OponErrorKind::MemoryLimitExceeded);
+        assert_eq!(err.limit, AILOPIN_HARD_LIMIT);
+    }
+
+    #[test]
+    fn test_ebo_epochs() {
+        let mut opon = Opon::default();
+
+        // Start an epoch
+        opon.begin_epoch("request");
+        let start_used = opon.memory_used();
+
+        // Allocate within epoch
+        opon.allocate(IfaValue::int(1)).unwrap();
+        opon.allocate(IfaValue::int(2)).unwrap();
+
+        // Check usage increased
+        assert_eq!(opon.memory_used(), start_used + 2);
+
+        // Check epoch stats
+        let epoch = opon.current_epoch().unwrap();
+        assert_eq!(epoch.name, "request");
+        assert_eq!(epoch.alloc_count, 2);
+
+        // End epoch
+        opon.end_epoch().unwrap();
+
+        // Check memory released
+        assert_eq!(opon.memory_used(), start_used);
+    }
+
+    #[test]
+    fn test_nested_epochs() {
+        let mut opon = Opon::default();
+
+        opon.begin_epoch("outer");
+        opon.allocate(IfaValue::int(1)).unwrap();
+
+        opon.begin_epoch("inner");
+        opon.allocate(IfaValue::int(2)).unwrap();
+
+        // Check total usage
+        assert_eq!(opon.memory.len(), 2);
+
+        // End inner epoch
+        opon.end_epoch().unwrap();
+        assert_eq!(opon.memory.len(), 1); // Inner released, outer remains
+
+        // End outer epoch
+        opon.end_epoch().unwrap();
+        assert_eq!(opon.memory.len(), 0); // All released
+    }
+}

@@ -4,125 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Use Cases - If�-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2rem 0 1rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        .use-case-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin: 2rem 0;
-        }
-
-        .use-case-card {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid rgba(233, 69, 96, 0.3);
-            transition: all 0.3s;
-            text-decoration: none;
-            color: var(--text);
-        }
-
-        .use-case-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--gold);
-            box-shadow: 0 8px 25px rgba(233, 69, 96, 0.2);
-        }
-
-        .use-case-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-
-        .use-case-card h3 {
-            color: var(--gold);
-            margin-bottom: 0.5rem;
-        }
-
-        .use-case-card p {
-            color: var(--text-dim);
-            font-size: 0.9rem;
-            margin: 0;
-        }
-
-        .use-case-card .stack {
-            display: inline-block;
-            background: rgba(255, 215, 0, 0.1);
-            color: var(--gold);
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            margin-top: 0.75rem;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Use Cases - Ifá-Lang</title>
+    <meta name="description" content="Real-world use cases and examples for Ifá-Lang applications">
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -130,109 +20,397 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
-            <h1>?? Use Cases</h1>
-            <p style="color: var(--text-dim);">Real-world projects you can build with If�-Lang</p>
+            <h1>Use Cases & Examples</h1>
+            <p class="subtitle">Real-world Applications of Ifá-Lang</p>
         </header>
 
-        <p>These tutorials walk you through complete projects, showing how If�-Lang's domains and stacks work together
-            to solve real problems.</p>
-
-        <h2>?? Use Case Categories</h2>
-        <div class="use-case-grid">
-            <a href="domains.html" class="use-case-card">
-                <div class="use-case-icon">??</div>
-                <h3>Domain Use Cases</h3>
-                <p>Real-world examples for all 16 Od� domains</p>
-                <span class="stack">16 Domains</span>
-            </a>
-            <a href="stacks.html" class="use-case-card">
-                <div class="use-case-icon">??</div>
-                <h3>Stack Use Cases</h3>
-                <p>Full applications using technology stacks</p>
-                <span class="stack">7 Stacks</span>
-            </a>
-            <a href="infra.html" class="use-case-card">
-                <div class="use-case-icon">???</div>
-                <h3>Infrastructure Use Cases</h3>
-                <p>Low-level hardware and system programming</p>
-                <span class="stack">5 Modules</span>
-            </a>
+        <div class="step">
+            <h2>Overview</h2>
+            <p>Ifá-Lang's unique combination of cultural philosophy, domain-based architecture, and modern runtime features makes it suitable for a wide range of applications. These use cases demonstrate practical implementations across different domains and platforms.</p>
         </div>
 
-        <h2>Web Development</h2>
-        <div class="use-case-grid">
-            <a href="rest-api.html" class="use-case-card">
-                <div class="use-case-icon">??</div>
-                <h3>REST API Server</h3>
-                <p>Build a JSON API with routing, middleware, and CRUD operations</p>
-                <span class="stack">Backend Stack</span>
-            </a>
-            <a href="static-site.html" class="use-case-card">
-                <div class="use-case-icon">??</div>
-                <h3>Static Site Generator</h3>
-                <p>Generate HTML from markdown with templates</p>
-                <span class="stack">Frontend Stack</span>
-            </a>
+        <div class="step">
+            <h2>Application Categories</h2>
+            
+            <div class="category-grid">
+                <div class="category-card">
+                    <h3>Web Development</h3>
+                    <p>Modern web applications using Ifá-Lang's domain system and reactive programming:</p>
+                    <ul>
+                        <li><a href="rest-api.html">REST API Server</a> - HTTP API with domain-based routing</li>
+                        <li><a href="static-site.html">Static Site Generator</a> - Content management with cultural themes</li>
+                        <li><a href="cloud.html">Cloud Services</a> - Scalable web services with reactive patterns</li>
+                    </ul>
+                </div>
+
+                <div class="category-card">
+                    <h3>System Tools</h3>
+                    <p>Command-line utilities and system administration tools:</p>
+                    <ul>
+                        <li><a href="cli-tool.html">CLI Tool</a> - Command-line interface with rich features</li>
+                        <li><a href="file-processor.html">File Processor</a> - Batch file processing with automation</li>
+                        <li><a href="password-manager.html">Password Manager</a> - Secure credential management</li>
+                    </ul>
+                </div>
+
+                <div class="category-card">
+                    <h3>Data Processing</h3>
+                    <p>Data analysis, pipelines, and database operations:</p>
+                    <ul>
+                        <li><a href="data-pipeline.html">Data Pipeline</a> - ETL processes with domain operations</li>
+                        <li><a href="database.html">Database Applications</a> - Data persistence and querying</li>
+                        <li><a href="infra.html">Infrastructure Tools</a> - System monitoring and management</li>
+                    </ul>
+                </div>
+
+                <div class="category-card">
+                    <h3>Game Development</h3>
+                    <p>Interactive entertainment and educational games:</p>
+                    <ul>
+                        <li><a href="simple-game.html">Simple Game</a> - Interactive game with cultural elements</li>
+                        <li><a href="audio-player.html">Audio Player</a> - Media playback with reactive UI</li>
+                    </ul>
+                </div>
+
+                <div class="category-card">
+                    <h3>Domain Examples</h3>
+                    <p>Detailed examples of each Odù domain in action:</p>
+                    <ul>
+                        <li><a href="domains.html">All 16 Domains</a> - Complete domain reference</li>
+                        <li><a href="ogbe-examples.html">Ogbe (System)</a> - System operations</li>
+                        <li><a href="irosu-examples.html">Irosu (Console)</a> - I/O operations</li>
+                        <li><a href="owonrin-examples.html">Owòn (Random)</a> - Random operations</li>
+                    </ul>
+                </div>
+
+                <div class="category-card">
+                    <h3>Infrastructure</h3>
+                    <p>System-level programming and hardware integration:</p>
+                    <ul>
+                        <li><a href="infra.html">Infrastructure</a> - System programming patterns</li>
+                        <li><a href="stacks.html">Technology Stacks</a> - Specialized libraries</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
-        <h2>Command Line</h2>
-        <div class="use-case-grid">
-            <a href="cli-tool.html" class="use-case-card">
-                <div class="use-case-icon">??</div>
-                <h3>CLI Tool</h3>
-                <p>Create command-line apps with argument parsing and colored output</p>
-                <span class="stack">Irosu + Ose</span>
-            </a>
-            <a href="file-processor.html" class="use-case-card">
-                <div class="use-case-icon">??</div>
-                <h3>File Processor</h3>
-                <p>Batch process files with parallel operations</p>
-                <span class="stack">Odi + Osa</span>
-            </a>
+        <div class="step">
+            <h2>Featured Examples</h2>
+            
+            <div class="example-showcase">
+                <div class="example-item">
+                    <h3>REST API Server</h3>
+                    <p>Build scalable web APIs using Ifá-Lang's domain system for routing, middleware, and data handling.</p>
+                    <div class="code-preview">
+                        <pre><code>// REST API with domain-based routing
+import ifa-web;
+
+ese handle_users(req: Request) -> Response {
+    gbiyanju {
+        ayanmo users = Odi.read_all("users.json");
+        pada Response::json(users);
+    } gba (error) {
+        pada Response::error(500, "Database error");
+    }
+}
+
+// Route configuration
+Iwori.route("/api/users", handle_users);
+Iwori.route("/api/users/:id", handle_user_by_id);
+Iwori.start(8080);</code></pre>
+                    </div>
+                    <a href="rest-api.html" class="btn">View Full Example</a>
+                </div>
+
+                <div class="example-item">
+                    <h3>Data Processing Pipeline</h3>
+                    <p>Process large datasets using Ifá-Lang's reactive system and domain operations.</p>
+                    <div class="code-preview">
+                        <pre><code>// Data pipeline with reactive processing
+import ifa-data;
+
+ese process_data(source: Str) {
+    // Reactive data processing
+    ajose! {
+        ayanmo stream = Odi.read_stream(source);
+        ayanmo processed = stream
+            .map(Obara.filter_valid)
+            .group_by(Ika.category)
+            .aggregate(Obara.sum);
+        
+        processed.subscribe(Odi.write_output);
+    }
+}</code></pre>
+                    </div>
+                    <a href="data-pipeline.html" class="btn">View Full Example</a>
+                </div>
+
+                <div class="example-item">
+                    <h3>CLI Tool</h3>
+                    <p>Create powerful command-line tools with rich features and cultural error messages.</p>
+                    <div class="code-preview">
+                        <pre><code>// CLI tool with argument parsing
+import ifa-cli;
+
+ese main() {
+    ayanmo args = Ogbe.parse_args();
+    
+    if args.contains("--help") {
+        Irosu.fo("Ifá-Lang CLI Tool v1.3.0");
+        Irosu.fo("Usage: ifa-tool [options]");
+        Oyeku.exit(0);
+    }
+    
+    if args.contains("--version") {
+        Irosu.fo("ifa-tool 1.3.0");
+        Oyeku.exit(0);
+    }
+    
+    // Process files
+    fun file ninu args.files {
+        process_file(file);
+    }
+}</code></pre>
+                    </div>
+                    <a href="cli-tool.html" class="btn">View Full Example</a>
+                </div>
+            </div>
         </div>
 
-        <h2>Data & Security</h2>
-        <div class="use-case-grid">
-            <a href="data-pipeline.html" class="use-case-card">
-                <div class="use-case-icon">??</div>
-                <h3>Data Pipeline</h3>
-                <p>Process large datasets with parallel map/reduce</p>
-                <span class="stack">Osa + Ogunda</span>
-            </a>
-            <a href="password-manager.html" class="use-case-card">
-                <div class="use-case-icon">??</div>
-                <h3>Password Manager</h3>
-                <p>Secure credential storage with encryption</p>
-                <span class="stack">Crypto Stack</span>
-            </a>
+        <div class="step">
+            <h2>Domain-Specific Examples</h2>
+            
+            <h3>Core Domains</h3>
+            <div class="domains-grid">
+                <div class="domain-item">
+                    <h4><a href="ogbe-examples.html">Ogbe (1111)</a></h4>
+                    <p>System operations, file I/O, process management</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="irosu-examples.html">Irosu (1100)</a></h4>
+                    <p>Console I/O, logging, user interaction</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="owonrin-examples.html">Owòn (0011)</a></h4>
+                    <p>Random numbers, cryptography, simulation</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="oyeku-examples.html">Oyeku (0000)</a></h4>
+                    <p>Exit handling, cleanup, shutdown procedures</p>
+                </div>
+            </div>
+
+            <h3>Mathematical Domains</h3>
+            <div class="domains-grid">
+                <div class="domain-item">
+                    <h4><a href="obara-examples.html">Obara (1000)</a></h4>
+                    <p>Addition, multiplication, accumulation</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="oturupon-examples.html">Oturupon (0101)</a></h4>
+                    <p>Subtraction, division, reduction</p>
+                </div>
+            </div>
+
+            <h3>Data Structure Domains</h3>
+            <div class="domains-grid">
+                <div class="domain-item">
+                    <h4><a href="ika-examples.html">Ika (1010)</a></h4>
+                    <p>String operations, text processing</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="ogunda-examples.html">Ogunda (1101)</a></h4>
+                    <p>Array operations, list processing</p>
+                </div>
+            </div>
+
+            <h3>Advanced Domains</h3>
+            <div class="domains-grid">
+                <div class="domain-item">
+                    <h4><a href="odi-examples.html">Odi (0110)</a></h4>
+                    <p>File operations, database access</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="otura-examples.html">Otura (1110)</a></h4>
+                    <p>Networking, communication protocols</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="irete-examples.html">Irete (1011)</a></h4>
+                    <p>Cryptography, compression, encoding</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="ose-examples.html">Ose (1001)</a></h4>
+                    <p>Graphics, visualization, UI</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="ofun-examples.html">Ofun (0001)</a></h4>
+                    <p>Permissions, security, access control</p>
+                </div>
+            </div>
+
+            <h3>Specialized Domains</h3>
+            <div class="domains-grid">
+                <div class="domain-item">
+                    <h4><a href="okanran-examples.html">Okanran (0010)</a></h4>
+                    <p>Error handling, validation, debugging</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="osa-examples.html">Osa (0100)</a></h4>
+                    <p>Concurrency, parallelism, async operations</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="iwori-examples.html">Iwori (0001)</a></h4>
+                    <p>Time operations, scheduling, delays</p>
+                </div>
+            </div>
         </div>
 
-        <h2>Multimedia</h2>
-        <div class="use-case-grid">
-            <a href="audio-player.html" class="use-case-card">
-                <div class="use-case-icon">??</div>
-                <h3>Audio Player</h3>
-                <p>Build a music player with playlists</p>
-                <span class="stack">Ohun Domain</span>
-            </a>
-            <a href="simple-game.html" class="use-case-card">
-                <div class="use-case-icon">??</div>
-                <h3>Simple Game</h3>
-                <p>Create a 2D game with sprites and collision</p>
-                <span class="stack">GameDev Stack</span>
-            </a>
+        <div class="step">
+            <h2>Technology Stacks</h2>
+            
+            <div class="stacks-grid">
+                <div class="stack-item">
+                    <h3>Web Development Stack</h3>
+                    <p>Complete web application development with Ifá-Lang:</p>
+                    <ul>
+                        <li><strong>Backend:</strong> HTTP servers, REST APIs, WebSocket</li>
+                        <li><strong>Frontend:</strong> WebAssembly, reactive UI</li>
+                        <li><strong>Database:</strong> SQL and NoSQL integration</li>
+                        <li><strong>Deployment:</strong> Docker, cloud platforms</li>
+                    </ul>
+                    <a href="stacks.html#web-development" class="btn">Learn More</a>
+                </div>
+
+                <div class="stack-item">
+                    <h3>Data Science Stack</h3>
+                    <p>Data analysis and machine learning capabilities:</p>
+                    <ul>
+                        <li><strong>Data Processing:</strong> ETL pipelines, streaming</li>
+                        <li><strong>Analysis:</strong> Statistics, visualization</li>
+                        <li><strong>Machine Learning:</strong> Neural networks, algorithms</li>
+                        <li><strong>Big Data:</strong> Distributed processing</li>
+                    </ul>
+                    <a href="stacks.html#data-science" class="btn">Learn More</a>
+                </div>
+
+                <div class="stack-item">
+                    <h3>IoT Stack</h3>
+                    <p>Embedded systems and IoT device development:</p>
+                    <ul>
+                        <li><strong>Embedded:</strong> Microcontroller programming</li>
+                        <li><strong>Communication:</strong> I2C, SPI, wireless protocols</li>
+                        <li><strong>Sensors:</strong> Data acquisition and processing</li>
+                        <li><strong>Edge Computing:</strong> Local processing and AI</li>
+                    </ul>
+                    <a href="stacks.html#iot-stack" class="btn">Learn More</a>
+                </div>
+
+                <div class="stack-item">
+                    <h3>Game Development Stack</h3>
+                    <p>Game creation and interactive applications:</p>
+                    <ul>
+                        <li><strong>Graphics:</strong> 2D/3D rendering, shaders</li>
+                        <li><strong>Audio:</strong> Sound effects, music synthesis</li>
+                        <li><strong>Physics:</strong> Collision detection, dynamics</li>
+                        <li><strong>Networking:</strong> Multiplayer, real-time sync</li>
+                    </ul>
+                    <a href="stacks.html#game-development" class="btn">Learn More</a>
+                </div>
+            </div>
         </div>
 
-        <footer class="doc-footer">
-            <p><a href="../../index.html">? Tour of If�</a> � <a href="../../api/api.html">API Reference</a></p>
-            <p><a href="../../index.html">Documentation Home</a></p>
+        <div class="step">
+            <h2>Learning Path</h2>
+            
+            <h3>Beginner Examples</h3>
+            <p>Start with these examples to learn Ifá-Lang basics:</p>
+            <ol>
+                <li><strong>Hello World:</strong> Basic syntax and Irosu domain</li>
+                <li><strong>Simple Calculator:</strong> Obara domain and basic operations</li>
+                <li><strong>File Reader:</strong> Odi domain and file operations</li>
+                <li><strong>String Processing:</strong> Ika domain and text manipulation</li>
+            </ol>
+
+            <h3>Intermediate Examples</h3>
+            <p>Expand your knowledge with these applications:</p>
+            <ol>
+                <li><strong>REST API:</strong> Web development and Otura domain</li>
+                <li><strong>Data Pipeline:</strong> Reactive programming and Ajose system</li>
+                <li><strong>CLI Tool:</strong> Command-line interface and argument parsing</li>
+                <li><strong>Database App:</strong> Persistence and query operations</li>
+            </ol>
+
+            <h3>Advanced Examples</h3>
+            <p>Master Ifá-Lang with complex applications:</p>
+            <ol>
+                <li><strong>Game Engine:</strong> Graphics, physics, and real-time updates</li>
+                <li><strong>IoT System:</strong> Embedded programming and hardware integration</li>
+                <li><strong>Machine Learning:</strong> Data processing and algorithm implementation</li>
+                <li><strong>Cloud Service:</strong> Distributed systems and scalability</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>Code Organization</h3>
+            <ul>
+                <li><strong>Domain Usage:</strong> Choose appropriate domains for specific tasks</li>
+                <li><strong>Error Handling:</strong> Use Okanran domain for proper error management</li>
+                <li><strong>Resource Management:</strong> Use   (sacrifice) blocks for cleanup</li>
+                <li><strong>Reactive Programming:</strong> Leverage Ajose system for data flows</li>
+            </ul>
+
+            <h3>Performance</h3>
+            <ul>
+                <li><strong>Memory Management:</strong> Use Opon memory system efficiently</li>
+                <li><strong>Async Operations:</strong> Use Osa domain for concurrent tasks</li>
+                <li><strong>Caching:</strong> Implement caching strategies with Iwori domain</li>
+                <li><strong>Optimization:</strong> Profile and optimize hot paths</li>
+            </ul>
+
+            <h3>Cultural Integration</h3>
+            <ul>
+                <li><strong>Yoruba Concepts:</strong> Incorporate cultural meaning in applications</li>
+                <li><strong>Proverb Messages:</strong> Use culturally appropriate error messages</li>
+                <li><strong>Domain Philosophy:</strong> Understand the spiritual meaning of domains</li>
+                <li><strong>Community Values:</strong> Design applications that benefit the community</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Contributing Examples</h2>
+            
+            <p>Share your Ifá-Lang applications with the community:</p>
+            
+            <ul>
+                <li><strong>Submit Examples:</strong> Add your projects to the examples repository</li>
+                <li><strong>Documentation:</strong> Provide clear explanations and comments</li>
+                <li><strong>Testing:</strong> Include tests and usage instructions</li>
+                <li><strong>Cultural Context:</strong> Explain cultural significance when relevant</li>
+            </ul>
+
+            <div class="contribution-guide">
+                <h3>Example Guidelines</h3>
+                <ol>
+                    <li>Use proper Ifá-Lang syntax and domain usage</li>
+                    <li>Include comprehensive documentation</li>
+                    <li>Provide setup and run instructions</li>
+                    <li>Demonstrate best practices and patterns</li>
+                    <li>Consider cultural appropriateness and meaning</li>
+                </ol>
+            </div>
+        </div>
+
+        <footer>
+            <p><a href="../index.html">Examples Documentation</a></p>
         </footer>
     </div>
-        <script src="../../js/nav.js"></script>
+
     <script src="../../js/common.js"></script>
 </body>
 
 </html>
-

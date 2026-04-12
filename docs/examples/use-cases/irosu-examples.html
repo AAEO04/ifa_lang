@@ -4,86 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Irosu Use Cases - Console I/O Examples</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Irosu Domain Examples - If√°-Lang</title>
+    <meta name="description" content="Examples of Irosu (1100) domain operations for console I/O and user interaction in If√°-Lang">
+    <link rel="stylesheet" href="../../js/common.css">
+    <script src="../../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -91,234 +20,956 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
-        <h1>?? Irosu: Console I/O</h1>
-        <p>Real-world examples of console input/output operations.</p>
+        <header>
+            <h1>Irosu Domain Examples</h1>
+            <p class="subtitle">Console I/O and User Interaction (1100)</p>
+        </header>
 
-        <h2>Use Case 1: Interactive Menu System</h2>
-        <p>Build a command-line menu for user navigation.</p>
+        <div class="step">
+            <h2>Overview</h2>
+            <p>Irosu (1100) is the console domain representing communication, messages, and user interaction. It provides comprehensive input/output operations, formatting, logging, and user interface functionality for command-line applications.</p>
+            
+            <div class="domain-info">
+                <div class="domain-card">
+                    <h3>Domain Characteristics</h3>
+                    <ul>
+                        <li><strong>Binary Pattern:</strong> 1100 (communication and clarity)</li>
+                        <li><strong>Yoruba Meaning:</strong> "The watcher" or "The observer"</li>
+                        <li><strong>System Role:</strong> Console I/O and user interaction</li>
+                        <li><strong>Element:</strong> Air (communication and messages)</li>
+                    </ul>
+                </div>
+                
+                <div class="domain-card">
+                    <h3>Core Capabilities</h3>
+                    <ul>
+                        <li><strong>Console Output:</strong> Text printing and formatting</li>
+                        <li><strong>User Input:</strong> Keyboard and mouse input</li>
+                        <li><strong>Logging:</strong> Structured logging with levels</li>
+                        <li><strong>Terminal Control:</strong> Colors, cursor, screen control</li>
+                        <li><strong>Progress Indicators:</strong> Progress bars and spinners</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-        <pre><code>// menu.ifa - Interactive CLI menu
-ise show_menu() {
-    Irosu.fo("\n+---------------------------+");
-    Irosu.fo("¶   TASK MANAGER v1.0       ¶");
-    Irosu.fo("¶---------------------------¶");
-    Irosu.fo("¶ 1. Add new task           ¶");
-    Irosu.fo("¶ 2. List all tasks         ¶");
-    Irosu.fo("¶ 3. Mark task complete     ¶");
-    Irosu.fo("¶ 4. Delete task            ¶");
-    Irosu.fo("¶ 5. Exit                   ¶");
-    Irosu.fo("+---------------------------+");
-    Irosu.so("\nEnter choice (1-5): ");
-}
+        <div class="step">
+            <h2>Basic Console Operations</h2>
+            
+            <h3>Text Output</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Console Output Methods</span>
+                </div>
+                <pre><code>// Basic output
+Irosu.fo("Hello, If√°-Lang!");           // Standard output
+Irosu.kigbe("Error message!");          // Error output (stderr)
+Irosu.fo("Debug info");                 // Debug output
 
-ayanmo running = otito;
-ayanmo tasks = [];
+// Formatted output
+ayanmo name = "If√°-Lang";
+ayanmo version = "1.3.0";
+Irosu.fo("Welcome to " + name + " version " + version);
 
-nigba (running) {
-    show_menu();
-    ayanmo choice = Irosu.ka();
-    
-    ti (choice == "1") {
-        Irosu.so("Enter task name: ");
-        ayanmo name = Irosu.ka();
-        ayanmo tasks = Ogunda.push(tasks, {"name": name, "done": iro});
-        Irosu.fo("? Task added!");
-    } bib?k? ti (choice == "2") {
-        Irosu.fo("\n=== Your Tasks ===");
-        ayanmo i = 1;
-        fun task ninu tasks {
-            ayanmo status = "";
-            ti (task["done"]) {
-                ayanmo status = "[?]";
-            } bib?k? {
-                ayanmo status = "[ ]";
+// Multi-line output
+Irosu.fo("Line 1");
+Irosu.fo("Line 2");
+Irosu.fo("Line 3");
+
+// Output with special characters
+Irosu.fo("Tab\tSeparated\tValues");
+Irosu.fo("New\nLine\nCharacters");
+Irosu.fo("Quote: \"Hello World\"");</code></pre>
+            </div>
+
+            <h3>User Input</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Input Operations</span>
+                </div>
+                <pre><code>// Simple input
+ayanmo user_name = Irosu.gbo("Enter your name: ");
+Irosu.fo("Hello, " + user_name + "!");
+
+// Input with validation
+ese get_age() -> u32 {
+    while ototo {
+        ayanmo input = Irosu.gbo("Enter your age: ");
+        gbiyanju {
+            ayanmo age = Obara.parse_int(input);
+            if age >= 0 and age <= 120 {
+                pada age;
+            } else {
+                Irosu.kigbe("Please enter a valid age (0-120)");
             }
-            Irosu.fo(i + ". " + status + " " + task["name"]);
-            ayanmo i = i + 1;
+        } gba (error) {
+            Irosu.kigbe("Please enter a valid number");
         }
-    } bib?k? ti (choice == "5") {
-        Irosu.fo("Goodbye!");
-        ayanmo running = iro;
+    }
+}
+
+// Password input (hidden)
+ayanmo password = Irosu.gbo_password("Enter password: ");
+Irosu.fo("Password entered (length: " + Obara.to_str(Ika.length(password)) + ")");
+
+// Selection input
+ese select_option(options: Vec<Str>) -> u32 {
+    Irosu.fo("Please select an option:");
+    fun i ninu 0..options.length() {
+        Irosu.fo("  " + Obara.to_str(i + 1) + ". " + options[i]);
+    }
+    
+    while ototo {
+        ayanmo input = Irosu.gbo("Enter choice (1-" + Obara.to_str(options.length()) + "): ");
+        gbiyanju {
+            ayanmo choice = Obara.parse_int(input);
+            if choice >= 1 and choice <= options.length() {
+                pada choice - 1;
+            } else {
+                Irosu.kigbe("Invalid choice. Please try again.");
+            }
+        } gba (error) {
+            Irosu.kigbe("Please enter a valid number");
+        }
     }
 }</code></pre>
+            </div>
+        </div>
 
-        <h2>Use Case 2: Logging System</h2>
-        <p>Create a structured logging utility with severity levels.</p>
-
-        <pre><code>// logger.ifa - Structured logging
-
-ise log(level, message) {
-    ayanmo timestamp = Iwori.format(Iwori.now(), "%Y-%m-%d %H:%M:%S");
-    ayanmo prefix = "";
-    
-    ti (level == "INFO") {
-        ayanmo prefix = "[INFO ]";
-    } bib?k? ti (level == "WARN") {
-        ayanmo prefix = "[WARN ]";
-    } bib?k? ti (level == "ERROR") {
-        ayanmo prefix = "[ERROR]";
-    } bib?k? ti (level == "DEBUG") {
-        ayanmo prefix = "[DEBUG]";
-    }
-    
-    ayanmo line = timestamp + " " + prefix + " " + message;
-    
-    ti (level == "ERROR") {
-        Irosu.kigbe(line);  // stderr for errors
-    } bib?k? {
-        Irosu.fo(line);     // stdout for others
-    }
-}
-
-// Usage
-log("INFO", "Application started");
-log("DEBUG", "Loading configuration from config.json");
-log("WARN", "Config file missing, using defaults");
-log("ERROR", "Failed to connect to database");
-log("INFO", "Retrying in 5 seconds...");</code></pre>
-
-        <p>Output:</p>
-        <pre><code>2026-01-17 11:30:00 [INFO ] Application started
-2026-01-17 11:30:00 [DEBUG] Loading configuration from config.json
-2026-01-17 11:30:00 [WARN ] Config file missing, using defaults
-2026-01-17 11:30:00 [ERROR] Failed to connect to database
-2026-01-17 11:30:00 [INFO ] Retrying in 5 seconds...</code></pre>
-
-        <h2>Use Case 3: Progress Indicator</h2>
-        <p>Show progress for long-running operations.</p>
-
-        <pre><code>// progress.ifa - Progress bar
-
-ise show_progress(current, total, width) {
-    ayanmo percent = (current * 100) / total;
-    ayanmo filled = (current * width) / total;
-    
-    ayanmo bar = "";
-    ayanmo i = 0;
-    nigba (i < width) {
-        ti (i < filled) {
-            ayanmo bar = bar + "¶";
-        } bib?k? {
-            ayanmo bar = bar + "¶";
-        }
-        ayanmo i = i + 1;
-    }
-    
-    Irosu.so("\r[" + bar + "] " + percent + "%");
-}
-
-// Simulate file processing
-ayanmo files = 50;
-ayanmo processed = 0;
-
-Irosu.fo("Processing files...");
-nigba (processed < files) {
-    show_progress(processed, files, 30);
-    Oyeku.sleep(50);  // Simulate work
-    ayanmo processed = processed + 1;
-}
-show_progress(files, files, 30);
-Irosu.fo("\n? All files processed!");</code></pre>
-
-        <h2>Use Case 4: Interactive Prompt with Validation</h2>
-        <pre><code>// prompt.ifa - Validated input
-
-ise prompt_number(message, min, max) {
-    ayanmo valid = iro;
-    ayanmo value = 0;
-    
-    nigba (!valid) {
-        Irosu.so(message);
-        ayanmo input = Irosu.ka();
-        ayanmo parsed = Ogbe.parse_int(input);
-        
-        ti (parsed == nil) {
-            Irosu.fo("? Please enter a valid number.");
-        } bib?k? ti (parsed < min || parsed > max) {
-            Irosu.fo("? Must be between " + min + " and " + max);
-        } bib?k? {
-            ayanmo valid = otito;
-            ayanmo value = parsed;
-        }
-    }
-    
-    padap? value;
-}
-
-ise prompt_confirm(message) {
-    Irosu.so(message + " (y/n): ");
-    ayanmo input = Ika.lowercase(Irosu.ka());
-    padap? input == "y" || input == "yes";
-}
-
-// Usage
-ayanmo age = prompt_number("Enter your age (1-120): ", 1, 120);
-Irosu.fo("Your age: " + age);
-
-ti (prompt_confirm("Save changes?")) {
-    Irosu.fo("? Changes saved!");
-} bib?k? {
-    Irosu.fo("? Cancelled.");
-}</code></pre>
-
-        <h2>Use Case 5: Table Formatter</h2>
-        <pre><code>// table.ifa - Format data as table
-
-ise print_table(headers, rows) {
+        <div class="step">
+            <h2>Advanced Formatting</h2>
+            
+            <h3>Text Formatting and Alignment</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Formatted Output</span>
+                </div>
+                <pre><code>// Column alignment
+se print_table(data: Vec<Vec<Str>>) {
     // Calculate column widths
-    ayanmo widths = [];
-    fun h ninu headers {
-        ayanmo widths = Ogunda.push(widths, Ika.len(h));
+    ayanmo widths = Vec::<u32>::new();
+    fun col ninu 0..data[0].length() {
+        ayanmo max_width = 0;
+        fun row ninu data {
+            ayanmo length = Ika.length(row[col]);
+            if length > max_width {
+                max_width = length;
+            }
+        }
+        widths.push(max_width + 2); // Add padding
     }
     
-    // Print header
-    ayanmo header_line = "| ";
-    ayanmo i = 0;
-    fun h ninu headers {
-        ayanmo w = Ogunda.get(widths, i);
-        ayanmo header_line = header_line + Ika.pad_right(h, w) + " | ";
-        ayanmo i = i + 1;
+    // Print header separator
+    ayanmo separator = "+";
+    fun width ninu widths {
+        separator += Ika.repeat("-", width) + "+";
     }
-    Irosu.fo(header_line);
+    Irosu.fo(separator);
     
-    // Print separator
-    ayanmo sep = "|";
-    fun w ninu widths {
-        ayanmo sep = sep + Ika.repeat("-", w + 2) + "|";
-    }
-    Irosu.fo(sep);
-    
-    // Print rows
-    fun row ninu rows {
-        ayanmo line = "| ";
-        ayanmo j = 0;
-        fun cell ninu row {
-            ayanmo w = Ogunda.get(widths, j);
-            ayanmo line = line + Ika.pad_right(cell, w) + " | ";
-            ayanmo j = j + 1;
+    // Print data
+    fun row ninu data {
+        ayanmo line = "|";
+        fun col ninu 0..row.length() {
+            ayanmo cell = row[col];
+            ayanmo padding = widths[col] - Ika.length(cell);
+            line += cell + Ika.repeat(" ", padding) + "|";
         }
         Irosu.fo(line);
+        Irosu.fo(separator);
     }
 }
 
-// Usage
-ayanmo headers = ["Name", "Role", "Status"];
-ayanmo rows = [
-    ["Alice", "Engineer", "Active"],
-    ["Bob", "Designer", "Away"],
-    ["Carol", "Manager", "Active"]
+// Usage example
+ayanmo table_data = [
+    ["Name", "Age", "City"],
+    ["Alice", "25", "New York"],
+    ["Bob", "30", "Los Angeles"],
+    ["Charlie", "35", "Chicago"]
 ];
-print_table(headers, rows);</code></pre>
+print_table(table_data);
 
-        <footer class="doc-footer">
-            <p><a href="domains.html">? All Domain Use Cases</a></p>
-            <p><a href="../../index.html">Documentation Home</a></p>
+// Number formatting
+se format_number(num: Float, decimals: u32) -> Str {
+    ayanmo rounded = Obara.round(num * Obara.pow(10, decimals)) / Obara.pow(10, decimals);
+    ayanmo str_num = Obara.to_str(rounded);
+    
+    if !Ika.contains(str_num, ".") {
+        str_num += "." + Ika.repeat("0", decimals);
+    } else {
+        ayanmo parts = Ika.split(str_num, ".");
+        ayanmo decimal_part = parts[1];
+        while Ika.length(decimal_part) < decimals {
+            decimal_part += "0";
+        }
+        str_num = parts[0] + "." + decimal_part;
+    }
+    
+    // Add thousands separator
+    ayanmo int_part = Ika.split(str_num, ".")[0];
+    ayanmo formatted = "";
+    ayanmo count = 0;
+    
+    fun i ninu (Ika.length(int_part) - 1)..0 {
+        count += 1;
+        formatted = int_part[i] + formatted;
+        if count == 3 and i > 0 {
+            formatted = "," + formatted;
+            count = 0;
+        }
+    }
+    
+    if Ika.contains(str_num, ".") {
+        formatted += "." + Ika.split(str_num, ".")[1];
+    }
+    
+    pada formatted;
+}
+
+Irosu.fo("Population: " + format_number(1234567.89, 2));
+Irosu.fo("Price: $" + format_number(99.99, 2));</code></pre>
+            </div>
+
+            <h3>Color and Terminal Control</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Colored Output</span>
+                </div>
+                <pre><code>// Color constants
+enum Color {
+    Reset = "\x1b[0m",
+    Red = "\x1b[31m",
+    Green = "\x1b[32m",
+    Yellow = "\x1b[33m",
+    Blue = "\x1b[34m",
+    Magenta = "\x1b[35m",
+    Cyan = "\x1b[36m",
+    White = "\x1b[37m",
+    BrightRed = "\x1b[91m",
+    BrightGreen = "\x1b[92m",
+    BrightYellow = "\x1b[93m",
+    BrightBlue = "\x1b[94m",
+    BrightMagenta = "\x1b[95m",
+    BrightCyan = "\x1b[96m",
+    BrightWhite = "\x1b[97m"
+}
+
+// Colored output functions
+se print_colored(text: Str, color: Color) {
+    Irosu.fo(color + text + Color::Reset);
+}
+
+se print_success(message: Str) {
+    print_colored("otito: " + message, Color::BrightGreen);
+}
+
+se print_error(message: Str) {
+    print_colored("eke: " + message, Color::BrightRed);
+}
+
+se print_warning(message: Str) {
+    print_colored("warning: " + message, Color::BrightYellow);
+}
+
+se print_info(message: Str) {
+    print_colored("info: " + message, Color::BrightBlue);
+}
+
+// Usage examples
+print_success("Operation completed successfully");
+print_error("Failed to connect to server");
+print_warning("Deprecated API used");
+print_info("Processing file...");
+
+// Progress bar with colors
+se show_progress(current: u32, total: u32, width: u32) {
+    ayanmo percentage = (current * 100) / total;
+    ayanmo filled = (current * width) / total;
+    ayanmo empty = width - filled;
+    
+    ayanmo bar = Color::BrightGreen + Ika.repeat("=", filled) + 
+                Color::Yellow + Ika.repeat("-", empty) + 
+                Color::Reset;
+    
+    Irosu.fo("\r[" + bar + "] " + Obara.to_str(percentage) + "%", flush=otito);
+}
+
+// Simulate progress
+fun i ninu 0..101 {
+    show_progress(i, 100, 50);
+    Iwori.sleep(50);
+}
+Irosu.fo(""); // New line after progress</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Logging System</h2>
+            
+            <h3>Structured Logging</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Logging Framework</span>
+                </div>
+                <pre><code>// Log levels
+enum LogLevel {
+    Debug = 0,
+    Info = 1,
+    Warning = 2,
+    Error = 3,
+    Critical = 4
+}
+
+// Logger configuration
+struct Logger {
+    level: LogLevel,
+    format: Str,
+    output: OutputTarget,
+}
+
+enum OutputTarget {
+    Console,
+    File(Str),
+    Both(Str)
+}
+
+// Global logger instance
+static mut LOGGER: Logger = Logger {
+    level: LogLevel::Info,
+    format: "[{timestamp}] [{level}] {message}",
+    output: OutputTarget::Console
+};
+
+// Logging functions
+se set_log_level(level: LogLevel) {
+    unsafe {
+        LOGGER.level = level;
+    }
+}
+
+se set_log_output(target: OutputTarget) {
+    unsafe {
+        LOGGER.output = target;
+    }
+}
+
+se log_message(level: LogLevel, message: Str) {
+    unsafe {
+        if level >= LOGGER.level {
+            ayanmo timestamp = Iwori.format_timestamp(Iwori.timestamp());
+            ayanmo level_str = match level {
+                LogLevel::Debug => "DEBUG",
+                LogLevel::Info => "INFO",
+                LogLevel::Warning => "WARNING",
+                LogLevel::Error => "ERROR",
+                LogLevel::Critical => "CRITICAL"
+            };
+            
+            ayanmo formatted = LOGGER.format;
+            formatted = Ika.replace(formatted, "{timestamp}", timestamp);
+            formatted = Ika.replace(formatted, "{level}", level_str);
+            formatted = Ika.replace(formatted, "{message}", message);
+            
+            match LOGGER.output {
+                OutputTarget::Console => {
+                    // Color based on level
+                    ayanmo color = match level {
+                        LogLevel::Debug => Color::Cyan,
+                        LogLevel::Info => Color::White,
+                        LogLevel::Warning => Color::Yellow,
+                        LogLevel::Error => Color::Red,
+                        LogLevel::Critical => Color::BrightRed
+                    };
+                    Irosu.fo(color + formatted + Color::Reset);
+                }
+                OutputTarget::File(path) => {
+                    Ogbe.file_append(path, formatted + "\n");
+                }
+                OutputTarget::Both(path) => {
+                    ayanmo color = match level {
+                        LogLevel::Debug => Color::Cyan,
+                        LogLevel::Info => Color::White,
+                        LogLevel::Warning => Color::Yellow,
+                        LogLevel::Error => Color::Red,
+                        LogLevel::Critical => Color::BrightRed
+                    };
+                    Irosu.fo(color + formatted + Color::Reset);
+                    Ogbe.file_append(path, formatted + "\n");
+                }
+            }
+        }
+    }
+}
+
+// Convenience functions
+se log_debug(message: Str) {
+    log_message(LogLevel::Debug, message);
+}
+
+se log_info(message: Str) {
+    log_message(LogLevel::Info, message);
+}
+
+se log_warning(message: Str) {
+    log_message(LogLevel::Warning, message);
+}
+
+se log_error(message: Str) {
+    log_message(LogLevel::Error, message);
+}
+
+se log_critical(message: Str) {
+    log_message(LogLevel::Critical, message);
+}
+
+// Usage examples
+set_log_level(LogLevel::Debug);
+set_log_output(OutputTarget::Both("app.log"));
+
+log_debug("Starting application initialization");
+log_info("Application started successfully");
+log_warning("Configuration file not found, using defaults");
+log_error("Failed to connect to database");
+log_critical("System out of memory, shutting down");</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Interactive Applications</h2>
+            
+            <h3>Menu System</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Interactive Menu</span>
+                </div>
+                <pre><code>// Menu structure
+struct MenuItem {
+    title: Str,
+    action: ese () -> (),
+    submenu: Option<Vec<MenuItem>>
+}
+
+// Main application menu
+ese create_main_menu() -> Vec<MenuItem> {
+    [
+        MenuItem {
+            title: "File Operations",
+            action: || file_operations_menu(),
+            submenu: Some([
+                MenuItem {
+                    title: "Read File",
+                    action: || read_file_operation(),
+                    submenu: None
+                },
+                MenuItem {
+                    title: "Write File",
+                    action: || write_file_operation(),
+                    submenu: None
+                },
+                MenuItem {
+                    title: "List Directory",
+                    action: || list_directory_operation(),
+                    submenu: None
+                }
+            ])
+        },
+        MenuItem {
+            title: "System Information",
+            action: || show_system_info(),
+            submenu: None
+        },
+        MenuItem {
+            title: "Settings",
+            action: || settings_menu(),
+            submenu: Some([
+                MenuItem {
+                    title: "Log Level",
+                    action: || change_log_level(),
+                    submenu: None
+                },
+                MenuItem {
+                    title: "Output Format",
+                    action: || change_output_format(),
+                    submenu: None
+                }
+            ])
+        },
+        MenuItem {
+            title: "Exit",
+            action: || Oyeku.exit(0),
+            submenu: None
+        }
+    ]
+}
+
+// Menu display and navigation
+se display_menu(title: Str, items: Vec<MenuItem>) -> u32 {
+    Irosu.fo("");
+    print_colored("=== " + title + " ===", Color::BrightCyan);
+    Irosu.fo("");
+    
+    fun i ninu 0..items.length() {
+        Irosu.fo("  " + Obara.to_str(i + 1) + ". " + items[i].title);
+    }
+    
+    Irosu.fo("");
+    ayanmo choice = Irosu.gbo("Enter your choice: ");
+    
+    gbiyanju {
+        ayanmo selected = Obara.parse_int(choice);
+        if selected >= 1 and selected <= items.length() {
+            pada selected - 1;
+        } else {
+            print_error("Invalid choice");
+            pada 0;
+        }
+    } gba (error) {
+        print_error("Please enter a valid number");
+        pada 0;
+    }
+}
+
+// Main menu loop
+se main_menu_loop() {
+    ayanmo menu_items = create_main_menu();
+    ayanmo history = Vec::<Str>::new();
+    
+    while ototo {
+        ayanmo choice = display_menu("Main Menu", menu_items);
+        
+        if choice < menu_items.length() {
+            ayanmo item = menu_items[choice];
+            history.push(item.title);
+            
+            if item.submenu.is_some() {
+                // Handle submenu
+                ayanmo submenu_items = item.submenu.unwrap();
+                ayanmo sub_choice = display_menu(item.title, submenu_items);
+                
+                if sub_choice < submenu_items.length() {
+                    submenu_items[sub_choice].action();
+                }
+            } else {
+                // Execute action
+                item.action();
+            }
+            
+            // Pause after action
+            Irosu.gbo("Press Enter to continue...");
+        }
+    }
+}
+
+// Sample operations
+se file_operations_menu() {
+    ayanmo items = [
+        MenuItem { title: "Read File", action: || read_file_operation(), submenu: None },
+        MenuItem { title: "Write File", action: || write_file_operation(), submenu: None },
+        MenuItem { title: "Back", action: || (), submenu: None }
+    ];
+    
+    ayanmo choice = display_menu("File Operations", items);
+    if choice < items.length() {
+        items[choice].action();
+    }
+}
+
+se read_file_operation() {
+    ayanmo filename = Irosu.gbo("Enter filename: ");
+    
+    gbiyanju {
+        ayanmo content = Ogbe.file_read(filename);
+        Irosu.fo("");
+        print_colored("File contents:", Color::BrightGreen);
+        Irosu.fo(content);
+    } gba (error) {
+        print_error("Failed to read file: " + error.message);
+    }
+}
+
+se show_system_info() {
+    ayanmo info = Ogbe.get_system_info();
+    
+    Irosu.fo("");
+    print_colored("System Information:", Color::BrightCyan);
+    Irosu.fo("OS: " + info.os_name + " " + info.os_version);
+    Irosu.fo("CPU: " + info.cpu_model);
+    Irosu.fo("Memory: " + info.memory_total + " total, " + info.memory_used + " used");
+    Irosu.fo("Uptime: " + info.uptime);
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Progress Indicators</h2>
+            
+            <h3>Progress Bars and Spinners</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Progress Indicators</span>
+                </div>
+                <pre><code>// Progress bar with percentage and time estimate
+se progress_bar_with_eta(current: u32, total: u32, width: u32, start_time: u64) {
+    ayanmo percentage = (current * 100) / total;
+    ayanmo filled = (current * width) / total;
+    ayanmo empty = width - filled;
+    
+    // Calculate ETA
+    ayanmo elapsed = Iwori.timestamp() - start_time;
+    ayanmo rate = current as f64 / (elapsed as f64 / 1000.0); // items per second
+    ayanmo remaining = total - current;
+    ayanmo eta_seconds = remaining as f64 / rate;
+    ayanmo eta_str = if eta_seconds < 60 {
+        Obara.to_str(Obara.round(eta_seconds)) + "s"
+    } else if eta_seconds < 3600 {
+        Obara.to_str(Obara.round(eta_seconds / 60)) + "m"
+    } else {
+        Obara.to_str(Obara.round(eta_seconds / 3600)) + "h"
+    };
+    
+    // Build progress bar
+    ayanmo bar = Color::BrightGreen + Ika.repeat("=", filled) + 
+                Color::Yellow + Ika.repeat("-", empty) + 
+                Color::Reset;
+    
+    // Format output
+    ayanmo output = "\r[" + bar + "] " + 
+                   Obara.to_str(percentage) + "% " +
+                   "(" + Obara.to_str(current) + "/" + Obara.to_str(total) + ") " +
+                   "ETA: " + eta_str;
+    
+    Irosu.fo(output, flush=otito);
+}
+
+// Spinner animation
+se spinner_animation(message: Str, duration_ms: u32) {
+    ayanmo spinner = ["|", "/", "-", "\\"];
+    ayanmo start_time = Iwori.timestamp();
+    ayanmo end_time = start_time + duration_ms;
+    
+    while Iwori.timestamp() < end_time {
+        ayanmo elapsed = Iwori.timestamp() - start_time;
+        ayanmo frame = (elapsed / 100) % 4; // Change every 100ms
+        
+        Irosu.fo("\r" + Color::BrightCyan + spinner[frame] + Color::Reset + " " + message, 
+                 flush=otito);
+        Iwori.sleep(50);
+    }
+    
+    Irosu.fo("\r" + Color::BrightGreen + "otito" + Color::Reset + " " + message);
+}
+
+// Multi-progress display
+se multi_progress(tasks: Vec<TaskProgress>) {
+    // Clear screen
+    Irosu.fo("\x1b[2J\x1b[H", flush=otito);
+    
+    print_colored("Task Progress Monitor", Color::BrightCyan);
+    Irosu.fo("");
+    
+    fun task ninu tasks {
+        ayanmo percentage = (task.current * 100) / task.total;
+        ayanmo filled = (task.current * 30) / 30; // 30 character bar
+        ayanmo empty = 30 - filled;
+        
+        ayanmo bar = Color::BrightGreen + Ika.repeat("=", filled) + 
+                    Color::Yellow + Ika.repeat("-", empty) + 
+                    Color::Reset;
+        
+        Irosu.fo(task.name + ":");
+        Irosu.fo("  [" + bar + "] " + Obara.to_str(percentage) + "%");
+        
+        if task.status == "completed" {
+            Irosu.fo("  " + Color::BrightGreen + "otito" + Color::Reset + " " + task.status);
+        } else if task.status == "error" {
+            Irosu.fo("  " + Color::BrightRed + "eke" + Color::Reset + " " + task.status);
+        } else {
+            Irosu.fo("  " + Color::BrightYellow + "processing..." + Color::Reset);
+        }
+        Irosu.fo("");
+    }
+}
+
+// Task progress structure
+struct TaskProgress {
+    name: Str,
+    current: u32,
+    total: u32,
+    status: Str
+}
+
+// Usage example
+se demo_progress_indicators() {
+    // Progress bar with ETA
+    Irosu.fo("Demonstrating progress bar with ETA:");
+    ayanmo start_time = Iwori.timestamp();
+    
+    fun i ninu 0..101 {
+        progress_bar_with_eta(i, 100, 40, start_time);
+        Iwori.sleep(100);
+    }
+    Irosu.fo("");
+    Irosu.fo("");
+    
+    // Spinner animation
+    Irosu.fo("Demonstrating spinner animation:");
+    spinner_animation("Processing data...", 3000);
+    Irosu.fo("");
+    Irosu.fo("");
+    
+    // Multi-progress display
+    Irosu.fo("Demonstrating multi-progress display:");
+    ayanmo tasks = [
+        TaskProgress { name: "File Download", current: 75, total: 100, status: "processing" },
+        TaskProgress { name: "Data Processing", current: 45, total: 100, status: "processing" },
+        TaskProgress { name: "Report Generation", current: 100, total: 100, status: "completed" },
+        TaskProgress { name: "Backup Creation", current: 0, total: 100, status: "pending" }
+    ];
+    
+    multi_progress(tasks);
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Terminal Applications</h2>
+            
+            <h3>Text-Based User Interface</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">TUI Framework</span>
+                </div>
+                <pre><code>// TUI components
+struct Window {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    title: Str,
+    border: Bool
+}
+
+struct Button {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    text: Str,
+    focused: Bool
+}
+
+struct TextBox {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    text: Str,
+    cursor_pos: u32,
+    focused: Bool
+}
+
+// Screen management
+se clear_screen() {
+    Irosu.fo("\x1b[2J\x1b[H", flush=otito);
+}
+
+se move_cursor(x: u32, y: u32) {
+    Irosu.fo("\x1b[" + Obara.to_str(y) + ";" + Obara.to_str(x) + "H", flush=otito);
+}
+
+se hide_cursor() {
+    Irosu.fo("\x1b[?25l", flush=otito);
+}
+
+se show_cursor() {
+    Irosu.fo("\x1b[?25h", flush=otito);
+}
+
+// Window drawing
+se draw_window(window: Window) {
+    if window.border {
+        // Draw top border
+        move_cursor(window.x, window.y);
+        ayanmo top = "+" + Ika.repeat("-", window.width - 2) + "+";
+        Irosu.fo(top);
+        
+        // Draw sides
+        fun i ninu 1..window.height - 1 {
+            move_cursor(window.x, window.y + i);
+            Irosu.fo("|" + Ika.repeat(" ", window.width - 2) + "|");
+        }
+        
+        // Draw bottom border
+        move_cursor(window.x, window.y + window.height - 1);
+        ayanmo bottom = "+" + Ika.repeat("-", window.width - 2) + "+";
+        Irosu.fo(bottom);
+        
+        // Draw title
+        if window.title != "" {
+            ayanmo title_x = window.x + (window.width - Ika.length(window.title)) / 2;
+            move_cursor(title_x, window.y);
+            Irosu.fo(window.title);
+        }
+    }
+}
+
+// Button drawing
+se draw_button(button: Button) {
+    move_cursor(button.x, button.y);
+    
+    if button.focused {
+        Irosu.fo(Color::BrightBlue + "[" + button.text + "]" + Color::Reset);
+    } else {
+        Irosu.fo("[" + button.text + "]");
+    }
+}
+
+// TextBox drawing
+se draw_textbox(textbox: TextBox) {
+    move_cursor(textbox.x, textbox.y);
+    
+    ayanmo display_text = textbox.text;
+    if Ika.length(display_text) > textbox.width {
+        display_text = Ika.substring(display_text, 
+                                   Ika.length(display_text) - textbox.width + 1);
+    }
+    
+    if textbox.focused {
+        Irosu.fo(Color::BrightWhite + display_text + "_" + Color::Reset);
+    } else {
+        Irosu.fo(display_text);
+    }
+}
+
+// Simple TUI application
+se simple_tui_app() {
+    hide_cursor();
+    clear_screen();
+    
+    // Create components
+    ayanmo main_window = Window {
+        x: 5, y: 2, width: 70, height: 20,
+        title: "If√°-Lang TUI Demo",
+        border: otito
+    };
+    
+    ayanmo text_box = TextBox {
+        x: 10, y: 8, width: 50, height: 1,
+        text: "", cursor_pos: 0, focused: otito
+    };
+    
+    ayanmo ok_button = Button {
+        x: 10, y: 12, width: 10, height: 1,
+        text: "OK", focused: eke
+    };
+    
+    ayanmo cancel_button = Button {
+        x: 25, y: 12, width: 10, height: 1,
+        text: "Cancel", focused: otito
+    };
+    
+    ayanmo focused_component = 0; // 0: textbox, 1: ok, 2: cancel
+    
+    // Main loop
+    while ototo {
+        // Draw interface
+        draw_window(main_window);
+        
+        move_cursor(10, 6);
+        Irosu.fo("Enter your name:");
+        
+        draw_textbox(text_box);
+        draw_button(ok_button);
+        draw_button(cancel_button);
+        
+        // Handle input
+        ayanmo key = Irosu.get_key();
+        
+        match key {
+            Key::Tab => {
+                // Switch focus
+                focused_component = (focused_component + 1) % 3;
+                text_box.focused = focused_component == 0;
+                ok_button.focused = focused_component == 1;
+                cancel_button.focused = focused_component == 2;
+            }
+            Key::Enter => {
+                if focused_component == 1 { // OK button
+                    Irosu.fo("Hello, " + text_box.text + "!");
+                    break;
+                } else if focused_component == 2 { // Cancel button
+                    Irosu.fo("Operation cancelled");
+                    break;
+                }
+            }
+            Key::Escape => {
+                break;
+            }
+            Key::Char(c) => {
+                if focused_component == 0 { // Textbox
+                    text_box.text += c;
+                    text_box.cursor_pos += 1;
+                }
+            }
+            Key::Backspace => {
+                if focused_component == 0 && text_box.cursor_pos > 0 {
+                    text_box.text = Ika.substring(text_box.text, 0, text_box.cursor_pos - 1);
+                    text_box.cursor_pos -= 1;
+                }
+            }
+            _ => {}
+        }
+    }
+    
+    show_cursor();
+    clear_screen();
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>User Experience</h3>
+            <ul>
+                <li>Provide clear and concise error messages</li>
+                <li>Use colors consistently to indicate status and type</li>
+                <li>Implement progress indicators for long-running operations</li>
+                <li>Support keyboard shortcuts and navigation</li>
+            </ul>
+
+            <h3>Accessibility</h3>
+            <ul>
+                <li>Ensure color choices are distinguishable for colorblind users</li>
+                <li>Provide alternative indicators besides color</li>
+                <li>Support screen readers with proper text formatting</li>
+                <li>Allow customization of display settings</li>
+            </ul>
+
+            <h3>Performance</h3>
+            <ul>
+                <li>Use buffered output for large amounts of text</li>
+                <li>Minimize screen updates and redraws</li>
+                <li>Implement efficient input handling</li>
+                <li>Cache formatted strings when possible</li>
+            </ul>
+
+            <h3>Portability</h3>
+                <ul>
+                <li>Test on different terminal emulators</li>
+                <li>Handle different terminal capabilities gracefully</li>
+                <li>Provide fallbacks for advanced features</li>
+                <li>Consider Windows vs Unix terminal differences</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Use Cases Documentation</a></p>
         </footer>
     </div>
-    <script src="../../js/nav.js"></script>
+
     <script src="../../js/common.js"></script>
 </body>
 
 </html>
-

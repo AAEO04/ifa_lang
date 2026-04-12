@@ -20,8 +20,8 @@ fn test_embedded_ptr_ops() {
         0xFF, // Halt
     ];
 
-    let result = vm.run(&bytecode).unwrap();
-    assert_eq!(result, EmbeddedValue::Int(42));
+    let result = vm.start(&bytecode).unwrap();
+    assert_eq!(result, ifa_embedded::VmExit::Halted(EmbeddedValue::Int(42)));
 }
 
 #[test]
@@ -38,6 +38,6 @@ fn test_ptr_memory_bounds() {
         0xA2, 0xFF,
     ];
 
-    let result = vm.run(&bytecode);
+    let result = vm.start(&bytecode);
     assert!(result.is_err());
 }

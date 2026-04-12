@@ -3,12 +3,10 @@
 //! Tree-walking interpreter that executes AST directly.
 //! This is the bridge between parsing and execution.
 
-
-
-
-use std::collections::HashMap;
 use crate::ast::*;
 use crate::error::{IfaError, IfaResult};
+use ifa_types::domain::OduDomain;
+use std::collections::{HashMap, VecDeque};
 
 use crate::opon::Opon;
 // use crate::value::IfaValue; // Legacy
@@ -17,7 +15,7 @@ use std::fmt::Debug;
 
 /// Debugger trait for execution tracing
 pub trait Debugger: Debug {
-    fn on_statement(&mut self, stmt: &Statement, env: &Environment);
+    fn on_statement(&mut self, stmt: &Statement, env: &EnvRef);
 }
 
 use super::handlers::HandlerRegistry;
@@ -63,162 +61,32 @@ mod sandbox_stub {
     }
 }
 
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct AstFnData {
-    pub name: String,
-    pub params: Vec<String>,
-    pub body: Vec<Statement>,
-}
+use super::environment::{EnvRef, Environment};
+use std::sync::Arc;
 
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct AstClassData {
-    pub name: String,
-    pub fields: Vec<String>,
-    pub methods: HashMap<String, IfaValue>,
-}
-
-use super::environment::Environment;
-
-/// Ose Canvas for ASCII graphics
-#[derive(Clone)]
-#[allow(dead_code)]
-struct OseCanvas {
-    width: usize,
-    height: usize,
-    buffer: Vec<Vec<char>>,
-    cursor_x: usize,
-    cursor_y: usize,
-}
-
-#[allow(dead_code)]
-impl OseCanvas {
-    fn new() -> Self {
-        Self {
-            width: 80,
-            height: 24,
-            buffer: vec![vec![' '; 80]; 24],
-            cursor_x: 0,
-            cursor_y: 0,
-        }
-    }
-
-    fn clear(&mut self, fill: char) {
-        for row in &mut self.buffer {
-            row.fill(fill);
-        }
-    }
-
-    fn resize(&mut self, width: usize, height: usize) {
-        self.width = width;
-        self.height = height;
-        self.buffer = vec![vec![' '; width]; height];
-    }
-
-    fn set_pixel(&mut self, x: i64, y: i64, ch: char) {
-        if x >= 0 && y >= 0 && (x as usize) < self.width && (y as usize) < self.height {
-            self.buffer[y as usize][x as usize] = ch;
-        }
-    }
-
-    fn write_text(&mut self, x: i64, y: i64, text: &str) {
-        for (i, ch) in text.chars().enumerate() {
-            self.set_pixel(x + i as i64, y, ch);
-        }
-    }
-
-    fn draw_line(&mut self, x1: i64, y1: i64, x2: i64, y2: i64, ch: char) {
-        // Bresenham's line algorithm
-        let dx = (x2 - x1).abs();
-        let dy = (y2 - y1).abs();
-        let sx = if x1 < x2 { 1 } else { -1 };
-        let sy = if y1 < y2 { 1 } else { -1 };
-        let mut err = dx - dy;
-        let mut x = x1;
-        let mut y = y1;
-
-        loop {
-            self.set_pixel(x, y, ch);
-            if x == x2 && y == y2 {
-                break;
-            }
-            let e2 = 2 * err;
-            if e2 > -dy {
-                err -= dy;
-                x += sx;
-            }
-            if e2 < dx {
-                err += dx;
-                y += sy;
-            }
-        }
-    }
-
-    fn draw_rect(&mut self, x: i64, y: i64, w: i64, h: i64, ch: char) {
-        for i in 0..w {
-            self.set_pixel(x + i, y, ch);
-            self.set_pixel(x + i, y + h - 1, ch);
-        }
-        for i in 0..h {
-            self.set_pixel(x, y + i, ch);
-            self.set_pixel(x + w - 1, y + i, ch);
-        }
-    }
-
-    fn fill_rect(&mut self, x: i64, y: i64, w: i64, h: i64, ch: char) {
-        for dy in 0..h {
-            for dx in 0..w {
-                self.set_pixel(x + dx, y + dy, ch);
-            }
-        }
-    }
-
-    fn draw_circle(&mut self, xc: i64, yc: i64, r: i64, ch: char) {
-        // Midpoint circle algorithm
-        let mut x = 0;
-        let mut y = r;
-        let mut d = 1 - r;
-
-        while x <= y {
-            self.set_pixel(xc + x, yc + y, ch);
-            self.set_pixel(xc - x, yc + y, ch);
-            self.set_pixel(xc + x, yc - y, ch);
-            self.set_pixel(xc - x, yc - y, ch);
-            self.set_pixel(xc + y, yc + x, ch);
-            self.set_pixel(xc - y, yc + x, ch);
-            self.set_pixel(xc + y, yc - x, ch);
-            self.set_pixel(xc - y, yc - x, ch);
-
-            x += 1;
-            if d < 0 {
-                d += 2 * x + 1;
-            } else {
-                y -= 1;
-                d += 2 * (x - y) + 1;
-            }
-        }
-    }
-}
 
 /// The Ifá Interpreter
 
-
-
-
 pub struct Interpreter {
-    pub env: Environment,
+    pub env: EnvRef,
     output: Vec<String>,
-    /// Already imported modules (to prevent circular imports)
+    /// Captured closure environments by id.
+    closures: HashMap<u64, EnvRef>,
+    next_closure_id: u64,
+    /// Already imported modules (prevents re-execution)
     imported: std::collections::HashSet<String>,
-    /// Module search paths
-    module_paths: Vec<std::path::PathBuf>,
+    /// Circular import guard
+    import_guard: crate::module_resolver::ImportGuard,
+    /// Cached module exports (key -> exports map)
+    module_cache: HashMap<String, IfaValue>,
+    /// Canonical resolver initialized once, used for every import
+    resolver: crate::module_resolver::ModuleResolver,
     /// Current file being executed (for relative imports)
     current_file: Option<std::path::PathBuf>,
     /// Security capabilities
     pub capabilities: CapabilitySet,
-    /// Ose canvas for graphics
-    canvas: OseCanvas,
+
+
     /// Modular domain handlers
     handlers: HandlerRegistry,
     /// Memory (The Calabash)
@@ -227,34 +95,53 @@ pub struct Interpreter {
     unsafe_depth: usize,
     /// Optional debugger hook
     pub debugger: Option<Box<dyn Debugger>>,
+    /// Current function call depth
+    call_depth: usize,
+    /// Max allowed call frames (from #opon)
+    call_depth_limit: Option<usize>,
+    /// Async task queue
+    task_queue: VecDeque<AstTask>,
+}
+
+#[derive(Clone)]
+struct AstTask {
+    func: IfaValue,
+    args: Vec<IfaValue>,
+    future: ifa_types::value_union::FutureCell,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         let mut module_paths = Vec::new();
-        // Add current directory
         if let Ok(cwd) = std::env::current_dir() {
             module_paths.push(cwd);
         }
-        // Add standard library path (if exists)
         if let Ok(exe) = std::env::current_exe() {
             if let Some(dir) = exe.parent() {
                 module_paths.push(dir.join("lib"));
             }
         }
+        let resolver = crate::module_resolver::ModuleResolver::new(module_paths);
 
         Interpreter {
             env: Environment::new(),
             output: Vec::new(),
+            closures: HashMap::new(),
+            next_closure_id: 1,
             imported: std::collections::HashSet::new(),
-            module_paths,
+            import_guard: crate::module_resolver::ImportGuard::new(),
+            module_cache: HashMap::new(),
+            resolver,
             current_file: None,
             capabilities: CapabilitySet::default(),
-            canvas: OseCanvas::new(),
+
             handlers: HandlerRegistry::new(),
             opon: Opon::default(),
             unsafe_depth: 0,
             debugger: None,
+            call_depth: 0,
+            call_depth_limit: None,
+            task_queue: VecDeque::new(),
         }
     }
 
@@ -263,7 +150,7 @@ impl Interpreter {
         let mut interp = Self::new();
         let path = file.as_ref().to_path_buf();
         if let Some(parent) = path.parent() {
-            interp.module_paths.insert(0, parent.to_path_buf());
+            interp.resolver.search_paths.insert(0, parent.to_path_buf());
         }
         interp.current_file = Some(path);
         interp
@@ -305,7 +192,74 @@ impl Interpreter {
             result = self.execute_statement(stmt)?;
         }
 
-        Ok(result)
+        match result {
+            IfaValue::Return(v) => Ok((*v).clone()),
+            other => Ok(other),
+        }
+    }
+
+    fn spawn_task(&mut self, func: IfaValue, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
+        let cell = match IfaValue::future_pending() {
+            IfaValue::Future(cell) => cell,
+            _ => unreachable!(),
+        };
+        let task = AstTask {
+            func,
+            args,
+            future: cell.clone(),
+        };
+        self.task_queue.push_back(task);
+        Ok(IfaValue::Future(cell))
+    }
+
+    fn poll_one_task(&mut self) -> IfaResult<bool> {
+        let Some(task) = self.task_queue.pop_front() else {
+            return Ok(false);
+        };
+        let result = match task.func {
+            IfaValue::AstFn(data) => {
+                let env = self
+                    .closures
+                    .get(&data.closure_id)
+                    .cloned()
+                    .ok_or_else(|| IfaError::Runtime("Closure environment missing".into()))?;
+                self.call_ast_function_values(&data.params, &data.body, env, task.args)?
+            }
+            other => {
+                return Err(IfaError::TypeError {
+                    expected: "Function".into(),
+                    got: other.type_name().into(),
+                });
+            }
+        };
+        let mut state = task
+            .future
+            .lock()
+            .map_err(|_| IfaError::Runtime("Future lock poisoned".into()))?;
+        *state = ifa_types::value_union::FutureState::Ready(result);
+        Ok(true)
+    }
+
+    fn await_future(&mut self, cell: &ifa_types::value_union::FutureCell) -> IfaResult<IfaValue> {
+        loop {
+            let ready = {
+                let state = cell
+                    .lock()
+                    .map_err(|_| IfaError::Runtime("Future lock poisoned".into()))?;
+                match &*state {
+                    ifa_types::value_union::FutureState::Ready(v) => Some(v.clone()),
+                    ifa_types::value_union::FutureState::Pending => None,
+                }
+            };
+            if let Some(v) = ready {
+                return Ok(v);
+            }
+            if !self.poll_one_task()? {
+                return Err(IfaError::Runtime(
+                    "Future pending with no runnable tasks".into(),
+                ));
+            }
+        }
     }
 
     /// Get captured output
@@ -313,15 +267,12 @@ impl Interpreter {
         &self.output
     }
 
-    /// Get canvas output (rendered as string)
-    pub fn get_canvas(&self) -> String {
-        self.canvas
-            .buffer
-            .iter()
-            .map(|row| row.iter().collect::<String>())
-            .collect::<Vec<_>>()
-            .join("\n")
+    fn record_runtime_message(&mut self, spirit: &str, action: &str, message: impl Into<String>) {
+        let message = message.into();
+        self.output.push(message.clone());
+        self.opon.record_msg(spirit, action, &message);
     }
+
 
     /// Check if currently in an unsafe block
     pub fn is_unsafe(&self) -> bool {
@@ -329,16 +280,24 @@ impl Interpreter {
     }
 
     /// Import a module by path (e.g., ["std", "otura"])
-    fn import_module(&mut self, path: &[String]) -> IfaResult<()> {
+    fn import_module(&mut self, path: &[String]) -> IfaResult<IfaValue> {
         let module_key = path.join(".");
 
-        // Check for circular imports
-        if self.imported.contains(&module_key) {
-            return Ok(()); // Already imported
+        if path.first().map(|p| p == "std").unwrap_or(false) {
+            let domain = path.last().cloned().unwrap_or_default();
+            let marker = format!("__odu_mod__:{domain}");
+            return Ok(IfaValue::str(marker));
         }
 
-        // Mark as imported to prevent circular imports
-        self.imported.insert(module_key.clone());
+        if self.imported.contains(&module_key) {
+            if let Some(exports) = self.module_cache.get(&module_key) {
+                return Ok(exports.clone());
+            }
+        }
+
+        // Check for circular imports
+        self.import_guard.enter(&module_key)?;
+
 
         // Try to find the module file
         let file_path = self.resolve_module_path(path)?;
@@ -352,36 +311,53 @@ impl Interpreter {
             IfaError::Runtime(format!("Parse error in module '{}': {}", module_key, e))
         })?;
 
+        let export_names = collect_exports(&program);
+
         // Save current file and execute the module
         let prev_file = self.current_file.take();
         self.current_file = Some(file_path);
 
-        // Execute the module's code (will define functions, classes, etc.)
+        let old_env = self.env.clone();
+        self.env = Environment::new();
+        // Execute the module's code in isolated scope
         for stmt in &program.statements {
             self.execute_statement(stmt)?;
         }
 
+        let mut exports = std::collections::HashMap::new();
+        for name in export_names {
+            if let Some(val) = Environment::get(&self.env, &name) {
+                exports.insert(name, val);
+            }
+        }
+
+        self.env = old_env;
         // Restore previous file
         self.current_file = prev_file;
 
-        Ok(())
+        let exports_val = IfaValue::map(exports);
+        self.import_guard.exit(&module_key);
+        self.imported.insert(module_key.clone());
+        self.module_cache.insert(module_key, exports_val.clone());
+
+        Ok(exports_val)
     }
 
     /// Execute a block of statements in a new scope
     fn execute_block(&mut self, statements: &[Statement]) -> IfaResult<IfaValue> {
         // Push Scope - Manually (GPC Pattern)
         // We take the current env and wrap it as the parent of a new empty env
-        let old_env = std::mem::take(&mut self.env);
-        self.env = crate::interpreter::environment::Environment::with_parent(old_env);
+        let old_env = self.env.clone();
+        self.env = Environment::with_parent(old_env.clone());
 
         let mut result = Ok(IfaValue::null());
         for stmt in statements {
             result = self.execute_statement(stmt);
-            
+
             if result.is_err() {
                 break;
             }
-            
+
             //Check for return values to propagate break/return
             if let Ok(val) = &result {
                 if val.is_return() {
@@ -390,47 +366,17 @@ impl Interpreter {
             }
         }
 
-        // Pop Scope
-        // We take the parent back and restore it as current env
-        if let Some(parent) = self.env.parent.take() {
-            self.env = *parent;
-        }
-
+        // Pop scope: restore previous env.
+        self.env = old_env;
         result
     }
 
-    /// Resolve module path to file path
+    /// Delegate to the unified ModuleResolver so AST and VM share identical
+    /// path resolution logic (mod.ifa fallback, OS separators, etc.)
     fn resolve_module_path(&self, path: &[String]) -> IfaResult<std::path::PathBuf> {
-        if path.is_empty() {
-            return Err(IfaError::Runtime("Empty module path".to_string()));
-        }
-
-        // Convert module path to file path
-        // std.otura -> std/otura.ifa
-        let relative_path = format!("{}.ifa", path.join(std::path::MAIN_SEPARATOR_STR));
-
-        // Try each module search path
-        for base in &self.module_paths {
-            let full_path = base.join(&relative_path);
-            if full_path.exists() {
-                return Ok(full_path);
-            }
-        }
-
-        // Also try as a directory with mod.ifa
-        let dir_path = format!("{}/mod.ifa", path.join(std::path::MAIN_SEPARATOR_STR));
-        for base in &self.module_paths {
-            let full_path = base.join(&dir_path);
-            if full_path.exists() {
-                return Ok(full_path);
-            }
-        }
-
-        Err(IfaError::Runtime(format!(
-            "Module '{}' not found. Searched in: {:?}",
-            path.join("."),
-            self.module_paths
-        )))
+        let raw = path.join(".");
+        let resolved = self.resolver.resolve(&raw)?;
+        Ok(resolved.path)
     }
 
     fn execute_statement(&mut self, stmt: &Statement) -> IfaResult<IfaValue> {
@@ -440,14 +386,14 @@ impl Interpreter {
         match stmt {
             Statement::VarDecl { name, value, .. } => {
                 let val = self.evaluate(value)?;
-                self.env.define(name, val);
+                Environment::define(&self.env, name, val);
                 Ok(IfaValue::null())
             }
 
             Statement::Const { name, value, .. } => {
                 // Runtime interpretation: identical to VarDecl but conceptually constant
                 let val = self.evaluate(value)?;
-                self.env.define(name, val);
+                Environment::define_const(&self.env, name, val);
                 Ok(IfaValue::null())
             }
 
@@ -455,90 +401,131 @@ impl Interpreter {
                 try_body,
                 catch_var,
                 catch_body,
+                finally_body,
                 ..
             } => {
-                // Execute try block with new scope
-                match self.execute_block(try_body) {
+                let mut result = match self.execute_block(try_body) {
                     Ok(val) => Ok(val),
                     Err(e) => {
                         // Execute catch block with new scope
                         // We must manually enter scope for catch to bind the error variable
-                        let old_env = std::mem::take(&mut self.env);
-                        self.env = Environment::with_parent(old_env);
-                        
+                        let old_env = self.env.clone();
+                        self.env = Environment::with_parent(old_env.clone());
+
                         if !catch_var.is_empty() {
-                            self.env.define(catch_var, IfaValue::str(e.to_string()));
+                            // R4: Bind structured error value, not a plain string
+                            let kind_name = match &e {
+                                IfaError::TypeError { .. } => "TypeError",
+                                IfaError::Runtime(_) => "RuntimeError",
+                                IfaError::DivisionByZero(_) => "DivisionByZeroError",
+                                IfaError::PermissionDenied(_) => "PermissionError",
+                                IfaError::UndefinedVariable(_) => "ReferenceError",
+                                _ => "Error",
+                            };
+                            let mut error_map = std::collections::HashMap::new();
+                            error_map.insert("message".to_string(), IfaValue::str(e.to_string()));
+                            error_map
+                                .insert("kind".to_string(), IfaValue::str(kind_name.to_string()));
+                            Environment::define(&self.env, catch_var, IfaValue::map(error_map));
                         }
-                        
+
                         // Execute catch body statements manually inside this scope
-                        // (We reusing execute_block logic but inline to avoid double-scoping 
-                        // or we could use execute_block if we didn't already push scope... 
+                        // (We reusing execute_block logic but inline to avoid double-scoping
+                        // or we could use execute_block if we didn't already push scope...
                         // Actually execute_block pushes scope. So we can't use it if we want to bind var *in* that scope first.
                         // So we do it manually here for catch.)
-                        
+
                         let mut result = Ok(IfaValue::null());
                         for s in catch_body {
                             result = self.execute_statement(s);
-                            if result.is_err() { break; }
+                            if result.is_err() {
+                                break;
+                            }
                         }
-                        
+
                         // Pop scope
-                        if let Some(parent) = self.env.parent.take() {
-                            self.env = *parent;
-                        }
-                        
+                        self.env = old_env;
+
                         result
                     }
+                };
+
+                if let Some(finally_body) = finally_body {
+                    let finally_result = self.execute_block(finally_body);
+                    result = match finally_result {
+                        Ok(val) if val.is_return() => Ok(val),
+                        Ok(_) => result,
+                        Err(err) => Err(err),
+                    };
                 }
+
+                result
             }
 
             Statement::Assignment { target, value, .. } => {
                 let val = self.evaluate(value)?;
                 match target {
                     AssignTarget::Variable(name) => {
-                        if !self.env.set(name, val.clone()) {
-                            self.env.define(name, val);
+                        if Environment::is_const(&self.env, name) {
+                            return Err(IfaError::TypeError {
+                                expected: "Mutable binding".into(),
+                                got: format!("const {name}"),
+                            });
+                        }
+                        if !Environment::set(&self.env, name, val.clone()) {
+                            Environment::define(&self.env, name, val);
                         }
                     }
                     AssignTarget::Index { name, index } => {
                         let idx = self.evaluate(index)?;
-                        let mut container = self.env.get(name).ok_or_else(|| {
+                        let mut container = Environment::get(&self.env, name).ok_or_else(|| {
                             IfaError::Runtime(format!("Undefined variable: {}", name))
                         })?;
 
                         // Index Assignment: xs[0] = 10
-                         match container {
-                             IfaValue::List(ref mut vec_arc) => {
-                                 let i = match idx {
-                                     IfaValue::Int(n) => n as usize,
-                                     _ => return Err(IfaError::Runtime("List index must be Int".into()))
-                                 };
-                                 
-                                 // HIGH PERFORMANCE: CoW using make_mut
-                                 // O(1) if unique, O(N) if shared.
-                                 let vec = std::sync::Arc::make_mut(vec_arc);
-                                 if i >= vec.len() { return Err(IfaError::Runtime("Index out of bounds".into())); }
-                                 vec[i] = val;
-                             }
-                             
-                             IfaValue::Map(ref mut map_arc) => {
-                                 let k = match idx {
-                                     IfaValue::Str(s) => s.clone(),
-                                     _ => return Err(IfaError::Runtime("Map key must be Str".into()))
-                                 };
-                                 // HIGH PERFORMANCE: CoW using make_mut
-                                 let map = std::sync::Arc::make_mut(map_arc);
-                                 map.insert(k, val);
-                             }
-                             _ => return Err(IfaError::Runtime("Invalid index assignment target".into()))
+                        match container {
+                            IfaValue::List(ref mut vec_arc) => {
+                                let i = match idx {
+                                    IfaValue::Int(n) => n as usize,
+                                    _ => {
+                                        return Err(IfaError::Runtime(
+                                            "List index must be Int".into(),
+                                        ));
+                                    }
+                                };
+
+                                // HIGH PERFORMANCE: CoW using make_mut
+                                // O(1) if unique, O(N) if shared.
+                                let vec = std::sync::Arc::make_mut(vec_arc);
+                                if i >= vec.len() {
+                                    return Err(IfaError::Runtime("Index out of bounds".into()));
+                                }
+                                vec[i] = val;
+                            }
+
+                            IfaValue::Map(ref mut map_arc) => {
+                                let k = match idx {
+                                    IfaValue::Str(s) => s.clone(),
+                                    _ => {
+                                        return Err(IfaError::Runtime("Map key must be Str".into()));
+                                    }
+                                };
+                                // HIGH PERFORMANCE: CoW using make_mut
+                                let map = std::sync::Arc::make_mut(map_arc);
+                                map.insert(k, val);
+                            }
+                            _ => {
+                                return Err(IfaError::Runtime(
+                                    "Invalid index assignment target".into(),
+                                ));
+                            }
                         }
-                        self.env.set(name, container);
+                        Environment::set(&self.env, name, container);
                     }
                     AssignTarget::Dereference(expr) => {
                         // *ptr = val
                         let ptr = self.evaluate(expr)?;
                         match ptr {
-        
                             IfaValue::Int(addr) => {
                                 if !self.is_unsafe() {
                                     return Err(IfaError::Runtime(format!(
@@ -550,9 +537,15 @@ impl Interpreter {
                                     .try_set(addr as usize, val)
                                     .map_err(|e| IfaError::Runtime(e.to_string()))?;
                             }
-        
+
                             IfaValue::Str(name) => {
-                                if !self.env.set(&name, val.clone()) {
+                                if Environment::is_const(&self.env, &name) {
+                                    return Err(IfaError::TypeError {
+                                        expected: "Mutable binding".into(),
+                                        got: format!("const {name}"),
+                                    });
+                                }
+                                if !Environment::set(&self.env, &name, val.clone()) {
                                     return Err(IfaError::Runtime(format!(
                                         "Reference to undefined variable: {}",
                                         name
@@ -582,11 +575,17 @@ impl Interpreter {
                 let cond = self.evaluate(condition)?;
                 if cond.is_truthy() {
                     for s in then_body {
-                        self.execute_statement(s)?;
+                        let res = self.execute_statement(s)?;
+                        if res.is_return() {
+                            return Ok(res);
+                        }
                     }
                 } else if let Some(else_stmts) = else_body {
                     for s in else_stmts {
-                        self.execute_statement(s)?;
+                        let res = self.execute_statement(s)?;
+                        if res.is_return() {
+                            return Ok(res);
+                        }
                     }
                 }
                 Ok(IfaValue::null())
@@ -597,7 +596,10 @@ impl Interpreter {
             } => {
                 while self.evaluate(condition)?.is_truthy() {
                     for s in body {
-                        self.execute_statement(s)?;
+                        let res = self.execute_statement(s)?;
+                        if res.is_return() {
+                            return Ok(res);
+                        }
                     }
                 }
                 Ok(IfaValue::null())
@@ -612,17 +614,20 @@ impl Interpreter {
                 let iter_val = self.evaluate(iterable)?;
                 // Pattern match using kind
                 if let IfaValue::List(items) = iter_val {
-                     // Note: items is &[IfaValue]. We need to iterate.
-                     // But we can't iterate 'items' directly if we need to execute statements 
-                     // because statements might mutate state or invalidate borrows?
-                     // Safer to clone the items first.
-                     let items_vec = items.to_vec(); // Clone items (IfaValue clone)
-                     for item in items_vec {
-                        self.env.define(var, item);
+                    // Note: items is &[IfaValue]. We need to iterate.
+                    // But we can't iterate 'items' directly if we need to execute statements
+                    // because statements might mutate state or invalidate borrows?
+                    // Safer to clone the items first.
+                    let items_vec = items.to_vec(); // Clone items (IfaValue clone)
+                    for item in items_vec {
+                        Environment::define(&self.env, var, item);
                         for s in body {
-                            self.execute_statement(s)?;
+                            let res = self.execute_statement(s)?;
+                            if res.is_return() {
+                                return Ok(res);
+                            }
                         }
-                     }
+                    }
                 }
                 Ok(IfaValue::null())
             }
@@ -648,13 +653,17 @@ impl Interpreter {
                             cond_val == pat_val
                         }
                         MatchPattern::Range { start, end } => {
-                             let start_val = self.evaluate(start)?;
-                             let end_val = self.evaluate(end)?;
-                             match (&cond_val, start_val, end_val) {
-                                 (IfaValue::Int(v), IfaValue::Int(s), IfaValue::Int(e)) => *v >= s && *v <= e,
-                                 (IfaValue::Float(v), IfaValue::Float(s), IfaValue::Float(e)) => *v >= s && *v <= e,
-                                 _ => false
-                             }
+                            let start_val = self.evaluate(start)?;
+                            let end_val = self.evaluate(end)?;
+                            match (&cond_val, start_val, end_val) {
+                                (IfaValue::Int(v), IfaValue::Int(s), IfaValue::Int(e)) => {
+                                    *v >= s && *v <= e
+                                }
+                                (IfaValue::Float(v), IfaValue::Float(s), IfaValue::Float(e)) => {
+                                    *v >= s && *v <= e
+                                }
+                                _ => false,
+                            }
                         }
                         MatchPattern::Wildcard => true,
                     };
@@ -673,72 +682,74 @@ impl Interpreter {
                 Ok(IfaValue::null())
             }
 
-            Statement::Ase { .. } => {
-                Ok(IfaValue::null())
-            }
+            Statement::Ase { .. } => Ok(IfaValue::null()),
 
-
-
-// Inside execute_statement match
+            // Inside execute_statement match
             Statement::EseDef {
-                name, params, body, ..
+                name,
+                params,
+                body,
+                is_async,
+                ..
             } => {
-                // AST-mode function dispatch is disabled in the interpreter
-                // (call_function returns Err for all non-bytecode callables).
-                // Store Null as the function value so the name is defined in scope.
-                // When the compiler path is active, EseDef is compiled to bytecode
-                // and called via OpCode::Call — not through the interpreter env.
-                let _data = AstFnData {
+                let closure_id = self.next_closure_id;
+                self.next_closure_id = self.next_closure_id.saturating_add(1);
+                self.closures.insert(closure_id, self.env.clone());
+
+                let value = IfaValue::AstFn(Arc::new(ifa_types::value_union::AstFnData {
                     name: name.clone(),
                     params: params.iter().map(|p| p.name.clone()).collect(),
                     body: body.clone(),
-                };
-                // `_data` is dropped here — no raw pointer, no leak.
-                self.env.define(name, IfaValue::null());
+                    closure_id,
+                    is_async: *is_async,
+                }));
+                Environment::define(&self.env, name, value);
                 Ok(IfaValue::null())
             }
 
-            Statement::Import { path, .. } => {
-                self.import_module(path)?;
+            Statement::Import { path, names, .. } => {
+                let exports = self.import_module(path)?;
+
+                if let Some(names) = names {
+                    for name in names {
+                        let val = match &exports {
+                            IfaValue::Map(map) => {
+                                let key: std::sync::Arc<str> = std::sync::Arc::from(name.as_str());
+                                map.get(&key).cloned().ok_or_else(|| {
+                                    IfaError::Runtime(format!("Export '{}' not found", name))
+                                })?
+                            }
+                            _ => {
+                                return Err(IfaError::Runtime(
+                                    "Import did not return an exports map".into(),
+                                ));
+                            }
+                        };
+                        Environment::define(&self.env, name, val);
+                    }
+                } else {
+                    let module_name = path.last().cloned().unwrap_or_else(|| "module".into());
+                    Environment::define(&self.env, &module_name, exports);
+                }
                 Ok(IfaValue::null())
             }
 
             Statement::OduDef { name, body, .. } => {
-                let mut fields = Vec::new();
-
-                for stmt in body {
-                    match stmt {
-                        Statement::EseDef {
-                            name, params, body, ..
-                        } => {
-                            // AST-mode function dispatch is disabled; drop cleanly.
-                            let _data = AstFnData {
-                                name: name.clone(),
-                                params: params.iter().map(|p| p.name.clone()).collect(),
-                                body: body.clone(),
-                            };
-                            // `_data` dropped here — no pointer, no leak.
-                        }
-                        Statement::VarDecl { name, .. } => {
-                            fields.push(name.clone());
-                        }
-                        _ => {}
-                    }
-                }
-
-                // Class dispatch is handled by the VM's DefineClass opcode.
-                // The interpreter registers the class name as Null in the current scope
-                // so subsequent references don't produce "undefined variable" errors.
-                let _ = fields;
-                self.env.define(name, IfaValue::null());
-                Ok(IfaValue::null())
+                let _ = (name, body);
+                Err(IfaError::NotImplemented(
+                    "Class (odu) definitions are not supported in the AST interpreter backend"
+                        .into(),
+                ))
             }
-
 
             Statement::Expr { expr, .. } => self.evaluate(expr),
 
             Statement::Taboo { source, target, .. } => {
-                println!("[taboo] {} -> {} forbidden", source, target);
+                self.record_runtime_message(
+                    "Eewo",
+                    "declare",
+                    format!("[taboo] {} -> {} forbidden", source, target),
+                );
                 Ok(IfaValue::null())
             }
 
@@ -759,36 +770,41 @@ impl Interpreter {
                             msg
                         )))
                     }
-                    _ => {
-                        Err(IfaError::Runtime(format!(
-                            "[ẹ̀wọ̀/verify] Assertion expects boolean, got: {:?}",
-                            condition_val.type_name()
-                        )))
-                    }
+                    _ => Err(IfaError::Runtime(format!(
+                        "[ẹ̀wọ̀/verify] Assertion expects boolean, got: {:?}",
+                        condition_val.type_name()
+                    ))),
                 }
             }
 
             Statement::Opon { size, .. } => {
-                use crate::opon::OponSize;
-                if let Some(opon_size) = OponSize::from_str(size) {
-                    println!(
-                        "[opon/mem] Memory configured: {} ({} slots, {})",
-                        opon_size.display_name(),
-                        opon_size.slot_count(),
-                        opon_size.approx_memory()
-                    );
-                } else {
-                    println!(
-                        "[opon] Warning: Unknown size '{}', using default (arinrin)",
-                        size
-                    );
-                }
+                let opon_size = match size.as_str() {
+                    "kekere" => crate::bytecode::OponSize::Kekere,
+                    "arinrin" => crate::bytecode::OponSize::Arinrin,
+                    "nla" => crate::bytecode::OponSize::Nla,
+                    "ailopin" => crate::bytecode::OponSize::Ailopin,
+                    _ => {
+                        self.record_runtime_message(
+                            "Opon",
+                            "configure",
+                            format!("[opon] Unknown size '{}', defaulting to arinrin", size),
+                        );
+                        crate::bytecode::OponSize::Arinrin
+                    }
+                };
+                // Set call-frame limit for this interpreter session
+                let (_, frame_cap) = opon_size.limits();
+                self.call_depth_limit = frame_cap;
                 Ok(IfaValue::null())
             }
 
             Statement::Ebo { offering, .. } => {
                 let val = self.evaluate(offering)?;
-                println!("[ẹbọ/sacrifice] Aspect initiated: {}", val);
+                self.record_runtime_message(
+                    "Ebo",
+                    "initiate",
+                    format!("[ẹbọ/sacrifice] Aspect initiated: {}", val),
+                );
                 Ok(IfaValue::null())
             }
 
@@ -809,12 +825,24 @@ impl Interpreter {
 
             Statement::Yield { duration, .. } => {
                 let val = self.evaluate(duration)?;
-                if let IfaValue::Int(micros) = val {
-                    std::thread::sleep(std::time::Duration::from_micros(micros as u64));
-                } else {
-                    return Err(IfaError::Runtime(
-                        "Yield duration must be an integer (microseconds)".to_string(),
-                    ));
+                match val {
+                    IfaValue::Int(micros) if micros >= 0 => {
+                        self.record_runtime_message(
+                            "Osa",
+                            "yield",
+                            format!("[yield] requested {} microseconds", micros),
+                        );
+                    }
+                    IfaValue::Int(_) => {
+                        return Err(IfaError::Runtime(
+                            "Yield duration must be non-negative".to_string(),
+                        ));
+                    }
+                    _ => {
+                        return Err(IfaError::Runtime(
+                            "Yield duration must be an integer (microseconds)".to_string(),
+                        ));
+                    }
                 }
                 Ok(IfaValue::null())
             }
@@ -829,15 +857,32 @@ impl Interpreter {
             Expression::Bool(b) => Ok(IfaValue::Bool(*b)),
             Expression::Nil => Ok(IfaValue::Null),
 
-            Expression::Identifier(name) => self
-                .env
-                .get(name)
+            Expression::Identifier(name) => Environment::get(&self.env, name)
                 .ok_or_else(|| IfaError::Runtime(format!("Undefined variable: {}", name))),
 
             Expression::BinaryOp { left, op, right } => {
-                let l = self.evaluate(left)?;
-                let r = self.evaluate(right)?;
-                self.apply_binary_op(&l, op, &r)
+                // Short-circuit operators must not evaluate the RHS eagerly.
+                match op {
+                    BinaryOperator::And => {
+                        let l = self.evaluate(left)?;
+                        if !l.is_truthy() {
+                            return Ok(l);
+                        }
+                        self.evaluate(right)
+                    }
+                    BinaryOperator::Or => {
+                        let l = self.evaluate(left)?;
+                        if l.is_truthy() {
+                            return Ok(l);
+                        }
+                        self.evaluate(right)
+                    }
+                    _ => {
+                        let l = self.evaluate(left)?;
+                        let r = self.evaluate(right)?;
+                        self.apply_binary_op(&l, op, &r)
+                    }
+                }
             }
 
             Expression::UnaryOp { op, expr } => {
@@ -845,10 +890,10 @@ impl Interpreter {
                 if matches!(op, UnaryOperator::AddressOf) {
                     // &x -> Ref("x") - Unsupported in current type system
                     if let Expression::Identifier(_name) = &**expr {
-                         return Err(IfaError::Runtime("AddressOf (&) not supported in new type system".into()));
+                        return Ok(IfaValue::Str(_name.clone().into()));
                     }
                 }
-                
+
                 let r = self.evaluate(expr)?;
                 match op {
                     UnaryOperator::Not => Ok(IfaValue::bool(!r.is_truthy())),
@@ -858,14 +903,51 @@ impl Interpreter {
                         _ => Err(IfaError::Runtime("Operand must be a number".into())),
                     },
                     UnaryOperator::AddressOf => {
-                        // If we are here, it means it wasn't a simple identifier. 
+                        // If we are here, it means it wasn't a simple identifier.
                         // We can't really take address of a literal or expression result in this simple VM yet.
-                        Err(IfaError::Runtime("Cannot take address of this expression".into()))
+                        {
+                            if let IfaValue::Int(addr) = r {
+                                Ok(IfaValue::Int(addr))
+                            } else {
+                                Err(IfaError::Runtime(
+                                    "Cannot take address of a non-integer literal".into(),
+                                ))
+                            }
+                        }
                     }
                     UnaryOperator::Dereference => {
-                         // *r
-                         // Deref not supported currently as AddressOf is disabled
-                         Err(IfaError::Runtime("Deref (*) not supported in new type system".into()))
+                        // *r
+                        // Deref not supported currently as AddressOf is disabled
+                        {
+                            let ptr = self.evaluate(expr)?;
+                            match ptr {
+                                IfaValue::Str(name) => Environment::get(&self.env, &name)
+                                    .ok_or_else(|| {
+                                        IfaError::Runtime(format!(
+                                            "Reference to undefined variable: {}",
+                                            name
+                                        ))
+                                    }),
+                                IfaValue::Int(addr) => {
+                                    if !self.is_unsafe() {
+                                        return Err(IfaError::Runtime(format!(
+                                            "Safety violation: *0x{:X} requires 'ailewu'",
+                                            addr
+                                        )));
+                                    }
+                                    self.opon.get(addr as usize).cloned().ok_or_else(|| {
+                                        IfaError::Runtime(format!(
+                                            "Invalid memory address: {}",
+                                            addr
+                                        ))
+                                    })
+                                }
+                                _ => Err(IfaError::Runtime(format!(
+                                    "Cannot dereference type: {}",
+                                    ptr.type_name()
+                                ))),
+                            }
+                        }
                     }
                 }
             }
@@ -882,11 +964,63 @@ impl Interpreter {
             }
 
             Expression::Call { name, args } => {
-                let func = self
-                    .env
-                    .get(name)
-                    .ok_or_else(|| IfaError::Runtime(format!("Undefined function: {}", name)))?;
-                self.call_function(&func, args)
+                let value = Environment::get(&self.env, name)
+                    .ok_or_else(|| IfaError::UndefinedFunction(name.clone()))?;
+                match value {
+                    IfaValue::AstFn(data) => {
+                        if data.is_async {
+                            let mut arg_values = Vec::with_capacity(args.len());
+                            for arg in args {
+                                arg_values.push(self.evaluate(arg)?);
+                            }
+                            self.spawn_task(IfaValue::AstFn(data.clone()), arg_values)
+                        } else {
+                            let env =
+                                self.closures
+                                    .get(&data.closure_id)
+                                    .cloned()
+                                    .ok_or_else(|| {
+                                        IfaError::Runtime("Closure environment missing".into())
+                                    })?;
+                            self.call_ast_function(&data.params, &data.body, env, args)
+                        }
+                    }
+                    IfaValue::Str(s) => {
+                        if let Some((domain, method)) = parse_odu_fn_marker(&s) {
+                            let mut arg_values = Vec::with_capacity(args.len());
+                            for arg in args {
+                                arg_values.push(self.evaluate(arg)?);
+                            }
+                            self.handlers.dispatch(
+                                domain,
+                                &method,
+                                arg_values,
+                                &self.env,
+                                &mut self.output,
+                            )
+                        } else {
+                            Err(IfaError::TypeError {
+                                expected: "Function".into(),
+                                got: "Str".into(),
+                            })
+                        }
+                    }
+                    other => Err(IfaError::TypeError {
+                        expected: "Function".into(),
+                        got: other.type_name().into(),
+                    }),
+                }
+            }
+
+            Expression::Await(expr) => {
+                let value = self.evaluate(expr)?;
+                match value {
+                    IfaValue::Future(cell) => self.await_future(&cell),
+                    other => Err(IfaError::TypeError {
+                        expected: "Future".into(),
+                        got: other.type_name().into(),
+                    }),
+                }
             }
 
             Expression::List(items) => {
@@ -902,7 +1036,7 @@ impl Interpreter {
                 for (k, v) in entries {
                     let key = match self.evaluate(k)? {
                         IfaValue::Str(s) => s.to_string(),
-                         _ => return Err(IfaError::Runtime("Map keys must be strings".into())),
+                        _ => return Err(IfaError::Runtime("Map keys must be strings".into())),
                     };
                     map.insert(key.into(), self.evaluate(v)?);
                 }
@@ -917,7 +1051,7 @@ impl Interpreter {
                     (IfaValue::List(list), IfaValue::Int(i)) => {
                         let i = i as usize;
                         if i < list.len() {
-                             Ok(list[i].clone())
+                            Ok(list[i].clone())
                         } else {
                             Err(IfaError::Runtime(format!("Index {} out of bounds", i)))
                         }
@@ -929,9 +1063,30 @@ impl Interpreter {
                     _ => Err(IfaError::Runtime("Invalid index operation".into())),
                 }
             }
+
+            Expression::Try(expr) => {
+                // §12.3: Error propagation in the tree-walking interpreter.
+                // Delegate to `evaluate`. Since the interpreter operates on
+                // IfaResult<IfaValue>, error propagation is already handled
+                // by Rust — this just surfaces the inner error to the caller.
+                self.evaluate(expr)
+            }
+
+            Expression::InterpolatedString { parts } => {
+                let mut res = String::new();
+                for part in parts {
+                    match part {
+                        InterpolatedPart::Literal(s) => res.push_str(s),
+                        InterpolatedPart::Expression(expr) => {
+                            let val = self.evaluate(expr)?;
+                            res.push_str(&val.to_string());
+                        }
+                    }
+                }
+                Ok(IfaValue::Str(res.into()))
+            }
         }
     }
-
 
     fn execute_odu_call(&mut self, call: &OduCall) -> IfaResult<IfaValue> {
         let args: Vec<IfaValue> = call
@@ -940,15 +1095,71 @@ impl Interpreter {
             .map(|arg| self.evaluate(arg))
             .collect::<Result<_, _>>()?;
 
+        // Minimal async support for Osa domain (spawn/await helpers)
+        if call.domain == OduDomain::Osa {
+            match call.method.as_str() {
+                "ise" | "spawn" | "sa" | "bẹrẹ" => {
+                    let task = args
+                        .get(0)
+                        .cloned()
+                        .ok_or_else(|| IfaError::ArgumentError("Osa.ise expects a task".into()))?;
+                    let task_args = args
+                        .get(1)
+                        .and_then(|v| {
+                            if let IfaValue::List(list) = v {
+                                Some(list.to_vec())
+                            } else {
+                                None
+                            }
+                        })
+                        .unwrap_or_default();
+                    return self.spawn_task(task, task_args);
+                }
+                "duro" | "sleep" => {
+                    let duration = args.get(0).ok_or_else(|| {
+                        IfaError::ArgumentError(
+                            "Osa.sleep expects a duration in milliseconds".into(),
+                        )
+                    })?;
+                    match duration {
+                        IfaValue::Int(ms) if *ms >= 0 => {
+                            self.record_runtime_message(
+                                "Osa",
+                                "sleep",
+                                format!("[osa.sleep] requested {} milliseconds", ms),
+                            );
+                            return Ok(IfaValue::future_ready(IfaValue::null()));
+                        }
+                        IfaValue::Int(_) => {
+                            return Err(IfaError::ArgumentError(
+                                "Osa.sleep duration must be non-negative".into(),
+                            ));
+                        }
+                        other => {
+                            return Err(IfaError::ArgumentError(format!(
+                                "Osa.sleep expects an integer duration, got {}",
+                                other.type_name()
+                            )));
+                        }
+                    }
+                }
+                "gbogbo" | "all" => {
+                    if let Some(IfaValue::List(list)) = args.get(0) {
+                        return Ok(IfaValue::list(list.to_vec()));
+                    }
+                }
+                _ => {}
+            }
+        }
+
         self.handlers.dispatch(
             call.domain.clone(),
             &call.method,
             args,
-            &mut self.env,
+            &self.env,
             &mut self.output,
         )
     }
-
 
     fn apply_binary_op(
         &self,
@@ -962,9 +1173,7 @@ impl Interpreter {
                 (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::float(a + b)),
                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::float(*a as f64 + b)),
                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::float(a + *b as f64)),
-                (IfaValue::Str(a), IfaValue::Str(b)) => {
-                    Ok(IfaValue::str(format!("{}{}", a, b)))
-                }
+                (IfaValue::Str(a), IfaValue::Str(b)) => Ok(IfaValue::str(format!("{}{}", a, b))),
                 (IfaValue::Str(a), _) => Ok(IfaValue::str(format!("{}{}", a, right))),
                 (_, IfaValue::Str(b)) => Ok(IfaValue::str(format!("{}{}", left, b))),
                 _ => Err(IfaError::Runtime("Invalid operands for +".into())),
@@ -974,23 +1183,26 @@ impl Interpreter {
                 (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::float(a - b)),
                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::float(*a as f64 - b)),
                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::float(a - *b as f64)),
-                 _ => Err(IfaError::Runtime("Invalid operands for -".into())),
+                _ => Err(IfaError::Runtime("Invalid operands for -".into())),
             },
             BinaryOperator::Mul => match (left, right) {
                 (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::int(a * b)),
                 (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::float(a * b)),
                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::float(*a as f64 * b)),
                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::float(a * *b as f64)),
-                 _ => Err(IfaError::Runtime("Invalid operands for *".into())),
+                _ => Err(IfaError::Runtime("Invalid operands for *".into())),
             },
             BinaryOperator::Div => match (left, right) {
                 (IfaValue::Int(a), IfaValue::Int(b)) if *b != 0 => Ok(IfaValue::int(a / b)),
-                (IfaValue::Float(a), IfaValue::Float(b)) if *b != 0.0 => Ok(IfaValue::float(a / b)),
-                 // Mixed
-                (IfaValue::Int(a), IfaValue::Float(b)) if *b != 0.0 => Ok(IfaValue::float(*a as f64 / b)),
-                (IfaValue::Float(a), IfaValue::Int(b)) if *b != 0 => Ok(IfaValue::float(a / *b as f64)),
-                
-                _ => Err(IfaError::Runtime("Division by zero or invalid operands".into())),
+                // Spec: Float division by zero never errors; it yields IEEE 754 results (Inf/NaN).
+                (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::float(a / b)),
+                // Mixed
+                (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::float(*a as f64 / b)),
+                (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::float(a / *b as f64)),
+
+                _ => Err(IfaError::DivisionByZero(
+                    "Division by zero or invalid operands".into(),
+                )),
             },
             BinaryOperator::Mod => match (left, right) {
                 (IfaValue::Int(a), IfaValue::Int(b)) if *b != 0 => Ok(IfaValue::int(a % b)),
@@ -1003,80 +1215,272 @@ impl Interpreter {
                     (IfaValue::Str(a), IfaValue::Str(b)) => a == b,
                     (IfaValue::Bool(a), IfaValue::Bool(b)) => a == b,
                     (IfaValue::Null, IfaValue::Null) => true,
-                    _ => false // Default to false for mismatched types
+                    _ => false, // Default to false for mismatched types
                 };
                 Ok(IfaValue::bool(eq))
-            },
+            }
             BinaryOperator::NotEq => {
-                 let eq = match (left, right) {
+                let eq = match (left, right) {
                     (IfaValue::Int(a), IfaValue::Int(b)) => a == b,
                     (IfaValue::Float(a), IfaValue::Float(b)) => (a - b).abs() < f64::EPSILON,
                     (IfaValue::Str(a), IfaValue::Str(b)) => a == b,
                     (IfaValue::Bool(a), IfaValue::Bool(b)) => a == b,
                     (IfaValue::Null, IfaValue::Null) => true,
-                    _ => false
+                    _ => false,
                 };
                 Ok(IfaValue::bool(!eq))
-            },
+            }
             BinaryOperator::Lt => match (left, right) {
                 (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::bool(a < b)),
                 (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::bool(a < b)),
                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) < *b)),
                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a < (*b as f64))),
-                 _ => Ok(IfaValue::bool(false)),
+                _ => Err(IfaError::TypeError {
+                    expected: "Comparable types (Int/Float)".into(),
+                    got: format!("{} < {}", left.type_name(), right.type_name()),
+                }),
             },
             BinaryOperator::LtEq => match (left, right) {
                 (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::bool(a <= b)),
                 (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::bool(a <= b)),
-                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) <= *b)),
-                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a <= (*b as f64))),
-                 _ => Ok(IfaValue::bool(false)),
+                (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) <= *b)),
+                (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a <= (*b as f64))),
+                _ => Err(IfaError::TypeError {
+                    expected: "Comparable types (Int/Float)".into(),
+                    got: format!("{} <= {}", left.type_name(), right.type_name()),
+                }),
             },
             BinaryOperator::Gt => match (left, right) {
                 (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::bool(a > b)),
                 (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::bool(a > b)),
-                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) > *b)),
-                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a > (*b as f64))),
-                 _ => Ok(IfaValue::bool(false)),
+                (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) > *b)),
+                (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a > (*b as f64))),
+                _ => Err(IfaError::TypeError {
+                    expected: "Comparable types (Int/Float)".into(),
+                    got: format!("{} > {}", left.type_name(), right.type_name()),
+                }),
             },
             BinaryOperator::GtEq => match (left, right) {
                 (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::bool(a >= b)),
                 (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::bool(a >= b)),
-                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) >= *b)),
-                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a >= (*b as f64))),
-                 _ => Ok(IfaValue::bool(false)),
+                (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::bool((*a as f64) >= *b)),
+                (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::bool(*a >= (*b as f64))),
+                _ => Err(IfaError::TypeError {
+                    expected: "Comparable types (Int/Float)".into(),
+                    got: format!("{} >= {}", left.type_name(), right.type_name()),
+                }),
             },
-            BinaryOperator::And => Ok(IfaValue::bool(left.is_truthy() && right.is_truthy())),
-            BinaryOperator::Or => Ok(IfaValue::bool(left.is_truthy() || right.is_truthy())),
+            // Note: short-circuiting is handled in `evaluate()`; this is a value-level fallback.
+            BinaryOperator::And => Ok(if !left.is_truthy() {
+                left.clone()
+            } else {
+                right.clone()
+            }),
+            BinaryOperator::Or => Ok(if left.is_truthy() {
+                left.clone()
+            } else {
+                right.clone()
+            }),
         }
     }
 
     fn call_method(
         &mut self,
-        _obj: &IfaValue,
+        obj: &IfaValue,
         method: &str,
-        _args: &[Expression],
+        args: &[Expression],
     ) -> IfaResult<IfaValue> {
-        Err(IfaError::Runtime(format!(
-            "Method '{}' not implemented",
-            method
-        )))
+        if let IfaValue::Str(s) = obj {
+            if let Some(domain) = parse_odu_mod_marker(s) {
+                let mut arg_values = Vec::with_capacity(args.len());
+                for arg in args {
+                    arg_values.push(self.evaluate(arg)?);
+                }
+                return self.handlers.dispatch(
+                    domain,
+                    method,
+                    arg_values,
+                    &self.env,
+                    &mut self.output,
+                );
+            }
+        }
+
+        match obj {
+            IfaValue::Map(map) => {
+                let key: std::sync::Arc<str> = std::sync::Arc::from(method);
+                let func = map.get(&key).cloned().ok_or_else(|| {
+                    IfaError::Runtime(format!("Method '{}' not found on map", method))
+                })?;
+
+                let mut arg_values = Vec::with_capacity(args.len());
+                for arg in args {
+                    arg_values.push(self.evaluate(arg)?);
+                }
+
+                match func {
+                    IfaValue::AstFn(data) => {
+                        let env =
+                            self.closures
+                                .get(&data.closure_id)
+                                .cloned()
+                                .ok_or_else(|| {
+                                    IfaError::Runtime("Closure environment missing".into())
+                                })?;
+                        self.call_ast_function_values(&data.params, &data.body, env, arg_values)
+                    }
+                    IfaValue::Str(s) => {
+                        if let Some((domain, method)) = parse_odu_fn_marker(&s) {
+                            self.handlers.dispatch(
+                                domain,
+                                &method,
+                                arg_values,
+                                &self.env,
+                                &mut self.output,
+                            )
+                        } else {
+                            Err(IfaError::TypeError {
+                                expected: "Function".into(),
+                                got: "Str".into(),
+                            })
+                        }
+                    }
+                    _ => Err(IfaError::TypeError {
+                        expected: "Function".into(),
+                        got: func.type_name().into(),
+                    }),
+                }
+            }
+            _ => Err(IfaError::Runtime(format!(
+                "Method '{}' not implemented",
+                method
+            ))),
+        }
     }
 
-    fn call_function(&mut self, func: &IfaValue, _args: &[Expression]) -> IfaResult<IfaValue> {
-        match func {
+    fn call_ast_function(
+        &mut self,
+        params: &[String],
+        body: &[Statement],
+        env: EnvRef,
+        args: &[Expression],
+    ) -> IfaResult<IfaValue> {
+        if args.len() != params.len() {
+            return Err(IfaError::ArityMismatch {
+                expected: params.len(),
+                got: args.len(),
+            });
+        }
 
-             IfaValue::Fn(_) => {
-                 Err(IfaError::Runtime("Bytecode function cannot be called in Interpreter (AST mode)".into()))
-             }
-             // AstFn removed/disabled
+        // Enforce call depth limit set by #opon
+        self.call_depth += 1;
+        if let Some(limit) = self.call_depth_limit {
+            if self.call_depth > limit {
+                self.call_depth -= 1;
+                return Err(IfaError::StackOverflow {
+                    limit,
+                    directive: match limit {
+                        64 => crate::bytecode::OponSize::Kekere,
+                        512 => crate::bytecode::OponSize::Arinrin,
+                        4096 => crate::bytecode::OponSize::Nla,
+                        _ => crate::bytecode::OponSize::Arinrin,
+                    },
+                });
+            }
+        }
 
-             IfaValue::Int(_) => { return Err(IfaError::Runtime("AstFn disabled/removed".into())); }
-                 // Unsafe cast to access AstFnData
-                 // We know we created it as Box<AstFnData>
+        let mut arg_values = Vec::with_capacity(args.len());
+        for arg in args {
+            arg_values.push(self.evaluate(arg)?);
+        }
 
+        // Enter function scope (lexical parent = env at definition time).
+        let old_env = self.env.clone();
+        self.env = Environment::with_parent(env);
 
-             _ => Err(IfaError::Runtime("Not a callable function".into()))
+        for (param, value) in params.iter().zip(arg_values.into_iter()) {
+            Environment::define(&self.env, param, value);
+        }
+
+        let mut result = Ok(IfaValue::null());
+        for stmt in body {
+            result = self.execute_statement(stmt);
+            if let Ok(val) = &result {
+                if val.is_return() {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        // Exit function scope.
+        self.env = old_env;
+        self.call_depth -= 1;
+
+        let value = result?;
+        match value {
+            IfaValue::Return(v) => Ok((*v).clone()),
+            other => Ok(other),
+        }
+    }
+
+    fn call_ast_function_values(
+        &mut self,
+        params: &[String],
+        body: &[Statement],
+        env: EnvRef,
+        args: Vec<IfaValue>,
+    ) -> IfaResult<IfaValue> {
+        if args.len() != params.len() {
+            return Err(IfaError::ArityMismatch {
+                expected: params.len(),
+                got: args.len(),
+            });
+        }
+
+        self.call_depth += 1;
+        if let Some(limit) = self.call_depth_limit {
+            if self.call_depth > limit {
+                self.call_depth -= 1;
+                return Err(IfaError::StackOverflow {
+                    limit,
+                    directive: match limit {
+                        64 => crate::bytecode::OponSize::Kekere,
+                        512 => crate::bytecode::OponSize::Arinrin,
+                        4096 => crate::bytecode::OponSize::Nla,
+                        _ => crate::bytecode::OponSize::Arinrin,
+                    },
+                });
+            }
+        }
+
+        let old_env = self.env.clone();
+        self.env = Environment::with_parent(env);
+
+        for (param, value) in params.iter().zip(args.into_iter()) {
+            Environment::define(&self.env, param, value);
+        }
+
+        let mut result = Ok(IfaValue::null());
+        for stmt in body {
+            result = self.execute_statement(stmt);
+            if let Ok(val) = &result {
+                if val.is_return() {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        self.env = old_env;
+        self.call_depth -= 1;
+
+        let value = result?;
+        match value {
+            IfaValue::Return(v) => Ok((*v).clone()),
+            other => Ok(other),
         }
     }
 }
@@ -1084,6 +1488,133 @@ impl Interpreter {
 impl Default for Interpreter {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+fn collect_exports(program: &Program) -> Vec<String> {
+    let mut out = Vec::new();
+    for stmt in &program.statements {
+        match stmt {
+            Statement::VarDecl {
+                name,
+                visibility: Visibility::Public,
+                ..
+            } => out.push(name.clone()),
+            Statement::Const {
+                name,
+                visibility: Visibility::Public,
+                ..
+            } => out.push(name.clone()),
+            Statement::EseDef {
+                name,
+                visibility: Visibility::Public,
+                ..
+            } => out.push(name.clone()),
+            Statement::OduDef {
+                name,
+                visibility: Visibility::Public,
+                ..
+            } => out.push(name.clone()),
+            _ => {}
+        }
+    }
+    out
+}
+
+fn parse_odu_mod_marker(s: &str) -> Option<OduDomain> {
+    const PREFIX: &str = "__odu_mod__:";
+    if let Some(rest) = s.strip_prefix(PREFIX) {
+        if let Ok(id) = rest.parse::<u8>() {
+            return odu_domain_from_id(id);
+        }
+        return odu_domain_from_name(rest);
+    }
+    None
+}
+
+fn parse_odu_fn_marker(s: &str) -> Option<(OduDomain, String)> {
+    const PREFIX: &str = "__odu_fn__:";
+    if let Some(rest) = s.strip_prefix(PREFIX) {
+        let mut parts = rest.splitn(2, ':');
+        let domain = parts.next()?;
+        let method = parts.next()?.to_string();
+        if let Ok(id) = domain.parse::<u8>() {
+            return odu_domain_from_id(id).map(|d| (d, method));
+        }
+        return odu_domain_from_name(domain).map(|d| (d, method));
+    }
+    None
+}
+
+fn odu_domain_from_id(id: u8) -> Option<OduDomain> {
+    match id {
+        0 => Some(OduDomain::Ogbe),
+        1 => Some(OduDomain::Oyeku),
+        2 => Some(OduDomain::Iwori),
+        3 => Some(OduDomain::Odi),
+        4 => Some(OduDomain::Irosu),
+        5 => Some(OduDomain::Owonrin),
+        6 => Some(OduDomain::Obara),
+        7 => Some(OduDomain::Okanran),
+        8 => Some(OduDomain::Ogunda),
+        9 => Some(OduDomain::Osa),
+        10 => Some(OduDomain::Ika),
+        11 => Some(OduDomain::Oturupon),
+        12 => Some(OduDomain::Otura),
+        13 => Some(OduDomain::Irete),
+        14 => Some(OduDomain::Ose),
+        15 => Some(OduDomain::Ofun),
+        16 => Some(OduDomain::Coop),
+        17 => Some(OduDomain::Opele),
+        18 => Some(OduDomain::Cpu),
+        19 => Some(OduDomain::Gpu),
+        20 => Some(OduDomain::Storage),
+        21 => Some(OduDomain::Backend),
+        22 => Some(OduDomain::Frontend),
+        23 => Some(OduDomain::Crypto),
+        24 => Some(OduDomain::Ml),
+        25 => Some(OduDomain::GameDev),
+        26 => Some(OduDomain::Iot),
+        27 => Some(OduDomain::Ohun),
+        28 => Some(OduDomain::Fidio),
+        29 => Some(OduDomain::Sys),
+        _ => None,
+    }
+}
+
+fn odu_domain_from_name(name: &str) -> Option<OduDomain> {
+    match name.to_lowercase().as_str() {
+        "ogbe" => Some(OduDomain::Ogbe),
+        "oyeku" => Some(OduDomain::Oyeku),
+        "iwori" => Some(OduDomain::Iwori),
+        "odi" => Some(OduDomain::Odi),
+        "irosu" => Some(OduDomain::Irosu),
+        "owonrin" => Some(OduDomain::Owonrin),
+        "obara" => Some(OduDomain::Obara),
+        "okanran" => Some(OduDomain::Okanran),
+        "ogunda" => Some(OduDomain::Ogunda),
+        "osa" => Some(OduDomain::Osa),
+        "ika" => Some(OduDomain::Ika),
+        "oturupon" => Some(OduDomain::Oturupon),
+        "otura" => Some(OduDomain::Otura),
+        "irete" => Some(OduDomain::Irete),
+        "ose" => Some(OduDomain::Ose),
+        "ofun" => Some(OduDomain::Ofun),
+        "coop" => Some(OduDomain::Coop),
+        "opele" => Some(OduDomain::Opele),
+        "cpu" => Some(OduDomain::Cpu),
+        "gpu" => Some(OduDomain::Gpu),
+        "storage" => Some(OduDomain::Storage),
+        "backend" => Some(OduDomain::Backend),
+        "frontend" => Some(OduDomain::Frontend),
+        "crypto" => Some(OduDomain::Crypto),
+        "ml" => Some(OduDomain::Ml),
+        "gamedev" => Some(OduDomain::GameDev),
+        "iot" => Some(OduDomain::Iot),
+        "ohun" => Some(OduDomain::Ohun),
+        "fidio" => Some(OduDomain::Fidio),
+        "sys" => Some(OduDomain::Sys),
+        _ => None,
     }
 }
 
@@ -1098,7 +1629,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("x"), Some(IfaValue::int(42)));
+        assert_eq!(Environment::get(&interp.env, "x"), Some(IfaValue::int(42)));
     }
 
     #[test]
@@ -1109,7 +1640,7 @@ mod tests {
         interp.execute(&program).unwrap();
 
         // Should be 2 + (3 * 4) = 14
-        assert_eq!(interp.env.get("x"), Some(IfaValue::int(14)));
+        assert_eq!(Environment::get(&interp.env, "x"), Some(IfaValue::int(14)));
     }
 
     #[test]
@@ -1133,9 +1664,30 @@ mod tests {
         interp.execute(&program).unwrap();
 
         assert_eq!(
-            interp.env.get("s"),
+            Environment::get(&interp.env, "s"),
             Some(IfaValue::str("Hello World"))
         );
+    }
+
+    #[test]
+    fn test_closure_captures_outer_variable() {
+        let program = parse(
+            r#"
+            ese make_adder(x) {
+                ese add(y) { pada x + y; }
+                pada add;
+            }
+
+            ayanmo f = make_adder(5);
+            ayanmo r = f(3);
+            "#,
+        )
+        .expect("Parse failed");
+
+        let mut interp = Interpreter::new();
+        interp.execute(&program).unwrap();
+
+        assert_eq!(Environment::get(&interp.env, "r"), Some(IfaValue::Int(8)));
     }
 
     #[test]
@@ -1152,7 +1704,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("x"), Some(IfaValue::int(1)));
+        assert_eq!(Environment::get(&interp.env, "x"), Some(IfaValue::int(1)));
     }
 
     #[test]
@@ -1169,7 +1721,44 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("x"), Some(IfaValue::int(5)));
+        assert_eq!(Environment::get(&interp.env, "x"), Some(IfaValue::int(5)));
+    }
+
+    #[test]
+    fn test_function_def_and_call() {
+        let program = parse(
+            r#"
+            ese add(a, b) { da a + b; }
+            ayanmo x = add(1, 2);
+        "#,
+        )
+        .unwrap();
+        let mut interp = Interpreter::new();
+        interp.execute(&program).unwrap();
+
+        assert_eq!(Environment::get(&interp.env, "x"), Some(IfaValue::int(3)));
+    }
+
+    #[test]
+    fn test_return_propagates_through_if() {
+        let program = parse(
+            r#"
+            ese f(x) {
+                ti x {
+                    da 1;
+                }
+                da 2;
+            }
+            ayanmo a = f(1);
+            ayanmo b = f(0);
+        "#,
+        )
+        .unwrap();
+        let mut interp = Interpreter::new();
+        interp.execute(&program).unwrap();
+
+        assert_eq!(Environment::get(&interp.env, "a"), Some(IfaValue::int(1)));
+        assert_eq!(Environment::get(&interp.env, "b"), Some(IfaValue::int(2)));
     }
 
     #[test]
@@ -1184,7 +1773,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("len"), Some(IfaValue::int(3)));
+        assert_eq!(Environment::get(&interp.env, "len"), Some(IfaValue::int(3)));
     }
 
     #[test]
@@ -1194,7 +1783,7 @@ mod tests {
         interp.execute(&program).unwrap();
 
         assert_eq!(
-            interp.env.get("s"),
+            Environment::get(&interp.env, "s"),
             Some(IfaValue::str("HELLO"))
         );
     }
@@ -1205,7 +1794,7 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("x"), Some(IfaValue::int(10)));
+        assert_eq!(Environment::get(&interp.env, "x"), Some(IfaValue::int(10)));
     }
 
     #[test]
@@ -1224,10 +1813,109 @@ mod tests {
         let mut interp = Interpreter::new();
         interp.execute(&program).unwrap();
 
-        assert_eq!(interp.env.get("a"), Some(IfaValue::bool(true)));
-        assert_eq!(interp.env.get("b"), Some(IfaValue::bool(true)));
-        assert_eq!(interp.env.get("c"), Some(IfaValue::bool(true)));
-        assert_eq!(interp.env.get("d"), Some(IfaValue::bool(true)));
+        assert_eq!(
+            Environment::get(&interp.env, "a"),
+            Some(IfaValue::bool(true))
+        );
+        assert_eq!(
+            Environment::get(&interp.env, "b"),
+            Some(IfaValue::bool(true))
+        );
+        assert_eq!(
+            Environment::get(&interp.env, "c"),
+            Some(IfaValue::bool(true))
+        );
+        assert_eq!(
+            Environment::get(&interp.env, "d"),
+            Some(IfaValue::bool(true))
+        );
+    }
+
+    #[test]
+    fn test_logical_ops_return_operands_and_short_circuit() {
+        let program = parse(
+            r#"
+            ayanmo a = 0 && (1 / 0);          # should short-circuit: a == 0
+            ayanmo b = 1 || (1 / 0);          # should short-circuit: b == 1
+            ayanmo c = ofo || "default";      # should return RHS: c == "default"
+        "#,
+        )
+        .unwrap();
+
+        let mut interp = Interpreter::new();
+        interp.execute(&program).unwrap();
+
+        assert_eq!(Environment::get(&interp.env, "a"), Some(IfaValue::int(0)));
+        assert_eq!(Environment::get(&interp.env, "b"), Some(IfaValue::int(1)));
+        assert_eq!(
+            Environment::get(&interp.env, "c"),
+            Some(IfaValue::str("default"))
+        );
+    }
+
+    #[test]
+    fn test_try_finally_runs_on_return() {
+        let program = parse(
+            r#"
+            ayanmo y = 0;
+            ese f() {
+                gbiyanju {
+                    pada 1;
+                } gba (e) {
+                    pada 2;
+                } nipari {
+                    y = 3;
+                }
+            }
+            ayanmo out = f();
+            "#,
+        )
+        .unwrap();
+
+        let mut interp = Interpreter::new();
+        interp.execute(&program).unwrap();
+
+        assert_eq!(Environment::get(&interp.env, "out"), Some(IfaValue::int(1)));
+        assert_eq!(Environment::get(&interp.env, "y"), Some(IfaValue::int(3)));
+    }
+
+    #[test]
+    fn test_runtime_directives_are_captured_in_output_and_opon() {
+        let program = parse(
+            r#"
+            taboo: Ogbe -> Oyeku;
+            ebo "server";
+            jowo 10;
+            "#,
+        )
+        .unwrap();
+
+        let mut interp = Interpreter::new();
+        interp.execute(&program).unwrap();
+
+        let output = interp.get_output().join("\n");
+        assert!(output.contains("[taboo] Ogbe -> Oyeku forbidden"));
+        assert!(output.contains("[ẹbọ/sacrifice] Aspect initiated: server"));
+        assert!(output.contains("[yield] requested 10 microseconds"));
+
+        let history = interp.opon.get_history();
+        assert!(history.iter().any(|event| event.action == "declare"));
+        assert!(history.iter().any(|event| event.action == "initiate"));
+        assert!(history.iter().any(|event| event.action == "yield"));
+    }
+
+    #[test]
+    fn test_osa_sleep_records_without_blocking() {
+        let program = parse(r#"ayanmo pending = Osa.sleep(5);"#).unwrap();
+        let mut interp = Interpreter::new();
+        interp.execute(&program).unwrap();
+
+        assert!(
+            interp
+                .get_output()
+                .iter()
+                .any(|line| line.contains("[osa.sleep] requested 5 milliseconds"))
+        );
     }
 }
 

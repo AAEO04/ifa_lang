@@ -7,6 +7,11 @@
 //!
 //! Core VM and runtime for Ifá-Lang - The Yoruba Programming Language.
 //!
+//! ### 🚀 ARCHITECTURAL STATUS
+//! Current release focus is **Tier 1 Conformance** and **Symmetric String Interpolation**.
+//! The implementation utilizes an overloaded `Add` opcode as a TEMPORARY architecture.
+//! Refer to `patch.md` for the Phase 7 Hardening Roadmap.
+//!
 //! ## Modules
 //!
 //! - `lexer` - Tokenization with logos
@@ -33,6 +38,7 @@ pub mod error;
 pub mod interpreter;
 pub mod iwa_pele;
 pub mod lexer;
+pub mod module_resolver;
 pub mod native;
 pub mod opon;
 pub mod parser;
@@ -59,6 +65,7 @@ pub use error::{IfaError, IfaResult};
 pub use interpreter::Interpreter;
 pub use iwa_pele::{IwaPele, IwaPeleError, IwaPeleErrorKind};
 pub use lexer::{OduDomain, Token, tokenize};
+pub use module_resolver::{ImportGuard, ModuleResolver};
 pub use opon::{Opon, OponError, OponErrorKind, OponResult, OponSize};
 pub use parser::parse;
 pub use project_generator::generate_project;

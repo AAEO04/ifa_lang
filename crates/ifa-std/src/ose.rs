@@ -6,6 +6,8 @@
 
 use crate::impl_odu_domain;
 #[cfg(feature = "full")]
+use crossterm::event::{self, Event, KeyCode, KeyModifiers};
+#[cfg(feature = "full")]
 use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
@@ -17,8 +19,6 @@ use ratatui::{
     style::Color,
     widgets::{Block, Borders, Paragraph},
 };
-#[cfg(feature = "full")]
-use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use std::io;
 
 /// Ọ̀ṣẹ́ - The Painter (Graphics/UI)
@@ -75,18 +75,18 @@ impl Ose {
     pub fn gboran(&self) -> io::Result<Option<String>> {
         if event::poll(std::time::Duration::from_millis(10))? {
             if let Event::Key(key) = event::read()? {
-               let s = match key.code {
-                   KeyCode::Char(c) => c.to_string(),
-                   KeyCode::Enter => "Enter".to_string(),
-                   KeyCode::Esc => "Esc".to_string(),
-                   KeyCode::Up => "Up".to_string(),
-                   KeyCode::Down => "Down".to_string(),
-                   KeyCode::Left => "Left".to_string(),
-                   KeyCode::Right => "Right".to_string(),
-                   KeyCode::Backspace => "Backspace".to_string(),
-                   _ => return Ok(None),
-               };
-               return Ok(Some(s));
+                let s = match key.code {
+                    KeyCode::Char(c) => c.to_string(),
+                    KeyCode::Enter => "Enter".to_string(),
+                    KeyCode::Esc => "Esc".to_string(),
+                    KeyCode::Up => "Up".to_string(),
+                    KeyCode::Down => "Down".to_string(),
+                    KeyCode::Left => "Left".to_string(),
+                    KeyCode::Right => "Right".to_string(),
+                    KeyCode::Backspace => "Backspace".to_string(),
+                    _ => return Ok(None),
+                };
+                return Ok(Some(s));
             }
         }
         Ok(None)
@@ -96,12 +96,12 @@ impl Ose {
     pub fn gbile(&self) -> io::Result<String> {
         loop {
             if let Event::Key(key) = event::read()? {
-                 return Ok(match key.code {
-                   KeyCode::Char(c) => c.to_string(),
-                   KeyCode::Enter => "Enter".to_string(),
-                   KeyCode::Esc => "Esc".to_string(),
-                   _ => "?".to_string(),
-               });
+                return Ok(match key.code {
+                    KeyCode::Char(c) => c.to_string(),
+                    KeyCode::Enter => "Enter".to_string(),
+                    KeyCode::Esc => "Esc".to_string(),
+                    _ => "?".to_string(),
+                });
             }
         }
     }

@@ -30,14 +30,9 @@ pub fn tap(vm: &mut IfaVM, bytecode: &Bytecode) -> IfaResult<OpCode> {
         ));
     }
 
-    // Unsafe access is acceptable here because we just checked bounds (redundant check elimination hint?)
-    // Actually, `get` is safe and fast enough, but `get_unchecked` satisfies the "Linus Requirement".
-    // We stick to safe `get` unless benchmarks prove it's the bottleneck,
-    // BUT the plan promised unsafe get. We should be careful.
-    // Let's use safe indexing for now to avoid UB if my bounds check logic has a subtle flaw.
-    // The optimizer usually elides the second check anyway.
-
-    let byte = unsafe { *bytecode.code.get_unchecked(vm.ip) };
+    // Safe indexing: bounds already checked at line 27 above.
+    // The optimizer elides the redundant check in release builds.
+    let byte = bytecode.code[vm.ip];
     vm.ip += 1;
 
     // 3. Decode

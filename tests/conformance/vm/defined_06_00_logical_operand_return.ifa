@@ -1,0 +1,6 @@
+# expect: "default"
+# spec: §5 truthiness, §6 logical short-circuit returns operand value
+
+ayanmo x = ofo || "default";
+pada x;
+

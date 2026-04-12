@@ -63,7 +63,7 @@ fn test_yield_loop() {
         // Loop Start (Offset 7)
         // Load i
         0x50, 0, // Push 1
-        0x01, 1, 0, 0, 0, // Add
+        0x01, 1, 0, 0, 0,    // Add
         0x20, // Store i
         0x51, 0, // Yield(0)
         0xF0, 0, 0, 0, 0, // Load i
@@ -104,7 +104,7 @@ fn test_yield_loop() {
 
         // Load i
         0x50, 0, // Push 3
-        0x01, 3, 0, 0, 0, // Lt (i < 3) -> True
+        0x01, 3, 0, 0, 0,    // Lt (i < 3) -> True
         0x32, // Not -> False
         0x42, // JumpIfFalse to Loop Start (7)
         0x61, 7, 0, // Halt (Offset 37)

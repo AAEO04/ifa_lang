@@ -91,6 +91,17 @@ impl NetManager {
             if parts.len() >= 2 {
                 let hash = parts[0].to_lowercase();
                 let filename = parts[1].trim_start_matches('*');
+
+                // S5: Validate hash is exactly 64 hex characters (SHA-256).
+                // Without this, a malformed SHA256SUMS file could inject an empty
+                // or partial hash that silently passes the comparison.
+                if hash.len() != 64 || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+                    return Err(NetError::ChecksumMismatch {
+                        expected: format!("valid 64-char hex hash for '{}'", filename),
+                        got: hash,
+                    });
+                }
+
                 checksums.insert(filename.to_string(), hash);
             }
         }

@@ -13,7 +13,7 @@ pub static LIFECYCLE_RULES: Lazy<HashMap<&'static str, Option<&'static str>>> = 
 
     // File I/O (Òdí)
     m.insert("odi.si", Some("odi.pa")); // Open -> Close
-    m.insert("odi.ko", Some("odi.pa")); // Write -> Close
+    m.insert("odi.ko", None); // Write is auto-closing
 
     // Network (Òtúrá)
     m.insert("otura.de", Some("otura.pa")); // Bind -> Close

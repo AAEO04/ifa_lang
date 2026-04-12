@@ -4,10 +4,8 @@
 //! This module is organized into:
 //! - `core.rs` - Main Interpreter implementation
 //! - `environment.rs` - GPC (Grandparent-Parent-Child) scope chain
-//! - `canvas.rs` - OseCanvas for ASCII graphics
 //! - `handlers/` - Modular domain-specific operation handlers
 
-mod canvas;
 mod core;
 pub mod environment;
 pub mod handlers;
@@ -16,8 +14,7 @@ pub mod handlers;
 pub use self::core::{CapabilitySet, Debugger, Interpreter, Ofun};
 
 // Re-export extracted modules
-pub use canvas::OseCanvas;
-pub use environment::Environment;
+pub use environment::{EnvRef, Environment};
 
 // Re-export handler types
 pub use handlers::{HandlerRegistry, OduHandler};

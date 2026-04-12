@@ -9,7 +9,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 
 /// Handler for Ọ̀wọ́nrín (Random) domain.
 pub struct OwonrinHandler;
@@ -23,10 +23,9 @@ impl OduHandler for OwonrinHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
-
         let arg0 = args.first();
         let arg1 = args.get(1);
 
@@ -66,30 +65,30 @@ impl OduHandler for OwonrinHandler {
             // Shuffle a list
             "aruwo" | "shuffle" => {
                 if let Some(IfaValue::List(l)) = arg0 {
-                        let mut list = (**l).clone();
-                        // Fisher-Yates shuffle
-                        let len = list.len();
-                        if len > 1 {
-                             for i in (1..len).rev() {
-                                 let j = (self.generate_random() as usize) % (i + 1);
-                                 list.swap(i, j);
-                             }
+                    let mut list = (**l).clone();
+                    // Fisher-Yates shuffle
+                    let len = list.len();
+                    if len > 1 {
+                        for i in (1..len).rev() {
+                            let j = (self.generate_random() as usize) % (i + 1);
+                            list.swap(i, j);
                         }
-                        return Ok(IfaValue::list(list));
                     }
+                    return Ok(IfaValue::list(list));
+                }
                 Err(IfaError::Runtime("shuffle requires a list".into()))
             }
 
             // Random choice from list
             "yan" | "choice" => {
-                 if let Some(IfaValue::List(list)) = arg0 {
-                        if list.is_empty() {
-                            return Ok(IfaValue::null());
-                        }
-                        let idx = (self.generate_random() as usize) % list.len();
-                        return Ok(list[idx].clone());
+                if let Some(IfaValue::List(list)) = arg0 {
+                    if list.is_empty() {
+                        return Ok(IfaValue::null());
                     }
-                 Err(IfaError::Runtime("choice requires a non-empty list".into()))
+                    let idx = (self.generate_random() as usize) % list.len();
+                    return Ok(list[idx].clone());
+                }
+                Err(IfaError::Runtime("choice requires a non-empty list".into()))
             }
 
             _ => Err(IfaError::Runtime(format!(

@@ -1,0 +1,13 @@
+# expect: 42
+# spec: §8.7 TailCall (must be emitted + must not grow call stack)
+
+ese g(x) {
+    pada x + 1;
+}
+
+ese f(x) {
+    pada g(x);
+}
+
+pada f(41);
+

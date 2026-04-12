@@ -281,10 +281,41 @@ enum OjaCommands {
     Install,
     /// List dependencies
     List,
+    /// Update dependencies (re-resolve and regenerate oja.lock)
+    Update,
+    /// Show full dependency tree
+    Tree,
+    /// Search registry for packages
+    Search {
+        /// Search query
+        query: String,
+    },
+    /// Audit installed dependencies for vulnerabilities
+    Audit,
     /// Upgrade Ifá-Lang CLI to latest version
     Upgrade,
     /// Publish package to registry (Git Tag)
     Publish,
+}
+
+fn run_babalawo(program: &ifa_core::ast::Program, filepath: &std::path::Path) -> bool {
+    let filename = filepath.display().to_string();
+    let config = ifa_babalawo::BabalawoConfig {
+        include_wisdom: true,
+    };
+    let baba = ifa_babalawo::check_program_with_config(program, &filename, config);
+    if baba.error_count() > 0 || baba.warning_count() > 0 {
+        eprintln!("{}", baba.format());
+    }
+    if baba.error_count() > 0 {
+        eprintln!(
+            "❌ Babalawo rejected {}: {} error(s) found. Ìdájọ́ (Judgment) invoked. Àṣẹ!",
+            filename,
+            baba.error_count()
+        );
+        return false;
+    }
+    true
 }
 
 fn main() -> Result<()> {
@@ -395,6 +426,11 @@ fn main() -> Result<()> {
             let program =
                 parse(&source).map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
 
+            // 5-Layer Integrity Defence (Babalawo Static Analysis)
+            if !run_babalawo(&program, &file) {
+                std::process::exit(1);
+            }
+
             println!("Parsed {} statements", program.statements.len());
             println!("---");
             println!();
@@ -467,7 +503,17 @@ fn main() -> Result<()> {
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to read file: {}", e))?;
 
             // Compile to bytecode
-            let bytecode = ifa_core::compile(&source)
+            let program = ifa_core::parse(&source)
+                .map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
+
+            // 5-Layer Integrity Defence
+            if !run_babalawo(&program, &file) {
+                std::process::exit(1);
+            }
+
+            let compiler = ifa_core::Compiler::new(&file.display().to_string());
+            let bytecode = compiler
+                .compile(&program)
                 .map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
 
             // Write .ifab file
@@ -486,6 +532,29 @@ fn main() -> Result<()> {
         Commands::Runb { file } => {
             println!("⚡ Running bytecode: {}", file.display());
 
+            // Security gate: bytecode must remain coupled to a verifiable source file.
+            let source_candidate = file.with_extension("ifa");
+            if !source_candidate.exists() {
+                return Err(color_eyre::eyre::eyre!(
+                    "Refusing to run unverified bytecode '{}': expected matching source '{}' for Babalawo verification",
+                    file.display(),
+                    source_candidate.display()
+                ));
+            }
+
+            let source = std::fs::read_to_string(&source_candidate).map_err(|e| {
+                color_eyre::eyre::eyre!("Failed to read source for verification: {}", e)
+            })?;
+            let program = ifa_core::parse(&source).map_err(|e| {
+                color_eyre::eyre::eyre!("Failed to parse source for verification: {}", e)
+            })?;
+            if !run_babalawo(&program, &source_candidate) {
+                return Err(color_eyre::eyre::eyre!(
+                    "Babalawo verification failed for {}",
+                    source_candidate.display()
+                ));
+            }
+
             // Read bytecode
             let bytes = std::fs::read(&file)
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to read bytecode: {}", e))?;
@@ -494,8 +563,9 @@ fn main() -> Result<()> {
             let bytecode = ifa_core::Bytecode::from_bytes(&bytes)
                 .map_err(|e| color_eyre::eyre::eyre!("Invalid bytecode: {}", e))?;
 
-            // Execute in VM
-            let mut vm = ifa_core::IfaVM::new();
+            // Execute in VM with standard library
+            let registry = ifa_std::vm_registry::StdRegistry::new();
+            let mut vm = ifa_core::IfaVM::new().with_registry(Box::new(registry));
             match vm.execute(&bytecode) {
                 Ok(result) => {
                     println!("Result: {:?}", result);
@@ -548,6 +618,11 @@ fn main() -> Result<()> {
             println!("   📝 Parsing Ifá source...");
             let program = ifa_core::parse(&source)
                 .map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
+
+            // 5-Layer Integrity Defence
+            if !run_babalawo(&program, &file) {
+                std::process::exit(1);
+            }
 
             println!("   🔄 Transpiling to Rust...");
 
@@ -810,6 +885,18 @@ lto = true
                 OjaCommands::List => {
                     oja_manager.list()?;
                 }
+                OjaCommands::Update => {
+                    oja_manager.update()?;
+                }
+                OjaCommands::Tree => {
+                    oja_manager.tree()?;
+                }
+                OjaCommands::Search { query } => {
+                    oja_manager.search(&query)?;
+                }
+                OjaCommands::Audit => {
+                    oja_manager.audit()?;
+                }
                 OjaCommands::Upgrade => {
                     oja::update_cli()?;
                 }
@@ -824,8 +911,15 @@ lto = true
             println!("🔍 Checking syntax of {}...", file.display());
             let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
             match ifa_core::parse(&source) {
-                Ok(_) => {
-                    println!("✅ No syntax errors found in {}", file.display());
+                Ok(program) => {
+                    if run_babalawo(&program, &file) {
+                        println!(
+                            "✅ No syntax or static analysis errors found in {}",
+                            file.display()
+                        );
+                    } else {
+                        std::process::exit(1);
+                    }
                 }
                 Err(e) => {
                     eprintln!("❌ Syntax Error: {}", e);
@@ -835,11 +929,10 @@ lto = true
             Ok(())
         }
 
-
         Commands::Fmt { file, check } => {
             let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
-            
-            use ifa_fmt::{format, FormatterConfig};
+
+            use ifa_fmt::{FormatterConfig, format};
             let config = FormatterConfig::default();
             let formatted = format(&source, config);
 
@@ -1177,6 +1270,13 @@ lto = true
 
                 match parse(&source) {
                     Ok(program) => {
+                        // 5-Layer Integrity Defence
+                        if !run_babalawo(&program, file) {
+                            println!("FAIL (Babalawo)");
+                            failed += 1;
+                            continue;
+                        }
+
                         // Simple execution test
                         let mut interp = ifa_core::Interpreter::new();
                         match interp.execute(&program) {

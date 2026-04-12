@@ -1,0 +1,15 @@
+// # expect: Alafia, Orunmila! The count is 16.
+
+ayanmo name = "Orunmila";
+ayanmo count = 16;
+ayanmo result = $"Alafia, {name}! The count is {count}.";
+
+Irosu.fo(result);
+
+// Test nested expressions and mixed types
+ayanmo complex = $"Status: {count > 10}, Value: {count * 2}";
+Irosu.fo(complex);
+
+// Test empty interpolation
+ayanmo empty = $"";
+Irosu.fo($"Empty: '{empty}'");

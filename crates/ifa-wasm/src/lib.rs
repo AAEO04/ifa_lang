@@ -11,9 +11,13 @@ use wasm_bindgen::prelude::*;
 // INTERPRETER WASM EXPORTS
 // =============================================================================
 
-/// Run Ifá-Lang code and return the output
+/// Run Ifá-Lang code and return the output via Promise to avoid blocking the main thread synchronously
 #[wasm_bindgen]
-pub fn run_code(source: &str) -> String {
+pub async fn run_code(source: String) -> String {
+    // Yield to the browser event loop immediately before starting heavy synchronous work
+    let promise = js_sys::Promise::resolve(&JsValue::undefined());
+    let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+
     // Initialize interpreter
     let mut interpreter = Interpreter::new();
 
@@ -21,7 +25,7 @@ pub fn run_code(source: &str) -> String {
     interpreter.register_handler(Box::new(ifa_std::handlers::sys::SysHandler::new()));
 
     // Parse source code
-    match parse(source) {
+    match parse(&source) {
         Ok(program) => {
             // Execute program
             match interpreter.execute(&program) {

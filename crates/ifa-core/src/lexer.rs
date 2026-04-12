@@ -150,6 +150,8 @@ pub enum Token {
     Let,
 
     #[token("const")]
+    #[token("ayanfe")]
+    #[token("àyànfẹ́")]
     Const,
 
     // Control flow
@@ -179,6 +181,13 @@ pub enum Token {
     #[token("break")]
     Break,
 
+    #[token("ta")]        // canonical throw
+    #[token("tá")]
+    #[token("throw")]
+    Throw,
+
+    #[token("tesiwaju")]  // canonical Yoruba (spec §3.4)
+    #[token("bayan")]     // Yoruba alias
     #[token("continue")]
     Continue,
 
@@ -209,6 +218,17 @@ pub enum Token {
     #[token("class")]
     Class,
 
+    // Async
+    #[token("daro")]
+    #[token("dàrò")]
+    #[token("async")]
+    Async,
+
+    #[token("reti")]       // canonical await (spec §3.4 ratified)
+    #[token("rẹti")]
+    #[token("await")]
+    Await,
+
     #[token("iba")]
     #[token("ìbà")]
     #[token("import")]
@@ -224,6 +244,8 @@ pub enum Token {
     False,
 
     #[token("ohunkohun")]
+    #[token("ofo")]       // canonical Yoruba (spec §3.4)
+    #[token("ófo")]
     #[token("nil")]
     #[token("null")]
     Nil,
@@ -271,6 +293,12 @@ pub enum Token {
     // ═══════════════════════════════════════════════════════════════════════
     #[regex(r"[0-9]+(\.[0-9]+)?", |lex| lex.slice().to_string())]
     Number(String),
+
+    #[regex(r#"\$"[^"]*""#, |lex| {
+        let s = lex.slice();
+        s[2..s.len()-1].to_string()
+    })]
+    InterpolatedString(String),
 
     #[regex(r#""[^"]*""#, |lex| {
         let s = lex.slice();
@@ -378,6 +406,7 @@ impl fmt::Display for Token {
         match self {
             Token::Number(n) => write!(f, "Number({})", n),
             Token::String(s) => write!(f, "String(\"{}\")", s),
+            Token::InterpolatedString(s) => write!(f, "Interpolated(\"{}\")", s),
             Token::Identifier(i) => write!(f, "Ident({})", i),
             Token::Domain(d) => write!(f, "Domain({:?})", d),
             Token::Comment(_c) => write!(f, "Comment"),
@@ -407,8 +436,7 @@ pub fn tokenize(source: &str) -> Vec<Spanned<Token>> {
                 });
             }
             Err(_) => {
-                // Skip invalid tokens for now
-                eprintln!("Lex error at {:?}: {:?}", lexer.span(), lexer.slice());
+                // Skip invalid tokens for now (architecture: diagnostics handled by parser)
             }
         }
     }
@@ -447,5 +475,11 @@ mod tests {
         let tokens = tokenize("àyànmọ́ x = otito");
         assert!(matches!(tokens[0].value, Token::Let));
         assert!(matches!(tokens[3].value, Token::True));
+    }
+
+    #[test]
+    fn test_interpolated_string() {
+        let tokens = tokenize(r#"$"The value is {x}""#);
+        assert!(matches!(&tokens[0].value, Token::InterpolatedString(s) if s == "The value is {x}"));
     }
 }

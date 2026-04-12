@@ -28,7 +28,7 @@ impl fmt::Display for Severity {
 
 /// An Ifá error with Babalawo-style messaging
 #[derive(Debug, Clone)]
-pub struct IfaError {
+pub struct LintError {
     pub code: String,
     pub message: String,
     pub file: String,
@@ -37,7 +37,7 @@ pub struct IfaError {
     pub context: Option<String>,
 }
 
-impl IfaError {
+impl LintError {
     pub fn new(code: &str, message: &str, file: &str, line: usize, column: usize) -> Self {
         Self {
             code: code.to_string(),
@@ -59,7 +59,7 @@ impl IfaError {
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
     pub severity: Severity,
-    pub error: IfaError,
+    pub error: LintError,
     pub odu: String,
     pub wisdom: Option<String>,
 }
@@ -131,7 +131,7 @@ impl Babalawo {
 
         let diagnostic = Diagnostic {
             severity,
-            error: IfaError::new(code, msg, file, line, col),
+            error: LintError::new(code, msg, file, line, col),
             odu: odu_key.to_string(),
             wisdom,
         };

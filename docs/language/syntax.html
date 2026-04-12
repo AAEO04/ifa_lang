@@ -4,155 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Syntax Reference - If·-Lang</title>
-    <meta name="description" content="Complete syntax reference for If·-Lang with Yoruba and English aliases.">
-    <style>
-        :root {
-            --bg: #0f0f1a;
-            --card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-            margin: 2.5rem 0 1rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        .syntax-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 2fr;
-            gap: 1rem;
-            padding: 0.75rem;
-            background: var(--card);
-            border-radius: 8px;
-            margin: 0.5rem 0;
-        }
-
-        .syntax-row:nth-child(even) {
-            background: rgba(26, 26, 46, 0.7);
-        }
-
-        .yoruba {
-            color: var(--gold);
-            font-family: monospace;
-        }
-
-        .english {
-            color: var(--accent);
-            font-family: monospace;
-        }
-
-        .desc {
-            color: var(--dim);
-        }
-
-        .section {
-            background: var(--card);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-        }
-
-        th,
-        td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(233, 69, 96, 0.3);
-        }
-
-        th {
-            color: var(--gold);
-        }
-
-        td code {
-            background: #0d1321;
-            padding: 2px 6px;
-            border-radius: 3px;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Syntax Reference - If√°-Lang</title>
+    <meta name="description" content="Complete syntax reference for If√°-Lang programming language">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -160,277 +20,580 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
         <header>
             <h1>Syntax Reference</h1>
-            <p style="color: var(--dim);">Complete If·-Lang syntax with Yoruba and English aliases</p>
+            <p class="subtitle">Complete Grammar and Language Structure</p>
         </header>
 
-        <h2>Variables</h2>
-        <table>
-            <tr>
-                <th>Yoruba</th>
-                <th>English</th>
-                <th>Description</th>
-            </tr>
-            <tr>
-                <td><code>ayanmo</code></td>
-                <td><code>let</code></td>
-                <td>Variable declaration</td>
-            </tr>
-            <tr>
-                <td><code>‡y‡nm?¥</code></td>
-                <td><code>let</code></td>
-                <td>Variable (with diacritics)</td>
-            </tr>
-        </table>
-        <pre><code>// Yoruba
-ayanmo oruko = "If·";
-ayanmo iye = 42;
+        <div class="step">
+            <h2>Program Structure</h2>
+            <p>An If√°-Lang program is a sequence of statements, from top to bottom execution:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Basic Program</span>
+                </div>
+                <pre><code>// Import statements
+iba std.irosu;
+iba { fo, ka } from std.irosu;
 
-// English
-let name = "If·";
-let count = 42;</code></pre>
+// Constants
+const PI = 3.14159;
 
-        <h2>Data Types</h2>
-        <table>
-            <tr>
-                <th>Type</th>
-                <th>Yoruba Literal</th>
-                <th>English Literal</th>
-                <th>Example</th>
-            </tr>
-            <tr>
-                <td>Integer</td>
-                <td>ó</td>
-                <td>ó</td>
-                <td><code>42</code>, <code>-17</code></td>
-            </tr>
-            <tr>
-                <td>Float</td>
-                <td>ó</td>
-                <td>ó</td>
-                <td><code>3.14</code>, <code>-0.5</code></td>
-            </tr>
-            <tr>
-                <td>String</td>
-                <td>ó</td>
-                <td>ó</td>
-                <td><code>"Hello"</code></td>
-            </tr>
-            <tr>
-                <td>Boolean</td>
-                <td><code>otito</code>, <code>iro</code></td>
-                <td><code>true</code>, <code>false</code></td>
-                <td><code>otito</code></td>
-            </tr>
-            <tr>
-                <td>Null</td>
-                <td><code>ohunkohun</code></td>
-                <td><code>null</code></td>
-                <td><code>ohunkohun</code></td>
-            </tr>
-            <tr>
-                <td>List</td>
-                <td>ó</td>
-                <td>ó</td>
-                <td><code>[1, 2, 3]</code></td>
-            </tr>
-        </table>
+// Variables
+ayanmo name = "If√°-Lang";
 
-        <h2>Control Flow</h2>
+// Functions
+ese greet(who) {
+    Irosu.fo("Kaabo, " + who + "!");
+}
 
-        <h3>Conditionals</h3>
-        <table>
-            <tr>
-                <th>Yoruba</th>
-                <th>English</th>
-                <th>Description</th>
-            </tr>
-            <tr>
-                <td><code>ti</code></td>
-                <td><code>if</code></td>
-                <td>If condition</td>
-            </tr>
-            <tr>
-                <td><code>bib?k? ti</code></td>
-                <td><code>else if</code></td>
-                <td>Else if</td>
-            </tr>
-            <tr>
-                <td><code>bib?k?</code></td>
-                <td><code>else</code></td>
-                <td>Else</td>
-            </tr>
-        </table>
-        <pre><code>// Yoruba
-ti (x > 10) {
-    Irosu.fo("Large");
-} bib?k? ti (x > 5) {
-    Irosu.fo("Medium");
-} bib?k? {
-    Irosu.fo("Small");
+// Main execution
+greet("World");</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Statements</h2>
+            
+            <h3>Variable Declaration</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Variables</span>
+                </div>
+                <pre><code>// Yoruba keywords
+ayanmo x = 5;                    // Mutable variable
+const NAME = "If√°";              // Constant
+
+// English keywords  
+let x = 5;                       // Mutable variable
+const NAME = "If√°";              // Constant
+
+// With type hints
+ayanmo age: Int = 25;
+let name: Str = "Alice";</code></pre>
+            </div>
+
+            <h3>Assignment</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Assignments</span>
+                </div>
+                <pre><code>x = 10;                         // Simple assignment
+*ptr = 20;                       // Pointer dereference
+arr[0] = 30;                     // Array indexing</code></pre>
+            </div>
+
+            <h3>Function Definition</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Functions</span>
+                </div>
+                <pre><code>// Yoruba
+ese add(a, b) {
+    pada a + b;
+}
+
+// Async function
+ese fetch_data() async {
+    // Async operations here
 }
 
 // English
-if (x > 10) {
-    Irosu.println("Large");
-} else if (x > 5) {
-    Irosu.println("Medium");
-} else {
-    Irosu.println("Small");
+fn add(a, b) {
+    return a + b;
+}
+
+// Public function
+public ese calculate(x) {
+    // Accessible from other modules
 }</code></pre>
+            </div>
+        </div>
 
-        <h3>Loops</h3>
-        <table>
-            <tr>
-                <th>Yoruba</th>
-                <th>English</th>
-                <th>Description</th>
-            </tr>
-            <tr>
-                <td><code>nigba</code></td>
-                <td><code>while</code></td>
-                <td>While loop</td>
-            </tr>
-            <tr>
-                <td><code>fun ... ninu</code></td>
-                <td><code>for ... in</code></td>
-                <td>For-each loop</td>
-            </tr>
-        </table>
-        <pre><code>// While loop (Yoruba)
-ayanmo i = 0;
-nigba (i < 5) {
-    Irosu.fo(i);
-    ayanmo i = i + 1;
+        <div class="step">
+            <h2>Control Flow</h2>
+            
+            <h3>If Statement</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Conditional Logic</span>
+                </div>
+                <pre><code>// Yoruba
+bi x > 0 {
+    Irosu.fo("Positive");
+} bi kosi {
+    Irosu.fo("Non-positive");
 }
 
-// For loop (Yoruba)
-ayanmo awon = [1, 2, 3];
-fun x ninu awon {
-    Irosu.fo(x);
+// English
+if x > 0 {
+    Irosu.fo("Positive");
+} else {
+    Irosu.fo("Non-positive");
+}</code></pre>
+            </div>
+
+            <h3>Loops</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Iteration</span>
+                </div>
+                <pre><code>// While loop
+nigita x < 10 {
+    x = x + 1;
+}
+
+// For loop
+fun i ninu 0..10 {
+    Irosu.fo(i);
 }
 
 // English equivalents
-let i = 0;
-while (i < 5) {
-    Irosu.println(i);
-    let i = i + 1;
+while x < 10 {
+    x = x + 1;
 }
 
-let items = [1, 2, 3];
-for x in items {
-    Irosu.println(x);
+for i in 0..10 {
+    Irosu.fo(i);
 }</code></pre>
+            </div>
 
-        <h2>Functions</h2>
-        <table>
-            <tr>
-                <th>Yoruba</th>
-                <th>English</th>
-                <th>Description</th>
-            </tr>
-            <tr>
-                <td><code>ese</code></td>
-                <td><code>fn</code></td>
-                <td>Function definition</td>
-            </tr>
-            <tr>
-                <td><code>pada</code></td>
-                <td><code>return</code></td>
-                <td>Return value</td>
-            </tr>
-        </table>
-        <pre><code>// Yoruba
-ese greet(oruko) {
-    pada "Kaabo, " + oruko + "!";
+            <h3>Match Statement</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Pattern Matching</span>
+                </div>
+                <pre><code>match (x) {
+    0 => Irosu.fo("Zero"),
+    1..10 => Irosu.fo("Small"),
+    _ => Irosu.fo("Large")
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Error Handling</h2>
+            
+            <h3>Try-Catch-Finally</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Exception Handling</span>
+                </div>
+                <pre><code>// Yoruba
+gbiyanju {
+    risky_operation();
+} gba (error) {
+    Irosu.fo("Error: " + error.message);
+} nipari {
+    cleanup();
 }
 
 // English
-fn greet(name) {
-    return "Hello, " + name + "!";
+try {
+    risky_operation();
+} catch (error) {
+    Irosu.fo("Error: " + error.message);
+} finally {
+    cleanup();
+}</code></pre>
+            </div>
+
+            <h3>Assertions</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Debug Assertions</span>
+                </div>
+                <pre><code>// Yoruba
+ewo x >= 0, "x must be non-negative";
+ewo balance >= 0;
+
+// English
+assert x >= 0, "x must be non-negative";
+verify balance >= 0;</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Imports and Modules</h2>
+            
+            <h3>When You Need Imports</h3>
+            <p><strong>NOTE:</strong> The 16 Od√π domains (Ogbe, Irosu, Obara, etc.) are <strong>built-in</strong> and <strong>do NOT need imports</strong>. They're fundamental language primitives.</p>
+            
+            <h3>Import Statements</h3>
+            <p>Use imports for external modules, utilities, or specific functions:</p>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Module Imports</span>
+                </div>
+                <pre><code>// Import external utilities
+iba std.utils;
+import std.utils;
+
+// Import specific functions from modules
+iba { fo, ka } from std.irosu;  // Specific Irosu functions
+import { println, read } from std.irosu;
+
+// Import from sub-modules
+iba std.crypto.sha256;
+import std.crypto.sha256;
+
+// Import third-party packages
+iba external_crate;
+import external_crate;</code></pre>
+            </div>
+
+            <h3>What DOESN'T Need Imports</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Built-in Domains (No Imports)</span>
+                </div>
+                <pre><code>// These are WRONG - don't import the 16 Od√π domains!
+// iba std.irosu;    // NO! Irosu is built-in
+// iba std.obara;    // NO! Obara is built-in  
+// import std.ogbe;   // NO! Ogbe is built-in
+
+// These are CORRECT - use domains directly
+ese main() {
+    Irosu.fo("Hello");     // Built-in, no import needed
+    ayanmo sum = Obara.fikun(1, 2);  // Built-in, no import needed
+    Ogbe.jade(0);          // Built-in, no import needed
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Domain Calls</h2>
+            <p>Call methods on the 16 Od√π domains - <strong>NO IMPORTS NEEDED</strong>:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Domain Operations</span>
+                </div>
+                <pre><code>// The 16 Od√π domains are built-in and globally available
+// No imports required - they're fundamental language primitives
+
+// Console I/O (Irosu - 0011)
+Irosu.fo("Hello, World!");
+ayanmo input = Irosu.ka("Enter name: ");
+
+// Mathematics (Obara - 1000)
+ayanmo result = Obara.fikun(10, 20);
+ayanmo sqrt = Obara.akako(16);
+
+// Cryptography (Irete - 1101)
+ayanmo hash = Irete.sha256("data");
+ayanmo encoded = Irete.base64("data");
+
+// Time operations (Iwori - 0110)
+ayanmo now = Iwori.bayi();
+ayanmo formatted = Iwori.ohun(now);
+
+// System operations (Ogbe - 1111)
+ayanmo args = Ogbe.args();
+Ogbe.jade(0);
+
+// And all other 16 Od√π domains work the same way</code></pre>
+            </div>
+
+            <h3>Available Domains (Built-in)</h3>
+            <div class="domain-grid">
+                <div class="domain-item">
+                    <span class="pattern">1111</span>
+                    <strong>Ogbe</strong> - System
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">0000</span>
+                    <strong>Oyeku</strong> - Exit
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">0110</span>
+                    <strong>Iwori</strong> - Time
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">1001</span>
+                    <strong>Odi</strong> - Files
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">1100</span>
+                    <strong>Irosu</strong> - Console
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">0011</span>
+                    <strong>Owonrin</strong> - Random
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">1000</span>
+                    <strong>Obara</strong> - Math
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">0001</span>
+                    <strong>Okanran</strong> - Errors
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">1110</span>
+                    <strong>Ogunda</strong> - Arrays
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">0111</span>
+                    <strong>Osa</strong> - Concurrency
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">0100</span>
+                    <strong>Ika</strong> - Strings
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">0010</span>
+                    <strong>Oturupon</strong> - Math
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">1011</span>
+                    <strong>Otura</strong> - Network
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">1101</span>
+                    <strong>Irete</strong> - Crypto
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">1010</span>
+                    <strong>Ose</strong> - Graphics
+                </div>
+                <div class="domain-item">
+                    <span class="pattern">0101</span>
+                    <strong>Ofun</strong> - Permissions
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Memory Management</h2>
+            
+            <h3>Opon Directives</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Memory Configuration</span>
+                </div>
+                <pre><code>// Memory size directives
+opon: kekere;              // Small memory
+#opon arinrin;               // Medium memory  
+mem: nla;                   // Large memory
+#mem ailopin;               // Unlimited memory</code></pre>
+            </div>
+
+            <h3>Resource Management ( )</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Resource Sacrifice</span>
+                </div>
+                <pre><code>// Resource acquisition with obligation
+ebo "server_config.json";
+
+// File handling with automatic cleanup
+ebo file = Odi.open("data.txt");
+// Use file...
+// File automatically closed when scope ends</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Unsafe Code</h2>
+            <p>For low-level operations when needed:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Unsafe Blocks</span>
+                </div>
+                <pre><code>// Yoruba
+ailewu {
+    // Unsafe operations here
+    // Direct memory manipulation
+    // FFI calls
 }
 
-// Call
-ayanmo result = greet("World");</code></pre>
+// English
+unsafe {
+    // Unsafe operations here
+}</code></pre>
+            </div>
+        </div>
 
-        <h2>Operators</h2>
-        <table>
-            <tr>
-                <th>Category</th>
-                <th>Operators</th>
-                <th>Example</th>
-            </tr>
-            <tr>
-                <td>Arithmetic</td>
-                <td><code>+ - * / %</code></td>
-                <td><code>a + b</code></td>
-            </tr>
-            <tr>
-                <td>Comparison</td>
-                <td><code>== != < > <= >=</code></td>
-                <td><code>a == b</code></td>
-            </tr>
-            <tr>
-                <td>Logical</td>
-                <td><code>ati/and</code>, <code>tabi/or</code>, <code>kii ?e/not</code></td>
-                <td><code>a ati b</code></td>
-            </tr>
-            <tr>
-                <td>String</td>
-                <td><code>+</code> (concat)</td>
-                <td><code>"a" + "b"</code></td>
-            </tr>
-        </table>
+        <div class="step">
+            <h2>Special Constructs</h2>
+            
+            <h3>Yield</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Generators</span>
+                </div>
+                <pre><code>// Yoruba
+jowo 1000;
 
-        <h2>Domain Calls</h2>
-        <p>Call domain methods with dot notation:</p>
-        <pre><code>// Pattern: Domain.method(args...)
-Irosu.fo("Hello");           // Console output
-Irete.sha256("data");        // Crypto hash
-Odi.read("file.txt");        // File I/O
-Iwori.now();                 // Timestamp
-Osa.sum([1, 2, 3]);          // Parallel sum</code></pre>
+// English  
+yield 1000;</code></pre>
+            </div>
 
-        <h2>Comments</h2>
-        <pre><code>// Single line comment
+            <h3>Return</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Function Return</span>
+                </div>
+                <pre><code>// Yoruba
+pada result;
 
-/* Multi-line
-   comment */</code></pre>
+// English
+return result;</code></pre>
+            </div>
 
-        <h2>Special Statements</h2>
-        <table>
-            <tr>
-                <th>Yoruba</th>
-                <th>English</th>
-                <th>Description</th>
-            </tr>
-            <tr>
-                <td><code>?b?</code></td>
-                <td><code>sacrifice</code></td>
-                <td>Resource cleanup (RAII)</td>
-            </tr>
-            <tr>
-                <td><code>‡j??e</code></td>
-                <td><code>co-op</code></td>
-                <td>Reactive relationship</td>
-            </tr>
-            <tr>
-                <td><code>Ïw‡p?`l?¥</code></td>
-                <td><code>gentle</code></td>
-                <td>Graceful error handling</td>
-            </tr>
-        </table>
+            <h3>End Statement</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Program Termination</span>
+                </div>
+                <pre><code>// Yoruba
+ase;
+
+// English
+end;</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Type System</h2>
+            
+            <h3>Basic Types</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Primitive Types</span>
+                </div>
+                <pre><code>// Numbers
+ayanmo i: Int = 42;
+ayanmo f: Float = 3.14;
+ayanmo u8: u8 = 255;
+ayanmo i64: i64 = 1000000;
+
+// Text
+ayanmo s: Str = "Hello";
+ayanmo c: char = 'A';
+
+// Boolean
+ayanmo b: Bool = otito;
+
+// Collections
+ayanmo list: List[Int] = [1, 2, 3];
+ayanmo map: Map[Str, Int] = {"a": 1, "b": 2};
+
+// Universal
+ayanmo anything: Any = 42;</code></pre>
+            </div>
+
+            <h3>Type Hints</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Type Annotations</span>
+                </div>
+                <pre><code>// Function parameters with types
+ese add(a: Int, b: Int) -> Int {
+    pada a + b;
+}
+
+// Variable with type hint
+ayanmo name: Str = "Alice";
+
+// Complex types
+ayanmo matrix: List[List[Float]] = [[1.0, 2.0], [3.0, 4.0]];</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Comments</h2>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Comments</span>
+                </div>
+                <pre><code>// Single line comment
+
+/* 
+   Multi-line comment
+   Can span multiple lines
+*/
+
+/// Documentation comment
+ese documented_function() {
+    // Implementation
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Taboo Declarations</h2>
+            <p>Declare architectural constraints:</p>
+            
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Taboo Rules</span>
+                </div>
+                <pre><code>// Taboo: Graphics operations in error context
+√®√®w√≤: Ose -> Odi;
+
+// Taboo: Network operations in crypto context  
+taboo: Otura -> Irete;
+
+// This means certain domain combinations are forbidden
+// to prevent architectural violations</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Complete Grammar Summary</h2>
+            
+            <h3>Keywords (Bilingual)</h3>
+            <table class="keyword-table">
+                <thead>
+                    <tr>
+                        <th>Concept</th>
+                        <th>Yoruba</th>
+                        <th>English</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Variable</td><td>ayanmo</td><td>let</td></tr>
+                    <tr><td>Function</td><td>ese</td><td>fn</td></tr>
+                    <tr><td>If</td><td>bi</td><td>if</td></tr>
+                    <tr><td>Else</td><td>bi kosi</td><td>else</td></tr>
+                    <tr><td>While</td><td>nigita</td><td>while</td></tr>
+                    <tr><td>For</td><td>fun</td><td>for</td></tr>
+                    <tr><td>In</td><td>ninu</td><td>in</td></tr>
+                    <tr><td>Return</td><td>pada</td><td>return</td></tr>
+                    <tr><td>Try</td><td>gbiyanju</td><td>try</td></tr>
+                    <tr><td>Catch</td><td>gba</td><td>catch</td></tr>
+                    <tr><td>Finally</td><td>nipari</td><td>finally</td></tr>
+                    <tr><td>Assert</td><td>ewo</td><td>assert</td></tr>
+                    <tr><td>Import</td><td>iba</td><td>import</td></tr>
+                    <tr><td>From</td><td>lati</td><td>from</td></tr>
+                    <tr><td>Unsafe</td><td>ailewu</td><td>unsafe</td></tr>
+                    <tr><td>Yield</td><td>jowo</td><td>yield</td></tr>
+                    <tr><td>Taboo</td><td>√®√®w√≤</td><td>taboo</td></tr>
+                </tbody>
+            </table>
+
+            <h3>Special Values</h3>
+            <ul>
+                <li><strong>otito/true</strong> - Boolean true</li>
+                <li><strong>eke/false</strong> - Boolean false</li>
+                <li><strong>ofo/null</strong> - Null value</li>
+                <li><strong>ofun/void</strong> - Void type</li>
+            </ul>
+        </div>
 
         <footer>
-            <p><a href="../api/api.html">API Reference ?</a></p>
-            <p><a href="../index.html">? Back to Documentation</a></p>
+            <p><a href="index.html">Language Documentation</a></p>
         </footer>
     </div>
-    <script src="../js/nav.js"></script>
+
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

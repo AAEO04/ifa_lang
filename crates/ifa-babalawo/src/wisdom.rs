@@ -303,6 +303,7 @@ pub static ERROR_TO_ODU: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
     m.insert("UNHANDLED_EXCEPTION", "OKANRAN");
     m.insert("ASSERTION_FAILED", "OKANRAN");
     m.insert("UNUSED_VARIABLE", "OKANRAN");
+    m.insert("TABOO_UNSAFE_FFI", "OKANRAN");
 
     // Array errors → Ogunda
     m.insert("INDEX_OUT_OF_BOUNDS", "OGUNDA");

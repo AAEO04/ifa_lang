@@ -4,86 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oja Publishing Guide - If�-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <title>Publishing to Oja - Ifá-Lang</title>
+    <meta name="description" content="Complete guide to publishing packages to the Ifá-Lang Oja marketplace">
+    <link rel="stylesheet" href="../js/common.css">
+    <script src="../js/nav.js" defer></script>
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
-    <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -91,115 +20,1078 @@
             </ul>
         </div>
     </div>
+
     <div class="container">
-        <h1>?? Oja Publishing Guide</h1>
-        <p>Oja (Yoruba: "market") is the If�-Lang package manager. This guide shows how to create and publish packages.
-        </p>
+        <header>
+            <h1>Publishing to Oja</h1>
+            <p class="subtitle">Package Publishing Guide</p>
+        </header>
 
-        <h2>Package Structure</h2>
-        <pre><code>my-package/
-+-- oja.toml          # Package manifest
-+-- src/
-�   +-- lib.ifa       # Main library entry
-+-- tests/
-�   +-- test_lib.ifa  # Tests
-+-- examples/
-�   +-- demo.ifa      # Examples
-+-- README.md         # Documentation</code></pre>
+        <div class="step">
+            <h2>Overview</h2>
+            <p>Publishing packages to Oja (the Ifá-Lang marketplace) allows you to share your libraries, frameworks, and tools with the community. This guide covers the complete publishing process from package creation to release.</p>
+        </div>
 
-        <h2>oja.toml Manifest</h2>
-        <pre><code>[package]
-name = "my-package"
+        <div class="step">
+            <h2>Prerequisites</h2>
+            
+            <h3>Account Setup</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Create Account</span>
+                </div>
+                <pre><code># Create Oja account
+curl https://api.oja.ifa-lang.org/register \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "your-username",
+    "email": "your.email@example.com",
+    "password": "secure-password"
+  }'
+
+# Or register via web interface
+# Visit: https://oja.ifa-lang.org/register</code></pre>
+            </div>
+
+            <h3>Install Tools</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Install Ìjà</span>
+                </div>
+                <pre><code># Install package manager
+curl -sSL https://install.ifa-lang.org | sh
+
+# Or install from source
+cargo install --path ifa-cli
+
+# Verify installation
+ija --version
+
+# Login to Oja
+ija login
+# Enter your username and password when prompted</code></pre>
+            </div>
+
+            <h3>Configure Git</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Git Configuration</span>
+                </div>
+                <pre><code># Configure Git for package publishing
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+
+# Set up SSH keys for GitHub
+ssh-keygen -t ed25519 -C "your.email@example.com"
+
+# Add SSH key to GitHub
+# Copy ~/.ssh/id_ed25519.pub to GitHub settings</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Creating a Package</h2>
+            
+            <h3>Package Structure</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Directory Structure</span>
+                </div>
+                <pre><code>my-awesome-package/
+├── ifa.toml              # Package configuration
+├── README.md               # Package documentation
+├── LICENSE                 # License file
+├── CHANGELOG.md            # Version history
+├── .gitignore             # Git ignore file
+├── src/                   # Source code
+│   ├── lib.ifa            # Main library file
+│   └── modules/           # Additional modules
+│       ├── utils.ifa
+│       └── types.ifa
+├── examples/              # Usage examples
+│   ├── basic.ifa
+│   └── advanced.ifa
+├── tests/                 # Test files
+│   ├── integration_test.ifa
+│   └── unit_test.ifa
+├── docs/                  # Documentation
+│   ├── api.md
+│   └── guide.md
+└── scripts/               # Build scripts
+    ├── build.sh
+    └── test.sh</code></pre>
+            </div>
+
+            <h3>Package Configuration</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">ifa.toml</span>
+                </div>
+                <pre><code>[package]
+name = "ifa-awesome-utils"
 version = "1.0.0"
-description = "A useful If�-Lang package"
-authors = ["Your Name <you@email.com>"]
+description = "Awesome utility functions for Ifá-Lang"
+authors = ["Your Name <your.email@example.com>"]
 license = "MIT"
-repository = "https://github.com/you/my-package"
-keywords = ["utility", "helper"]
+repository = "https://github.com/username/ifa-awesome-utils"
+homepage = "https://github.com/username/ifa-awesome-utils"
+documentation = "https://docs.ifa-awesome-utils.com"
+keywords = ["utils", "helpers", "tools"]
+categories = ["utilities", "development-tools"]
+readme = "README.md"
+build = "scripts/build.sh"
 
 [dependencies]
-other-package = "2.1.0"
-another-lib = { version = "1.0", features = ["async"] }
+ifa-core = "^1.3.0"
+ifa-types = "^1.3.0"
 
 [dev-dependencies]
-test-utils = "0.5.0"</code></pre>
+ifa-testing = "^0.5.0"
+ifa-benchmarking = "^0.3.0"
 
-        <h2>Creating a Package</h2>
-        <pre><code># Create new package
-ifa new my-package
-cd my-package
+# Target-specific dependencies
+[target.wasm.dependencies]
+wasm-bindgen = "^0.2"
+web-sys = "^0.3"
 
-# Or initialize in existing directory
-ifa init</code></pre>
+[target.embedded.dependencies]
+heapless = "^0.8"
+cortex-m = "^0.7"
 
-        <h2>Versioning</h2>
-        <p>Follow semantic versioning (SemVer):</p>
-        <ul style="margin-left: 1.5rem;">
-            <li><strong>MAJOR</strong> � Breaking changes</li>
-            <li><strong>MINOR</strong> � New features, backwards compatible</li>
-            <li><strong>PATCH</strong> � Bug fixes</li>
-        </ul>
-        <pre><code># Bump version
-ifa version patch  # 1.0.0 ? 1.0.1
-ifa version minor  # 1.0.1 ? 1.1.0
-ifa version major  # 1.1.0 ? 2.0.0</code></pre>
+# Optional features
+[features]
+default = ["std"]
+std = []
+no-std = []
+serde = ["serde", "serde_json"]
+async = ["tokio"]</code></pre>
+            </div>
 
-        <h2>Publishing</h2>
-        <pre><code># Login to registry
-ifa login
+            <h3>Main Library File</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">src/lib.ifa</span>
+                </div>
+                <pre><code>// Package metadata
+/// Awesome utility functions for Ifá-Lang
+/// 
+/// This package provides common utilities for string manipulation,
+/// data validation, and formatting.
+/// 
+/// # Examples
+/// 
+/// ```
+/// ayanmo result = ifa_awesome_utils::format_name("alice");
+/// Irosu.fo(result); // "Alice"
+/// ```
+/// 
+/// # Features
+/// 
+/// - `std`: Standard library support (default)
+/// - `serde`: Serialization support
+/// - `async`: Async function support
 
-# Run checks before publishing
-ifa check
-ifa test
+// Public API
+pub ese format_name(name: Str) -> Str {
+    /// Format a name to title case
+    /// 
+    /// # Arguments
+    /// 
+    /// * `name` - The name to format
+    /// 
+    /// # Returns
+    /// 
+    /// Title-cased name
+    Ika.tikun(Ika.first_char(name)) + Ika.substring(name, 1);
+}
 
-# Publish to registry
-ifa publish</code></pre>
+pub ese validate_email(email: Str) -> Bool {
+    /// Validate email address format
+    /// 
+    /// # Arguments
+    /// 
+    /// * `email` - Email address to validate
+    /// 
+    /// # Returns
+    /// 
+    /// `otito` if valid, `eke` otherwise
+    Ika.contains(email, "@") and Ika.contains(email, ".");
+}
 
-        <h3>Pre-publish Checklist</h3>
-        <ul style="margin-left: 1.5rem;">
-            <li>All tests pass</li>
-            <li>No Babalawo warnings</li>
-            <li>README.md is up to date</li>
-            <li>Version number is correct</li>
-            <li>Dependencies are pinned</li>
-        </ul>
+pub ese format_currency(amount: Float, currency: Str) -> Str {
+    /// Format amount as currency
+    /// 
+    /// # Arguments
+    /// 
+    /// * `amount` - Numeric amount
+    /// * `currency` - Currency symbol
+    /// 
+    /// # Returns
+    /// 
+    /// Formatted currency string
+    currency + Obara.format(amount, 2);
+}
 
-        <h2>Installing Packages</h2>
-        <pre><code># Add dependency
-ifa add package-name
+// Internal helpers
+private ese clean_string(s: Str) -> Str {
+    Ika.trim(Ika.replace(s, "  ", " "));
+}</code></pre>
+            </div>
+        </div>
 
-# Add with specific version
-ifa add package-name@2.0.0
+        <div class="step">
+            <h2>Writing Tests</h2>
+            
+            <h3>Unit Tests</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">tests/unit_test.ifa</span>
+                </div>
+                <pre><code>// Import testing framework
+import ifa_testing;
 
-# Install all dependencies
-ifa install</code></pre>
+// Import package to test
+import ifa_awesome_utils;
 
-        <h2>Using Packages</h2>
-        <pre><code>// Import the package
-lo my-package
+// Test suite
+test_suite "String Utilities" {
+    test "format_name handles lowercase" {
+        ayanmo result = ifa_awesome_utils::format_name("alice");
+        ewo result == "Alice", "Should capitalize first letter";
+    }
+    
+    test "format_name handles uppercase" {
+        ayanmo result = ifa_awesome_utils::format_name("ALICE");
+        ewo result == "Alice", "Should title case properly";
+    }
+    
+    test "format_name handles mixed case" {
+        ayanmo result = ifa_awesome_utils::format_name("aLiCe");
+        ewo result == "Alice", "Should handle mixed case";
+    }
+    
+    test "format_name handles empty string" {
+        ayanmo result = ifa_awesome_utils::format_name("");
+        ewo result == "", "Should handle empty string";
+    }
+}
 
-// Or import specific items
-lo { helper, utility } lati my-package
+test_suite "Email Validation" {
+    test "validate_email accepts valid email" {
+        ayanmo result = ifa_awesome_utils::validate_email("user@example.com");
+        ewo result == otito, "Should accept valid email";
+    }
+    
+    test "validate_email rejects invalid email" {
+        ayanmo result = ifa_awesome_utils::validate_email("invalid-email");
+        ewo result == eke, "Should reject invalid email";
+    }
+    
+    test "validate_email rejects empty email" {
+        ayanmo result = ifa_awesome_utils::validate_email("");
+        ewo result == eke, "Should reject empty email";
+    }
+}
 
-// Use in code
-ayanmo result = helper.do_something();</code></pre>
+test_suite "Currency Formatting" {
+    test "format_currency formats basic amount" {
+        ayanmo result = ifa_awesome_utils::format_currency(123.45, "$");
+        ewo result == "$123.45", "Should format basic amount";
+    }
+    
+    test "format_currency handles zero" {
+        ayanmo result = ifa_awesome_utils::format_currency(0.0, "€");
+        ewo result == "€0.00", "Should format zero amount";
+    }
+    
+    test "format_currency handles negative" {
+        ayanmo result = ifa_awesome_utils::format_currency(-50.25, "£");
+        ewo result == "£-50.25", "Should format negative amount";
+    }
+}</code></pre>
+            </div>
 
-        <h2>Private Packages</h2>
-        <pre><code># Publish private package
-ifa publish --private
+            <h3>Integration Tests</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">tests/integration_test.ifa</span>
+                </div>
+                <pre><code>// Integration tests for complete workflows
+import ifa_testing;
+import ifa_awesome_utils;
 
-# Use private registry
-[registry]
-url = "https://private.registry.example.com"
-token = "$OJA_PRIVATE_TOKEN"</code></pre>
+test_suite "Integration Tests" {
+    test "complete user workflow" {
+        // Test formatting and validation together
+        ayanmo name = "john doe";
+        ayanmo email = "john.doe@example.com";
+        ayanmo balance = 1234.56;
+        
+        // Format user data
+        ayanmo formatted_name = ifa_awesome_utils::format_name(name);
+        ayanmo is_valid_email = ifa_awesome_utils::validate_email(email);
+        ayanmo formatted_balance = ifa_awesome_utils::format_currency(balance, "$");
+        
+        // Verify results
+        ewo formatted_name == "John Doe", "Name should be formatted";
+        ewo is_valid_email == otito, "Email should be valid";
+        ewo formatted_balance == "$1234.56", "Balance should be formatted";
+    }
+    
+    test "error handling workflow" {
+        // Test error scenarios
+        ayanmo invalid_emails = ["", "invalid", "no-at-symbol"];
+        
+        fun email in invalid_emails {
+            ayanmo is_valid = ifa_awesome_utils::validate_email(email);
+            ewo is_valid == eke, "Should reject invalid email: " + email;
+        }
+    }
+}</code></pre>
+            </div>
 
-        <footer class="doc-footer">
-            <p><a href="oja.html">? Oja Reference</a> � <a href="../index.html">Documentation Home</a></p>
+            <h3>Running Tests</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Test Commands</span>
+                </div>
+                <pre><code># Run all tests
+ija test
+
+# Run specific test file
+ija test tests/unit_test.ifa
+
+# Run with verbose output
+ija test --verbose
+
+# Run tests for specific target
+ija test --target wasm
+ija test --target embedded
+
+# Run tests with coverage
+ija test --coverage
+
+# Run benchmarks
+ija bench</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Documentation</h2>
+            
+            <h3>README.md</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">README.md</span>
+                </div>
+                <pre><code># ifa-awesome-utils
+
+[![Oja](https://img.shields.io/oja/v/ifa-awesome-utils)](https://oja.ifa-lang.org/packages/ifa-awesome-utils)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/username/ifa-awesome-utils/actions)
+
+Awesome utility functions for Ifá-Lang providing common string manipulation, data validation, and formatting utilities.
+
+## Features
+
+- **String Utilities**: Title case formatting, trimming, cleaning
+- **Email Validation**: RFC-compliant email validation
+- **Currency Formatting**: Locale-aware currency formatting
+- **Type Safety**: Full type checking and error handling
+- **Cross-Platform**: Works on native, WASM, and embedded targets
+
+## Installation
+
+Add to your `ifa.toml`:
+
+```toml
+[dependencies]
+ifa-awesome-utils = "1.0.0"
+```
+
+## Quick Start
+
+```ifa
+import ifa_awesome_utils;
+
+// Format a name
+ayanmo name = ifa_awesome_utils::format_name("alice");
+Irosu.fo(name); // "Alice"
+
+// Validate email
+ayanmo is_valid = ifa_awesome_utils::validate_email("user@example.com");
+Irosu.fo(is_valid); // otito
+
+// Format currency
+ayanmo price = ifa_awesome_utils::format_currency(123.45, "$");
+Irosu.fo(price); // "$123.45"
+```
+
+## API Reference
+
+### `format_name(name: Str) -> Str`
+
+Formats a name to title case.
+
+**Parameters:**
+- `name`: The name to format
+
+**Returns:** Title-cased name
+
+**Example:**
+```ifa
+ayanmo result = ifa_awesome_utils::format_name("john doe");
+// result == "John Doe"
+```
+
+### `validate_email(email: Str) -> Bool`
+
+Validates an email address format.
+
+**Parameters:**
+- `email`: Email address to validate
+
+**Returns:** `otito` if valid, `eke` otherwise
+
+**Example:**
+```ifa
+ayanmo is_valid = ifa_awesome_utils::validate_email("user@example.com");
+// is_valid == otito
+```
+
+### `format_currency(amount: Float, currency: Str) -> Str`
+
+Formats a numeric amount as currency.
+
+**Parameters:**
+- `amount`: Numeric amount to format
+- `currency`: Currency symbol
+
+**Returns:** Formatted currency string
+
+**Example:**
+```ifa
+ayanmo price = ifa_awesome_utils::format_currency(123.45, "$");
+// price == "$123.45"
+```
+
+## Examples
+
+See the `examples/` directory for complete usage examples:
+
+- `basic.ifa`: Basic usage examples
+- `advanced.ifa`: Advanced patterns and workflows
+- `web.ifa`: Web application integration
+
+## Testing
+
+Run the test suite:
+
+```bash
+ija test
+```
+
+## Contributing
+
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.</code></pre>
+            </div>
+
+            <h3>API Documentation</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">docs/api.md</span>
+                </div>
+                <pre><code># API Documentation
+
+## Core Functions
+
+### String Functions
+
+#### `format_name(name: Str) -> Str`
+
+Formats a name to title case by capitalizing the first letter and making the rest lowercase.
+
+**Parameters:**
+- `name` (Str): Input name string
+
+**Returns:** (Str) Title-cased name
+
+**Throws:** `IfaError::TypeError` if input is not a string
+
+**Examples:**
+```ifa
+format_name("alice")    // "Alice"
+format_name("ALICE")    // "Alice"
+format_name("aLiCe")    // "Alice"
+```
+
+#### `clean_string(s: Str) -> Str` (Internal)
+
+Removes extra whitespace and normalizes spacing.
+
+**Parameters:**
+- `s` (Str): String to clean
+
+**Returns:** (Str) Cleaned string
+
+**Note:** This is an internal function, not part of the public API.
+
+### Validation Functions
+
+#### `validate_email(email: Str) -> Bool`
+
+Validates email address using basic format checking.
+
+**Parameters:**
+- `email` (Str): Email address to validate
+
+**Returns:** (Bool) `otito` if valid, `eke` otherwise
+
+**Validation Rules:**
+- Contains exactly one `@` symbol
+- Contains at least one `.` after `@`
+- Not empty string
+
+**Examples:**
+```ifa
+validate_email("user@example.com")  // otito
+validate_email("invalid-email")      // eke
+validate_email("")                   // eke
+```
+
+### Formatting Functions
+
+#### `format_currency(amount: Float, currency: Str) -> Str`
+
+Formats a numeric amount as currency with two decimal places.
+
+**Parameters:**
+- `amount` (Float): Numeric amount
+- `currency` (Str): Currency symbol
+
+**Returns:** (Str) Formatted currency string
+
+**Examples:**
+```ifa
+format_currency(123.45, "$")  // "$123.45"
+format_currency(0.0, "€")      // "€0.00"
+format_currency(-50.25, "£")    // "£-50.25"
+```
+
+## Error Handling
+
+All functions follow Ifá-Lang error handling conventions:
+
+```ifa
+gbiyanju {
+    ayanmo result = format_name(input);
+} gba (error) {
+    Irosu.fo("Error formatting name: " + error.message);
+}
+```
+
+## Performance Considerations
+
+- `format_name`: O(n) complexity, where n is string length
+- `validate_email`: O(n) complexity, basic string operations
+- `format_currency`: O(1) complexity, uses Obara domain formatting
+
+## Thread Safety
+
+All functions are thread-safe and can be used in concurrent environments.</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Version Management</h2>
+            
+            <h3>Semantic Versioning</h3>
+            <p>Follow semantic versioning (SemVer) for package versions:</p>
+            
+            <ul>
+                <li><strong>MAJOR (X.0.0):</strong> Breaking changes</li>
+                <li><strong>MINOR (X.Y.0):</strong> New features, backward compatible</li>
+                <li><strong>PATCH (X.Y.Z):</strong> Bug fixes, backward compatible</li>
+            </ul>
+
+            <h3>Pre-release Versions</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Pre-release Versions</span>
+                </div>
+                <pre><code># Pre-release identifiers
+1.0.0-alpha.1    # Alpha release
+1.0.0-beta.2     # Beta release
+1.0.0-rc.1        # Release candidate
+1.0.0              # Stable release
+
+# Development versions
+1.0.0-dev.20240410  # Development build
+1.1.0-nightly       # Nightly build</code></pre>
+            </div>
+
+            <h3>Dependency Versioning</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Version Constraints</span>
+                </div>
+                <pre><code>[dependencies]
+# Exact version
+ifa-core = "1.3.0"
+
+# Caret version (^) - compatible updates
+ifa-types = "^1.3.0"  # >=1.3.0, <2.0.0
+
+# Tilde version (~) - patch updates only
+ifa-testing = "~0.5.0"  # >=0.5.0, <0.6.0
+
+# Wildcard version (*)
+ifa-docs = "*"  # Any version
+
+# Greater than or equal to
+ifa-cli = ">=1.2.0"
+
+# Range version
+ifa-babalawo = ">=1.0.0, <2.0.0"
+
+# Multiple version requirements
+ifa-web = { version = ">=1.0.0", features = ["async"] }</code></pre>
+            </div>
+
+            <h3>Changelog Maintenance</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">CHANGELOG.md</span>
+                </div>
+                <pre><code># Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- New feature descriptions here
+
+### Changed
+- Changes in existing functionality
+
+### Deprecated
+- Features that will be removed in future versions
+
+### Removed
+- Features removed in this version
+
+### Fixed
+- Bug fixes
+
+### Security
+- Security improvements
+
+## [1.0.0] - 2024-04-10
+
+### Added
+- Initial release of ifa-awesome-utils
+- `format_name()` function for title case formatting
+- `validate_email()` function for email validation
+- `format_currency()` function for currency formatting
+- Comprehensive test suite with 95% coverage
+- Full documentation and examples
+- Support for native, WASM, and embedded targets
+
+### Changed
+- N/A
+
+### Deprecated
+- N/A
+
+### Removed
+- N/A
+
+### Fixed
+- N/A
+
+### Security
+- N/A
+
+## [0.9.0] - 2024-04-05
+
+### Added
+- Beta release for testing
+- Core functionality implementation
+
+### Changed
+- N/A
+
+### Deprecated
+- N/A
+
+### Removed
+- N/A
+
+### Fixed
+- Fixed string encoding issues
+- Improved error messages
+
+### Security
+- N/A</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Publishing Process</h2>
+            
+            <h3>Pre-publishing Checklist</h3>
+            <div class="checklist">
+                <div class="checklist-item">
+                    <input type="checkbox" id="check1" disabled>
+                    <label for="check1">Package has meaningful name and description</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check2" disabled>
+                    <label for="check2">Version follows semantic versioning</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check3" disabled>
+                    <label for="check3">License file is included and valid</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check4" disabled>
+                    <label for="check4">README.md is comprehensive and up-to-date</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check5" disabled>
+                    <label for="check5">All tests pass on all target platforms</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check6" disabled>
+                    <label for="check6">Documentation is complete and accurate</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check7" disabled>
+                    <label for="check7">CHANGELOG.md is updated with new changes</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check8" disabled>
+                    <label for="check8">Code is properly formatted and linted</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check9" disabled>
+                    <label for="check9">Security scan passes</label>
+                </div>
+                <div class="checklist-item">
+                    <input type="checkbox" id="check10" disabled>
+                    <label for="check10">Dependencies are minimal and up-to-date</label>
+                </div>
+            </div>
+
+            <h3>Validation</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Package Validation</span>
+                </div>
+                <pre><code># Validate package structure and metadata
+ija validate
+
+# Output:
+✓ Package structure is valid
+✓ ifa.toml is well-formed
+✓ All required files are present
+✓ Dependencies are valid
+✓ Version format is correct
+✓ License is valid
+✓ README.md exists and is not empty
+
+# Check for common issues
+ija check
+
+# Output:
+⚠️  Consider adding more examples to examples/
+⚠️  Some functions lack documentation
+ℹ️  Consider adding badges to README.md</code></pre>
+            </div>
+
+            <h3>Dry Run</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Publishing Dry Run</span>
+                </div>
+                <pre><code># Dry run (check without actually publishing)
+ija publish --dry-run
+
+# Output:
+🔍 Preparing package for publishing...
+📦 Package: ifa-awesome-utils v1.0.0
+📁 Size: 2.3 MB
+📋 Files: 15 files
+🔍 Checking dependencies...
+✓ All dependencies are valid
+🔍 Checking for name conflicts...
+✓ Package name is available
+🔍 Validating package structure...
+✓ Package structure is valid
+🔍 Checking license...
+✓ MIT license is valid
+🔍 Checking documentation...
+✓ Documentation is complete
+
+🎉 Package is ready for publishing!
+📝 Run `ija publish` to publish to Oja.</code></pre>
+            </div>
+
+            <h3>Actual Publishing</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Publish Package</span>
+                </div>
+                <pre><code># Publish package to Oja
+ija publish
+
+# Output:
+🔍 Authenticating with Oja...
+✓ Authentication successful
+📦 Uploading package: ifa-awesome-utils v1.0.0
+📤 Uploading files... [████████████████████] 100%
+📋 Processing package metadata...
+✓ Metadata validated
+🏷️  Registering package name...
+✓ Package name registered
+🔍 Running security scan...
+✓ Security scan passed
+📝 Publishing package...
+✓ Package published successfully!
+
+🎉 Your package is now available at:
+https://oja.ifa-lang.org/packages/ifa-awesome-utils
+
+📊 Package stats:
+📦 Downloads: 0 (just published!)
+⭐ Stars: 0 (be the first!)
+👁️  Views: 1 (you!)
+
+📝 Next steps:
+1. Share your package on social media
+2. Add badges to your README
+3. Encourage users to leave reviews
+4. Monitor download statistics</code></pre>
+            </div>
+
+            <h3>Publishing Options</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Advanced Publishing</span>
+                </div>
+                <pre><code># Publish specific version
+ija publish --version 1.0.0
+
+# Publish to registry (custom registry)
+ija publish --registry https://custom-registry.com
+
+# Publish with tag
+ija publish --tag v1.0.0
+
+# Publish without dry run validation
+ija publish --no-validate
+
+# Publish with custom timeout
+ija publish --timeout 300
+
+# Publish with verbose output
+ija publish --verbose</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Post-Publishing</h2>
+            
+            <h3>Package Management</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Managing Published Package</span>
+                </div>
+                <pre><code># List published packages
+ija list-published
+
+# Output:
+📦 Published Packages:
+1. ifa-awesome-utils v1.0.0 (published 2024-04-10)
+2. ifa-awesome-utils v0.9.0 (published 2024-04-05)
+3. ifa-other-package v2.1.0 (published 2024-03-15)
+
+# Yank (unpublish) a version
+ija yank ifa-awesome-utils --version 0.9.0
+
+# Output:
+📦 Yanking package: ifa-awesome-utils v0.9.0
+⚠️  This will make the version unavailable for new installations
+📝 Existing installations will continue to work
+✓ Package yanked successfully
+
+# Unyank (restore) a version
+ija unyank ifa-awesome-utils --version 0.9.0
+
+# Update package metadata
+ija update-metadata ifa-awesome-utils \
+  --description "New improved description" \
+  --keywords "utils,helpers,tools" \
+  --categories "development-tools,utilities"</code></pre>
+            </div>
+
+            <h3>Monitoring and Analytics</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Package Analytics</span>
+                </div>
+                <pre><code># View package statistics
+ija stats ifa-awesome-utils
+
+# Output:
+📊 Package Statistics for ifa-awesome-utils:
+📦 Total Downloads: 1,234
+📈 Downloads This Week: 156
+📈 Downloads This Month: 678
+⭐ Stars: 42
+👁️  Views: 1,890
+💬 Reviews: 8
+🏷️  Tags: 5
+🔗 Dependents: 12
+
+# Download history
+ija downloads ifa-awesome-utils --period 30d
+
+# Output:
+📈 Download History (Last 30 Days):
+2024-04-10: 45 downloads
+2024-04-09: 38 downloads
+2024-04-08: 52 downloads
+...
+2024-03-11: 12 downloads
+
+# View reviews
+ija reviews ifa-awesome-utils
+
+# Output:
+💬 Reviews for ifa-awesome-utils:
+⭐⭐⭐⭐⭐ "Great utility functions!" - user123 (2024-04-09)
+⭐⭐⭐⭐ "Good, but needs more features" - user456 (2024-04-08)
+⭐⭐⭐⭐⭐⭐ "Exactly what I needed!" - user789 (2024-04-07)</code></pre>
+            </div>
+
+            <h3>Community Engagement</h3>
+            <ul>
+                <li><strong>Social Media:</strong> Share your package on Twitter, LinkedIn, etc.</li>
+                <li><strong>Forums:</strong> Post announcements on Ifá-Lang forums</li>
+                <li><strong>Discord:</strong> Share in the community Discord server</li>
+                <li><strong>Blog Posts:</strong> Write tutorials and usage examples</li>
+                <li><strong>GitHub:</strong> Create releases and tag versions</li>
+            </ul>
+
+            <h3>Maintenance</h3>
+            <ul>
+                <li><strong>Bug Reports:</strong> Monitor and respond to issues</li>
+                <li><strong>Feature Requests:</strong> Consider user feedback</li>
+                <li><strong>Security Updates:</strong> Promptly address vulnerabilities</li>
+                <li><strong>Dependency Updates:</strong> Keep dependencies current</li>
+                <li><strong>Documentation:</strong> Keep docs updated with changes</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Best Practices</h2>
+            
+            <h3>Package Quality</h3>
+            <ul>
+                <li><strong>Meaningful Names:</strong> Choose descriptive, unique names</li>
+                <li><strong>Clear Documentation:</strong> Comprehensive README and API docs</li>
+                <li><strong>Test Coverage:</strong> Aim for 90%+ test coverage</li>
+                <li><strong>Performance:</strong> Optimize for speed and memory usage</li>
+                <li><strong>Error Handling:</strong> Provide clear error messages</li>
+            </ul>
+
+            <h3>Version Management</h3>
+            <ul>
+                <li><strong>Semantic Versioning:</strong> Follow SemVer strictly</li>
+                <li><strong>Changelog:</strong> Maintain detailed changelog</li>
+                <li><strong>Breaking Changes:</strong> Use MAJOR versions for breaking changes</li>
+                <li><strong>Deprecation:</strong> Deprecate features before removal</li>
+            </ul>
+
+            <h3>Community Guidelines</h3>
+            <ul>
+                <li><strong>Code of Conduct:</strong> Follow community guidelines</li>
+                <li><strong>Contributing:</strong> Welcome and guide contributors</li>
+                <li><strong>Responsiveness:</strong> Respond to issues and PRs promptly</li>
+                <li><strong>Cultural Respect:</strong> Honor Yoruba cultural context</li>
+            </ul>
+
+            <h3>Security Considerations</h3>
+            <ul>
+                <li><strong>Input Validation:</strong> Validate all external inputs</li>
+                <li><strong>Dependency Security:</strong> Audit dependencies regularly</li>
+                <li><strong>Secure Defaults:</strong> Use secure default configurations</li>
+                <li><strong>Vulnerability Disclosure:</strong> Report security issues responsibly</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>Troubleshooting</h2>
+            
+            <h3>Common Publishing Issues</h3>
+            <div class="troubleshooting-grid">
+                <div class="trouble-item">
+                    <h4>Name Already Taken</h4>
+                    <p><strong>Error:</strong> Package name is already registered</p>
+                    <p><strong>Solution:</strong> Choose a different name or check if you own the existing package</p>
+                </div>
+                <div class="trouble-item">
+                    <h4>Invalid Version Format</h4>
+                    <p><strong>Error:</strong> Version doesn't follow semantic versioning</p>
+                    <p><strong>Solution:</strong> Use format MAJOR.MINOR.PATCH (e.g., 1.0.0)</p>
+                </div>
+                <div class="trouble-item">
+                    <h4>Missing Files</h4>
+                    <p><strong>Error:</strong> Required files are missing</p>
+                    <p><strong>Solution:</strong> Ensure README.md, LICENSE, and ifa.toml are present</p>
+                </div>
+                <div class="trouble-item">
+                    <h4>Dependency Conflicts</h4>
+                    <p><strong>Error:</strong> Dependencies have conflicting requirements</p>
+                    <p><strong>Solution:</strong> Update dependency versions or resolve conflicts</p>
+                </div>
+                <div class="trouble-item">
+                    <h4>Authentication Failed</h4>
+                    <p><strong>Error:</strong> Invalid credentials or authentication error</p>
+                    <p><strong>Solution:</strong> Check username/password or re-authenticate with `ija login`</p>
+                </div>
+            </div>
+
+            <h3>Getting Help</h3>
+            <ul>
+                <li><strong>Documentation:</strong> Check official publishing guide</li>
+                <li><strong>Forums:</strong> Ask questions on Oja forums</li>
+                <li><strong>Discord:</strong> Get help in the #publishing channel</li>
+                <li><strong>GitHub:</strong> Open issues for tooling problems</li>
+                <li><strong>Email:</strong> Contact support@oja.ifa-lang.org</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p><a href="index.html">Deployment Documentation</a></p>
         </footer>
     </div>
-    <script src="../js/nav.js"></script>
+
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

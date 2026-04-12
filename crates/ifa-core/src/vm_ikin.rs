@@ -77,27 +77,27 @@ impl Ikin {
     pub fn load_from_bytecode(&mut self, bytecode: &crate::bytecode::Bytecode) {
         // Clear existing? Or append? For now, we assume a fresh load or append is fine.
         // We map the Bytecode string index to the Ikin ID.
-        // Since bytecode uses index-based access, we must ensure order is preserved 
+        // Since bytecode uses index-based access, we must ensure order is preserved
         // OR we need a mapping table if we deduplicate.
-        
-        // Strategy: 
+
+        // Strategy:
         // Bytecode relies on index X being "String X".
         // If we deduplicate, "String X" and "String Y" might both point to Ikin ID Z.
-        // But the VM instruction is `PushStr(Index)`. 
+        // But the VM instruction is `PushStr(Index)`.
         // So we need a mapping: BytecodeIndex -> IkinIndex.
         // Or, simpler for V1: Just mirror the vector (no dedup on load, just caching).
         // But Ikin is about dedup.
-        
+
         // Actually, Bytecode `strings` vector IS the index.
         // OpCode says: PushStr(idx).
         // So `ikin.consult_string(idx)` must return the string at `bytecode.strings[idx]`.
         // So we MUST preserve 1:1 mapping with bytecode.strings indices.
-        
+
         self.strings.clear();
         self.string_map.clear();
-        
+
         self.strings.reserve(bytecode.strings.len());
-        
+
         for s in &bytecode.strings {
             let arc: Arc<str> = s.as_str().into();
             self.strings.push(arc.clone());
@@ -107,13 +107,50 @@ impl Ikin {
             // self.string_map.insert(arc, (self.strings.len() - 1) as u32);
         }
     }
-
-
-
 }
 
 impl Default for Ikin {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+#[derive(Serialize, Deserialize)]
+struct IkinData {
+    strings: Vec<String>,
+    constants: Vec<IfaValue>,
+}
+
+impl Serialize for Ikin {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let data = IkinData {
+            strings: self.strings.iter().map(|s| s.to_string()).collect(),
+            constants: self.constants.clone(),
+        };
+        data.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Ikin {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let data = IkinData::deserialize(deserializer)?;
+        let mut ikin = Ikin::new();
+        ikin.strings.reserve(data.strings.len());
+
+        for (i, s) in data.strings.into_iter().enumerate() {
+            let arc: std::sync::Arc<str> = s.into();
+            ikin.strings.push(arc.clone());
+            ikin.string_map.insert(arc, i as u32);
+        }
+        ikin.constants = data.constants;
+        Ok(ikin)
     }
 }

@@ -9,7 +9,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 
 /// Handler for Òdí (Files/Database) domain.
 pub struct OdiHandler;
@@ -23,10 +23,9 @@ impl OduHandler for OdiHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
-
         let arg0 = args.get(0);
         let arg1 = args.get(1);
 
@@ -35,12 +34,12 @@ impl OduHandler for OdiHandler {
             "ka" | "read" => {
                 if let Some(val) = arg0 {
                     if let IfaValue::Str(path) = val {
-                         match std::fs::read_to_string(&**path) {
+                        match std::fs::read_to_string(&**path) {
                             Ok(content) => Ok(IfaValue::str(content)),
                             Err(e) => Err(IfaError::Runtime(format!("Cannot read file: {}", e))),
                         }
                     } else {
-                         Err(IfaError::Runtime("read requires file path".into()))
+                        Err(IfaError::Runtime("read requires file path".into()))
                     }
                 } else {
                     Err(IfaError::Runtime("read requires file path".into()))
@@ -58,7 +57,7 @@ impl OduHandler for OdiHandler {
                             }
                         }
                     } else {
-                         return Err(IfaError::Runtime("write requires path and content".into()));
+                        return Err(IfaError::Runtime("write requires path and content".into()));
                     }
                 }
                 Err(IfaError::Runtime("write requires path and content".into()))
@@ -66,7 +65,7 @@ impl OduHandler for OdiHandler {
 
             // Append to file
             "fikun" | "append" => {
-                 if let (Some(path_val), Some(content_val)) = (arg0, arg1) {
+                if let (Some(path_val), Some(content_val)) = (arg0, arg1) {
                     if let (IfaValue::Str(path), IfaValue::Str(content)) = (path_val, content_val) {
                         use std::io::Write;
                         let mut file = std::fs::OpenOptions::new()
@@ -78,7 +77,7 @@ impl OduHandler for OdiHandler {
                             .map_err(|e| IfaError::Runtime(format!("Cannot append: {}", e)))?;
                         return Ok(IfaValue::bool(true));
                     }
-                 }
+                }
                 Err(IfaError::Runtime("append requires path and content".into()))
             }
 
@@ -86,7 +85,7 @@ impl OduHandler for OdiHandler {
             "wa" | "exists" => {
                 if let Some(val) = arg0 {
                     if let IfaValue::Str(path) = val {
-                         return Ok(IfaValue::bool(PathBuf::from(&**path).exists()));
+                        return Ok(IfaValue::bool(PathBuf::from(&**path).exists()));
                     }
                 }
                 Err(IfaError::Runtime("exists requires path".into()))
@@ -94,11 +93,13 @@ impl OduHandler for OdiHandler {
 
             // Delete file
             "pa" | "delete" | "remove" => {
-               if let Some(val) = arg0 {
+                if let Some(val) = arg0 {
                     if let IfaValue::Str(path) = val {
-                         match std::fs::remove_file(&**path) {
+                        match std::fs::remove_file(&**path) {
                             Ok(_) => return Ok(IfaValue::bool(true)),
-                            Err(e) => return Err(IfaError::Runtime(format!("Cannot delete: {}", e))),
+                            Err(e) => {
+                                return Err(IfaError::Runtime(format!("Cannot delete: {}", e)));
+                            }
                         }
                     } else {
                         Err(IfaError::Runtime("delete requires path".into()))
@@ -110,15 +111,13 @@ impl OduHandler for OdiHandler {
 
             // List directory
             "ṣe_akojọ" | "list" | "ls" => {
-               if let Some(val) = arg0 {
+                if let Some(val) = arg0 {
                     if let IfaValue::Str(path) = val {
                         match std::fs::read_dir(&**path) {
                             Ok(entries) => {
                                 let files: Vec<IfaValue> = entries
                                     .filter_map(|e| e.ok())
-                                    .map(|e| {
-                                        IfaValue::str(e.file_name().to_string_lossy())
-                                    })
+                                    .map(|e| IfaValue::str(e.file_name().to_string_lossy()))
                                     .collect();
                                 return Ok(IfaValue::list(files));
                             }
@@ -128,7 +127,7 @@ impl OduHandler for OdiHandler {
                         Err(IfaError::Runtime("list requires directory path".into()))
                     }
                 } else {
-                     Err(IfaError::Runtime("list requires directory path".into()))
+                    Err(IfaError::Runtime("list requires directory path".into()))
                 }
             }
 

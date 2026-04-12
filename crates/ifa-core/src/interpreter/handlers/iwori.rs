@@ -9,7 +9,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 
 /// Handler for Ìwòrì (Time/DateTime) domain.
 pub struct IworiHandler;
@@ -23,10 +23,9 @@ impl OduHandler for IworiHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
-
         let arg0 = args.get(0);
         let arg1 = args.get(1);
 
@@ -78,9 +77,9 @@ impl OduHandler for IworiHandler {
             "ka_ọjọ" | "parse" => {
                 if let Some(val) = arg0 {
                     if let IfaValue::Str(s) = val {
-                         // Simple parsing - just try to parse as integer
-                         let ts = s.parse::<i64>().unwrap_or(0);
-                         return Ok(IfaValue::int(ts));
+                        // Simple parsing - just try to parse as integer
+                        let ts = s.parse::<i64>().unwrap_or(0);
+                        return Ok(IfaValue::int(ts));
                     }
                 }
                 Err(IfaError::Runtime("parse requires date string".into()))

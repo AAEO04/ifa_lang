@@ -1,0 +1,6 @@
+# expect: "default"
+# spec: §6.3 &&/|| short-circuit + operand return
+
+ayanmo x = ofo || "default";
+pada x;
+

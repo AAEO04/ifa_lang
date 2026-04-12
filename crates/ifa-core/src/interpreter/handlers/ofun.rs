@@ -7,7 +7,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 
 /// Handler for Òfún (Permissions/Reflection) domain.
 pub struct OfunHandler;
@@ -65,19 +65,18 @@ impl OduHandler for OfunHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
-
         let arg0 = args.first();
 
         match method {
             // Check if capability is granted
             "ni_agbara" | "has_capability" | "can" => {
                 if let Some(IfaValue::Str(cap)) = arg0 {
-                         let cap_type = parse_capability_name(cap);
-                        // Return true for valid capabilities, false for Unknown
-                        let has_cap = cap_type != "Unknown";
+                    let cap_type = parse_capability_name(cap);
+                    // Return true for valid capabilities, false for Unknown
+                    let has_cap = cap_type != "Unknown";
                     Ok(IfaValue::bool(has_cap))
                 } else {
                     Err(IfaError::Runtime(
@@ -88,18 +87,18 @@ impl OduHandler for OfunHandler {
 
             // Request capability (logs and returns success)
             "beere" | "request" => {
-                 if let Some(IfaValue::Str(cap)) = arg0 {
-                        let cap_type = parse_capability_name(cap);
-                        if cap_type == "Unknown" {
-                            return Err(IfaError::Runtime(format!(
-                                "Unknown capability: '{}'. Valid: stdio, time, random, network, files, env, execute, bridge",
-                                cap
-                            )));
-                        }
-                        Ok(IfaValue::bool(true))
-                    } else {
-                        Err(IfaError::Runtime("request requires capability name".into()))
+                if let Some(IfaValue::Str(cap)) = arg0 {
+                    let cap_type = parse_capability_name(cap);
+                    if cap_type == "Unknown" {
+                        return Err(IfaError::Runtime(format!(
+                            "Unknown capability: '{}'. Valid: stdio, time, random, network, files, env, execute, bridge",
+                            cap
+                        )));
                     }
+                    Ok(IfaValue::bool(true))
+                } else {
+                    Err(IfaError::Runtime("request requires capability name".into()))
+                }
             }
 
             // Reflect on type
@@ -113,19 +112,19 @@ impl OduHandler for OfunHandler {
             // Reflect on methods
             "awọn_ẹsẹ" | "methods" => {
                 if let Some(IfaValue::Str(domain)) = arg0 {
-                        Ok(IfaValue::list(get_domain_methods(domain)))
-                    } else {
-                        // Return all domains if no argument
-                        let domains: Vec<IfaValue> = vec![
-                            "irosu", "ogbe", "obara", "oturupon", "ika", "oyeku", "owonrin", "ogunda",
-                            "iwori", "okanran", "otura", "odi", "osa", "ofun", "irete", "ose", "ohun",
-                            "fidio",
-                        ]
-                        .into_iter()
-                        .map(|d| IfaValue::str(d.to_string()))
-                        .collect();
-                        Ok(IfaValue::list(domains))
-                    }
+                    Ok(IfaValue::list(get_domain_methods(domain)))
+                } else {
+                    // Return all domains if no argument
+                    let domains: Vec<IfaValue> = vec![
+                        "irosu", "ogbe", "obara", "oturupon", "ika", "oyeku", "owonrin", "ogunda",
+                        "iwori", "okanran", "otura", "odi", "osa", "ofun", "irete", "ose", "ohun",
+                        "fidio",
+                    ]
+                    .into_iter()
+                    .map(|d| IfaValue::str(d.to_string()))
+                    .collect();
+                    Ok(IfaValue::list(domains))
+                }
             }
 
             // List available capabilities
@@ -142,10 +141,7 @@ impl OduHandler for OfunHandler {
             // Get module info
             "alaye_ẹka" | "module_info" => Ok(IfaValue::map(std::collections::HashMap::from([
                 ("name".into(), IfaValue::str("ifá-core")),
-                (
-                    "version".into(),
-                    IfaValue::str(env!("CARGO_PKG_VERSION")),
-                ),
+                ("version".into(), IfaValue::str(env!("CARGO_PKG_VERSION"))),
                 ("edition".into(), IfaValue::str("2024")),
             ]))),
 

@@ -2,6 +2,10 @@
 //!
 //! Standard library implementing the 16 principal Odù as Rust modules.
 //!
+//! ### ⚠️ SECURITY ADVISORY (FFI Bridge)
+//! The `ffi` module is under a hardening mandate. Refer to `patch.md` for details 
+//! on BUG-018 through BUG-021. Use `ffi.itumo` only for sanctified bridges.
+//!
 //! ## Domain Overview
 //!
 //! | Binary | Odù | Purpose |
@@ -26,6 +30,7 @@
 pub mod handlers;
 pub mod sandbox_shim;
 pub mod traits;
+pub mod vm_registry;
 
 // Core domains (always available)
 pub mod ika; // 0100 - Strings

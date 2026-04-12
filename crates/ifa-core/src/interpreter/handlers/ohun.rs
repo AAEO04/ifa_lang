@@ -10,7 +10,7 @@ use crate::error::{IfaError, IfaResult};
 use crate::lexer::OduDomain;
 use crate::value::IfaValue;
 
-use super::{Environment, OduHandler};
+use super::{EnvRef, OduHandler};
 
 // Real audio implementation when audio feature is enabled
 #[cfg(feature = "audio")]
@@ -78,7 +78,7 @@ fn play_beep(freq: f32, duration_ms: u64) -> IfaResult<()> {
 #[cfg(not(feature = "audio"))]
 fn play_beep(_freq: f32, _duration_ms: u64) -> IfaResult<()> {
     // Fallback: ASCII bell
-    print!("\x07");
+    // Removed literal print: print!("\x07");
     Ok(())
 }
 
@@ -91,15 +91,15 @@ impl OduHandler for OhunHandler {
         &self,
         method: &str,
         args: Vec<IfaValue>,
-        _env: &mut Environment,
+        _env: &EnvRef,
         _output: &mut Vec<String>,
     ) -> IfaResult<IfaValue> {
         match method {
             // Play audio file
             "ṣe" | "play" => {
                 if let Some(IfaValue::Str(path)) = args.first() {
-                        let result = play_audio_file(path)?;
-                        return Ok(IfaValue::bool(result));
+                    let result = play_audio_file(path)?;
+                    return Ok(IfaValue::bool(result));
                 }
                 Err(IfaError::Runtime("play requires audio file path".into()))
             }
@@ -113,8 +113,8 @@ impl OduHandler for OhunHandler {
             // Get/set volume (0.0 - 1.0)
             "ohùn" | "volume" => {
                 if let Some(IfaValue::Float(vol)) = args.first() {
-                        let vol = vol.clamp(0.0, 1.0);
-                        return Ok(IfaValue::float(vol));
+                    let vol = vol.clamp(0.0, 1.0);
+                    return Ok(IfaValue::float(vol));
                 }
                 // Return current volume if no arg
                 Ok(IfaValue::float(1.0))

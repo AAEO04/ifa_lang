@@ -85,16 +85,16 @@ impl RustTranspiler {
             // ═══════════════════════════════════════════════════════════════════
             "odi" if matches_method(&method, odi::READ) => {
                 if let Some(path) = args.first() {
-                    format!("match std::fs::read_to_string(if let IfaValue::Str(s) = {} {{ s }} else {{ String::new() }}) {{ Ok(c) => IfaValue::Str(c), Err(_) => IfaValue::Nil }}", path)
+                    format!("match std::fs::read_to_string(if let IfaValue::Str(s) = {} {{ s }} else {{ String::new() }}) {{ Ok(c) => IfaValue::Str(c), Err(e) => {{ let mut m = HashMap::new(); m.insert(\"kind\".to_string(), IfaValue::Str(\"IoError\".to_string())); m.insert(\"message\".to_string(), IfaValue::Str(e.to_string())); IfaValue::Map(m) }} }}", path)
                 } else {
-                    "IfaValue::Nil".to_string()
+                    "{ let mut m = HashMap::new(); m.insert(\"kind\".to_string(), IfaValue::Str(\"TypeError\".to_string())); m.insert(\"message\".to_string(), IfaValue::Str(\"odi.read expects a path\".to_string())); IfaValue::Map(m) }".to_string()
                 }
             }
             "odi" if matches_method(&method, odi::WRITE) => {
                 if args.len() >= 2 {
-                    format!("{{ if let (IfaValue::Str(p), IfaValue::Str(c)) = ({}, {}) {{ std::fs::write(&p, &c).ok(); }} IfaValue::Bool(true) }}", args[0], args[1])
+                    format!("match ({}, {}) {{ (IfaValue::Str(p), IfaValue::Str(c)) => match std::fs::write(&p, &c) {{ Ok(()) => IfaValue::Bool(true), Err(e) => {{ let mut m = HashMap::new(); m.insert(\"kind\".to_string(), IfaValue::Str(\"IoError\".to_string())); m.insert(\"message\".to_string(), IfaValue::Str(e.to_string())); IfaValue::Map(m) }} }}, _ => {{ let mut m = HashMap::new(); m.insert(\"kind\".to_string(), IfaValue::Str(\"TypeError\".to_string())); m.insert(\"message\".to_string(), IfaValue::Str(\"odi.write expects (path, content) strings\".to_string())); IfaValue::Map(m) }} }}", args[0], args[1])
                 } else {
-                    "IfaValue::Bool(false)".to_string()
+                    "{ let mut m = HashMap::new(); m.insert(\"kind\".to_string(), IfaValue::Str(\"TypeError\".to_string())); m.insert(\"message\".to_string(), IfaValue::Str(\"odi.write expects path and content\".to_string())); IfaValue::Map(m) }".to_string()
                 }
             }
             "odi" if matches_method(&method, odi::EXISTS) => {
@@ -148,23 +148,23 @@ impl RustTranspiler {
             "okanran" if matches_method(&method, okanran::ASSERT) => {
                 if let Some(cond) = args.first() {
                     let msg = args.get(1).cloned().unwrap_or_else(|| "\"Assertion failed\"".to_string());
-                    format!("if !({}).is_truthy() {{ panic!(\"Ọ̀kànràn: {{}}\", {}); }}", cond, msg)
+                    format!("if !({}).is_truthy() {{ compile_error!(\"ifa-transpiler: Ọ̀kànràn.assert is not supported in generated Rust output\"); }} let _ = {};", cond, msg)
                 } else {
-                    "/* assert with no condition */".to_string()
+                    "compile_error!(\"ifa-transpiler: Ọ̀kànràn.assert requires a condition\")".to_string()
                 }
             }
             "okanran" if matches_method(&method, okanran::EQUALS) => {
                 if args.len() >= 2 {
-                    format!("if {} != {} {{ panic!(\"Ọ̀kànràn: Not equal\"); }}", args[0], args[1])
+                    format!("if {} != {} {{ compile_error!(\"ifa-transpiler: Ọ̀kànràn.equals is not supported in generated Rust output\"); }}", args[0], args[1])
                 } else {
-                    "/* assert_eq requires 2 args */".to_string()
+                    "compile_error!(\"ifa-transpiler: Ọ̀kànràn.equals requires 2 arguments\")".to_string()
                 }
             }
             "okanran" if matches_method(&method, okanran::DIE) => {
                 if let Some(msg) = args.first() {
-                    format!("panic!(\"Ọ̀kànràn: {{}}\", {})", msg)
+                    format!("{{ let _ = {}; compile_error!(\"ifa-transpiler: Ọ̀kànràn.die is not supported in generated Rust output\"); }}", msg)
                 } else {
-                    "panic!(\"Ọ̀kànràn: Fatal error\")".to_string()
+                    "compile_error!(\"ifa-transpiler: Ọ̀kànràn.die is not supported in generated Rust output\")".to_string()
                 }
             }
 
@@ -264,7 +264,7 @@ impl RustTranspiler {
             // ═══════════════════════════════════════════════════════════════════
             _ => {
                 format!(
-                    "unimplemented!(\"ifa-transpiler: {}.{}({}) has no Rust mapping\")",
+                    "compile_error!(\"ifa-transpiler: {}.{}({}) has no Rust mapping\")",
                     domain_str,
                     method,
                     args.join(", ")

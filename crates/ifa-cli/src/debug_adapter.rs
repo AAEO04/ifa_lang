@@ -104,7 +104,7 @@ impl DapAdapter {
         // eprintln!("[DAP-OUT] {}", json);
     }
 
-    fn wait_for_command(&self, env: Option<&Environment>) {
+    fn wait_for_command(&self, env: Option<&std::rc::Rc<std::cell::RefCell<Environment>>>) {
         let stdin = io::stdin();
         let mut handle = stdin.lock();
 
@@ -142,7 +142,11 @@ impl DapAdapter {
         }
     }
 
-    fn handle_request(&self, req: Request, env: Option<&Environment>) {
+    fn handle_request(
+        &self,
+        req: Request,
+        env: Option<&std::rc::Rc<std::cell::RefCell<Environment>>>,
+    ) {
         let success = true;
         let message = None;
         let mut body = None;
@@ -177,7 +181,9 @@ impl DapAdapter {
                 if let Some(list) = bps {
                     for bp in list {
                         let line = bp.get("line").and_then(|v| v.as_u64()).unwrap_or(0) as usize;
-                        if line == 0 { continue; }
+                        if line == 0 {
+                            continue;
+                        }
                         final_bps.push(Breakpoint { line });
                         confirmed_bps.push(serde_json::json!({
                             "verified": true,
@@ -186,7 +192,10 @@ impl DapAdapter {
                     }
                 }
 
-                self.breakpoints.lock().unwrap_or_else(|p| p.into_inner()).insert(path, final_bps);
+                self.breakpoints
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .insert(path, final_bps);
                 body = Some(serde_json::json!({ "breakpoints": confirmed_bps }));
             }
             "configurationDone" => {
@@ -235,13 +244,13 @@ impl DapAdapter {
             "variables" => {
                 let args = req.arguments.as_ref().unwrap();
                 let var_ref = args["variablesReference"].as_i64().unwrap_or(0);
-                
+
                 let mut vars = Vec::new();
 
                 if let Some(env) = env {
                     if var_ref == 1 {
                         // Locals (current scope)
-                        for (k, v) in &env.values {
+                        for (k, v) in &env.borrow().values {
                             vars.push(serde_json::json!({
                                 "name": k,
                                 "value": format!("{}", v), // Use Display trait
@@ -252,9 +261,9 @@ impl DapAdapter {
                     } else if var_ref == 2 {
                         // Globals (walk up to root)
                         // Simplified: just show parent's values if exists
-                        if let Some(parent) = &env.parent {
-                            for (k, v) in &parent.values {
-                                 vars.push(serde_json::json!({
+                        if let Some(parent) = &env.borrow().parent {
+                            for (k, v) in &parent.borrow().values {
+                                vars.push(serde_json::json!({
                                     "name": k,
                                     "value": format!("{}", v),
                                     "type": v.type_name(),
@@ -273,7 +282,8 @@ impl DapAdapter {
             }
             "next" => {
                 *self.paused.lock().unwrap_or_else(|p| p.into_inner()) = false;
-                *self.stop_reason.lock().unwrap_or_else(|p| p.into_inner()) = Some(StopReason::Step);
+                *self.stop_reason.lock().unwrap_or_else(|p| p.into_inner()) =
+                    Some(StopReason::Step);
             }
             "disconnect" => {
                 std::process::exit(0);
@@ -296,7 +306,11 @@ impl DapAdapter {
 }
 
 impl Debugger for DapAdapter {
-    fn on_statement(&mut self, stmt: &Statement, env: &Environment) {
+    fn on_statement(
+        &mut self,
+        stmt: &Statement,
+        env: &std::rc::Rc<std::cell::RefCell<Environment>>,
+    ) {
         // extract location
         let (line, _file) = match stmt {
             Statement::VarDecl { span, .. }
@@ -323,7 +337,11 @@ impl Debugger for DapAdapter {
             bps.values().flatten().any(|bp| bp.line == line)
         };
 
-        let stop_reason = self.stop_reason.lock().unwrap_or_else(|p| p.into_inner()).clone();
+        let stop_reason = self
+            .stop_reason
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone();
         let should_stop = should_break || matches!(stop_reason, Some(StopReason::Step));
 
         if should_stop {

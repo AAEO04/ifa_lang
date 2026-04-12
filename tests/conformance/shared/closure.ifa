@@ -1,0 +1,7 @@
+# expect: 13
+ese make_adder(x) {
+  pada |y| x + y;
+}
+
+ayanmo add5 = make_adder(5);
+Irosu.fo(add5(8));

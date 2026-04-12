@@ -47,7 +47,7 @@ fn main() {
     println!("CPU throughput: {:.2} GFLOPS", cpu_gflops);
 
     // --- GPU Compute ---
-    let ctx = GpuContext::new_blocking().expect("Failed to initialize GPU");
+    let ctx = pollster::block_on(GpuContext::new()).expect("Failed to initialize GPU");
 
     // Create buffers
     let buffer_a = ctx

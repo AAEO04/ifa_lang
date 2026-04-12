@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
-use std::ops::{Add, Div, Mul, Neg, Not, Rem, Sub};
+use std::ops::{Add, Mul, Neg, Not, Rem, Sub};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -56,6 +56,7 @@ pub enum IfaValue {
         name: String,
         params: Vec<String>,
         body: Vec<Statement>,
+        closure_id: u64,
     },
 
     /// Bytecode Function (Compiled) - Requires "vm" feature
@@ -250,40 +251,6 @@ impl Mul for IfaValue {
     }
 }
 
-impl Div for IfaValue {
-    type Output = IfaValue;
-
-    fn div(self, other: IfaValue) -> IfaValue {
-        match (&self, &other) {
-            (IfaValue::Int(a), IfaValue::Int(b)) => {
-                if *b == 0 {
-                    return IfaValue::Null;
-                }
-                IfaValue::Float(*a as f64 / *b as f64)
-            }
-            (IfaValue::Float(a), IfaValue::Float(b)) => {
-                if *b == 0.0 {
-                    return IfaValue::Null;
-                }
-                IfaValue::Float(a / b)
-            }
-            (IfaValue::Int(a), IfaValue::Float(b)) => {
-                if *b == 0.0 {
-                    return IfaValue::Null;
-                }
-                IfaValue::Float(*a as f64 / b)
-            }
-            (IfaValue::Float(a), IfaValue::Int(b)) => {
-                if *b == 0 {
-                    return IfaValue::Null;
-                }
-                IfaValue::Float(a / *b as f64)
-            }
-            _ => IfaValue::Null,
-        }
-    }
-}
-
 impl IfaValue {
     /// Checked division that returns proper errors.
     pub fn checked_div(&self, other: &IfaValue) -> IfaResult<IfaValue> {
@@ -441,17 +408,13 @@ impl IfaValue {
         match self {
             IfaValue::Bool(b) => *b,
             IfaValue::Int(n) => *n != 0,
-            IfaValue::Float(f) => *f != 0.0,
+            // Spec: Float(0.0) is falsy; NaN is falsy; all other floats are truthy.
+            IfaValue::Float(f) => *f != 0.0 && !f.is_nan(),
             IfaValue::Str(s) => !s.is_empty(),
             IfaValue::List(l) => !l.is_empty(),
             IfaValue::Map(m) => !m.is_empty(),
-            IfaValue::Object(o) => {
-                if let Ok(map) = o.try_borrow() {
-                    !map.is_empty()
-                } else {
-                    true // If locked/borrowed, assume it exists/is truthy
-                }
-            }
+            // Spec: all objects are truthy (emptiness is not observable truthiness).
+            IfaValue::Object(_) => true,
             IfaValue::Fn(_) => true,
             IfaValue::Resource(_) => true,
             IfaValue::Null => false,
@@ -802,6 +765,11 @@ mod tests {
         assert!(!IfaValue::Bool(false).is_truthy());
         assert!(IfaValue::Int(1).is_truthy());
         assert!(!IfaValue::Int(0).is_truthy());
+        assert!(!IfaValue::Float(f64::NAN).is_truthy());
         assert!(!IfaValue::Null.is_truthy());
+
+        // Spec: objects are always truthy (even if "empty").
+        let obj = IfaValue::Object(Rc::new(RefCell::new(HashMap::new())));
+        assert!(obj.is_truthy());
     }
 }

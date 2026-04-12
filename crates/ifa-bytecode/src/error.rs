@@ -46,6 +46,8 @@ pub enum ErrorCode {
     Halt = 0x0006,
     /// Yielded execution
     Yield = 0x0007,
+    /// Async not available on this target
+    AsyncNotAvailable = 0x0008,
 
     // === Memory (0x01XX) ===
     /// Out of Memory
@@ -95,6 +97,7 @@ impl ErrorCode {
             0x0005 => Self::InvalidBytecode,
             0x0006 => Self::Halt,
             0x0007 => Self::Yield,
+            0x0008 => Self::AsyncNotAvailable,
 
             0x0100 => Self::OutOfMemory,
             0x0101 => Self::AccessViolation,
@@ -132,6 +135,7 @@ impl ErrorCode {
             Self::InvalidBytecode => "Invalid Bytecode",
             Self::Halt => "Program Halted",
             Self::Yield => "Program Yielded",
+            Self::AsyncNotAvailable => "Async Not Available",
 
             Self::OutOfMemory => "Out of Memory",
             Self::AccessViolation => "Access Violation",

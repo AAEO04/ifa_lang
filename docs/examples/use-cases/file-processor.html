@@ -1,71 +1,330 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Processor - Ifa-Lang Use Cases</title>
+    <title>File Processor - Ifá-Lang</title>
+    <meta name="description" content="Complete file processing example using Ifá-Lang's Odi domain with cultural text processing">
     <link rel="stylesheet" href="../../js/common.css">
     <script src="../../js/nav.js" defer></script>
-    <script src="../../js/common.js" defer></script>
 </head>
 <body>
     <div id="nav-placeholder"></div>
-    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
     <div class="container">
-        <h1>File Processor</h1>
-        <p>Batch process files with Ifa-Lang's powerful I/O and concurrency features.</p>
+        <header>
+            <h1>File Processor</h1>
+            <p class="subtitle">Cultural File Processing with Ifá-Lang</p>
+        </header>
+        <div class="step">
+            <h2>Overview</h2>
+            <p>Complete file processing system using Ifá-Lang's Odi domain, including cultural text processing, Yoruba document handling, and traditional knowledge preservation.</p>
+        </div>
+        <div class="step">
+            <h2>File Processing Architecture</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">File Processor Structure</span>
+                </div>
+                <pre><code>// File processor with cultural support
+struct FileProcessor {
+    config: ProcessorConfig,
+    cultural_analyzer: CulturalTextAnalyzer,
+    output_manager: OutputManager
+}
 
-        <h2>Use Case</h2>
-        <p>Process multiple files in parallel - resize images, convert formats, or extract data.</p>
+// Cultural text analyzer
+struct CulturalTextAnalyzer {
+    proverb_detector: ProverbDetector,
+    language_analyzer: YorubaLanguageAnalyzer,
+    cultural_context_detector: CulturalContextDetector
+}
 
-        <h2>Domains Used</h2>
-        <ul>
-            <li><strong>Odi / Fs</strong> - File reading/writing</li>
-            <li><strong>Osa / Async</strong> - Parallel processing</li>
-            <li><strong>Ika / String</strong> - Path manipulation</li>
-        </ul>
-
-        <h2>Code Example</h2>
-        <pre><code>// Batch File Processor
-ayanmo files = Odi.akojopo("input/*.txt");
-ayanmo processed = 0;
-
-// Process files in parallel
-Osa.pelu_ara(files, ese(file) {
-    ayanmo content = Odi.ka(file);
-    
-    // Transform content
-    ayanmo upper = Ika.uppercase(content);
-    
-    // Write to output
-    ayanmo outname = Ika.ropo(file, "input/", "output/");
-    Odi.ko(outname, upper);
-    
-    processed = processed + 1;
-});
-
-Irosu.fo("Processed " + processed + " files");</code></pre>
-
-        <h2>CSV Processing Example</h2>
-        <pre><code>// Parse and transform CSV
-ayanmo csv = Odi.ka("data.csv");
-ayanmo lines = Ika.pin(csv, "\n");
-ayanmo output = [];
-
-fun line ninu lines {
-    ayanmo fields = Ika.pin(line, ",");
-    ti Ogunda.len(fields) >= 2 {
-        ayanmo name = Ogunda.gba(fields, 0);
-        ayanmo value = Ogunda.gba(fields, 1);
-        Ogunda.fi(output, name + ": " + value);
+// Processing configuration
+struct ProcessorConfig {
+    input_directory: Str,
+    output_directory: Str,
+    file_patterns: Vec<Str>,
+    cultural_processing: Bool,
+    preserve_encoding: Bool
+}</code></pre>
+            </div>
+        </div>
+        <div class="step">
+            <h2>File Operations</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Cultural File Processing</span>
+                </div>
+                <pre><code>// Process cultural documents
+se process_cultural_files(processor: FileProcessor) {
+    gbiyanju {
+        ayanmo files = Odi.scan_directory(processor.config.input_directory, processor.config.file_patterns);
+        
+        Irosu.fo("Found " + Obara.to_str(files.length()) + " files to process");
+        
+        fun file ninu files {
+            process_single_file(processor, file);
+        }
+        
+        Irosu.fo("File processing completed");
+    } gba (error) {
+        Irosu.kigbe("File processing failed: " + error.message);
     }
 }
 
-Odi.ko("output.txt", Ika.so(output, "\n"));</code></pre>
+// Process individual file with cultural analysis
+se process_single_file(processor: FileProcessor, file_path: Str) {
+    gbiyanju {
+        Irosu.fo("Processing: " + file_path);
+        
+        // Read file with encoding preservation
+        ayanmo content = Odi.read_file(file_path, processor.config.preserve_encoding);
+        
+        // Cultural text analysis
+        ayanmo cultural_analysis = if processor.config.cultural_processing {
+            analyze_cultural_content(processor.cultural_analyzer, content)
+        } else {
+            CulturalAnalysis::empty()
+        };
+        
+        // Process content based on cultural insights
+        ayanmo processed_content = apply_cultural_processing(content, cultural_analysis);
+        
+        // Generate output file
+        ayanmo output_path = generate_output_path(processor.config.output_directory, file_path);
+        Odi.write_file(output_path, processed_content);
+        
+        // Generate cultural metadata file
+        if cultural_analysis.has_cultural_content() {
+            generate_cultural_metadata(output_path + ".cultural.json", cultural_analysis);
+        }
+        
+        Irosu.fo("Processed: " + file_path + " -> " + output_path);
+    } gba (error) {
+        Irosu.kigbe("Failed to process file " + file_path + ": " + error.message);
+    }
+}
 
-        <footer class="doc-footer">
-            <p><a href="index.html">Back to Use Cases</a></p>
+// Analyze cultural content in text
+se analyze_cultural_content(analyzer: CulturalTextAnalyzer, content: Str) -> CulturalAnalysis {
+    ayanmo mut analysis = CulturalAnalysis::new();
+    
+    // Detect proverbs
+    analysis.proverbs = analyzer.proverb_detector.detect(content);
+    
+    // Analyze Yoruba language patterns
+    analysis.language_analysis = analyzer.language_analyzer.analyze(content);
+    
+    // Detect cultural context
+    analysis.cultural_contexts = analyzer.cultural_context_detector.detect(content);
+    
+    // Extract cultural entities
+    analysis.cultural_entities = extract_cultural_entities(content);
+    
+    analysis
+}
+
+// Extract cultural entities from text
+se extract_cultural_entities(content: Str) -> Vec<CulturalEntity> {
+    ayanmo mut entities = Vec::new();
+    
+    // Yoruba names and places
+    ayanmo names = extract_yoruba_names(content);
+    fun name ninu names {
+        entities.push(CulturalEntity {
+            type: "name",
+            value: name,
+            confidence: calculate_confidence(name, content)
+        });
+    }
+    
+    // Traditional titles
+    ayanmo titles = extract_traditional_titles(content);
+    fun title ninu titles {
+        entities.push(CulturalEntity {
+            type: "title",
+            value: title,
+            confidence: calculate_confidence(title, content)
+        });
+    }
+    
+    // Cultural references
+    ayanmo references = extract_cultural_references(content);
+    fun reference ninu references {
+        entities.push(CulturalEntity {
+            type: "reference",
+            value: reference,
+            confidence: calculate_confidence(reference, content)
+        });
+    }
+    
+    entities
+}</code></pre>
+            </div>
+        </div>
+        <div class="step">
+            <h2>Yoruba Text Processing</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Yoruba Language Analysis</span>
+                </div>
+                <pre><code>// Yoruba language analyzer
+struct YorubaLanguageAnalyzer {
+    tone_analyzer: ToneAnalyzer,
+    diacritic_processor: DiacriticProcessor,
+    grammar_analyzer: YorubaGrammarAnalyzer
+}
+
+// Analyze Yoruba text properties
+se analyze_yoruba_text(analyzer: YorubaLanguageAnalyzer, text: Str) -> YorubaAnalysis {
+    ayanmo mut analysis = YorubaAnalysis::new();
+    
+    // Tone analysis
+    analysis.tone_patterns = analyzer.tone_analyzer.analyze(text);
+    
+    // Diacritic processing
+    analysis.diacritic_usage = analyzer.diacritic_processor.analyze(text);
+    
+    // Grammar analysis
+    analysis.grammar_features = analyzer.grammar_analyzer.analyze(text);
+    
+    // Vocabulary analysis
+    analysis.vocabulary = analyze_yoruba_vocabulary(text);
+    
+    // Cultural markers
+    analysis.cultural_markers = identify_cultural_markers(text);
+    
+    analysis
+}
+
+// Process Yoruba diacritics
+se process_yoruba_diacritics(text: Str) -> Str {
+    ayanmo mut processed = text;
+    
+    // Normalize diacritics
+    processed = normalize_yoruba_diacritics(processed);
+    
+    // Fix common diacritic errors
+    processed = fix_common_diacritic_errors(processed);
+    
+    // Ensure proper tone marking
+    processed = ensure_proper_tone_marking(processed);
+    
+    processed
+}
+
+// Detect Yoruba proverbs in text
+se detect_yoruba_proverbs(text: Str) -> Vec<ProverbMatch> {
+    ayanmo mut matches = Vec::new();
+    
+    // Known proverb patterns
+    ayanmo proverb_patterns = [
+        "Àkùnlè kì í",
+        "Ìwò l'òwò",
+        "Àjíndé òun",
+        "Bí a bá r'òkànràn",
+        "Bí a bá r'ojú",
+        "Bí a bá r'érin",
+        "Bí a bá r'òwe"
+    ];
+    
+    fun pattern ninu proverb_patterns {
+        if Ika.contains(text, pattern) {
+            ayanmo context = extract_proverb_context(text, pattern);
+            matches.push(ProverbMatch {
+                proverb: pattern,
+                context: context,
+                confidence: calculate_proverb_confidence(pattern, context)
+            });
+        }
+    }
+    
+    matches
+}</code></pre>
+            </div>
+        </div>
+        <div class="step">
+            <h2>Batch Processing</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Batch File Operations</span>
+                </div>
+                <pre><code>// Batch processing with cultural awareness
+se batch_process_cultural_files(processor: FileProcessor, batch_size: u32) {
+    ayanmo files = Odi.scan_directory(processor.config.input_directory, processor.config.file_patterns);
+    ayanmo total_files = files.length();
+    
+    Irosu.fo("Starting batch processing of " + Obara.to_str(total_files) + " files");
+    
+    fun batch_start ninu (0..total_files).step_by(batch_size) {
+        ayanmo batch_end = Obara.min(batch_start + batch_size, total_files);
+        ayanmo batch_files = files.slice(batch_start..batch_end);
+        
+        Irosu.fo("Processing batch " + Obara.to_str(batch_start / batch_size + 1) + 
+                " (files " + Obara.to_str(batch_start) + "-" + Obara.to_str(batch_end - 1) + ")");
+        
+        process_file_batch(processor, batch_files);
+        
+        // Cultural progress report
+        generate_batch_cultural_report(batch_start, batch_end, total_files);
+    }
+    
+    Irosu.fo("Batch processing completed");
+}
+
+// Process individual batch
+se process_file_batch(processor: FileProcessor, files: Vec<Str>) {
+    ayanmo mut batch_results = Vec::new();
+    
+    fun file ninu files {
+        ayanmo result = process_single_file_with_result(processor, file);
+        batch_results.push(result);
+    }
+    
+    // Analyze batch cultural patterns
+    analyze_batch_cultural_patterns(batch_results);
+    
+    // Generate batch summary
+    generate_batch_summary(batch_results);
+}
+
+// Analyze cultural patterns across batch
+se analyze_batch_cultural_patterns(results: Vec<FileProcessResult>) {
+    ayanmo mut cultural_summary = CulturalBatchSummary::new();
+    
+    fun result ninu results {
+        if result.cultural_analysis.is_some() {
+            ayanmo analysis = result.cultural_analysis.unwrap();
+            cultural_summary.add_analysis(analysis);
+        }
+    }
+    
+    Irosu.fo("Batch Cultural Summary:");
+    Irosu.fo("  Proverbs found: " + Obara.to_str(cultural_summary.total_proverbs));
+    Irosu.fo("  Yoruba content: " + Obara.to_str(cultural_summary.yoruba_content_count));
+    Irosu.fo("  Cultural entities: " + Obara.to_str(cultural_summary.total_entities));
+    Irosu.fo("  Cultural contexts: " + Obara.to_str(cultural_summary.total_contexts));
+}</code></pre>
+            </div>
+        </div>
+        <div class="step">
+            <h2>Best Practices</h2>
+            <ul>
+                <li><strong>Encoding Preservation:</strong> Always preserve original file encoding</li>
+                <li><strong>Cultural Sensitivity:</strong> Handle cultural content with respect</li>
+                <li><strong>Diacritic Integrity:</strong> Maintain proper Yoruba diacritics</li>
+                <li><strong>Context Preservation:</strong> Keep cultural context intact</li>
+            </ul>
+        </div>
+        <footer>
+            <p><a href="index.html">Use Cases Documentation</a></p>
         </footer>
     </div>
+    <script src="../../js/common.js"></script>
 </body>
 </html>

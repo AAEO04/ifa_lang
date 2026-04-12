@@ -1,0 +1,10 @@
+# expect: 1
+# spec: §6.6 (incompatible comparisons MUST TypeError)
+
+gbiyanju {
+    ayanmo x = "a" < 1;
+    pada 0;
+} gba (e) {
+    pada 1;
+}
+

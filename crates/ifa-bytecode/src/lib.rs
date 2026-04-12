@@ -96,6 +96,11 @@ pub enum OpCode {
     /// Get Reference/Address (generic)
     Ref = 0x1C,
 
+    /// Load captured upvalue (followed by 2-byte upvalue index)
+    LoadUpvalue = 0x1D,
+    /// Store captured upvalue (followed by 2-byte upvalue index)
+    StoreUpvalue = 0x1E,
+
     // === Arithmetic Operations (0x20-0x2F) ===
     /// Add top two stack values
     Add = 0x20,
@@ -111,6 +116,8 @@ pub enum OpCode {
     Neg = 0x25,
     /// Power (exponentiation)
     Pow = 0x26,
+    /// Concatenate two strings
+    Concat = 0x27,
 
     // === Bitwise Operations (0x30-0x3F) ===
     /// Bitwise AND
@@ -157,6 +164,10 @@ pub enum OpCode {
     Halt = 0x55,
     /// Yield execution
     Yield = 0x56,
+    /// Tail-call a function (followed by 1-byte arg count)
+    TailCall = 0x57,
+    /// Await a future (unwrap async value)
+    Await = 0x58,
 
     // === Type Operations (0x60-0x6F) ===
     /// Convert to Integer
@@ -185,6 +196,10 @@ pub enum OpCode {
     PushList = 0x76,
     /// Push map literal (legacy)
     PushMap = 0x77,
+    /// Get object field (followed by 2-byte name index)
+    GetField = 0x78,
+    /// Set object field (followed by 2-byte name index)
+    SetField = 0x79,
 
     // === IO & System (0x80-0x8F) ===
     /// Print to stdout
@@ -205,6 +220,8 @@ pub enum OpCode {
     CallOdu = 0x91,
     /// Push function reference
     PushFn = 0x92,
+    /// Build a closure by capturing upvalues (variable-length operand)
+    MakeClosure = 0x93,
 
     // === Exception Handling (0xA0-0xAF) ===
     /// Begin try block (followed by 4-byte jump offset to catch)
@@ -213,6 +230,16 @@ pub enum OpCode {
     TryEnd = 0xA1,
     /// Throw exception (top of stack)
     Throw = 0xA2,
+    /// Mark that a finally block exists (followed by 4-byte IP of finally code)
+    /// The VM stores this in the RecoveryFrame so Return/Throw can run cleanup.
+    FinallyBegin = 0xA3,
+    /// Signal end of finally block; resume the suspended continuation
+    /// (normal return value or error re-propagation)
+    FinallyEnd = 0xA4,
+    /// Error propagation operator: equivalent to Rust’s `?`.
+    /// Pops a value. If it is a `UserError`, re-raises it (propagating out of
+    /// the current function). Otherwise pushes the value back unchanged.
+    PropagateError = 0xA5,
 }
 
 impl OpCode {
@@ -244,6 +271,8 @@ impl OpCode {
             0x1A => Some(OpCode::LoadGlobal),
             0x1B => Some(OpCode::StoreGlobal),
             0x1C => Some(OpCode::Ref),
+            0x1D => Some(OpCode::LoadUpvalue),
+            0x1E => Some(OpCode::StoreUpvalue),
 
             0x20 => Some(OpCode::Add),
             0x21 => Some(OpCode::Sub),
@@ -252,6 +281,7 @@ impl OpCode {
             0x24 => Some(OpCode::Mod),
             0x25 => Some(OpCode::Neg),
             0x26 => Some(OpCode::Pow),
+            0x27 => Some(OpCode::Concat),
 
             0x30 => Some(OpCode::And),
             0x31 => Some(OpCode::Or),
@@ -275,6 +305,8 @@ impl OpCode {
             0x54 => Some(OpCode::Return),
             0x55 => Some(OpCode::Halt),
             0x56 => Some(OpCode::Yield),
+            0x57 => Some(OpCode::TailCall),
+            0x58 => Some(OpCode::Await),
 
             0x60 => Some(OpCode::ToInt),
             0x61 => Some(OpCode::ToFloat),
@@ -289,6 +321,8 @@ impl OpCode {
             0x75 => Some(OpCode::Append),
             0x76 => Some(OpCode::PushList),
             0x77 => Some(OpCode::PushMap),
+            0x78 => Some(OpCode::GetField),
+            0x79 => Some(OpCode::SetField),
 
             0x80 => Some(OpCode::Print),
             0x81 => Some(OpCode::PrintRaw),
@@ -299,10 +333,14 @@ impl OpCode {
             0x90 => Some(OpCode::CallMethod),
             0x91 => Some(OpCode::CallOdu),
             0x92 => Some(OpCode::PushFn),
+            0x93 => Some(OpCode::MakeClosure),
 
             0xA0 => Some(OpCode::TryBegin),
             0xA1 => Some(OpCode::TryEnd),
             0xA2 => Some(OpCode::Throw),
+            0xA3 => Some(OpCode::FinallyBegin),
+            0xA4 => Some(OpCode::FinallyEnd),
+            0xA5 => Some(OpCode::PropagateError),
 
             _ => None,
         }
@@ -341,6 +379,8 @@ impl OpCode {
             OpCode::LoadGlobal => "load_global",
             OpCode::StoreGlobal => "store_global",
             OpCode::Ref => "ref",
+            OpCode::LoadUpvalue => "load_upvalue",
+            OpCode::StoreUpvalue => "store_upvalue",
 
             OpCode::Add => "add",
             OpCode::Sub => "sub",
@@ -349,6 +389,7 @@ impl OpCode {
             OpCode::Mod => "mod",
             OpCode::Neg => "neg",
             OpCode::Pow => "pow",
+            OpCode::Concat => "concat",
 
             OpCode::And => "and",
             OpCode::Or => "or",
@@ -372,6 +413,8 @@ impl OpCode {
             OpCode::Return => "return",
             OpCode::Halt => "halt",
             OpCode::Yield => "yield",
+            OpCode::TailCall => "tail_call",
+            OpCode::Await => "await",
 
             OpCode::ToInt => "to_int",
             OpCode::ToFloat => "to_float",
@@ -386,6 +429,8 @@ impl OpCode {
             OpCode::Append => "append",
             OpCode::PushList => "push_list",
             OpCode::PushMap => "push_map",
+            OpCode::GetField => "get_field",
+            OpCode::SetField => "set_field",
 
             OpCode::Print => "print",
             OpCode::PrintRaw => "print_raw",
@@ -396,10 +441,14 @@ impl OpCode {
             OpCode::CallMethod => "call_method",
             OpCode::CallOdu => "call_odu",
             OpCode::PushFn => "push_fn",
+            OpCode::MakeClosure => "make_closure",
 
             OpCode::TryBegin => "try_begin",
             OpCode::TryEnd => "try_end",
             OpCode::Throw => "throw",
+            OpCode::FinallyBegin => "finally_begin",
+            OpCode::FinallyEnd => "finally_end",
+            OpCode::PropagateError => "propagate_error",
         }
     }
 
@@ -423,6 +472,7 @@ impl OpCode {
             | OpCode::Store32
             | OpCode::Store64
             | OpCode::Add
+            | OpCode::Concat
             | OpCode::Sub
             | OpCode::Mul
             | OpCode::Div
@@ -456,32 +506,38 @@ impl OpCode {
             | OpCode::PrintRaw
             | OpCode::TryEnd
             | OpCode::Throw
-            | OpCode::Input => Some(0),
+            | OpCode::FinallyEnd
+            | OpCode::PropagateError
+            | OpCode::Input
+            | OpCode::Yield
+            | OpCode::Await => Some(0),
 
             // Fixed length operands
             OpCode::Push
             | OpCode::Jump
             | OpCode::JumpIfTrue
             | OpCode::JumpIfFalse
-            | OpCode::Call
-            | OpCode::Yield
             | OpCode::TryBegin
+            | OpCode::FinallyBegin
             | OpCode::Ref => Some(4),
             OpCode::PushInt | OpCode::PushFloat => Some(8),
+            OpCode::BuildList | OpCode::BuildMap | OpCode::Call | OpCode::TailCall => Some(1),
             OpCode::LoadLocal
             | OpCode::StoreLocal
             | OpCode::LoadGlobal
             | OpCode::StoreGlobal
+            | OpCode::LoadUpvalue
+            | OpCode::StoreUpvalue
             | OpCode::PushStr
-            | OpCode::CallMethod => Some(2),
+            | OpCode::Import
+            | OpCode::GetField
+            | OpCode::SetField => Some(2),
+            OpCode::CallMethod => Some(3),
+            OpCode::CallOdu => Some(4),
+            OpCode::PushFn => Some(8),
 
             // Variable length operands
-            OpCode::PushFn
-            | OpCode::Import
-            | OpCode::DefineClass
-            | OpCode::CallOdu
-            | OpCode::BuildList
-            | OpCode::BuildMap => None,
+            OpCode::DefineClass | OpCode::MakeClosure => None,
         }
     }
 
@@ -504,17 +560,14 @@ impl OpCode {
             | OpCode::PushFn => Some((0, 1)),
 
             // Memory operations
-            OpCode::Load8
-            | OpCode::Load16
-            | OpCode::Load32
-            | OpCode::Load64
-            | OpCode::LoadLocal
-            | OpCode::LoadGlobal => Some((0, 1)), // Note: Locals/Globals load from env, not stack addr
+            OpCode::Load8 | OpCode::Load16 | OpCode::Load32 | OpCode::Load64 => Some((1, 1)), // [addr] -> [value]
+
+            OpCode::LoadLocal | OpCode::LoadGlobal | OpCode::LoadUpvalue => Some((0, 1)), // Locals/Globals/Upvalues load from env, not stack addr
 
             OpCode::Ref => Some((0, 1)), // Pushes address
 
             OpCode::Store8 | OpCode::Store16 | OpCode::Store32 | OpCode::Store64 => Some((2, 0)), // [addr, val] -> []
-            OpCode::StoreLocal | OpCode::StoreGlobal => Some((1, 0)), // [val] -> [] (index in operand)
+            OpCode::StoreLocal | OpCode::StoreGlobal | OpCode::StoreUpvalue => Some((1, 0)), // [val] -> [] (index in operand)
 
             // Arithmetic
             OpCode::Add
@@ -534,6 +587,7 @@ impl OpCode {
             | OpCode::Le
             | OpCode::Gt
             | OpCode::Ge => Some((2, 1)),
+            OpCode::Concat => Some((2, 1)),
 
             OpCode::Neg | OpCode::Not => Some((1, 1)),
             OpCode::Pow => Some((2, 1)),
@@ -541,15 +595,19 @@ impl OpCode {
             // Control flow
             OpCode::Jump => Some((0, 0)),
             OpCode::JumpIfTrue | OpCode::JumpIfFalse => Some((1, 0)),
-            OpCode::Call | OpCode::CallMethod | OpCode::CallOdu => Some((0, 0)), // Dynamic return
-            OpCode::Return | OpCode::Halt | OpCode::Yield => Some((0, 0)),
+            OpCode::Call | OpCode::TailCall | OpCode::CallMethod | OpCode::CallOdu => Some((0, 0)), // Dynamic return
+            OpCode::Return | OpCode::Halt => Some((0, 0)),
+            OpCode::Yield => Some((1, 0)), // duration is read from stack
+            OpCode::Await => Some((1, 1)), // [future] -> [value]
 
             // Type conversions
             OpCode::ToInt | OpCode::ToFloat | OpCode::ToString | OpCode::ToBool => Some((1, 1)),
 
             // Collections
             OpCode::GetIndex => Some((2, 1)), // [col, idx] -> [val]
-            OpCode::SetIndex => Some((3, 1)), // [col, idx, val] -> [col] (or void?) - Ifa returns collection usually
+            OpCode::SetIndex => Some((3, 0)), // [col, idx, val] -> []
+            OpCode::GetField => Some((1, 1)), // [obj] -> [val]
+            OpCode::SetField => Some((2, 1)), // [obj, val] -> [obj] (for chaining)
             OpCode::Len => Some((1, 1)),      // [val] -> [int]
             OpCode::Append => Some((2, 1)),   // [list, val] -> [list]
 
@@ -558,18 +616,29 @@ impl OpCode {
             // IO
             OpCode::Print | OpCode::PrintRaw => Some((1, 0)),
             OpCode::Input => Some((0, 1)),
-            OpCode::Import | OpCode::DefineClass => Some((0, 0)), // Side effects or pushes? Import pushes module.
+            OpCode::Import | OpCode::DefineClass | OpCode::MakeClosure => Some((0, 0)), // Side effects or dynamic.
 
             // Exception Handling
             OpCode::TryBegin => Some((0, 0)), // Pushes internal frame, no value stack effect
             OpCode::TryEnd => Some((0, 0)),   // Pops internal frame
             OpCode::Throw => Some((1, 0)),    // [err] -> [] (unwinds)
+            OpCode::FinallyBegin => Some((0, 0)), // Registers finally IP in recovery frame
+            OpCode::FinallyEnd => Some((0, 0)), // Resume continuation; no net stack effect
+            OpCode::PropagateError => None,   // [val] -> [val] on success, unwind on error
         }
     }
 
     /// Get the stack effect description.
     pub const fn stack_effect_description(self) -> &'static str {
-        "Refer to stack_effect() values"
+        match self {
+            OpCode::Load8 | OpCode::Load16 | OpCode::Load32 | OpCode::Load64 => "[addr] → [value]",
+            OpCode::Store8 | OpCode::Store16 | OpCode::Store32 | OpCode::Store64 => {
+                "[addr, value] → []"
+            }
+            OpCode::Add => "[a, b] → [a+b]",
+            OpCode::Concat => "[lhs, rhs] â†’ [lhs++rhs]",
+            _ => "Refer to stack_effect() values",
+        }
     }
 }
 
@@ -610,6 +679,7 @@ mod tests {
         assert_eq!(OpCode::Load8 as u8, 0x10);
         assert_eq!(OpCode::Store8 as u8, 0x14);
         assert_eq!(OpCode::Add as u8, 0x20);
+        assert_eq!(OpCode::Concat as u8, 0x27);
         assert_eq!(OpCode::Jump as u8, 0x50);
         assert_eq!(OpCode::Call as u8, 0x53);
         assert_eq!(OpCode::Return as u8, 0x54);
@@ -620,12 +690,12 @@ mod tests {
     fn invalid_bytes_return_none() {
         assert_eq!(OpCode::from_u8(0x00), None);
         assert_eq!(OpCode::from_u8(0xFF), None);
-        assert_eq!(OpCode::from_u8(0x70), None);
+        assert_eq!(OpCode::from_u8(0x0B), None);
     }
 
     #[test]
     fn mnemonic_is_lowercase() {
         assert_eq!(OpCode::Push.mnemonic(), "push");
-        assert_eq!(OpCode::JumpIf.mnemonic(), "jumpif");
+        assert_eq!(OpCode::JumpIfFalse.mnemonic(), "jump_if_false");
     }
 }
