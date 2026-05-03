@@ -186,7 +186,7 @@ impl Interpreter {
 
     /// Execute a program
     pub fn execute(&mut self, program: &Program) -> IfaResult<IfaValue> {
-        let mut result = IfaValue::null();
+        let mut result = IfaValue::Null;
 
         for stmt in &program.statements {
             result = self.execute_statement(stmt)?;
@@ -350,7 +350,7 @@ impl Interpreter {
         let old_env = self.env.clone();
         self.env = Environment::with_parent(old_env.clone());
 
-        let mut result = Ok(IfaValue::null());
+        let mut result = Ok(IfaValue::Null);
         for stmt in statements {
             result = self.execute_statement(stmt);
 
@@ -387,14 +387,14 @@ impl Interpreter {
             Statement::VarDecl { name, value, .. } => {
                 let val = self.evaluate(value)?;
                 Environment::define(&self.env, name, val);
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::Const { name, value, .. } => {
                 // Runtime interpretation: identical to VarDecl but conceptually constant
                 let val = self.evaluate(value)?;
                 Environment::define_const(&self.env, name, val);
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::Try {
@@ -435,7 +435,7 @@ impl Interpreter {
                         // Actually execute_block pushes scope. So we can't use it if we want to bind var *in* that scope first.
                         // So we do it manually here for catch.)
 
-                        let mut result = Ok(IfaValue::null());
+                        let mut result = Ok(IfaValue::Null);
                         for s in catch_body {
                             result = self.execute_statement(s);
                             if result.is_err() {
@@ -460,6 +460,120 @@ impl Interpreter {
                 }
 
                 result
+            }
+
+            Statement::Update {
+                target,
+                op,
+                value,
+                ..
+            } => {
+                let current_val = match target {
+                    AssignTarget::Variable(name) => {
+                        Environment::get(&self.env, name).ok_or_else(|| {
+                            IfaError::UndefinedVariable(name.clone())
+                        })?
+                    }
+                    AssignTarget::Index { name, index } => {
+                        let idx = self.evaluate(index)?;
+                        let container = Environment::get(&self.env, name).ok_or_else(|| {
+                            IfaError::Runtime(format!("Undefined variable: {}", name))
+                        })?;
+                        match container {
+                            IfaValue::List(vec) => {
+                                let i = match idx {
+                                    IfaValue::Int(n) => n as usize,
+                                    _ => return Err(IfaError::Runtime("List index must be Int".into())),
+                                };
+                                vec.get(i).cloned().ok_or_else(|| IfaError::Runtime("Index out of bounds".into()))?
+                            }
+                            IfaValue::Map(map) => {
+                                let k = match idx {
+                                    IfaValue::Str(s) => s.clone(),
+                                    _ => return Err(IfaError::Runtime("Map key must be Str".into())),
+                                };
+                                map.get(&k).cloned().ok_or_else(|| IfaError::Runtime("Key not found".into()))?
+                            }
+                            _ => return Err(IfaError::Runtime("Invalid update target".into())),
+                        }
+                    }
+                    AssignTarget::Dereference(expr) => {
+                         let ptr = self.evaluate(expr)?;
+                         match ptr {
+                            IfaValue::Int(addr) => {
+                                if !self.is_unsafe() {
+                                    return Err(IfaError::Runtime("Update at raw pointer requires 'ailewu'".into()));
+                                }
+                                self.opon.get(addr as usize).cloned().ok_or_else(|| IfaError::Runtime("Invalid address".into()))?
+                            }
+                            IfaValue::Str(name) => Environment::get(&self.env, &name).ok_or_else(|| IfaError::UndefinedVariable(name.to_string()))?,
+                            _ => return Err(IfaError::Runtime("Invalid deref target".into())),
+                         }
+                    }
+                };
+
+                // Compute new value
+                let new_val = match op {
+                    UpdateOp::AddAssign => self.apply_update_add(&current_val, value)?,
+                    _ => {
+                        let rhs_expr = value.as_ref().ok_or_else(|| IfaError::Runtime("Update missing value".into()))?;
+                        let rhs = self.evaluate(rhs_expr)?;
+                        let bin_op = match op {
+                            UpdateOp::SubAssign => BinaryOperator::Sub,
+                            UpdateOp::MulAssign => BinaryOperator::Mul,
+                            UpdateOp::DivAssign => BinaryOperator::Div,
+                            UpdateOp::AddAssign => unreachable!(),
+                        };
+                        self.apply_binary_op(&current_val, &bin_op, &rhs)?
+                    }
+                };
+
+                // Reuse assignment logic to store back
+                // (Optimized path: we already have parts of the target resolved)
+                match target {
+                    AssignTarget::Variable(name) => {
+                        if Environment::is_const(&self.env, name) {
+                             return Err(IfaError::TypeError { expected: "Mutable binding".into(), got: format!("const {name}") });
+                        }
+                        if !Environment::set(&self.env, name, new_val.clone()) {
+                            Environment::define(&self.env, name, new_val);
+                        }
+                    }
+                    AssignTarget::Index { name, index } => {
+                        let idx = self.evaluate(index)?;
+                        let mut container = Environment::get(&self.env, name).ok_or_else(|| IfaError::Runtime(format!("Undefined: {name}")))?;
+                        match container {
+                            IfaValue::List(ref mut vec_arc) => {
+                                let i = match idx { IfaValue::Int(n) => n as usize, _ => unreachable!() };
+                                let vec = std::sync::Arc::make_mut(vec_arc);
+                                vec[i] = new_val;
+                            }
+                            IfaValue::Map(ref mut map_arc) => {
+                                let k = match idx { IfaValue::Str(s) => s.clone(), _ => unreachable!() };
+                                let map = std::sync::Arc::make_mut(map_arc);
+                                map.insert(k, new_val);
+                            }
+                            _ => unreachable!(),
+                        }
+                        Environment::set(&self.env, name, container);
+                    }
+                    AssignTarget::Dereference(expr) => {
+                         let ptr = self.evaluate(expr)?;
+                         match ptr {
+                            IfaValue::Int(addr) => {
+                                self.opon.try_set(addr as usize, new_val).map_err(|e| IfaError::Runtime(e.to_string()))?;
+                            }
+                            IfaValue::Str(name) => {
+                                if !Environment::set(&self.env, &name, new_val) {
+                                     return Err(IfaError::Runtime(format!("Undefined: {name}")));
+                                }
+                            }
+                            _ => unreachable!(),
+                         }
+                    }
+                }
+                
+                Ok(IfaValue::Null)
             }
 
             Statement::Assignment { target, value, .. } => {
@@ -561,7 +675,7 @@ impl Interpreter {
                         }
                     }
                 }
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::Instruction { call, .. } => self.execute_odu_call(call),
@@ -588,7 +702,7 @@ impl Interpreter {
                         }
                     }
                 }
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::While {
@@ -602,7 +716,7 @@ impl Interpreter {
                         }
                     }
                 }
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::For {
@@ -629,14 +743,14 @@ impl Interpreter {
                         }
                     }
                 }
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::Return { value, .. } => {
                 let val = if let Some(expr) = value {
                     self.evaluate(expr)?
                 } else {
-                    IfaValue::null()
+                    IfaValue::Null
                 };
                 Ok(IfaValue::return_value(val))
             }
@@ -676,13 +790,13 @@ impl Interpreter {
                                 return Ok(res);
                             }
                         }
-                        return Ok(IfaValue::null());
+                        return Ok(IfaValue::Null);
                     }
                 }
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
-            Statement::Ase { .. } => Ok(IfaValue::null()),
+            Statement::Ase { .. } => Ok(IfaValue::Null),
 
             // Inside execute_statement match
             Statement::EseDef {
@@ -704,7 +818,7 @@ impl Interpreter {
                     is_async: *is_async,
                 }));
                 Environment::define(&self.env, name, value);
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::Import { path, names, .. } => {
@@ -731,7 +845,7 @@ impl Interpreter {
                     let module_name = path.last().cloned().unwrap_or_else(|| "module".into());
                     Environment::define(&self.env, &module_name, exports);
                 }
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::OduDef { name, body, .. } => {
@@ -750,7 +864,7 @@ impl Interpreter {
                     "declare",
                     format!("[taboo] {} -> {} forbidden", source, target),
                 );
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::Ewo {
@@ -760,7 +874,7 @@ impl Interpreter {
             } => {
                 let condition_val = self.evaluate(condition)?;
                 match condition_val {
-                    IfaValue::Bool(true) => Ok(IfaValue::null()),
+                    IfaValue::Bool(true) => Ok(IfaValue::Null),
                     IfaValue::Bool(false) => {
                         let msg = message
                             .clone()
@@ -795,7 +909,7 @@ impl Interpreter {
                 // Set call-frame limit for this interpreter session
                 let (_, frame_cap) = opon_size.limits();
                 self.call_depth_limit = frame_cap;
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::Ebo { offering, .. } => {
@@ -805,7 +919,7 @@ impl Interpreter {
                     "initiate",
                     format!("[ẹbọ/sacrifice] Aspect initiated: {}", val),
                 );
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
 
             Statement::Ailewu { body, .. } => {
@@ -817,7 +931,7 @@ impl Interpreter {
                             return Ok(res);
                         }
                     }
-                    Ok(IfaValue::null())
+                    Ok(IfaValue::Null)
                 })();
                 self.unsafe_depth -= 1;
                 result
@@ -844,7 +958,7 @@ impl Interpreter {
                         ));
                     }
                 }
-                Ok(IfaValue::null())
+                Ok(IfaValue::Null)
             }
         }
     }
@@ -958,9 +1072,34 @@ impl Interpreter {
                 object,
                 method,
                 args,
+                is_optional,
+            } => {
+                let mut obj = self.evaluate(object)?;
+                if *is_optional && obj.is_null() {
+                    return Ok(IfaValue::Null);
+                }
+                self.call_method(&mut obj, method, args)
+            }
+
+            Expression::Get {
+                object,
+                name,
+                is_optional,
             } => {
                 let obj = self.evaluate(object)?;
-                self.call_method(&obj, method, args)
+                if *is_optional && obj.is_null() {
+                    return Ok(IfaValue::Null);
+                }
+                match obj {
+                    IfaValue::Map(map) => {
+                        Ok(map.get(name.as_str()).cloned().unwrap_or(IfaValue::Null))
+                    }
+                    _ => Err(IfaError::Runtime(format!(
+                        "Cannot access property '{}' on type {}",
+                        name,
+                        obj.type_name()
+                    ))),
+                }
             }
 
             Expression::Call { name, args } => {
@@ -1043,8 +1182,15 @@ impl Interpreter {
                 Ok(IfaValue::map(map))
             }
 
-            Expression::Index { object, index } => {
+            Expression::Index {
+                object,
+                index,
+                is_optional,
+            } => {
                 let obj = self.evaluate(object)?;
+                if *is_optional && obj.is_null() {
+                    return Ok(IfaValue::Null);
+                }
                 let idx = self.evaluate(index)?;
 
                 match (obj, idx) {
@@ -1056,10 +1202,9 @@ impl Interpreter {
                             Err(IfaError::Runtime(format!("Index {} out of bounds", i)))
                         }
                     }
-                    (IfaValue::Map(map), IfaValue::Str(key)) => map
-                        .get(&key)
-                        .cloned()
-                        .ok_or_else(|| IfaError::Runtime(format!("Key '{}' not found", key))),
+                    (IfaValue::Map(map), IfaValue::Str(key)) => {
+                        Ok(map.get(&key).cloned().unwrap_or(IfaValue::Null))
+                    }
                     _ => Err(IfaError::Runtime("Invalid index operation".into())),
                 }
             }
@@ -1089,6 +1234,11 @@ impl Interpreter {
     }
 
     fn execute_odu_call(&mut self, call: &OduCall) -> IfaResult<IfaValue> {
+        // OduCall doesn't really have a 'receiver' in the same way, 
+        // but we support optional chaining for consistency if the domain check ever fails.
+        // For now, domains are static, but if we add dynamic domains, this will be useful.
+        // Actually, if a domain is explicitly marked optional but we can't find it, we could return ofo.
+        
         let args: Vec<IfaValue> = call
             .args
             .iter()
@@ -1097,6 +1247,7 @@ impl Interpreter {
 
         // Minimal async support for Osa domain (spawn/await helpers)
         if call.domain == OduDomain::Osa {
+            // ... (rest of Osa logic)
             match call.method.as_str() {
                 "ise" | "spawn" | "sa" | "bẹrẹ" => {
                     let task = args
@@ -1128,7 +1279,7 @@ impl Interpreter {
                                 "sleep",
                                 format!("[osa.sleep] requested {} milliseconds", ms),
                             );
-                            return Ok(IfaValue::future_ready(IfaValue::null()));
+                            return Ok(IfaValue::future_ready(IfaValue::Null));
                         }
                         IfaValue::Int(_) => {
                             return Err(IfaError::ArgumentError(
@@ -1161,6 +1312,21 @@ impl Interpreter {
         )
     }
 
+    /// Apply the `+=` operator, which is type-aware: numeric Add for Int/Float, Concat for Str.
+    fn apply_update_add(&mut self, current: &IfaValue, value: &Option<Expression>) -> IfaResult<IfaValue> {
+        let rhs_expr = value.as_ref().ok_or_else(|| IfaError::Runtime("Update missing value".into()))?;
+        let rhs = self.evaluate(rhs_expr)?;
+        match (current, &rhs) {
+            (IfaValue::Str(a), IfaValue::Str(b)) => {
+                let mut s = String::with_capacity(a.len() + b.len());
+                s.push_str(a);
+                s.push_str(b);
+                Ok(IfaValue::str(s))
+            }
+            _ => self.apply_binary_op(current, &BinaryOperator::Add, &rhs),
+        }
+    }
+
     fn apply_binary_op(
         &self,
         left: &IfaValue,
@@ -1173,10 +1339,7 @@ impl Interpreter {
                 (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::float(a + b)),
                 (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::float(*a as f64 + b)),
                 (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::float(a + *b as f64)),
-                (IfaValue::Str(a), IfaValue::Str(b)) => Ok(IfaValue::str(format!("{}{}", a, b))),
-                (IfaValue::Str(a), _) => Ok(IfaValue::str(format!("{}{}", a, right))),
-                (_, IfaValue::Str(b)) => Ok(IfaValue::str(format!("{}{}", left, b))),
-                _ => Err(IfaError::Runtime("Invalid operands for +".into())),
+                _ => Err(IfaError::Runtime("Invalid operands for + (use += for strings)".into())),
             },
             BinaryOperator::Sub => match (left, right) {
                 (IfaValue::Int(a), IfaValue::Int(b)) => Ok(IfaValue::int(a - b)),
@@ -1286,7 +1449,7 @@ impl Interpreter {
 
     fn call_method(
         &mut self,
-        obj: &IfaValue,
+        obj: &mut IfaValue,
         method: &str,
         args: &[Expression],
     ) -> IfaResult<IfaValue> {
@@ -1351,9 +1514,29 @@ impl Interpreter {
                     }),
                 }
             }
+            IfaValue::List(vec_arc) => match method {
+                "fikun" | "fi_kún" | "append" | "push" => {
+                    let mut arg_values = Vec::with_capacity(args.len());
+                    for arg in args {
+                        arg_values.push(self.evaluate(arg)?);
+                    }
+                    let val = arg_values.get(0).ok_or_else(|| {
+                        IfaError::ArgumentError("List.fikun expects 1 argument".into())
+                    })?;
+                    // HIGH PERFORMANCE: CoW using make_mut
+                    let vec = std::sync::Arc::make_mut(vec_arc);
+                    vec.push(val.clone());
+                    Ok(IfaValue::Null)
+                }
+                _ => Err(IfaError::Runtime(format!(
+                    "Method '{}' not found on List",
+                    method
+                ))),
+            },
             _ => Err(IfaError::Runtime(format!(
-                "Method '{}' not implemented",
-                method
+                "Method '{}' not implemented on type {}",
+                method,
+                obj.type_name()
             ))),
         }
     }
@@ -1402,7 +1585,7 @@ impl Interpreter {
             Environment::define(&self.env, param, value);
         }
 
-        let mut result = Ok(IfaValue::null());
+        let mut result = Ok(IfaValue::Null);
         for stmt in body {
             result = self.execute_statement(stmt);
             if let Ok(val) = &result {
@@ -1462,7 +1645,7 @@ impl Interpreter {
             Environment::define(&self.env, param, value);
         }
 
-        let mut result = Ok(IfaValue::null());
+        let mut result = Ok(IfaValue::Null);
         for stmt in body {
             result = self.execute_statement(stmt);
             if let Ok(val) = &result {

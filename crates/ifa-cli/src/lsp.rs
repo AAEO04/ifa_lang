@@ -25,10 +25,9 @@ pub fn run() -> Result<(), Box<dyn Error + Send + Sync>> {
         completion_provider: Some(CompletionOptions {
             resolve_provider: Some(false),
             trigger_characters: Some(vec![".".to_string(), ":".to_string()]),
-            work_done_progress_options: Default::default(),
-            all_commit_characters: None,
-            completion_item: None,
+            ..Default::default()
         }),
+        code_action_provider: Some(lsp_types::CodeActionProviderCapability::Simple(true)),
         ..Default::default()
     })?;
 
@@ -57,28 +56,55 @@ fn main_loop(
                 if connection.handle_shutdown(&req)? {
                     return Ok(());
                 }
-                match cast_req::<lsp_types::request::Completion>(Message::Request(req)) {
-                    Ok((id, params)) => {
-                        eprintln!(
-                            "Got completion request for: {}",
-                            params.text_document_position.text_document.uri
-                        );
-                        let result = Some(lsp_types::CompletionResponse::Array(get_completions(
-                            &context,
-                        )));
-                        let result = serde_json::to_value(&result)
-                            .map_err(|e| format!("Failed to serialize completion: {}", e))?;
-                        let resp = Response {
-                            id,
-                            result: Some(result),
-                            error: None,
-                        };
-                        connection.sender.send(Message::Response(resp))?;
+                let req_msg = Message::Request(req);
+                if let Ok((id, params)) = cast_req::<lsp_types::request::Completion>(req_msg.clone()) {
+                    eprintln!(
+                        "Got completion request for: {}",
+                        params.text_document_position.text_document.uri
+                    );
+                    let result = Some(lsp_types::CompletionResponse::Array(get_completions(
+                        &context,
+                    )));
+                    let result = serde_json::to_value(&result)
+                        .map_err(|e| format!("Failed to serialize completion: {}", e))?;
+                    let resp = Response { id, result: Some(result), error: None };
+                    connection.sender.send(Message::Response(resp))?;
+                } else if let Ok((id, params)) = cast_req::<lsp_types::request::CodeActionRequest>(req_msg.clone()) {
+                    let mut actions = Vec::new();
+                    for diagnostic in params.context.diagnostics {
+                        if diagnostic.code == Some(lsp_types::NumberOrString::String("UNUSED_VARIABLE".to_string())) {
+                            let msg = &diagnostic.message;
+                            if let Some(start) = msg.find('\'') {
+                                if let Some(end) = msg[start+1..].find('\'') {
+                                    let name = &msg[start+1..start+1+end];
+                                    let new_name = format!("_{}", name);
+                                    
+                                    let mut changes = std::collections::HashMap::new();
+                                    changes.insert(params.text_document.uri.clone(), vec![lsp_types::TextEdit {
+                                        range: diagnostic.range,
+                                        new_text: new_name.clone(),
+                                    }]);
+
+                                    actions.push(lsp_types::CodeActionOrCommand::CodeAction(lsp_types::CodeAction {
+                                        title: format!("Sanctify (prefix with _): {}", new_name),
+                                        kind: Some(lsp_types::CodeActionKind::QUICKFIX),
+                                        diagnostics: Some(vec![diagnostic]),
+                                        edit: Some(lsp_types::WorkspaceEdit {
+                                            changes: Some(changes),
+                                            ..Default::default()
+                                        }),
+                                        is_preferred: Some(true),
+                                        ..Default::default()
+                                    }));
+                                }
+                            }
+                        }
                     }
-                    Err(Message::Request(req)) => {
-                        eprintln!("Unknown request: {:?}", req);
-                    }
-                    _ => {}
+                    let result = serde_json::to_value(&actions).unwrap_or(serde_json::Value::Null);
+                    let resp = Response { id, result: Some(result), error: None };
+                    connection.sender.send(Message::Response(resp))?;
+                } else {
+                    // Unknown or unhandled request
                 }
             }
             Message::Response(resp) => {
@@ -151,15 +177,28 @@ fn publish_diagnostics(
                     IfaSeverity::Style => DiagnosticSeverity::HINT,
                 };
 
-                let range = Range {
-                    start: Position {
-                        line: (diag.error.line).saturating_sub(1) as u32,
-                        character: (diag.error.column).saturating_sub(1) as u32,
-                    },
-                    end: Position {
-                        line: (diag.error.line).saturating_sub(1) as u32,
-                        character: (diag.error.column + 5) as u32,
-                    }, // Approx length
+                let range = if let Some(span) = &diag.error.span {
+                    Range {
+                        start: Position {
+                            line: span.line.saturating_sub(1) as u32,
+                            character: span.column.saturating_sub(1) as u32,
+                        },
+                        end: Position {
+                            line: span.line.saturating_sub(1) as u32, // Simplified: assume single line for now if not available
+                            character: (span.column as u32 + (span.end as u32).saturating_sub(span.start as u32)),
+                        },
+                    }
+                } else {
+                    Range {
+                        start: Position {
+                            line: (diag.error.line).saturating_sub(1) as u32,
+                            character: (diag.error.column).saturating_sub(1) as u32,
+                        },
+                        end: Position {
+                            line: (diag.error.line).saturating_sub(1) as u32,
+                            character: (diag.error.column + 5) as u32,
+                        }, // Approx length fallback
+                    }
                 };
 
                 let message = if let Some(wisdom) = &diag.wisdom {
@@ -309,7 +348,7 @@ fn get_completions(context: &Option<LintContext>) -> Vec<CompletionItem> {
 
     // Dynamic Completions from Context
     if let Some(ctx) = context {
-        for var in &ctx.defined_vars {
+        for (var, _) in &ctx.defined_vars {
             let detail = if let Some(type_hint) = ctx.get_var_type(var) {
                 format!("Variable: {:?}", type_hint)
             } else {

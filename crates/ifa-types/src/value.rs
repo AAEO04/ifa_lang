@@ -429,6 +429,11 @@ impl IfaValue {
         }
     }
 
+    /// Check if value is null
+    pub fn is_null(&self) -> bool {
+        matches!(self, IfaValue::Null)
+    }
+
     /// Get length (for strings, lists, maps)
     pub fn len(&self) -> usize {
         match self {

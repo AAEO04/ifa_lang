@@ -82,6 +82,7 @@ impl RustTranspiler {
                         domain: *domain,
                         method: name.clone(),
                         args: args.clone(),
+                        is_optional: false,
                         span: Span::default(),
                     };
                     return self.transpile_odu_call(&call);
@@ -97,16 +98,38 @@ impl RustTranspiler {
                 format!("({}).await", inner)
             }
 
-            Expression::Index { object, index } => {
+            Expression::Index {
+                object,
+                index,
+                is_optional,
+            } => {
                 let obj = self.transpile_expression(object);
                 let idx = self.transpile_expression(index);
-                format!("{}[{}]", obj, idx)
+                if *is_optional {
+                    format!("(({}).get_optional({}))", obj, idx)
+                } else {
+                    format!("{}[{}]", obj, idx)
+                }
+            }
+
+            Expression::Get {
+                object,
+                name,
+                is_optional,
+            } => {
+                let obj = self.transpile_expression(object);
+                if *is_optional {
+                    format!("(({}).get_attr_optional(\"{}\"))", obj, name)
+                } else {
+                    format!("{}.{}", obj, name)
+                }
             }
 
             Expression::MethodCall {
                 object,
                 method,
                 args,
+                is_optional,
             } => {
                 if let Expression::Identifier(obj_name) = &**object {
                     if let Some(domain) = self.std_modules.get(obj_name) {
@@ -114,6 +137,7 @@ impl RustTranspiler {
                             domain: *domain,
                             method: method.clone(),
                             args: args.clone(),
+                            is_optional: *is_optional,
                             span: Span::default(),
                         };
                         return self.transpile_odu_call(&call);

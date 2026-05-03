@@ -88,8 +88,8 @@ fn check_domain(lex: &mut Lexer<Token>) -> Option<OduDomain> {
                 // Ika (0100) - Strings
                 "str" | "string" => Some(OduDomain::Ika),
 
-                // Oturupon (0010) - Division
-                "div" => Some(OduDomain::Oturupon),
+                // Oturupon (0010) - Division / Inverse
+                "inv" | "inverse" | "div" => Some(OduDomain::Oturupon),
 
                 // Otura (1011) - Networking
                 "net" | "http" => Some(OduDomain::Otura),
@@ -314,14 +314,12 @@ pub enum Token {
     // IDENTIFIERS & DOMAINS
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Odù domain names (checked via callback)
-    #[regex(r"[A-Z][a-zA-Z_\u0080-\uFFFF]*", |lex| {
-        check_domain(lex)
-    })]
+    // Odù domain names (supports lowercase ergonomic aliases)
+    #[regex(r"[a-zA-Z\u0080-\uFFFF][a-zA-Z0-9_\u0080-\uFFFF]*", check_domain, priority = 2)]
     Domain(OduDomain),
 
     // Regular identifiers
-    #[regex(r"[a-z_\u0080-\uFFFF][a-zA-Z0-9_\u0080-\uFFFF]*", |lex| lex.slice().to_string())]
+    #[regex(r"[a-z_\u0080-\uFFFF][a-zA-Z0-9_\u0080-\uFFFF]*", |lex| lex.slice().to_string(), priority = 1)]
     Identifier(String),
 
     // ═══════════════════════════════════════════════════════════════════════

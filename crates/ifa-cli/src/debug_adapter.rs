@@ -393,7 +393,8 @@ pub fn run_debug_session(file: std::path::PathBuf) -> color_eyre::Result<()> {
 
     // Setup Interpreter
     let source = std::fs::read_to_string(&file)?;
-    let program = ifa_core::parse(&source)?;
+    let program =
+        ifa_core::parse(&source).map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
 
     let mut interpreter = Interpreter::with_file(&file);
     interpreter.set_capabilities(CapabilitySet::new()); // Full permissions for debug?

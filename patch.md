@@ -1,54 +1,60 @@
 # Ifá-Lang Hardening Patch: Strategic Blueprint
 
-This patch documents the architectural and security remediations required for Ifá-Lang v0.2. It addresses performance bottlenecks in string interpolation and critical vulnerabilities in the polyglot FFI bridge.
+This manifest documents the technical debt and architectural flaws in Ifá-Lang v0.2.
 
 ---
 
-## 1. String Interpolation (Hot-Path Optimization)
-
-**Issue**: Current implementation overloads `OpCode::Add`, polluting the arithmetic hot path.
-
-### Proposed Changes:
-- **`ifa-bytecode`**: Define `OpCode::Concat (0x27)` and `OpCode::ToString (0x28)`.
-- **`ifa-core` (VM)**: 
-    - Implement `OpCode::Concat` for strict `Str + Str` operations.
-    - Implement `OpCode::ToString` for coerced conversion.
-    - Revert `OpCode::Add` to pure numeric logic (Int/Float only).
-- **`ifa-core` (Compiler)**: Emit `ToString` followed by `Concat` for all interpolated segments.
+## 1. Hot-Path Optimization: Arithmetic vs. Strings
+**Status**: FIXED
+**Fix**: OpCode::Add is now PURE NUMERIC (Int/Float only). String concatenation
+uses OpCode::Concat (0x27), which is strict Str + Str only. The compiler emits
+Concat for string literals in += paths. The VM Add handler returns a typed error
+directing users to += for strings.
 
 ---
 
-## 2. FFI Bridge Security (The Shield of Ọ̀kànràn)
-
-**Issue**: Thread-unsafe environment manipulation, guest-level sandbox escapes, and memory leaks.
-
-### Remediation Blueprint:
-- **Eliminate `set_var` (BUG-018)**: Refactor bridge initialization to pass configuration directly to guest interpreter structs (e.g., `PyConfig` for Python) instead of modifying process-wide environment variables.
-- **Guest-Level Audit Hooks (BUG-019)**: Implement a callback system between the guest interpreter (Python/JS) and the Ifá `Ofun` capability matrix. Trap guest requests for `os.system` or file I/O and verify against Ifá permissions.
-- **Native Pointer Ownership (BUG-020)**: Implement a `Free` capability in the bridge. Native returns marking ownership must be explicitly deallocated using `libc::free` or the bridge-specific allocator after the Ifá string is copied.
-- **Secure Library Verification (BUG-021)**: Implement a hash-locked loading mechanism. Instead of just checking the path, verify the library's content hash against a "Sanctified" manifest to prevent TOCTOU replacement hacks.
+## 2. Operator Deprecation: ++ and --
+**Status**: FIXED  
+**Fix**: Removed inc_dec_op from grammar.pest. Removed Increment/Decrement
+from UpdateOp in ast.rs. Purged all handling from parser.rs, compiler.rs, and
+interpreter/core.rs. The sole mutation paths are now += / -= / *= / /=.
+apply_update_add() handles dual int/string += semantics at the interpreter level.
 
 ---
 
-## 3. Static Oversight (Babalawo)
-
-**New Rule**: `TABOO_UNSAFE_FFI`
-- Babalawo must statically flag any `ffi.itumo()` (Summon Bridge) call.
-- All bridge summons require explicit authorization in the `Babalawo.wisdom` manifest.
-- **The Proverb**: "Hidden mirrors reflect stolen shadows" — FFI should never be invisible to the auditor.
-
----
-
-## 4. Catastrophic Failure & Segfault Handling
-
-**Philosophy**: "Fail-Stop over Corruption."
-
-### Strategy:
-- **The Core**: Rely on Rust's memory safety to eliminate segfaults in the VM logic. bounds-checked accesses and the `Option/Result` pattern ensure that the runtime itself is immune to standard C-style memory corruption.
-- **The Bridges**: FFI-induced segfaults are treated as fatal. No process-level signal handlers are implemented; a segfault in a foreign library terminates the Ifá-Lang process immediately. This "hard exit" is intentional to prevent compromised guest code from corrupting host memory.
-- **Static Guard**: Babalawo flags high-risk FFI bindings via `TABOO_UNSAFE_FFI` to prevent "Hidden Crashes" before they can manifest at runtime.
+## 3. Babalawo: Ghost Verification Engine
+**Status**: FIXED
+**Checks implemented**:
+  - AWAIT_OUTSIDE_ASYNC: reti (await) now errors when used outside a daro function.
+  - NON_ITERABLE: For loop warns statically if iterable type is not List/Map/Str/Array.
+  - Params warning resolved: function params are now registered as used.
+  - in_async_function flag tracks context across nested function definitions.
+  - Expression::Get, Call, UnaryOp, InterpolatedString now fully traversed.
 
 ---
 
-**Status**: DOCUMENTED / READY FOR IMPLEMENTATION
-**Action**: DO NOT EXECUTE - Refer to this blueprint for future hardening cycles.
+## 4. The Shield of Okànràn: FFI Security Layer
+**Status**: PENDING
+**Issue**: Polyglot bridges (Python/JS) lack capability-matrix hooks and secure
+library verification.
+**Remediation**: Eliminate set_var (BUG-018), implement Guest-Level Audit Hooks
+(BUG-019), and Secure Library Verification (BUG-021).
+
+---
+
+## 5. CLI Subcommand Restriction
+**Status**: FIXED
+**Issue**: ifa <file> is broken; mandatory subcommands required.
+**Remediation**: Re-implemented positional argument support by intercepting `std::env::args()` and dynamically injecting the `run` default subcommand.
+
+---
+
+## 6. LSP Type and Ownership Debt
+**Status**: FIXED
+**Fix**: lsp.rs uses CodeActionRequest and clones new_name to avoid illegal moves.
+
+---
+
+**Current Project Status**: RECOVERY IN PROGRESS (5 of 6 milestones complete)
+**Linus Verdict**: The compiler is finally telling the truth about what it checks.
+Two fewer lies. One to go.

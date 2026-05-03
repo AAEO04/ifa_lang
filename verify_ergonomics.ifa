@@ -1,0 +1,26 @@
+# Verification: Lowercase Ergonomic Aliases (Math & Inv)
+# Standard duality: Obara (Expansion) vs Oturupon (Reduction)
+
+
+
+ayanmo a = 10;
+ayanmo b = 5;
+
+# 1. Obara Expansion (math.add)
+ayanmo res1 = math.add(a, b);
+Irosu.fo($"Math Add: {a} + {b} = {res1}");
+
+# 2. Oturupon Reduction (inv.sub)
+ayanmo res2 = inv.sub(res1, 3);
+Irosu.fo($"Inv Sub: {res1} - 3 = {res2}");
+
+# 3. Oturupon Reduction (inv.div)
+ayanmo res3 = inv.div(res1, 2);
+Irosu.fo($"Inv Div: {res1} / 2 = {res3}");
+
+# Validation
+Okanran.assert(res1 == 15, "Math add failed");
+Okanran.assert(res2 == 12, "Inv sub failed");
+Okanran.assert(res3 == 7.5, "Inv div failed");
+
+Irosu.fo("Duality Verified: Math and Inverse operations working in Harmony.");

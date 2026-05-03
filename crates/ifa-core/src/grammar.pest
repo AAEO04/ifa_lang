@@ -12,11 +12,13 @@ program = { SOI ~ statement* ~ EOI }
 statement = {
     import_stmt
     | from_import_stmt
+    | instruction
     | opon_stmt
     | ebo_stmt
     | ailewu_stmt
     | var_decl
     | const_stmt
+    | update_stmt
     | assignment_stmt
 
     | odu_def
@@ -27,7 +29,6 @@ statement = {
     | return_stmt
     | taboo_stmt
     | ewo_stmt
-    | instruction
     | ase_stmt
     | match_stmt
     | try_stmt
@@ -75,13 +76,19 @@ const_kw = { "const" | "loruko" | "ka" | "ayanfe" | "àyànfẹ́" }
 
 // Assignment: x = 5; *p = 5; arr[0] = 5;
 assignment_stmt = { lvalue ~ "=" ~ expression ~ ";" }
-lvalue = { deref_lvalue | index_lvalue | ident }
+
+// Update: x += 5;
+update_stmt = { lvalue ~ update_op ~ expression ~ ";" }
+update_op = { "+=" | "-=" | "*=" | "/=" }
+
+lvalue = { deref_lvalue | index_lvalue | property_access | ident }
 deref_lvalue = { "*" ~ expression } // *ptr
-index_lvalue = { ident ~ "[" ~ expression ~ "]" }
+index_lvalue = { ident ~ "?."? ~ "[" ~ expression ~ "]" }
 
 // Instruction: Obara.fikun(10);
-instruction = { odu_call ~ ";" }
-odu_call = { odu_name ~ "." ~ ident ~ "(" ~ arguments? ~ ")" }
+instruction = { (odu_call | method_call | function_call) ~ ";" }
+// Domain call: Obara.fikun(10) or Obara?.fikun(10)
+odu_call = { odu_name ~ chain_op ~ ident ~ "(" ~ arguments? ~ ")" }
 
 // Class: odu Server { }
 odu_def = { public_mod? ~ odu_kw ~ ident ~ "{" ~ odu_body ~ "}" }
@@ -166,11 +173,12 @@ try_op = { "?" }
 atom = {
     odu_call
     | method_call
+    | property_access
     | function_call
+    | index_access
     | await_expr
     | list_literal
     | map_literal
-    | index_access
     | number
     | interpolated_string
     | string
@@ -183,14 +191,17 @@ atom = {
 // Interpolated string: $"Hello {name}"
 interpolated_string = { "$" ~ "\"" ~ (interp_part)* ~ "\"" }
 interp_part = { interp_expr | interp_text }
-interp_text = @{ (!("\"" | "{") ~ ANY)+ }
+interp_text = @{ ( (!("\"" | "{" | "\\") ~ ANY) | ("\\" ~ ANY) )+ }
 interp_expr = { "{" ~ expression ~ "}" }
 
 // Function call: func(args)
 function_call = { ident ~ "(" ~ arguments? ~ ")" }
 
-// Method call: obj.method(args)
-method_call = { ident ~ "." ~ ident ~ "(" ~ arguments? ~ ")" }
+// Method call: obj.method(args) or obj?.method(args)
+method_call = { ident ~ chain_op ~ ident ~ "(" ~ arguments? ~ ")" }
+
+// Property access: obj.field or obj?.field
+property_access = { ident ~ ( chain_op ~ ident )+ }
 
 // List: [1, 2, 3]
 list_literal = { "[" ~ (expression ~ ("," ~ expression)*)? ~ "]" }
@@ -199,8 +210,8 @@ list_literal = { "[" ~ (expression ~ ("," ~ expression)*)? ~ "]" }
 map_literal = { "{" ~ (map_entry ~ ("," ~ map_entry)*)? ~ "}" }
 map_entry = { (string | ident) ~ ":" ~ expression }
 
-// Index: arr[0]
-index_access = { ident ~ "[" ~ expression ~ "]" }
+// Index: arr[0] or arr?.[0]
+index_access = { ident ~ "?."? ~ "[" ~ expression ~ "]" }
 
 // Await: reti expr
 await_expr = { await_kw ~ expression }
@@ -223,6 +234,8 @@ comp_op = { "==" | "!=" | "<=" | ">=" | "<" | ">" }
 and_op = { "&&" | "ati" | "and" }
 or_op = { "||" | "tabi" | "or" }
 not_op = { "!" | "kii" | "not" }
+chain_op = { "." | "?." }
+optional_chain_op = { "?." }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // KEYWORDS (Yoruba + English)
@@ -230,7 +243,7 @@ not_op = { "!" | "kii" | "not" }
 
 import_kw = _{ "iba" | "ìbà" | "import" | "mu" }
 from_kw = _{ "lati" | "láti" | "from" }
-var_kw = _{ "ayanmo" | "àyànmọ́" | "let" | "var" }
+var_kw = _{ "ayanmo" | "ayanmọ" | "àyànmọ́" | "variable" | "let" | "var" }
 odu_kw = _{ "odu" | "odù" | "class" }
 ese_kw = _{ "ese" | "ẹsẹ" | "fn" | "function" | "def" }
 if_kw = _{ "ti" | "bí" | "if" }
@@ -251,33 +264,31 @@ await_kw = _{ "reti" | "await" }
 // ═══════════════════════════════════════════════════════════════════════════
 
 odu_name = @{
-    "Ogbe" | "Ogbè" |
-    "Oyeku" | "Ọ̀yẹ̀kú" |
-    "Iwori" | "Ìwòrì" |
-    "Odi" | "Òdí" |
-    "Irosu" | "Ìrosù" |
-    "Owonrin" | "Ọ̀wọ́nrín" |
-    "Obara" | "Ọ̀bàrà" |
-    "Okanran" | "Ọ̀kànràn" |
-    "Ogunda" | "Ògúndá" |
-    "Osa" | "Ọ̀sá" |
-    "Ika" | "Ìká" |
-    "Oturupon" | "Òtúúrúpọ̀n" |
-    "Otura" | "Òtúrá" |
-    "Irete" | "Ìrẹtẹ̀" |
-    "Ose" | "Ọ̀ṣẹ́" |
-    "Ofun" | "Òfún" |
+    "Ogbe" | "Ogbè" | "sys" | "system" |
+    "Oyeku" | "Ọ̀yẹ̀kú" | "exit" |
+    "Iwori" | "Ìwòrì" | "time" |
+    "Odi" | "Òdí" | "fs" | "io" |
+    "Irosu" | "Ìrosù" | "log" | "out" |
+    "Owonrin" | "Ọ̀wọ́nrín" | "rand" |
+    "Obara" | "Ọ̀bàrà" | "math" | "arithmetic" |
+    "Okanran" | "Ọ̀kànràn" | "err" | "debug" |
+    "Ogunda" | "Ògúndá" | "vec" | "list" |
+    "Osa" | "Ọ̀sá" | "async" | "task" |
+    "Ika" | "Ìká" | "str" | "string" |
+    "Oturupon" | "Òtúúrúpọ̀n" | "inv" | "calc" | "inverse" |
+    "Otura" | "Òtúrá" | "net" | "http" |
+    "Irete" | "Ìrẹtẹ̀" | "hash" | "crypto" |
+    "Ose" | "Ọ̀ṣẹ́" | "ui" | "gui" | "draw" |
+    "Ofun" | "Òfún" | "meta" | "perm" |
     // Pseudo-domains
-    "Coop" | "Àjọṣe" |
+    "Coop" | "Àjọṣe" | "ffi" | "bridge" |
     "Opele" | "Ọpẹlẹ" | "Oracle" |
-
     // Infrastructure
     "Sys" | "System" |
     "Cpu" | "Gpu" |
     "Storage" | "Store" | "Db" |
     "Ohun" | "Audio" |
     "Fidio" | "Video" |
-
     // Stacks
     "Backend" | "Frontend" |
     "Fullstack" | "Fusion" |
@@ -296,7 +307,10 @@ number = @{
     | ("0b" ~ (ASCII_BIN_DIGIT | "_")+)
     | (ASCII_DIGIT ~ (ASCII_DIGIT | "_")* ~ ("." ~ ASCII_DIGIT ~ (ASCII_DIGIT | "_")*)?)
 }
-string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" | "'" ~ (!"'" ~ ANY)* ~ "'" }
+string = @{
+    "\"" ~ ( (!("\"" | "\\") ~ ANY) | ("\\" ~ ANY) )* ~ "\""
+    | "'" ~ ( (!("'" | "\\") ~ ANY) | ("\\" ~ ANY) )* ~ "'"
+}
 boolean = { "true" | "false" | "otito" | "iro" }
 nil = { "ofo" | "null" | "nil" }
 

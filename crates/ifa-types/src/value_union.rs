@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 #[cfg(feature = "vm")]
-use std::sync::Mutex;
+use std::{cell::RefCell, rc::Rc, sync::Mutex};
 
 #[cfg(feature = "vm")]
 use crate::ast::Statement;
@@ -68,7 +68,7 @@ pub enum IfaValue {
     Return(Arc<IfaValue>),
 
     // 4. Okanran (Error Handling)
-    Result(bool, Box<IfaValue>),
+    Result(Box<ResultPayload>),
 }
 
 // ============================================================================
@@ -77,7 +77,7 @@ pub enum IfaValue {
 
 /// Shared mutable cell used for closure capture (by-reference semantics).
 #[cfg(feature = "vm")]
-pub type UpvalueCell = Arc<Mutex<IfaValue>>;
+pub type UpvalueCell = Rc<RefCell<IfaValue>>;
 
 /// Closure payload for the bytecode VM.
 #[cfg(feature = "vm")]
@@ -100,6 +100,12 @@ pub enum FutureState {
 
 #[cfg(feature = "vm")]
 pub type FutureCell = Arc<Mutex<FutureState>>;
+
+#[derive(Clone, Debug)]
+pub enum ResultPayload {
+    Ok(IfaValue),
+    Err(IfaValue),
+}
 
 // ============================================================================
 // 2. Constructors & Helpers
@@ -175,11 +181,11 @@ impl IfaValue {
     }
 
     pub fn ok(val: IfaValue) -> Self {
-        IfaValue::Result(true, Box::new(val))
+        IfaValue::Result(Box::new(ResultPayload::Ok(val)))
     }
 
     pub fn err(val: IfaValue) -> Self {
-        IfaValue::Result(false, Box::new(val))
+        IfaValue::Result(Box::new(ResultPayload::Err(val)))
     }
 
     pub fn is_return(&self) -> bool {
@@ -205,7 +211,7 @@ impl IfaValue {
             IfaValue::Fn(_) => "Fn",
             #[cfg(feature = "vm")]
             IfaValue::AstFn(_) => "Fn",
-            IfaValue::Result(_, _) => "Result",
+            IfaValue::Result(_) => "Result",
             #[cfg(feature = "vm")]
             IfaValue::Upvalue(_) => "Upvalue",
             #[cfg(feature = "vm")]
@@ -232,19 +238,22 @@ impl IfaValue {
             IfaValue::Closure(_) => true,
             #[cfg(feature = "vm")]
             IfaValue::Return(v) => v.is_truthy(),
-            IfaValue::Result(_, _) => true,
+            IfaValue::Result(_) => true,
             #[cfg(feature = "vm")]
             IfaValue::Future(_) => true,
             #[cfg(feature = "vm")]
             IfaValue::Upvalue(cell) => cell
-                .lock()
-                .ok()
-                .as_deref()
-                .map(IfaValue::is_truthy)
+                .try_borrow()
+                .map(|value| value.is_truthy())
                 .unwrap_or(false),
             #[allow(unreachable_patterns)]
             _ => true,
         }
+    }
+
+    /// Check if value is null
+    pub fn is_null(&self) -> bool {
+        matches!(self, IfaValue::Null)
     }
 
     pub fn is_equal(&self, other: &Self) -> bool {
@@ -273,6 +282,11 @@ impl IfaValue {
                 a.iter()
                     .all(|(k, v)| b.get(k).map_or(false, |bv| v.is_equal(bv)))
             }
+            (IfaValue::Result(a), IfaValue::Result(b)) => match (a.as_ref(), b.as_ref()) {
+                (ResultPayload::Ok(av), ResultPayload::Ok(bv))
+                | (ResultPayload::Err(av), ResultPayload::Err(bv)) => av.is_equal(bv),
+                _ => false,
+            },
             _ => false,
         }
     }
@@ -303,13 +317,10 @@ impl fmt::Display for IfaValue {
             IfaValue::Fn(_) => write!(f, "<fn>"),
             #[cfg(feature = "vm")]
             IfaValue::AstFn(data) => write!(f, "<fn {}>", data.name),
-            IfaValue::Result(ok, val) => {
-                if *ok {
-                    write!(f, "Ok({})", val)
-                } else {
-                    write!(f, "Err({})", val)
-                }
-            }
+            IfaValue::Result(payload) => match payload.as_ref() {
+                ResultPayload::Ok(val) => write!(f, "Ok({})", val),
+                ResultPayload::Err(val) => write!(f, "Err({})", val),
+            },
             #[cfg(feature = "vm")]
             IfaValue::Future(_) => write!(f, "<future>"),
             _ => write!(f, "<?>"),
@@ -411,6 +422,16 @@ mod tests {
         let err = bincode::serialize(&value).expect_err("expected serialization failure");
         let msg = err.to_string();
         assert!(msg.contains("not serializable"));
+    }
+}
+
+#[cfg(test)]
+mod layout_tests {
+    use super::*;
+
+    #[test]
+    fn ifa_value_stays_within_16_bytes_on_64_bit() {
+        assert_eq!(std::mem::size_of::<IfaValue>(), 16);
     }
 }
 

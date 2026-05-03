@@ -1,0 +1,10 @@
+// Hardening Verification Test
+
+ayanmo s1 = "Hello";
+ayanmo s2 = "World";
+
+// 1. Verify Compiler uses Concat/ToString for Interpolation
+ayanmo interp = $"Combine: {s1} {s2}";
+Irosu.fo(interp);
+
+Irosu.fo("Verification Complete.");

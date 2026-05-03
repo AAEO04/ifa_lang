@@ -11,6 +11,7 @@ mod sandbox;
 
 use clap::{Parser, Subcommand};
 use eyre::{Result, WrapErr};
+use ifa_core::IfaValue;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -88,6 +89,45 @@ enum Commands {
     Runb {
         /// Path to .ifab bytecode file
         file: PathBuf,
+        /// Arguments to pass to the program
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+
+        /// Allow all permissions (insecure)
+        #[arg(long)]
+        allow_all: bool,
+
+        /// Allow read access to specific paths
+        #[arg(long)]
+        allow_read: Vec<PathBuf>,
+
+        /// Allow write access to specific paths
+        #[arg(long)]
+        allow_write: Vec<PathBuf>,
+
+        /// Allow network access to specific domains
+        #[arg(long)]
+        allow_net: Vec<String>,
+
+        /// Allow environment variable access
+        #[arg(long)]
+        allow_env: Vec<String>,
+
+        /// Allow execution of time functions
+        #[arg(long)]
+        allow_time: bool,
+
+        /// Allow random number generation (on by default)
+        #[arg(long, default_value = "true")]
+        allow_random: bool,
+
+        /// Allow Polyglot FFI for JavaScript
+        #[arg(long)]
+        allow_js: bool,
+
+        /// Allow Polyglot FFI for Python
+        #[arg(long)]
+        allow_python: bool,
     },
 
     /// Build native executable
@@ -165,6 +205,9 @@ enum Commands {
         /// Check only, don't modify
         #[arg(long)]
         check: bool,
+        /// Acknowledge that the formatter is not yet release-stable
+        #[arg(long)]
+        unstable: bool,
     },
 
     /// Start Language Server (LSP)
@@ -318,15 +361,31 @@ fn run_babalawo(program: &ifa_core::ast::Program, filepath: &std::path::Path) ->
     true
 }
 
+fn cli_args_value(args: Vec<String>) -> IfaValue {
+    IfaValue::list(args.into_iter().map(IfaValue::str).collect())
+}
+
 fn main() -> Result<()> {
     color_eyre::install()?;
 
-    let cli = Cli::parse();
+    // Intercept arguments to support implicit 'run' subcommand for `ifa <file>`
+    let mut args: Vec<String> = std::env::args().collect();
+    if args.len() >= 2 && !args[1].starts_with('-') {
+        let first_arg = args[1].as_str();
+        let subcommands = [
+            "run", "runb", "bytecode", "check", "doc", "fmt", "test", "lsp", "oja", "deploy", "help"
+        ];
+        if !subcommands.contains(&first_arg) {
+            args.insert(1, "run".to_string());
+        }
+    }
+
+    let cli = Cli::parse_from(args);
 
     match cli.command {
         Commands::Run {
             file,
-            args: _,
+            args,
             allow_all,
             allow_read,
             allow_write,
@@ -442,6 +501,11 @@ fn main() -> Result<()> {
             interpreter.register_handler(Box::new(ifa_std::handlers::sys::SysHandler::new()));
 
             interpreter.set_capabilities(caps.clone());
+            ifa_core::interpreter::Environment::define(
+                &interpreter.env,
+                "sys.args",
+                cli_args_value(args),
+            );
 
             // Handle sandbox modes
             match sandbox.as_str() {
@@ -529,7 +593,20 @@ fn main() -> Result<()> {
             Ok(())
         }
 
-        Commands::Runb { file } => {
+        Commands::Runb {
+            file,
+            args,
+            allow_all,
+            allow_read,
+            allow_write,
+            allow_net,
+            allow_env,
+            allow_time,
+            allow_random,
+            allow_js,
+            allow_python,
+        } => {
+            use ifa_sandbox::{CapabilitySet, Ofun};
             println!("⚡ Running bytecode: {}", file.display());
 
             // Security gate: bytecode must remain coupled to a verifiable source file.
@@ -555,6 +632,32 @@ fn main() -> Result<()> {
                 ));
             }
 
+            // Configure Capabilities
+            let mut caps = CapabilitySet::new();
+
+            if allow_all {
+                println!("Warning: Running bytecode with all permissions allowed!");
+                caps.grant(Ofun::ReadFiles { root: PathBuf::from("/") });
+                caps.grant(Ofun::ReadFiles { root: PathBuf::from("C:\\") });
+                caps.grant(Ofun::WriteFiles { root: PathBuf::from("/") });
+                caps.grant(Ofun::WriteFiles { root: PathBuf::from("C:\\") });
+                caps.grant(Ofun::Network { domains: vec!["*".to_string()] });
+                caps.grant(Ofun::Environment { keys: vec!["*".to_string()] });
+                caps.grant(Ofun::Time);
+                caps.grant(Ofun::Random);
+                caps.grant(Ofun::Stdio);
+            } else {
+                caps.grant(Ofun::Stdio); // Default allow stdio
+                for path in allow_read { caps.grant(Ofun::ReadFiles { root: path }); }
+                for path in allow_write { caps.grant(Ofun::WriteFiles { root: path }); }
+                if !allow_net.is_empty() { caps.grant(Ofun::Network { domains: allow_net }); }
+                if !allow_env.is_empty() { caps.grant(Ofun::Environment { keys: allow_env }); }
+                if allow_time { caps.grant(Ofun::Time); }
+                if allow_random { caps.grant(Ofun::Random); }
+                if allow_js { caps.grant(Ofun::Bridge { language: "js".into() }); }
+                if allow_python { caps.grant(Ofun::Bridge { language: "python".into() }); }
+            }
+
             // Read bytecode
             let bytes = std::fs::read(&file)
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to read bytecode: {}", e))?;
@@ -564,8 +667,10 @@ fn main() -> Result<()> {
                 .map_err(|e| color_eyre::eyre::eyre!("Invalid bytecode: {}", e))?;
 
             // Execute in VM with standard library
-            let registry = ifa_std::vm_registry::StdRegistry::new();
+            let mut registry = ifa_std::vm_registry::StdRegistry::new();
+            registry.set_capabilities(caps);
             let mut vm = ifa_core::IfaVM::new().with_registry(Box::new(registry));
+            vm.set_global("sys.args", cli_args_value(args));
             match vm.execute(&bytecode) {
                 Ok(result) => {
                     println!("Result: {:?}", result);
@@ -929,7 +1034,17 @@ lto = true
             Ok(())
         }
 
-        Commands::Fmt { file, check } => {
+        Commands::Fmt {
+            file,
+            check,
+            unstable,
+        } => {
+            if !unstable {
+                return Err(color_eyre::eyre::eyre!(
+                    "`ifa fmt` is still unstable. Re-run with `--unstable`."
+                ));
+            }
+
             let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
 
             use ifa_fmt::{FormatterConfig, format};

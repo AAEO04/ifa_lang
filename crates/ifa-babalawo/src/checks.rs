@@ -6,19 +6,24 @@
 use crate::diagnose::Babalawo;
 use crate::iwa::IwaEngine;
 use crate::taboo::TabooEnforcer;
-use ifa_core::ast::{Expression, Program, Statement, TypeHint};
+use ifa_core::ast::{Expression, Program, Statement, TypeHint, Visibility};
+use crate::Severity;
 use std::collections::{HashMap, HashSet};
 
 /// Context for linting - tracks state as we walk the AST
 #[derive(Debug)]
 pub struct LintContext {
-    /// Variables that have been defined
-    pub defined_vars: HashSet<String>,
+    /// Variables that have been defined (with their declaration span)
+    pub defined_vars: HashMap<String, ifa_core::ast::Span>,
     /// Variables that have been used
     pub used_vars: HashSet<String>,
     /// Variable types (for static type checking)
     /// Key: variable name, Value: declared type
     pub var_types: HashMap<String, TypeHint>,
+    /// Variable and function visibility
+    pub var_visibility: HashMap<String, Visibility>,
+    /// The domain (Odu) where the variable was defined, if any
+    pub var_domain: HashMap<String, Option<String>>,
     /// Imports
     pub imports: HashSet<String>,
     /// Current function name (if inside one)
@@ -35,6 +40,10 @@ pub struct LintContext {
     pub in_ailewu: bool,
     /// Active #opon directive size (if declared)
     pub opon_size: Option<String>,
+    /// Whether currently inside an async (daro) function
+    pub in_async_function: bool,
+    /// Current domain (class/odu) name, for visibility scoping
+    pub current_domain: Option<String>,
 }
 
 impl Default for LintContext {
@@ -46,9 +55,11 @@ impl Default for LintContext {
 impl LintContext {
     pub fn new() -> Self {
         Self {
-            defined_vars: HashSet::new(),
+            defined_vars: HashMap::new(),
             used_vars: HashSet::new(),
             var_types: HashMap::new(),
+            var_visibility: HashMap::new(),
+            var_domain: HashMap::new(),
             imports: HashSet::new(),
             current_function: None,
             has_return: false,
@@ -57,17 +68,23 @@ impl LintContext {
             taboo_enforcer: TabooEnforcer::new(),
             in_ailewu: false,
             opon_size: None,
+            in_async_function: false,
+            current_domain: None,
         }
     }
 
-    pub fn define_var(&mut self, name: &str) {
-        self.defined_vars.insert(name.to_string());
+    pub fn define_var(&mut self, name: &str, span: ifa_core::ast::Span, visibility: Visibility) {
+        self.defined_vars.insert(name.to_string(), span);
+        self.var_visibility.insert(name.to_string(), visibility);
+        self.var_domain.insert(name.to_string(), self.current_domain.clone());
     }
 
     /// Define a variable with a type hint
-    pub fn define_var_typed(&mut self, name: &str, type_hint: TypeHint) {
-        self.defined_vars.insert(name.to_string());
+    pub fn define_var_typed(&mut self, name: &str, type_hint: TypeHint, span: ifa_core::ast::Span, visibility: Visibility) {
+        self.defined_vars.insert(name.to_string(), span);
         self.var_types.insert(name.to_string(), type_hint);
+        self.var_visibility.insert(name.to_string(), visibility);
+        self.var_domain.insert(name.to_string(), self.current_domain.clone());
     }
 
     pub fn use_var(&mut self, name: &str) {
@@ -79,14 +96,50 @@ impl LintContext {
         self.var_types.get(name)
     }
 
-    pub fn enter_function(&mut self, name: &str) {
+    /// Get the visibility of a variable
+    pub fn get_var_visibility(&self, name: &str) -> Option<&Visibility> {
+        self.var_visibility.get(name)
+    }
+
+    /// Get the domain where a variable was defined
+    pub fn get_var_domain(&self, name: &str) -> Option<&Option<String>> {
+        self.var_domain.get(name)
+    }
+
+    /// Check if a symbol is accessible from the current context
+    pub fn is_accessible(&self, visibility: &Visibility, target_domain: Option<&String>) -> bool {
+        match visibility {
+            Visibility::Public | Visibility::Crate => true,
+            Visibility::Private => {
+                if let Some(target) = target_domain {
+                    // Must be in the same domain to access private members
+                    self.current_domain.as_ref() == Some(target)
+                } else {
+                    // Top-level privates are accessible within the same file (linting unit)
+                    true
+                }
+            }
+        }
+    }
+
+    pub fn enter_function(&mut self, name: &str, is_async: bool) {
         self.current_function = Some(name.to_string());
         self.has_return = false;
+        self.in_async_function = is_async;
     }
 
     pub fn exit_function(&mut self) {
         self.current_function = None;
         self.has_return = false;
+        self.in_async_function = false;
+    }
+
+    pub fn enter_domain(&mut self, name: &str) {
+        self.current_domain = Some(name.to_string());
+    }
+
+    pub fn exit_domain(&mut self) {
+        self.current_domain = None;
     }
 }
 
@@ -263,42 +316,48 @@ fn check_taboo_violations(ctx: &LintContext, baba: &mut Babalawo, file: &str) {
 fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
     match stmt {
         Statement::VarDecl {
-            name, type_hint, ..
+            name, type_hint, span, visibility, ..
         } => {
             if let Some(th) = type_hint {
-                ctx.define_var_typed(name, th.clone());
+                ctx.define_var_typed(name, th.clone(), span.clone(), *visibility);
             } else {
-                ctx.define_var(name);
+                ctx.define_var(name, span.clone(), *visibility);
             }
+        }
+        Statement::Const {
+            name, value: _, visibility, span,
+        } => {
+            ctx.define_var(name, span.clone(), *visibility);
         }
         Statement::EseDef {
             name,
             params,
             body,
+            span,
+            visibility,
             is_async: _,
-            ..
         } => {
-            ctx.define_var(name);
-            // Parameters are also definitions within the function
+            ctx.define_var(name, span.clone(), *visibility);
+            // Parameters are also definitions within the function (private by default)
             for param in params {
                 if let Some(th) = &param.type_hint {
-                    ctx.define_var_typed(&param.name, th.clone());
+                    ctx.define_var_typed(&param.name, th.clone(), span.clone(), Visibility::Private); // Simplification: param uses Ese span
                 } else {
-                    ctx.define_var(&param.name);
+                    ctx.define_var(&param.name, span.clone(), Visibility::Private);
                 }
             }
             for s in body {
                 collect_definitions(s, ctx);
             }
         }
-        Statement::OduDef { name, body, .. } => {
-            ctx.define_var(name);
+        Statement::OduDef { name, body, span, visibility } => {
+            ctx.define_var(name, span.clone(), *visibility);
             for s in body {
                 collect_definitions(s, ctx);
             }
         }
-        Statement::For { var, body, .. } => {
-            ctx.define_var(var);
+        Statement::For { var, iterable: _, body, span } => {
+            ctx.define_var(var, span.clone(), Visibility::Private);
             for s in body {
                 collect_definitions(s, ctx);
             }
@@ -397,7 +456,7 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
 
             // Check if target variable is defined
             if let ifa_core::ast::AssignTarget::Variable(name) = target {
-                if !ctx.defined_vars.contains(name) {
+                if !ctx.defined_vars.contains_key(name) {
                     baba.error(
                         "UNDEFINED_VARIABLE",
                         &format!("Variable '{}' assigned before declaration", name),
@@ -422,6 +481,20 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                                 span.column,
                             );
                         }
+                    }
+                }
+
+                // Check visibility
+                if let Some(visibility) = ctx.get_var_visibility(name) {
+                    let target_domain = ctx.get_var_domain(name).as_ref().and_then(|d| d.as_ref());
+                    if !ctx.is_accessible(visibility, target_domain) {
+                        baba.error(
+                            "VISIBILITY_VIOLATION",
+                            &format!("Èèwọ̀: Cannot access private variable '{}' from outside its domain", name),
+                            file,
+                            span.line,
+                            span.column,
+                        );
                     }
                 }
             }
@@ -490,13 +563,18 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
 
         Statement::EseDef {
             name,
+            params,
             body,
             span,
             visibility: _,
-            is_async: _,
-            ..
+            is_async,
         } => {
-            ctx.enter_function(name);
+            // Register params as used (they are implicitly used by the caller)
+            for param in params {
+                ctx.use_var(&param.name);
+            }
+
+            ctx.enter_function(name, *is_async);
 
             for s in body {
                 check_statement(s, ctx, baba, file);
@@ -519,10 +597,12 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             ctx.exit_function();
         }
 
-        Statement::OduDef { body, .. } => {
+        Statement::OduDef { name, body, .. } => {
+            ctx.enter_domain(name);
             for s in body {
                 check_statement(s, ctx, baba, file);
             }
+            ctx.exit_domain();
         }
 
         Statement::If {
@@ -564,6 +644,27 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
         } => {
             check_expression(iterable, ctx, baba, file, span);
             ctx.use_var(var);
+
+            // Iterable validation: warn if the expression is statically known
+            // to not be a collection type.
+            if let Some(inferred) = infer_expression_type(iterable, ctx) {
+                let is_iterable = matches!(
+                    inferred,
+                    TypeHint::List | TypeHint::Map | TypeHint::Str | TypeHint::Array { .. }
+                );
+                if !is_iterable {
+                    baba.warning(
+                        "NON_ITERABLE",
+                        &format!(
+                            "For loop iterates over '{:?}', which is not a collection type. Expected List, Map, Str, or Array.",
+                            inferred
+                        ),
+                        file,
+                        span.line,
+                        span.column,
+                    );
+                }
+            }
 
             for s in body {
                 check_statement(s, ctx, baba, file);
@@ -619,7 +720,7 @@ fn check_expression(
             ctx.use_var(name);
 
             // Check if variable is defined
-            if !ctx.defined_vars.contains(name) && !is_builtin(name) {
+            if !ctx.defined_vars.contains_key(name) && !is_builtin(name) {
                 baba.error(
                     "UNDEFINED_VARIABLE",
                     &format!("Variable '{}' used before declaration", name),
@@ -627,6 +728,20 @@ fn check_expression(
                     span.line,
                     span.column,
                 );
+            } else if !is_builtin(name) {
+                // Check visibility
+                if let Some(visibility) = ctx.get_var_visibility(name) {
+                    let target_domain = ctx.get_var_domain(name).as_ref().and_then(|d| d.as_ref());
+                    if !ctx.is_accessible(visibility, target_domain) {
+                        baba.error(
+                            "VISIBILITY_VIOLATION",
+                            &format!("Èèwọ̀: Cannot access private symbol '{}' from outside its domain", name),
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
+                }
             }
         }
 
@@ -665,7 +780,7 @@ fn check_expression(
             }
         }
 
-        Expression::Index { object, index } => {
+        Expression::Index { object, index, .. } => {
             check_expression(object, ctx, baba, file, span);
             check_expression(index, ctx, baba, file, span);
         }
@@ -682,6 +797,58 @@ fn check_expression(
             for arg in &call.args {
                 check_expression(arg, ctx, baba, file, span);
             }
+        }
+
+        Expression::Await(inner) => {
+            // §ASYNC_SAFETY: reti (await) is only valid inside a daro (async) function.
+            if !ctx.in_async_function {
+                baba.error(
+                    "AWAIT_OUTSIDE_ASYNC",
+                    "'reti' (await) used outside an async function. Declare function with 'daro ese' to use await.",
+                    file,
+                    span.line,
+                    span.column,
+                );
+            }
+            check_expression(inner, ctx, baba, file, span);
+        }
+
+        Expression::Get { object, .. } => {
+            check_expression(object, ctx, baba, file, span);
+        }
+
+        Expression::Call { name, args } => {
+            ctx.use_var(name);
+            
+            // Check visibility
+            if let Some(visibility) = ctx.get_var_visibility(name) {
+                let target_domain = ctx.get_var_domain(name).as_ref().and_then(|d| d.as_ref());
+                if !ctx.is_accessible(visibility, target_domain) {
+                    baba.error(
+                        "VISIBILITY_VIOLATION",
+                        &format!("Èèwọ̀: Cannot call private function '{}' from outside its domain", name),
+                        file,
+                        span.line,
+                        span.column,
+                    );
+                }
+            }
+
+            for arg in args {
+                check_expression(arg, ctx, baba, file, span);
+            }
+        }
+
+        Expression::InterpolatedString { parts } => {
+            for part in parts {
+                if let ifa_core::ast::InterpolatedPart::Expression(expr) = part {
+                    check_expression(expr, ctx, baba, file, span);
+                }
+            }
+        }
+
+        Expression::UnaryOp { expr, .. } => {
+            check_expression(expr, ctx, baba, file, span);
         }
 
         _ => {}
@@ -705,14 +872,14 @@ fn check_unsafe_ffi_call(call: &ifa_core::ast::OduCall, baba: &mut Babalawo, fil
 
 /// Check for unused variables
 fn check_unused_vars(ctx: &LintContext, baba: &mut Babalawo, file: &str) {
-    for var in &ctx.defined_vars {
+    for (var, span) in &ctx.defined_vars {
         if !ctx.used_vars.contains(var) && !var.starts_with('_') {
-            baba.warning(
+            baba.add_full(
+                Severity::Warning,
                 "UNUSED_VARIABLE",
                 &format!("Variable '{}' is defined but never used", var),
                 file,
-                1,
-                1,
+                span.clone(),
             );
         }
     }
@@ -739,7 +906,7 @@ fn expression_uses_var(expr: &Expression, var_name: &str) -> bool {
             expression_uses_var(left, var_name) || expression_uses_var(right, var_name)
         }
         Expression::List(items) => items.iter().any(|i| expression_uses_var(i, var_name)),
-        Expression::Index { object, index } => {
+        Expression::Index { object, index, .. } => {
             expression_uses_var(object, var_name) || expression_uses_var(index, var_name)
         }
         _ => false,
@@ -871,6 +1038,132 @@ mod tests {
         if let Ok(program) = parse(src) {
             let baba = check_program(&program, "test.ifa");
             assert!(baba.warning_count() > 0);
+        }
+    }
+
+    // §AWAIT_OUTSIDE_ASYNC: reti in a non-async function must trigger AWAIT_OUTSIDE_ASYNC
+    #[test]
+    fn test_await_outside_async_errors() {
+        let src = r#"
+            ese sync_fn() {
+                ayanmo result = reti Osa.ise("task");
+                pada result;
+            }
+        "#;
+        if let Ok(program) = parse(src) {
+            let baba = check_program(&program, "test.ifa");
+            let has_await_error = baba.diagnostics.iter().any(|d| d.error.code == "AWAIT_OUTSIDE_ASYNC");
+            assert!(has_await_error, "Expected AWAIT_OUTSIDE_ASYNC error but got: {:?}", baba.diagnostics);
+        }
+    }
+
+    // §AWAIT_OUTSIDE_ASYNC: reti inside a daro (async) function must be clean
+    #[test]
+    fn test_await_inside_async_is_clean() {
+        let src = r#"
+            daro ese async_fn() {
+                ayanmo result = reti Osa.ise("task");
+                pada result;
+            }
+        "#;
+        if let Ok(program) = parse(src) {
+            let baba = check_program(&program, "test.ifa");
+            let has_await_error = baba.diagnostics.iter().any(|d| d.error.code == "AWAIT_OUTSIDE_ASYNC");
+            assert!(!has_await_error, "Unexpected AWAIT_OUTSIDE_ASYNC in async function");
+        }
+    }
+
+    // §NON_ITERABLE: For loop over a typed Int variable must warn NON_ITERABLE
+    #[test]
+    fn test_for_loop_over_non_iterable_warns() {
+        let src = r#"
+            ese bad_loop() {
+                ayanmo n: Int = 5;
+                fun x ninu n {
+                    Irosu.ko(x);
+                }
+            }
+        "#;
+        if let Ok(program) = parse(src) {
+            let baba = check_program(&program, "test.ifa");
+            let has_warn = baba.diagnostics.iter().any(|d| d.error.code == "NON_ITERABLE");
+            assert!(has_warn, "Expected NON_ITERABLE warning but got: {:?}", baba.diagnostics);
+        }
+    }
+
+    // §NON_ITERABLE: For loop over a typed List must be clean
+    #[test]
+    fn test_for_loop_over_list_is_clean() {
+        let src = r#"
+            ese good_loop() {
+                ayanmo items: List = [1, 2, 3];
+                fun x ninu items {
+                    Irosu.ko(x);
+                }
+            }
+        "#;
+        if let Ok(program) = parse(src) {
+            let baba = check_program(&program, "test.ifa");
+            let has_warn = baba.diagnostics.iter().any(|d| d.error.code == "NON_ITERABLE");
+            assert!(!has_warn, "Unexpected NON_ITERABLE on a List variable");
+        }
+    }
+
+    #[test]
+    fn test_private_member_access_fails() {
+        let src = r#"
+            odu SecretHouse {
+                ikoko ayanmo key: Int = 123;
+                
+                gbangba ese getKey() { 
+                    pada key; 
+                }
+            }
+            
+            ese bad_access() {
+                ayanmo stolen = key;
+            }
+        "#;
+        if let Ok(program) = parse(src) {
+            let baba = check_program(&program, "test.ifa");
+            let has_error = baba.diagnostics.iter().any(|d| d.error.code == "VISIBILITY_VIOLATION");
+            assert!(has_error, "Expected VISIBILITY_VIOLATION error but got: {:?}", baba.diagnostics);
+        }
+    }
+
+    #[test]
+    fn test_public_member_access_passes() {
+        let src = r#"
+            odu OpenHouse {
+                gbangba ayanmo key: Int = 123;
+            }
+            
+            ese good_access() {
+                ayanmo found = key;
+            }
+        "#;
+        if let Ok(program) = parse(src) {
+            let baba = check_program(&program, "test.ifa");
+            let has_error = baba.diagnostics.iter().any(|d| d.error.code == "VISIBILITY_VIOLATION");
+            assert!(!has_error, "Unexpected VISIBILITY_VIOLATION on public member");
+        }
+    }
+
+    #[test]
+    fn test_internal_access_passes() {
+        let src = r#"
+            odu MyHouse {
+                ikoko ayanmo key: Int = 123;
+                
+                gbangba ese getKey() { 
+                    pada key; 
+                }
+            }
+        "#;
+        if let Ok(program) = parse(src) {
+            let baba = check_program(&program, "test.ifa");
+            let has_error = baba.diagnostics.iter().any(|d| d.error.code == "VISIBILITY_VIOLATION");
+            assert!(!has_error, "Unexpected VISIBILITY_VIOLATION on internal member access");
         }
     }
 }

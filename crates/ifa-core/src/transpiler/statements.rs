@@ -516,6 +516,10 @@ impl std::ops::Not for IfaValue {{
                 )
             }
 
+            Statement::Update { .. } => {
+                format!("{indent}compile_error!(\"Ifá transpiler: update statements (++, --, +=, etc) are not supported yet\");", indent = indent)
+            }
+
             Statement::Try { .. } => {
                 format!(
                     "{}compile_error!(\"Ifá transpiler: gbiyanju/gba (try/catch) is not supported yet\");",

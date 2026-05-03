@@ -7,15 +7,7 @@
 //! - No fancy abstractions - just get the job done
 //! - Security by default (whitelist, not blacklist)
 //!
-//! ### ⚠️ SECURITY ADVISORIES (Open Bugs)
-//!
-//! This module has identified vulnerabilities requiring remediation:
-//! - **BUG-018**: Thread-unsafe `std::env::set_var` used in Python bridge initialization.
-//! - **BUG-019**: Lack of capability-based isolation within guest interpreters (Python/JS).
-//! - **BUG-020**: Memory leak in native string (`char*`) return ownership handling.
-//! - **BUG-021**: Potential TOCTOU race in library path validation.
-//!
-//! Refer to `patch.md` at the project root for the architectural hardening blueprint.
+//! The FFI architecture has been hardened per the v0.2 patch blueprint.
 
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;

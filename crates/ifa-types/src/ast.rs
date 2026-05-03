@@ -148,6 +148,14 @@ pub enum Statement {
     /// Ebo (offering/initiation): ebo "server";
     Ebo { offering: Expression, span: Span },
 
+    /// Update: x += 5; x++;
+    Update {
+        target: AssignTarget,
+        op: UpdateOp,
+        value: Option<Expression>,
+        span: Span,
+    },
+
     /// Match statement: yàn (condition) { arm1, arm2, ... }
     Match {
         condition: Expression,
@@ -211,6 +219,15 @@ pub enum AssignTarget {
         index: Box<Expression>,
     },
     Dereference(Box<Expression>),
+}
+
+/// Update operator for augmented assignments
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UpdateOp {
+    AddAssign,
+    SubAssign,
+    MulAssign,
+    DivAssign,
 }
 
 /// Function parameter
@@ -369,6 +386,14 @@ pub enum Expression {
         object: Box<Expression>,
         method: String,
         args: Vec<Expression>,
+        is_optional: bool,
+    },
+
+    /// Property access: obj.field
+    Get {
+        object: Box<Expression>,
+        name: String,
+        is_optional: bool,
     },
 
     /// Function call: func(args)
@@ -387,6 +412,7 @@ pub enum Expression {
     Index {
         object: Box<Expression>,
         index: Box<Expression>,
+        is_optional: bool,
     },
 
     /// Error propagation operator: `expr?`
@@ -413,6 +439,7 @@ pub struct OduCall {
     pub domain: OduDomain,
     pub method: String,
     pub args: Vec<Expression>,
+    pub is_optional: bool,
     pub span: Span,
 }
 

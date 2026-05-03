@@ -519,7 +519,7 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
 
             let source = std::fs::read_to_string(&src_file).wrap_err("Failed to read main.ifa")?;
             println!("   📝 Parsing Ifá source...");
-            let program = ifa_core::parse(&source).wrap_err("Parse error")?;
+            let program = ifa_core::parse(&source).map_err(|e| eyre!("Parse error: {}", e))?;
 
             println!("   🔄 Transpiling to Rust...");
             let rust_code = ifa_core::transpile_to_rust(&program);

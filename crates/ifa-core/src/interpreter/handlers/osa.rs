@@ -74,14 +74,15 @@ impl OduHandler for OsaHandler {
             // Parallel sum - converts to i64, uses par_iter, real parallelism
             "afikun_afiwe" | "parallel_sum" | "sum" => {
                 if let Some(IfaValue::List(list)) = arg0 {
-                    let sum: i64 = list
-                        .par_iter()
+                    let numbers: Vec<i64> = list
+                        .iter()
                         .map(|v| match v {
                             IfaValue::Int(n) => *n,
                             IfaValue::Float(f) => *f as i64,
                             _ => 0,
                         })
-                        .sum();
+                        .collect();
+                    let sum: i64 = numbers.par_iter().copied().sum();
                     return Ok(IfaValue::int(sum));
                 }
                 Err(IfaError::Runtime("sum requires a list of numbers".into()))
@@ -90,14 +91,15 @@ impl OduHandler for OsaHandler {
             // Parallel product
             "isoro_afiwe" | "parallel_product" | "product" => {
                 if let Some(IfaValue::List(list)) = arg0 {
-                    let product: i64 = list
-                        .par_iter()
+                    let numbers: Vec<i64> = list
+                        .iter()
                         .map(|v| match v {
                             IfaValue::Int(n) => *n,
                             IfaValue::Float(f) => *f as i64,
                             _ => 1,
                         })
-                        .product();
+                        .collect();
+                    let product: i64 = numbers.par_iter().copied().product();
                     return Ok(IfaValue::int(product));
                 }
                 Err(IfaError::Runtime(
@@ -108,14 +110,15 @@ impl OduHandler for OsaHandler {
             // Parallel min
             "kekere_afiwe" | "parallel_min" | "min" => {
                 if let Some(IfaValue::List(list)) = arg0 {
-                    let min = list
-                        .par_iter()
+                    let numbers: Vec<i64> = list
+                        .iter()
                         .filter_map(|v| match v {
                             IfaValue::Int(n) => Some(*n),
                             IfaValue::Float(f) => Some(*f as i64),
                             _ => None,
                         })
-                        .min();
+                        .collect();
+                    let min = numbers.par_iter().copied().min();
                     return Ok(min.map(IfaValue::int).unwrap_or(IfaValue::null()));
                 }
                 Err(IfaError::Runtime("min requires a list of numbers".into()))
@@ -124,14 +127,15 @@ impl OduHandler for OsaHandler {
             // Parallel max
             "tobi_afiwe" | "parallel_max" | "max" => {
                 if let Some(IfaValue::List(list)) = arg0 {
-                    let max = list
-                        .par_iter()
+                    let numbers: Vec<i64> = list
+                        .iter()
                         .filter_map(|v| match v {
                             IfaValue::Int(n) => Some(*n),
                             IfaValue::Float(f) => Some(*f as i64),
                             _ => None,
                         })
-                        .max();
+                        .collect();
+                    let max = numbers.par_iter().copied().max();
                     return Ok(max.map(IfaValue::int).unwrap_or(IfaValue::null()));
                 }
                 Err(IfaError::Runtime("max requires a list of numbers".into()))

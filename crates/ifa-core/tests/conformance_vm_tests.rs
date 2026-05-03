@@ -153,6 +153,29 @@ fn conformance_vm_errors_are_catchable() {
 }
 
 #[test]
+fn conformance_vm_catch_preserves_thrown_value() {
+    let source = r#"
+    # expect: "boom"
+    gbiyanju {
+        ta "boom";
+        pada "nope";
+    } gba (e) {
+        pada e;
+    }
+    "#;
+
+    let expect = parse_expectation(source).unwrap();
+    let expected_value = parse_expected_value(&expect);
+
+    let program = parse(source).expect("parse failed");
+    let compiler = Compiler::new("conformance_vm_catch_preserves_thrown_value");
+    let bytecode = compiler.compile(&program).expect("compile failed");
+    let mut vm = IfaVM::new();
+    let got = vm.execute(&bytecode).expect("vm failed");
+    assert_eq!(got, expected_value);
+}
+
+#[test]
 fn conformance_vm_tailcall_emits_and_executes() {
     // This test verifies both emission (compiler) and execution (VM does not panic on TailCall).
     let source = r#"

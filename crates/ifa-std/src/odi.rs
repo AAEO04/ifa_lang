@@ -187,6 +187,22 @@ impl Odi {
         // No perms needed for in-memory
         Connection::open_in_memory().map_err(|e| IfaError::Custom(format!("Database error: {}", e)))
     }
+
+    // =========================================================================
+    // Ergonomic Aliases
+    // =========================================================================
+    
+    pub fn read(&self, path: &str) -> IfaResult<String> { self.ka(path) }
+    pub fn write(&self, path: &str, content: &str) -> IfaResult<()> { self.ko(path, content) }
+    pub fn append(&self, path: &str, content: &str) -> IfaResult<()> { self.fi(path, content) }
+    pub fn exists(&self, path: &str) -> bool { self.wa(path) }
+    pub fn remove(&self, path: &str) -> IfaResult<()> { self.pa_faili(path) }
+    pub fn delete(&self, path: &str) -> IfaResult<()> { self.pa_faili(path) }
+    pub fn mkdir(&self, path: &str) -> IfaResult<()> { self.seda_apoti(path) }
+    pub fn ls(&self, path: &str) -> IfaResult<Vec<String>> { self.akojo(path) }
+    pub fn list(&self, path: &str) -> IfaResult<Vec<String>> { self.akojo(path) }
+    pub fn size(&self, path: &str) -> IfaResult<u64> { self.iwon(path) }
+    pub fn open_db(&self, path: &str) -> IfaResult<Connection> { self.so_db(path) }
 }
 
 #[cfg(test)]

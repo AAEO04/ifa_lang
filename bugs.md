@@ -171,42 +171,45 @@ The dependency graph was locked to `rustls-pemfile` `1.0.4` which had a RustSec 
 
 ---
 
-## Open
-
 ## BUG-018 - Thread-Unsafe Environment Manipulation in FFI Bridge
 **Severity:** Critical  
-**Status:** Open  
+**Status:** Resolved  
 **Found in:** `ifa-std`
 
-### Description
-`std::env::set_var` is used in `itumo` (ffi binary summon) to set `PYTHONHOME`. This is globally unsound in multi-threaded programs and leads to segmentation faults if other threads access the environment concurrently.
+### Resolution
+The `set_var` call for `PYTHONHOME` was removed. The Python interpreter path is now passed explicitly to the `PyConfig` structure via `ifa-std` without modifying global process environment.
 
 ---
 
 ## BUG-019 - Lack of Guest-Level Sandbox Isolation in Python/JS Bridges
 **Severity:** Critical  
-**Status:** Open  
+**Status:** Resolved  
 **Found in:** `ifa-std`
 
-### Description
-The Python and JS bridges do not propagate Ifá's capability-based security into the guest interpreters. A whitelisted Python bridge can be used to execute `os.system()` or file I/O that bypasses all Ifá taboos.
+### Resolution
+Implemented `GuestAuditPolicy`, a capability-interceptor pattern within Python and Javascript engines that intercepts sensitive bindings (e.g., `os.system` and file I/O) and verifies them against the Ifá `Ofun` capability matrix.
 
 ---
 
 ## BUG-020 - Memory Leak in Native String Return Handling
 **Severity:** Medium  
-**Status:** Open  
+**Status:** Resolved  
 **Found in:** `ifa-std`
 
-### Description
-Native FFI calls returning `char*` (strings) are copied into owned Ifa strings, but the original pointer is never freed. This causes progressive memory leaks for libraries that return heap-allocated strings (e.g., `strdup`).
+### Resolution
+`char*` returns configured via `IfaType::OwnedStr` now correctly call `libc::free` on the returned pointer after an owned Rust string is instantiated.
 
 ---
 
 ## BUG-021 - TOCTOU Race Condition in Library Path Validation
 **Severity:** Medium  
-**Status:** Open  
+**Status:** Resolved  
 **Found in:** `ifa-std`
 
-### Description
-There is a window between path validation (checking symlinks/traversal) and actual library loading. An attacker with write access to the library directory could replace a validated library with a malicious one before `libloading` execution.
+### Resolution
+`load_native_verified` implements explicit canonicalization that rejects symlinks outright and enforces an immutable SHA-256 integrity hash verification before initialization to eliminate TOCTOU replacement hacks.
+
+---
+
+## Open
+

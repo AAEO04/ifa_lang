@@ -2,23 +2,23 @@
 //!
 //! Stack-based bytecode interpreter for Ifá-Lang.
 //!
-//! ### 🚀 ARCHITECTURAL STATUS (String Interpolation)
-//! The VM currently implements string interpolation by overloading `OpCode::Add` to support 
-//! `Str + Any` operations. This is a stopgap for Tier 1 conformance.
-//! 
-//! **Future Goal**: Revert `OpCode::Add` to pure arithmetic and utilize dedicated 
-//! `OpCode::Concat` and `OpCode::ToString` for performance isolation.
-//! 
+//! ### ✅ ARCHITECTURAL STATUS (String Operations)
+//! `OpCode::Add` is now PURE NUMERIC (Int/Float only). String concatenation uses
+//! the dedicated `OpCode::Concat (0x27)`, which is strict `Str + Str` only.
+//! The `text += " more"` compiler path emits `ToString` + `Concat` as appropriate.
+//!
 //! Refer to `patch.md` for the Phase 7 Hardening Roadmap.
 
 use crate::bytecode::{Bytecode, OpCode};
 use crate::error::{IfaError, IfaResult};
 use crate::native::{OduRegistry, VmContext};
 use crate::opon::Opon;
-use ifa_types::value_union::{ClosureData, FutureState, IfaValue, UpvalueCell};
+use ifa_types::value_union::{ClosureData, FutureState, IfaValue, ResultPayload, UpvalueCell};
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
+use std::sync::Arc;
 
 /// Call frame for function calls
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -182,6 +182,13 @@ struct TaskState {
 }
 
 impl IfaVM {
+    fn error_to_catch_value(error: &IfaError) -> IfaValue {
+        error
+            .user_value()
+            .cloned()
+            .unwrap_or_else(|| IfaValue::str(error.to_string()))
+    }
+
     /// Get a global variable by name
     pub fn get_global(&self, name: &str) -> Option<&IfaValue> {
         self.globals.get(name)
@@ -912,13 +919,10 @@ impl IfaVM {
                 self.frames.truncate(frame.call_depth);
             }
 
-            // 2. Convert Error to Value (Result::Err)
-            // For now, convert error string to IfaValue::Str
-            let err_val = IfaValue::str(error.to_string());
-            let result = IfaValue::Result(false, Box::new(err_val));
-
-            // 3. Push Result and Jump
-            self.push(result)?;
+            // 2. Convert the trapped control-flow error into the catch binding value.
+            // User-thrown values must arrive unchanged; VM/runtime errors still degrade
+            // to their display string until structured VM errors are introduced.
+            self.push(Self::error_to_catch_value(error))?;
 
             // Catch has consumed the exception arm. If a finally exists, keep a
             // sentinel frame so return/throw/error from the catch still runs it.
@@ -966,8 +970,8 @@ impl IfaVM {
                     .ok_or_else(|| IfaError::UndefinedVariable(format!("<upvalue:{}>", slot)))?;
 
                 let value = cell
-                    .lock()
-                    .map_err(|_| IfaError::Runtime("Upvalue lock poisoned".into()))?
+                    .try_borrow()
+                    .map_err(|_| IfaError::Runtime("Upvalue borrow failed".into()))?
                     .clone();
                 self.push(value)?;
             }
@@ -989,8 +993,8 @@ impl IfaVM {
                     .ok_or_else(|| IfaError::UndefinedVariable(format!("<upvalue:{}>", slot)))?;
 
                 *cell
-                    .lock()
-                    .map_err(|_| IfaError::Runtime("Upvalue lock poisoned".into()))? = value;
+                    .try_borrow_mut()
+                    .map_err(|_| IfaError::Runtime("Upvalue borrow failed".into()))? = value;
             }
 
             OpCode::PushFn => {
@@ -1052,7 +1056,7 @@ impl IfaVM {
                             let cell = match slot {
                                 IfaValue::Upvalue(cell) => cell,
                                 value => {
-                                    let cell: UpvalueCell = Arc::new(Mutex::new(value));
+                                    let cell: UpvalueCell = Rc::new(RefCell::new(value));
                                     // Box the local slot so future mutations share the cell.
                                     if slot_index < self.stack.len() {
                                         self.stack[slot_index] = IfaValue::Upvalue(cell.clone());
@@ -1129,7 +1133,7 @@ impl IfaVM {
                 self.stack.swap(len - 1, len - 2);
             }
 
-            // Arithmetic
+            // Arithmetic: Add is now PURE NUMERIC. Strings use OpCode::Concat.
             OpCode::Add => {
                 let b = self.pop()?;
                 let a = self.pop()?;
@@ -1144,26 +1148,15 @@ impl IfaVM {
                     (IfaValue::Float(fa), IfaValue::Float(fb)) => {
                         self.push(IfaValue::float(fa + fb))?
                     }
-                    (IfaValue::Str(lhs), IfaValue::Str(rhs)) => {
-                        // Concat
-                        let mut s = String::with_capacity(lhs.len() + rhs.len());
-                        s.push_str(&lhs);
-                        s.push_str(&rhs);
-                        self.push(IfaValue::str(s))?;
+                    (IfaValue::Int(ia), IfaValue::Float(fb)) => {
+                        self.push(IfaValue::float(ia as f64 + fb))?
                     }
-                    (IfaValue::Str(lhs), rhs) => {
-                        let mut s = String::from(&*lhs);
-                        s.push_str(&rhs.to_string());
-                        self.push(IfaValue::str(s))?;
-                    }
-                    (lhs, IfaValue::Str(rhs)) => {
-                        let mut s = lhs.to_string();
-                        s.push_str(&rhs);
-                        self.push(IfaValue::str(s))?;
+                    (IfaValue::Float(fa), IfaValue::Int(ib)) => {
+                        self.push(IfaValue::float(fa + ib as f64))?
                     }
                     _ => {
                         return Err(IfaError::TypeError {
-                            expected: "Int/Float/Str".into(),
+                            expected: "Int or Float (use += for strings)".into(),
                             got: format!("{} + {}", a.type_name(), b.type_name()),
                         });
                     }
@@ -1273,8 +1266,8 @@ impl IfaVM {
                 match slot {
                     IfaValue::Upvalue(cell) => {
                         let value = cell
-                            .lock()
-                            .map_err(|_| IfaError::Runtime("Upvalue lock poisoned".into()))?
+                            .try_borrow()
+                            .map_err(|_| IfaError::Runtime("Upvalue borrow failed".into()))?
                             .clone();
                         self.push(value)?;
                     }
@@ -1292,8 +1285,8 @@ impl IfaVM {
                 match self.stack[base + idx].clone() {
                     IfaValue::Upvalue(cell) => {
                         *cell
-                            .lock()
-                            .map_err(|_| IfaError::Runtime("Upvalue lock poisoned".into()))? =
+                            .try_borrow_mut()
+                            .map_err(|_| IfaError::Runtime("Upvalue borrow failed".into()))? =
                             value;
                     }
                     _ => self.stack[base + idx] = value,
@@ -1612,7 +1605,7 @@ impl IfaVM {
                 }
 
                 // Try map-based dispatch first (kiri pattern: app = {"main": fn, ...}; app.main())
-                match &object {
+                match object {
                     IfaValue::Map(map) => {
                         let key: std::sync::Arc<str> = std::sync::Arc::from(method_name.as_str());
                         if let Some(func) = map.get(&key) {
@@ -1700,17 +1693,28 @@ impl IfaVM {
                             )));
                         }
                     }
-                    _ => {
+                    IfaValue::List(mut l) => {
+                        if method_name == "fikun" || method_name == "append" || method_name == "push" {
+                           let val = args.get(0).ok_or_else(|| IfaError::ArityMismatch { expected: 1, got: args.len() })?;
+                           let vec = Arc::make_mut(&mut l);
+                           vec.push(val.clone());
+                           self.push(IfaValue::null())?;
+                           return Ok(());
+                        } else {
+                             return Err(IfaError::Custom(format!("List has no method '{}'", method_name)));
+                        }
+                    }
+                    obj => {
                         // Fall back to registry for class instances / native objects
                         if let Some(registry) = self.registry.take() {
-                            let result = registry.call_method(&object, method_idx, args)?;
+                            let result = registry.call_method(&obj, method_idx, args)?;
                             self.push(result)?;
                             self.registry = Some(registry);
                         } else {
                             return Err(IfaError::Custom(format!(
                                 "Cannot call method '{}' on {}",
                                 method_name,
-                                object.type_name()
+                                obj.type_name()
                             )));
                         }
                     }
@@ -1823,21 +1827,6 @@ impl IfaVM {
                         });
                     }
                 }
-            }
-
-            OpCode::Append => {
-                let val = self.pop()?;
-                let mut list = self.pop()?;
-                if let IfaValue::List(ref mut vec_arc) = list {
-                    let vec = std::sync::Arc::make_mut(vec_arc);
-                    vec.push(val);
-                } else {
-                    return Err(IfaError::TypeError {
-                        expected: "List".into(),
-                        got: list.type_name().into(),
-                    });
-                }
-                self.push(list)?;
             }
 
             OpCode::BuildList => {
@@ -2004,12 +1993,12 @@ impl IfaVM {
             OpCode::PropagateError => {
                 let value = self.pop()?;
                 match value {
-                    IfaValue::Result(true, ok) => {
-                        self.push(*ok)?;
-                    }
-                    IfaValue::Result(false, err) => {
-                        return Err(IfaError::UserError(err));
-                    }
+                    IfaValue::Result(payload) => match *payload {
+                        ResultPayload::Ok(ok) => self.push(ok)?,
+                        ResultPayload::Err(err) => {
+                            return Err(IfaError::UserError(Box::new(err)));
+                        }
+                    },
                     other => {
                         // Preserve backwards-compatibility for existing call sites
                         // that still compile bare values before full Result lowering.

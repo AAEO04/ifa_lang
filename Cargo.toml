@@ -38,7 +38,7 @@ color-eyre = "0.6"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 
 # Serialization (Ìká - The Controller)
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 bincode = "1.3"
 

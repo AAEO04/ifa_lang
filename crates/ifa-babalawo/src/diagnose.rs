@@ -34,6 +34,7 @@ pub struct LintError {
     pub file: String,
     pub line: usize,
     pub column: usize,
+    pub span: Option<ifa_core::ast::Span>,
     pub context: Option<String>,
 }
 
@@ -45,8 +46,14 @@ impl LintError {
             file: file.to_string(),
             line,
             column,
+            span: None,
             context: None,
         }
+    }
+
+    pub fn with_span(mut self, span: ifa_core::ast::Span) -> Self {
+        self.span = Some(span);
+        self
     }
 
     pub fn with_context(mut self, ctx: &str) -> Self {
@@ -84,6 +91,33 @@ impl Babalawo {
             verbose: false,
             include_wisdom: true,
         }
+    }
+
+    /// Add a diagnostic with a full span
+    pub fn add_full(
+        &mut self,
+        severity: Severity,
+        code: &str,
+        msg: &str,
+        file: &str,
+        span: ifa_core::ast::Span,
+    ) {
+        let odu_key = ERROR_TO_ODU.get(code).copied().unwrap_or("OKANRAN");
+
+        let wisdom = if self.include_wisdom {
+            ODU_WISDOM.get(odu_key).map(|w| w.advice.to_string())
+        } else {
+            None
+        };
+
+        let diagnostic = Diagnostic {
+            severity,
+            error: LintError::new(code, msg, file, span.line, span.column).with_span(span),
+            odu: odu_key.to_string(),
+            wisdom,
+        };
+
+        self.diagnostics.push(diagnostic);
     }
 
     pub fn verbose(mut self) -> Self {

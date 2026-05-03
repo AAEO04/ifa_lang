@@ -29,24 +29,51 @@ impl OduHandler for IrosuHandler {
             "fo" | "sọ" | "so" | "print" | "println" => {
                 let line_parts: Vec<String> = args.iter().map(|a| a.to_string()).collect();
                 let line = line_parts.join(" ");
-                // Remove direct host output: println!("{}", line);
-                output.push(line); // Capture for WASM and explicit host flush
+                
+                // Native host output
+                #[cfg(feature = "native")]
+                {
+                    if method == "fo" || method == "println" {
+                        println!("{}", line);
+                    } else {
+                        print!("{}", line);
+                        use std::io::Write;
+                        std::io::stdout().flush().ok();
+                    }
+                }
+
+                output.push(line);
                 Ok(IfaValue::null())
             }
 
             // Read input
             "ka" | "input" | "listen" | "gbo" => {
-                // Remove host interactive block: print!("> "); io::stdout().flush().ok();
-                output.push("[input] requested".into());
-                // In an isolated AST script context, synchronous stdin blocks the host.
-                // We fake an empty return for now to preserve semantics without hanging servers.
-                Ok(IfaValue::str(""))
+                #[cfg(feature = "native")]
+                {
+                    use std::io::{self, Write};
+                    print!("> ");
+                    io::stdout().flush().ok();
+                    let mut input = String::new();
+                    io::stdin().read_line(&mut input).ok();
+                    return Ok(IfaValue::str(input.trim()));
+                }
+
+                #[cfg(not(feature = "native"))]
+                {
+                    output.push("[input] requested".into());
+                    Ok(IfaValue::str(""))
+                }
             }
 
             // Error output
             "kigbe" | "error" => {
                 let msg = args.first().map(|a| a.to_string()).unwrap_or_default();
-                // Remove direct host error: eprintln!("[ERROR] {}", msg);
+                
+                #[cfg(feature = "native")]
+                {
+                    eprintln!("[ERROR] {}", msg);
+                }
+
                 output.push(format!("[ERROR] {}", msg));
                 Ok(IfaValue::null())
             }

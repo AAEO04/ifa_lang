@@ -121,9 +121,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                 visibility,
                 span,
             }))
-        }
-
-        Rule::assignment_stmt => {
+        }        Rule::assignment_stmt => {
             let mut inner = pair.into_inner();
             let lvalue_pair = inner
                 .next()
@@ -134,54 +132,58 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                     .ok_or_else(|| IfaError::Parse("Assignment missing value".to_string()))?,
             )?;
 
-            let target = match lvalue_pair.as_rule() {
-                Rule::lvalue => {
-                    let inner_lvalue = lvalue_pair
-                        .into_inner()
-                        .next()
-                        .ok_or_else(|| IfaError::Parse("Empty lvalue".to_string()))?;
-                    match inner_lvalue.as_rule() {
-                        Rule::ident => AssignTarget::Variable(inner_lvalue.as_str().to_string()),
-                        Rule::index_lvalue => {
-                            let mut index_inner = inner_lvalue.into_inner();
-                            let name = index_inner
-                                .next()
-                                .ok_or_else(|| {
-                                    IfaError::Parse("Index lvalue missing name".to_string())
-                                })?
-                                .as_str()
-                                .to_string();
-                            let index_expr =
-                                parse_expression(index_inner.next().ok_or_else(|| {
-                                    IfaError::Parse("Index lvalue missing index".to_string())
-                                })?)?;
-                            AssignTarget::Index {
-                                name,
-                                index: Box::new(index_expr),
-                            }
-                        }
-                        Rule::deref_lvalue => {
-                            let mut deref_inner = inner_lvalue.into_inner();
-                            let expr = parse_expression(deref_inner.next().ok_or_else(|| {
-                                IfaError::Parse("Deref lvalue missing expression".to_string())
-                            })?)?;
-                            AssignTarget::Dereference(Box::new(expr))
-                        }
-                        _ => {
-                            return Err(IfaError::Parse(format!(
-                                "Unexpected lvalue rule: {:?}",
-                                inner_lvalue.as_rule()
-                            )));
-                        }
-                    }
-                }
-                // Fallback for old grammar or direct recursion if grammar was flat
-                _ => return Err(IfaError::Parse("Expected lvalue in assignment".to_string())),
-            };
+            let target = parse_lvalue(lvalue_pair)?;
 
             Ok(Some(Statement::Assignment {
                 target,
                 value,
+                span,
+            }))
+        }
+
+        Rule::update_stmt => {
+            let mut inner = pair.into_inner();
+            let first = inner
+                .next()
+                .ok_or_else(|| IfaError::Parse("Update missing target".to_string()))?;
+
+            let target = match first.as_rule() {
+                Rule::ident => AssignTarget::Variable(first.as_str().to_string()),
+                Rule::lvalue => parse_lvalue(first)?,
+                _ => {
+                    return Err(IfaError::Parse(format!(
+                        "Invalid update target: {:?}",
+                        first.as_rule()
+                    )))
+                }
+            };
+
+            let op_pair = inner
+                .next()
+                .ok_or_else(|| IfaError::Parse("Update missing op".to_string()))?;
+            let op = match op_pair.as_str() {
+                "+=" => UpdateOp::AddAssign,
+                "-=" => UpdateOp::SubAssign,
+                "*=" => UpdateOp::MulAssign,
+                "/=" => UpdateOp::DivAssign,
+                _ => {
+                    return Err(IfaError::Parse(format!(
+                        "Unknown update operator: {}",
+                        op_pair.as_str()
+                    )))
+                }
+            };
+
+            let value = if let Some(val_pair) = inner.next() {
+                Some(parse_expression(val_pair)?)
+            } else {
+                None
+            };
+
+            Ok(Some(Statement::Update {
+                target,
+                op,
+                value: Some(value.ok_or_else(|| IfaError::Parse("Update missing value".into()))? ),
                 span,
             }))
         }
@@ -231,8 +233,16 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                 .into_inner()
                 .next()
                 .ok_or_else(|| IfaError::Parse("Instruction missing body".to_string()))?;
-            let call = parse_odu_call(call_pair)?;
-            Ok(Some(Statement::Instruction { call, span }))
+            match call_pair.as_rule() {
+                Rule::odu_call => {
+                    let call = parse_odu_call(call_pair)?;
+                    Ok(Some(Statement::Instruction { call, span }))
+                }
+                _ => {
+                    let expr = parse_expression(call_pair)?;
+                    Ok(Some(Statement::Expr { expr, span }))
+                }
+            }
         }
 
         Rule::if_stmt => {
@@ -649,6 +659,43 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
     }
 }
 
+fn parse_lvalue(pair: pest::iterators::Pair<Rule>) -> IfaResult<AssignTarget> {
+    let inner_lvalue = pair
+        .into_inner()
+        .next()
+        .ok_or_else(|| IfaError::Parse("Empty lvalue".to_string()))?;
+
+    match inner_lvalue.as_rule() {
+        Rule::ident => Ok(AssignTarget::Variable(inner_lvalue.as_str().to_string())),
+        Rule::index_lvalue => {
+            let mut index_inner = inner_lvalue.into_inner();
+            let name = index_inner
+                .next()
+                .ok_or_else(|| IfaError::Parse("Index lvalue missing name".to_string()))?
+                .as_str()
+                .to_string();
+            let index_expr = parse_expression(index_inner.next().ok_or_else(|| {
+                IfaError::Parse("Index lvalue missing index".to_string())
+            })?)?;
+            Ok(AssignTarget::Index {
+                name,
+                index: Box::new(index_expr),
+            })
+        }
+        Rule::deref_lvalue => {
+            let mut deref_inner = inner_lvalue.into_inner();
+            let expr = parse_expression(deref_inner.next().ok_or_else(|| {
+                IfaError::Parse("Deref lvalue missing expression".to_string())
+            })?)?;
+            Ok(AssignTarget::Dereference(Box::new(expr)))
+        }
+        _ => Err(IfaError::Parse(format!(
+            "Unexpected lvalue rule: {:?}",
+            inner_lvalue.as_rule()
+        ))),
+    }
+}
+
 fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> {
     match pair.as_rule() {
         Rule::expression
@@ -783,6 +830,31 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
             parse_expression(inner)
         }
 
+        Rule::property_access => {
+            let mut inner = pair.into_inner();
+            let mut obj = parse_expression(
+                inner
+                    .next()
+                    .ok_or(IfaError::Parse("Property access missing object".into()))?,
+            )?;
+
+            while let Some(op_pair) = inner.next() {
+                let is_optional = op_pair.as_str() == "?.";
+                let name = inner
+                    .next()
+                    .ok_or(IfaError::Parse("Property access missing field name".into()))?
+                    .as_str()
+                    .to_string();
+
+                obj = Expression::Get {
+                    object: Box::new(obj),
+                    name,
+                    is_optional,
+                };
+            }
+            Ok(obj)
+        }
+
         Rule::number => {
             let s = pair.as_str().replace('_', "");
             if s.starts_with("0x") {
@@ -825,6 +897,10 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
                 .ok_or(IfaError::Parse("Method call missing object".into()))?
                 .as_str()
                 .to_string();
+            let op = inner
+                .next()
+                .ok_or(IfaError::Parse("Method call missing operator".into()))?;
+            let is_optional = op.as_str() == "?.";
             let method = inner
                 .next()
                 .ok_or(IfaError::Parse("Method call missing method name".into()))?
@@ -842,6 +918,7 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
                 object: Box::new(Expression::Identifier(object_name)),
                 method,
                 args,
+                is_optional,
             })
         }
 
@@ -873,6 +950,31 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
             Ok(Expression::Await(Box::new(expr)))
         }
 
+        Rule::index_access => {
+            let mut inner = pair.into_inner();
+            let object_name = inner
+                .next()
+                .ok_or(IfaError::Parse("Index access missing object".into()))?
+                .as_str()
+                .to_string();
+            
+            let mut is_optional = false;
+            let next_pair = inner.next().ok_or(IfaError::Parse("Index access missing index".into()))?;
+            let index_expr_pair = if next_pair.as_rule() == Rule::optional_chain_op {
+                is_optional = true;
+                inner.next().ok_or(IfaError::Parse("Index access missing index after ?.".into()))?
+            } else {
+                next_pair
+            };
+
+            let index = parse_expression(index_expr_pair)?;
+            Ok(Expression::Index {
+                object: Box::new(Expression::Identifier(object_name)),
+                index: Box::new(index),
+                is_optional,
+            })
+        }
+
         Rule::list_literal => {
             let mut items = Vec::new();
             for item in pair.into_inner() {
@@ -900,25 +1002,6 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
             Ok(Expression::Map(entries))
         }
 
-        Rule::index_access => {
-            let mut inner = pair.into_inner();
-            let object = Expression::Identifier(
-                inner
-                    .next()
-                    .ok_or(IfaError::Parse("Index access missing object".into()))?
-                    .as_str()
-                    .to_string(),
-            );
-            let index = parse_expression(
-                inner
-                    .next()
-                    .ok_or(IfaError::Parse("Index access missing index".into()))?,
-            )?;
-            Ok(Expression::Index {
-                object: Box::new(object),
-                index: Box::new(index),
-            })
-        }
 
         Rule::interpolated_string => {
             let mut parts = Vec::new();
@@ -960,6 +1043,12 @@ fn parse_odu_call(pair: pest::iterators::Pair<Rule>) -> IfaResult<OduCall> {
         .ok_or(IfaError::Parse("Odu call missing domain".into()))?
         .as_str();
     let domain = parse_odu_domain(domain_str)?;
+    
+    let op = inner
+        .next()
+        .ok_or(IfaError::Parse("Odu call missing operator".into()))?;
+    let is_optional = op.as_str() == "?.";
+
     let method = inner
         .next()
         .ok_or(IfaError::Parse("Odu call missing method".into()))?
@@ -977,6 +1066,7 @@ fn parse_odu_call(pair: pest::iterators::Pair<Rule>) -> IfaResult<OduCall> {
         domain,
         method,
         args,
+        is_optional,
         span,
     })
 }

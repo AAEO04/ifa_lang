@@ -1,0 +1,38 @@
+// Test: Await outside async should produce AWAIT_OUTSIDE_ASYNC error
+ese bad_await() {
+    ayanmo result = reti Osa.ise("task");
+    pada result;
+}
+
+// Test: Await inside async should be clean
+daro ese good_await() {
+    ayanmo result = reti Osa.ise("task");
+    pada result;
+}
+
+// Test: For loop over an Int should trigger NON_ITERABLE warning
+ese bad_loop() {
+    ayanmo n: Int = 5;
+    fun x ninu n {
+        Irosu.ko(x);
+    }
+}
+
+// Test: For loop over a List should be clean
+ese good_loop() {
+    ayanmo items: List = [1, 2, 3];
+    fun x ninu items {
+        Irosu.ko(x);
+    }
+}
+
+// Test: Augmented assignment - int and string
+ese test_add_assign() {
+    ayanmo count: Int = 0;
+    count += 1;
+    count += 5;
+
+    ayanmo msg: Str = "Hello";
+    msg += " World";
+    pada msg;
+}

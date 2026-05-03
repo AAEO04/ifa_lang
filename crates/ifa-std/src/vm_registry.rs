@@ -8,19 +8,27 @@ use ifa_core::error::{IfaError, IfaResult};
 use ifa_core::native::{OduRegistry, VmContext};
 
 use crate::irosu::Irosu;
+use crate::odi::Odi;
 use crate::sandbox_shim::CapabilitySet;
 
 /// Standard library registry for the bytecode VM.
 pub struct StdRegistry {
     irosu: Irosu,
+    odi: Odi,
 }
 
 impl StdRegistry {
     pub fn new() -> Self {
         let caps = CapabilitySet::new();
         Self {
-            irosu: Irosu::new(caps),
+            irosu: Irosu::new(caps.clone()),
+            odi: Odi::new(caps),
         }
+    }
+
+    pub fn set_capabilities(&mut self, caps: CapabilitySet) {
+        self.irosu = Irosu::new(caps.clone());
+        self.odi = Odi::new(caps);
     }
 }
 
@@ -42,6 +50,7 @@ impl OduRegistry for StdRegistry {
             0 => dispatch_ogbe(method_name, args),
             1 => dispatch_oyeku(method_name, args),
             2 => dispatch_iwori(method_name, args),
+            3 => self.dispatch_odi(method_name, args),
             4 => self.dispatch_irosu(method_name, args),
             5 => dispatch_owonrin(method_name, args),
             6 => dispatch_obara(method_name, args),
@@ -145,6 +154,28 @@ impl StdRegistry {
             ))),
         }
     }
+
+    fn dispatch_odi(&self, method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
+        match method {
+            "ka" | "read" => {
+                let path = args.first().map(|v| v.to_string()).unwrap_or_default();
+                self.odi.ka(&path).map(IfaValue::str)
+            }
+            "ko" | "write" => {
+                let path = args.first().map(|v| v.to_string()).unwrap_or_default();
+                let content = args.get(1).map(|v| v.to_string()).unwrap_or_default();
+                self.odi.ko(&path, &content).map(|_| IfaValue::null())
+            }
+            "wa" | "exists" => {
+                let path = args.first().map(|v| v.to_string()).unwrap_or_default();
+                Ok(IfaValue::bool(self.odi.wa(&path)))
+            }
+            _ => Err(IfaError::Custom(format!(
+                "Odi: unknown method '{}'",
+                method
+            ))),
+        }
+    }
 }
 
 // Stateless dispatchers (no struct instance needed)
@@ -239,8 +270,10 @@ fn dispatch_obara(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
     let a = args.first().map(extract_num).unwrap_or(0.0);
     let b = args.get(1).map(extract_num).unwrap_or(0.0);
     match method {
-        "fikun" | "add" => Ok(IfaValue::float(a + b)),
-        "isodipupo" | "mul" => Ok(IfaValue::float(a * b)),
+        "fikun" | "add" | "plus" => Ok(IfaValue::float(a + b)),
+        "isodipupo" | "mul" | "times" => Ok(IfaValue::float(a * b)),
+        "agbara" | "pow" => Ok(IfaValue::float(a.powf(b))),
+        "gbongbo" | "sqrt" => Ok(IfaValue::float(a.sqrt())),
         _ => Err(IfaError::Custom(format!(
             "Obara: unknown method '{}'",
             method
@@ -309,8 +342,8 @@ fn dispatch_oturupon(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
     let a = args.first().map(extract_num).unwrap_or(0.0);
     let b = args.get(1).map(extract_num).unwrap_or(0.0);
     match method {
-        "yokuro" | "sub" => Ok(IfaValue::float(a - b)),
-        "pipin" | "div" => {
+        "yokuro" | "sub" | "minus" => Ok(IfaValue::float(a - b)),
+        "pipin" | "div" | "divide" => {
             if b == 0.0 {
                 return Err(IfaError::Custom("Division by zero".into()));
             }
@@ -361,13 +394,34 @@ fn dispatch_owonrin(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
     }
 }
 
-fn dispatch_ogunda(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
+fn dispatch_ogunda(method: &str, mut args: Vec<IfaValue>) -> IfaResult<IfaValue> {
     match method {
-        "apapo" | "len" => {
+        "iwọn" | "len" | "count" | "apapo" => {
             if let Some(IfaValue::List(list)) = args.first() {
                 Ok(IfaValue::int(list.len() as i64))
             } else {
                 Ok(IfaValue::int(0))
+            }
+        }
+        "fi" | "push" | "append" => {
+            if args.len() < 2 {
+                return Err(IfaError::ArgumentError("push/fi expects (list, item)".into()));
+            }
+            let val = args[1].clone();
+            if let IfaValue::List(ref mut list_arc) = args[0] {
+                let vec = std::sync::Arc::make_mut(list_arc);
+                vec.push(val);
+                Ok(IfaValue::Null)
+            } else {
+                Err(IfaError::TypeError { expected: "List".into(), got: args[0].type_name().into() })
+            }
+        }
+        "mu" | "pop" => {
+            if let IfaValue::List(ref mut list_arc) = args[0] {
+                let vec = std::sync::Arc::make_mut(list_arc);
+                Ok(vec.pop().unwrap_or(IfaValue::Null))
+            } else {
+                Err(IfaError::TypeError { expected: "List".into(), got: args[0].type_name().into() })
             }
         }
         _ => Err(IfaError::Custom(format!(
@@ -389,7 +443,7 @@ fn dispatch_ogbe(method: &str, _args: Vec<IfaValue>) -> IfaResult<IfaValue> {
 
 fn dispatch_oyeku(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
     match method {
-        "jade" | "exit" => {
+        "jade" | "exit" | "quit" | "halt" => {
             let code = args
                 .first()
                 .and_then(|v| {
@@ -402,7 +456,7 @@ fn dispatch_oyeku(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
                 .unwrap_or(0);
             std::process::exit(code);
         }
-        "sun" | "sleep" => {
+        "sun" | "sleep" | "wait" => {
             let ms = args
                 .first()
                 .and_then(|v| {
@@ -425,11 +479,18 @@ fn dispatch_oyeku(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
 
 fn dispatch_iwori(method: &str, _args: Vec<IfaValue>) -> IfaResult<IfaValue> {
     match method {
-        "bayi" | "now" => {
+        "bayi" | "now" | "current" => {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis() as i64;
+            Ok(IfaValue::int(now))
+        }
+        "akoko" | "timestamp" => {
+             let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs() as i64;
             Ok(IfaValue::int(now))
         }
         _ => Err(IfaError::Custom(format!(
@@ -441,19 +502,19 @@ fn dispatch_iwori(method: &str, _args: Vec<IfaValue>) -> IfaResult<IfaValue> {
 
 fn dispatch_okanran(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
     match method {
-        "sise" | "assert" => {
+        "sise" | "assert" | "verify" | "check" => {
             let null_val = IfaValue::null();
             let val = args.first().unwrap_or(&null_val);
-            match val {
-                IfaValue::Bool(false) | IfaValue::Null => {
-                    let msg = args
-                        .get(1)
-                        .map(|v| v.to_string())
-                        .unwrap_or_else(|| "Assertion failed".into());
-                    Err(IfaError::Custom(msg))
-                }
-                _ => Ok(IfaValue::null()),
+            if val.is_truthy() {
+                Ok(IfaValue::bool(true))
+            } else {
+                let msg = args.get(1).map(|v| v.to_string()).unwrap_or_else(|| "Assertion failed".into());
+                Err(IfaError::Runtime(format!("[Okanran.assert] {msg}")))
             }
+        }
+        "kigbe" | "throw" | "panic" | "raise" => {
+            let msg = args.first().map(|v| v.to_string()).unwrap_or_else(|| "Manually triggered error".into());
+            Err(IfaError::Runtime(format!("[Okanran.throw] {msg}")))
         }
         _ => Err(IfaError::Custom(format!(
             "Okanran: unknown method '{}'",
@@ -462,20 +523,8 @@ fn dispatch_okanran(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
     }
 }
 
-fn dispatch_ose(method: &str, _args: Vec<IfaValue>) -> IfaResult<IfaValue> {
-    // Ose (Graphics/UI) - stub implementations for kiri browser
-    match method {
-        "bere" | "init" => Ok(IfaValue::str("terminal")),
-        "pari" | "end" => Ok(IfaValue::null()),
-        "gbile" | "read_key" => Ok(IfaValue::str("q")), // Auto-quit for now
-        "apoti" | "box" => Ok(IfaValue::null()),
-        "ipinro" | "section" => Ok(IfaValue::null()),
-        "ya" | "draw" => Ok(IfaValue::null()),
-        _ => Err(IfaError::Custom(format!(
-            "Ose: unknown method '{}'",
-            method
-        ))),
-    }
+fn dispatch_ose(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
+    crate::ose::Ose::dispatch(method, args)
 }
 
 fn dispatch_ofun(method: &str, _args: Vec<IfaValue>) -> IfaResult<IfaValue> {
