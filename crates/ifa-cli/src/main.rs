@@ -11,7 +11,9 @@ mod sandbox;
 
 use clap::{Parser, Subcommand};
 use eyre::{Result, WrapErr};
-use ifa_core::IfaValue;
+use ifa_parser::parse;
+use ifa_types::ast::Program;
+use ifa_vm::IfaValue;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -341,7 +343,7 @@ enum OjaCommands {
     Publish,
 }
 
-fn run_babalawo(program: &ifa_core::ast::Program, filepath: &std::path::Path) -> bool {
+fn run_babalawo(program: &Program, filepath: &std::path::Path) -> bool {
     let filename = filepath.display().to_string();
     let config = ifa_babalawo::BabalawoConfig {
         include_wisdom: true,
@@ -397,7 +399,6 @@ fn main() -> Result<()> {
             allow_python,
             sandbox,
         } => {
-            use ifa_core::{Interpreter, parse};
             use ifa_sandbox::{CapabilitySet, Ofun};
 
             println!("Ifa-Lang Interpreter v1.2.2");
@@ -494,18 +495,16 @@ fn main() -> Result<()> {
             println!("---");
             println!();
 
-            // Interpret (with_file enables imports relative to script location)
-            let mut interpreter = Interpreter::with_file(&file);
+            // Compile and run in VM
+            let compiler = ifa_vm::Compiler::new(&file.display().to_string());
+            let bytecode = compiler
+                .compile(&program)
+                .map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
 
-            // Register Standard Library Handlers (Breaking the Cycle)
-            interpreter.register_handler(Box::new(ifa_std::handlers::sys::SysHandler::new()));
-
-            interpreter.set_capabilities(caps.clone());
-            ifa_core::interpreter::Environment::define(
-                &interpreter.env,
-                "sys.args",
-                cli_args_value(args),
-            );
+            let mut registry = ifa_std::vm_registry::StdRegistry::new();
+            registry.set_capabilities(caps.clone());
+            let mut vm = ifa_vm::IfaVM::new().with_registry(Box::new(registry));
+            vm.set_global("sys.args", cli_args_value(args));
 
             // Handle sandbox modes
             match sandbox.as_str() {
@@ -520,7 +519,7 @@ fn main() -> Result<()> {
                     config.force_wasm = true;
 
                     // Note: Full WASM execution would compile .ifa to .wasm first
-                    // For now, we run interpreted but with the capability restrictions
+                    // For now, we run on VM but with the capability restrictions
                     println!(
                         "   (WASM compilation not yet implemented - using capability enforcement)"
                     );
@@ -528,7 +527,6 @@ fn main() -> Result<()> {
                 "native" => {
                     println!("Running in Igbale (native OS) sandbox...");
                     // Native sandbox uses OS-level isolation (Linux namespaces, etc.)
-                    // Capabilities are already set on the interpreter
                 }
                 "none" => {
                     // No sandbox - just use capability checks
@@ -538,16 +536,20 @@ fn main() -> Result<()> {
                 }
             }
 
-            match interpreter.execute(&program) {
+            match vm.execute(&bytecode) {
                 Ok(_) => {
                     println!();
                     println!("---");
                     println!("Program completed successfully");
                 }
+                Err(ifa_types::IfaError::Exit(code)) => {
+                    std::process::exit(code);
+                }
                 Err(e) => {
                     println!();
                     println!("---");
                     println!("Runtime error: {}", e);
+                    std::process::exit(1);
                 }
             }
 
@@ -567,7 +569,7 @@ fn main() -> Result<()> {
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to read file: {}", e))?;
 
             // Compile to bytecode
-            let program = ifa_core::parse(&source)
+            let program = ifa_vm::parse(&source)
                 .map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
 
             // 5-Layer Integrity Defence
@@ -575,7 +577,7 @@ fn main() -> Result<()> {
                 std::process::exit(1);
             }
 
-            let compiler = ifa_core::Compiler::new(&file.display().to_string());
+            let compiler = ifa_vm::Compiler::new(&file.display().to_string());
             let bytecode = compiler
                 .compile(&program)
                 .map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
@@ -622,7 +624,7 @@ fn main() -> Result<()> {
             let source = std::fs::read_to_string(&source_candidate).map_err(|e| {
                 color_eyre::eyre::eyre!("Failed to read source for verification: {}", e)
             })?;
-            let program = ifa_core::parse(&source).map_err(|e| {
+            let program = ifa_vm::parse(&source).map_err(|e| {
                 color_eyre::eyre::eyre!("Failed to parse source for verification: {}", e)
             })?;
             if !run_babalawo(&program, &source_candidate) {
@@ -663,20 +665,24 @@ fn main() -> Result<()> {
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to read bytecode: {}", e))?;
 
             // Deserialize
-            let bytecode = ifa_core::Bytecode::from_bytes(&bytes)
+            let bytecode = ifa_vm::Bytecode::from_bytes(&bytes)
                 .map_err(|e| color_eyre::eyre::eyre!("Invalid bytecode: {}", e))?;
 
             // Execute in VM with standard library
             let mut registry = ifa_std::vm_registry::StdRegistry::new();
             registry.set_capabilities(caps);
-            let mut vm = ifa_core::IfaVM::new().with_registry(Box::new(registry));
+            let mut vm = ifa_vm::IfaVM::new().with_registry(Box::new(registry));
             vm.set_global("sys.args", cli_args_value(args));
             match vm.execute(&bytecode) {
                 Ok(result) => {
                     println!("Result: {:?}", result);
                 }
+                Err(ifa_types::IfaError::Exit(code)) => {
+                    std::process::exit(code);
+                }
                 Err(e) => {
                     println!("Runtime error: {}", e);
+                    std::process::exit(1);
                 }
             }
 
@@ -721,7 +727,7 @@ fn main() -> Result<()> {
 
             // Parse and transpile to Rust
             println!("   📝 Parsing Ifá source...");
-            let program = ifa_core::parse(&source)
+            let program = ifa_vm::parse(&source)
                 .map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
 
             // 5-Layer Integrity Defence
@@ -746,7 +752,7 @@ fn main() -> Result<()> {
 
                 println!("   📁 Generating Cargo project: {}", project_dir.display());
 
-                let config = ifa_core::generate_project(&program, &project_name, &project_dir)
+                let config = ifa_vm::generate_project(&program, &project_name, &project_dir)
                     .map_err(|e| color_eyre::eyre::eyre!("Failed to generate project: {}", e))?;
 
                 println!();
@@ -776,7 +782,7 @@ fn main() -> Result<()> {
                 return Ok(());
             }
 
-            let rust_code = ifa_core::transpile_to_rust(&program);
+            let rust_code = ifa_vm::transpile_to_rust(&program);
 
             // Create temp Cargo project
             let temp_dir = std::env::temp_dir().join(format!("ifa_build_{}", std::process::id()));
@@ -830,7 +836,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ifa-core = {{ path = "{}" }}
+ifa-vm = {{ path = "{}" }}
 ifa-std = {{ path = "{}", features = [{}], default-features = {} }}
 
 [profile.release]
@@ -839,7 +845,7 @@ lto = true
 "#,
                 out.file_stem().unwrap_or_default().to_string_lossy(),
                 std::env::current_dir()?
-                    .join("crates/ifa-core")
+                    .join("crates/ifa-vm")
                     .display()
                     .to_string()
                     .replace("\\", "/"),
@@ -926,8 +932,7 @@ lto = true
             if let Some(ref p) = port {
                 println!("   Port: {}", p);
             }
-            ifa_std::stacks::iot::flash(&target, file.to_str().unwrap_or(""), port.as_deref())
-                .map_err(|e| color_eyre::eyre::eyre!("IoT Error: {}", e))?;
+            println!("   (IoT flashing has been delegated to external tools - stacks are now external libraries)");
             Ok(())
         }
 
@@ -1015,7 +1020,7 @@ lto = true
         Commands::Check { file } => {
             println!("🔍 Checking syntax of {}...", file.display());
             let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
-            match ifa_core::parse(&source) {
+            match ifa_vm::parse(&source) {
                 Ok(program) => {
                     if run_babalawo(&program, &file) {
                         println!(
@@ -1099,16 +1104,22 @@ lto = true
             use std::io::{self, BufRead, Write};
 
             println!("╔═══════════════════════════════════════════════════════════════╗");
-            println!("║  🔮 Ifá-Lang REPL v1.0.0                                       ║");
+            println!("║  🔮 Ifá-Lang REPL v1.2.0 (VM-backed)                         ║");
             println!("║  The Yoruba Programming Language                              ║");
             println!("╠═══════════════════════════════════════════════════════════════╣");
             println!("║  Type Ifá-Lang code to execute. Commands:                     ║");
-            println!("║  .help    - Show help        .clear - Clear interpreter       ║");
+            println!("║  .help    - Show help        .clear - Clear VM state          ║");
             println!("║  .quit    - Exit REPL        .vars  - Show variables          ║");
             println!("╚═══════════════════════════════════════════════════════════════╝");
             println!();
 
-            let mut interpreter = ifa_core::Interpreter::new();
+            let mut registry = ifa_std::vm_registry::StdRegistry::new();
+            let mut caps = ifa_sandbox::CapabilitySet::new();
+            caps.grant(ifa_sandbox::Ofun::Stdio);
+            registry.set_capabilities(caps);
+            let mut vm = ifa_vm::IfaVM::new().with_registry(Box::new(registry));
+            let mut repl_constants = std::collections::HashMap::new();
+
             let stdin = io::stdin();
             let mut multiline_buffer = String::new();
             let mut in_multiline = false;
@@ -1138,21 +1149,35 @@ lto = true
                     ".help" | ".h" => {
                         println!("📚 Ifá-Lang REPL Help:");
                         println!("  .help, .h    - Show this help");
-                        println!("  .clear, .c   - Clear interpreter state");
+                        println!("  .clear, .c   - Clear VM state");
                         println!("  .vars, .v    - Show defined variables");
                         println!("  .quit, .q    - Exit REPL");
                         println!("  .odu         - List Odù domains");
                         continue;
                     }
                     ".clear" | ".c" => {
-                        interpreter = ifa_core::Interpreter::new();
-                        println!("🧹 Interpreter state cleared");
+                        let mut registry = ifa_std::vm_registry::StdRegistry::new();
+                        let mut caps = ifa_sandbox::CapabilitySet::new();
+                        caps.grant(ifa_sandbox::Ofun::Stdio);
+                        registry.set_capabilities(caps);
+                        vm = ifa_vm::IfaVM::new().with_registry(Box::new(registry));
+                        repl_constants = std::collections::HashMap::new();
+                        println!("🧹 VM state cleared");
                         continue;
                     }
                     ".vars" | ".v" => {
                         println!("📦 Variables:");
-                        // The env is private, so we'd need to add a method to expose vars
-                        println!("  (variable inspection not yet implemented)");
+                        let globals = vm.globals();
+                        let mut count = 0;
+                        for (i, name) in globals.names.iter().enumerate() {
+                            if let Some(Some(val)) = globals.values.get(i) {
+                                println!("  {} = {:?}", name, val);
+                                count += 1;
+                            }
+                        }
+                        if count == 0 {
+                            println!("  (no variables defined)");
+                        }
                         continue;
                     }
                     ".odu" => {
@@ -1196,17 +1221,26 @@ lto = true
                 let code = std::mem::take(&mut multiline_buffer);
 
                 // Parse and execute
-                match ifa_core::parse(&code) {
+                match ifa_vm::parse(&code) {
                     Ok(program) => {
-                        match interpreter.execute(&program) {
-                            Ok(result) => {
-                                // Don't print Null results for statements
-                                if !matches!(result, ifa_core::IfaValue::Null) {
-                                    println!("=> {:?}", result);
+                        let compiler = ifa_vm::Compiler::new("repl").with_constants(repl_constants.clone());
+                        match compiler.compile_repl(&program) {
+                            Ok((bytecode, updated_constants)) => {
+                                repl_constants = updated_constants;
+                                match vm.execute(&bytecode) {
+                                    Ok(result) => {
+                                        // Don't print Null results for statements
+                                        if !matches!(result, ifa_vm::IfaValue::Null) {
+                                            println!("=> {:?}", result);
+                                        }
+                                    }
+                                    Err(e) => {
+                                        println!("Runtime Error: {}", e);
+                                    }
                                 }
                             }
                             Err(e) => {
-                                println!("Runtime Error: {}", e);
+                                println!("Compilation Error: {}", e);
                             }
                         }
                     }
@@ -1241,7 +1275,7 @@ lto = true
             fast,
         } => {
             use ifa_babalawo::{BabalawoConfig, check_program_with_config};
-            use ifa_core::parse;
+            use ifa_vm::parse;
 
             println!("babalawo: {}", path.display());
             if fast {
@@ -1335,7 +1369,7 @@ lto = true
         }
 
         Commands::Test { path, verbose } => {
-            use ifa_core::parse;
+            use ifa_vm::parse;
 
             println!("idanwo: Running tests...");
             println!();
@@ -1392,15 +1426,32 @@ lto = true
                             continue;
                         }
 
-                        // Simple execution test
-                        let mut interp = ifa_core::Interpreter::new();
-                        match interp.execute(&program) {
-                            Ok(_) => {
-                                println!("ok");
-                                passed += 1;
+                        // Simple execution test via VM
+                        let compiler = ifa_vm::Compiler::new(&name);
+                        match compiler.compile(&program) {
+                            Ok(bytecode) => {
+                                let mut registry = ifa_std::vm_registry::StdRegistry::new();
+                                let mut caps = ifa_sandbox::CapabilitySet::new();
+                                caps.grant(ifa_sandbox::Ofun::Stdio);
+                                registry.set_capabilities(caps);
+
+                                let mut vm = ifa_vm::IfaVM::new().with_registry(Box::new(registry));
+                                match vm.execute(&bytecode) {
+                                    Ok(_) => {
+                                        println!("ok");
+                                        passed += 1;
+                                    }
+                                    Err(e) => {
+                                        println!("FAIL");
+                                        if verbose {
+                                            println!("    {}", e);
+                                        }
+                                        failed += 1;
+                                    }
+                                }
                             }
                             Err(e) => {
-                                println!("FAIL");
+                                println!("FAIL (compile)");
                                 if verbose {
                                     println!("    {}", e);
                                 }

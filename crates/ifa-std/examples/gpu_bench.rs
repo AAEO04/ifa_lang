@@ -3,7 +3,7 @@
 //! Demonstrates massive parallel speedups using GPU compute shaders.
 
 #[cfg(feature = "gpu")]
-use ifa_std::infra::gpu::GpuContext;
+use ifa_infra::gpu::GpuContext;
 
 #[cfg(feature = "gpu")]
 fn main() {

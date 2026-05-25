@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Building External Packages — Ifá-Lang Dev Docs</title>
+</head>
+
+<body>
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">packages.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Building External Packages</h1>
+            <p class="subtitle">Custom domains via <code>iba</code> import + <code>oja</code> package manager</p>
+        </header>
+
+        <div class="note">
+            <strong>Architectural constraint:</strong> The 16 Odù domains are the fixed core language
+            (<code>domain.rs:19-54</code>). Application stacks, libraries, and custom domains are
+            <strong>external packages</strong> imported via <code>iba</code> and distributed via
+            <code>oja</code>. They do not add variants to <code>OduDomain</code>.
+        </div>
+
+        <p>Not yet written. This page will cover:</p>
+        <ul>
+            <li>The <code>iba</code> import system: <code>OpCode::Import</code> module loading
+                (<code>ifa-compiler/src/lib.rs:714-720</code>)</li>
+            <li>How <code>oja</code> packages are structured and published
+                (<code>ifa-cli/src/oja.rs</code>, 1481 lines)</li>
+            <li>Binding external module members to local names</li>
+            <li>Differences between std domain dispatch (<code>Odu.method()</code> via
+                <code>CallOduFast</code>) and external module access</li>
+        </ul>
+
+        <footer>
+            <p><a href="index.html">← Back to Development Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

@@ -4,99 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Installer Architecture - If·-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-        }
-
-        th,
-        td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid var(--bg-card);
-        }
-
-        th {
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+        <link rel="stylesheet" href="../js/common.css">
+    <title>Installer Architecture - If√°-Lang</title>
 </head>
 
 
@@ -109,8 +18,9 @@
         </div>
     </div>
     <div class="container">
-        <h1>?? Installer Architecture</h1>
-        <p>How If·-Lang installation works across platforms.</p>
+        
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">installer.ifa</span></div><div class="terminal-body"><h1>Installer Architecture</h1>
+        <p>How If√°-Lang installation works across platforms.</p>
 
         <h2>Crates</h2>
         <table>
@@ -124,7 +34,7 @@
             </tr>
             <tr>
                 <td><code>ifa-installer-gui</code></td>
-                <td>Graphical installer UI</td>
+                <td>Graphical installer UI (egui)</td>
             </tr>
         </table>
 
@@ -137,112 +47,89 @@
             </tr>
             <tr>
                 <td><code>install.rs</code></td>
-                <td>Main installation flow</td>
+                <td>Main installation flow with RAII transaction rollback</td>
             </tr>
             <tr>
                 <td><code>uninstall.rs</code></td>
-                <td>Clean removal</td>
+                <td>Clean removal with safety checks</td>
             </tr>
             <tr>
                 <td><code>extraction.rs</code></td>
-                <td>Archive extraction</td>
+                <td>ZIP/tar.gz archive extraction with path traversal protection</td>
             </tr>
             <tr>
                 <td><code>net.rs</code></td>
-                <td>Download from release servers</td>
+                <td>Download from GitHub releases with SHA256 verification</td>
             </tr>
             <tr>
                 <td><code>check.rs</code></td>
-                <td>Verify installation</td>
+                <td>System requirements check (RAM, disk, OS)</td>
             </tr>
             <tr>
                 <td><code>config.rs</code></td>
-                <td>Installation configuration</td>
+                <td>Installation configuration (directory, PATH, offline mode)</td>
             </tr>
             <tr>
                 <td><code>profiles.rs</code></td>
-                <td>Installation profiles (minimal, full)</td>
+                <td>Component list (single <code>ifa</code> CLI binary)</td>
             </tr>
             <tr>
                 <td><code>args.rs</code></td>
-                <td>CLI argument parsing</td>
+                <td>CLI argument parsing via clap</td>
             </tr>
             <tr>
                 <td><code>windows.rs</code></td>
-                <td>Windows-specific (PATH, registry)</td>
+                <td>Windows PATH (registry), with rollback on failure</td>
             </tr>
             <tr>
                 <td><code>unix.rs</code></td>
-                <td>Unix-specific (symlinks, permissions)</td>
-            </tr>
-        </table>
-
-        <h2>Installation Profiles</h2>
-        <table>
-            <tr>
-                <th>Profile</th>
-                <th>Includes</th>
-            </tr>
-            <tr>
-                <td><code>minimal</code></td>
-                <td>ifa CLI only</td>
-            </tr>
-            <tr>
-                <td><code>standard</code></td>
-                <td>CLI + standard library</td>
-            </tr>
-            <tr>
-                <td><code>full</code></td>
-                <td>CLI + std + all stacks + embedded</td>
-            </tr>
-            <tr>
-                <td><code>development</code></td>
-                <td>Full + Babalawo + documentation</td>
+                <td>Shell detection (zsh/bash/fish) and rc file updates</td>
             </tr>
         </table>
 
         <h2>Installation Flow</h2>
-        <pre><code>1. Check prerequisites (Rust, OS version)
-2. Download release archive from GitHub
-3. Verify checksum
-4. Extract to target directory
+        <pre><code>1. Check system requirements (2GB RAM, 1GB disk)
+2. Fetch release metadata from GitHub API
+3. Download SHA256SUMS for verification
+4. For each component:
+   a. Check for local sidecar archive
+   b. Verify checksum (if available)
+   c. Extract (ZIP or tar.gz)
 5. Platform setup:
-   - Windows: Add to PATH, create Start Menu entry
-   - Unix: Create symlinks, set shell rc
-6. Verify installation
-7. Run post-install hooks</code></pre>
+   - Windows: Add to PATH via HKEY_CURRENT_USER\Environment
+   - Unix: Append export to shell rc file
+6. Commit transaction (RAII rollback on failure)</code></pre>
 
         <h2>CLI Usage</h2>
-        <pre><code># Install latest stable
-ifa-installer install
+        <pre><code># Interactive GUI (or headless with --headless)
+ifa-installer
 
-# Install specific version
-ifa-installer install --version 1.2.2
+# Headless install with defaults
+ifa-installer --headless
 
-# Install with profile
-ifa-installer install --profile development
+# Auto-accept prompts
+ifa-installer --headless --yes
 
-# Check installation
-ifa-installer check
+# Custom install directory
+ifa-installer --headless --dir /opt/ifa
 
 # Uninstall
-ifa-installer uninstall</code></pre>
+ifa-installer --headless --uninstall</code></pre>
 
         <h2>Rollback</h2>
-        <p>The installer uses RAII for automatic rollback on failure:</p>
-        <pre><code>// If any step fails, previous steps are undone:
-// - Extracted files are deleted
-// - PATH changes are reverted
-// - Registry entries are removed</code></pre>
+        <p>The installer uses <code>InstallTransaction</code> (RAII) for automatic rollback on failure. All extracted files are tracked; if any step fails, they are deleted on drop. On success, the transaction is committed to prevent cleanup.</p>
+        <pre><code>// RAII guard: files are tracked and cleaned up if not committed
+struct InstallTransaction { ... }
+impl Drop for InstallTransaction {
+    // Removes all tracked files on rollback
+}</code></pre>
 
         <footer class="doc-footer">
-            <p><a href="../getting-started/quickstart.html">? Quickstart</a> ∑ <a href="../getting-started/quickstart.html">Install Guide ?</a></p>
+            <p><a href="../getting-started/quickstart.html">Quickstart</a> - <a href="install.html">Install Guide</a></p>
             <p><a href="../index.html">Documentation Home</a></p>
-        </footer>
-    </div>
-    <script src="../js/nav.js"></script>
+        </footer></div></div>
+<script src="../js/nav.js"></script>
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

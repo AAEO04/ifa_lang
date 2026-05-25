@@ -22,6 +22,7 @@
     </div>
 
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">use-cases.ifa</span></div><div class="terminal-body">
         <header>
             <h1>Use Cases & Examples</h1>
             <p class="subtitle">Real-world Applications of Ifá-Lang</p>
@@ -29,49 +30,49 @@
 
         <div class="step">
             <h2>Overview</h2>
-            <p>Ifá-Lang's unique combination of cultural philosophy, domain-based architecture, and modern runtime features makes it suitable for a wide range of applications. These use cases demonstrate practical implementations across different domains and platforms.</p>
+            <p>Ifá-Lang combines cultural philosophy with domain-based architecture. These examples demonstrate practical code using methods that actually exist in the current crate. Each domain provides a focused set of operations accessible via <code>Domain.method()</code> syntax.</p>
         </div>
 
         <div class="step">
             <h2>Application Categories</h2>
-            
+
             <div class="category-grid">
                 <div class="category-card">
                     <h3>Web Development</h3>
-                    <p>Modern web applications using Ifá-Lang's domain system and reactive programming:</p>
+                    <p>HTTP clients and servers using the Otura domain:</p>
                     <ul>
-                        <li><a href="rest-api.html">REST API Server</a> - HTTP API with domain-based routing</li>
-                        <li><a href="static-site.html">Static Site Generator</a> - Content management with cultural themes</li>
-                        <li><a href="cloud.html">Cloud Services</a> - Scalable web services with reactive patterns</li>
+                        <li><a href="rest-api.html">REST API Server</a> - HTTP GET/POST with Otura</li>
+                        <li><a href="static-site.html">Static Site Generator</a> - HTML processing with Ika</li>
+                        <li><a href="cloud.html">Cloud Services</a> - Concurrent health checks and API calls</li>
                     </ul>
                 </div>
 
                 <div class="category-card">
                     <h3>System Tools</h3>
-                    <p>Command-line utilities and system administration tools:</p>
+                    <p>Command-line utilities using Irosu and Odi:</p>
                     <ul>
-                        <li><a href="cli-tool.html">CLI Tool</a> - Command-line interface with rich features</li>
-                        <li><a href="file-processor.html">File Processor</a> - Batch file processing with automation</li>
-                        <li><a href="password-manager.html">Password Manager</a> - Secure credential management</li>
+                        <li><a href="cli-tool.html">CLI Tool</a> - Interactive REPL with file operations</li>
+                        <li><a href="file-processor.html">File Processor</a> - Batch file processing with Ogunda</li>
+                        <li><a href="password-manager.html">Password Manager</a> - SHA256 hashing and Base64 encoding</li>
                     </ul>
                 </div>
 
                 <div class="category-card">
                     <h3>Data Processing</h3>
-                    <p>Data analysis, pipelines, and database operations:</p>
+                    <p>Data analysis with CPU parallel operations:</p>
                     <ul>
-                        <li><a href="data-pipeline.html">Data Pipeline</a> - ETL processes with domain operations</li>
-                        <li><a href="database.html">Database Applications</a> - Data persistence and querying</li>
-                        <li><a href="infra.html">Infrastructure Tools</a> - System monitoring and management</li>
+                        <li><a href="data-pipeline.html">Data Pipeline</a> - Parallel map/reduce with CPU domain</li>
+                        <li><a href="database.html">Database Applications</a> - File-backed record storage</li>
+                        <li><a href="infra.html">Infrastructure Tools</a> - System info and CPU operations</li>
                     </ul>
                 </div>
 
                 <div class="category-card">
                     <h3>Game Development</h3>
-                    <p>Interactive entertainment and educational games:</p>
+                    <p>Terminal UI with the Ose domain:</p>
                     <ul>
-                        <li><a href="simple-game.html">Simple Game</a> - Interactive game with cultural elements</li>
-                        <li><a href="audio-player.html">Audio Player</a> - Media playback with reactive UI</li>
+                        <li><a href="simple-game.html">Simple Game</a> - Ose-based terminal games</li>
+                        <li><a href="audio-player.html">Audio Player</a> - Console-based playlist manager</li>
                     </ul>
                 </div>
 
@@ -79,19 +80,19 @@
                     <h3>Domain Examples</h3>
                     <p>Detailed examples of each Odù domain in action:</p>
                     <ul>
-                        <li><a href="domains.html">All 16 Domains</a> - Complete domain reference</li>
-                        <li><a href="ogbe-examples.html">Ogbe (System)</a> - System operations</li>
+                        <li><a href="domains.html">All Domains Reference</a> - Complete capability matrix</li>
+                        <li><a href="ogbe-examples.html">Ogbe (System)</a> - Version info</li>
                         <li><a href="irosu-examples.html">Irosu (Console)</a> - I/O operations</li>
-                        <li><a href="owonrin-examples.html">Owòn (Random)</a> - Random operations</li>
+                        <li><a href="owonrin-examples.html">Owonrin (Random)</a> - Random generation</li>
                     </ul>
                 </div>
 
                 <div class="category-card">
                     <h3>Infrastructure</h3>
-                    <p>System-level programming and hardware integration:</p>
+                    <p>System-level programming and parallel processing:</p>
                     <ul>
-                        <li><a href="infra.html">Infrastructure</a> - System programming patterns</li>
-                        <li><a href="stacks.html">Technology Stacks</a> - Specialized libraries</li>
+                        <li><a href="infra.html">Infrastructure</a> - CPU, Sys, and GPU operations</li>
+                        <li><a href="stacks.html">Technology Stacks</a> - Multi-domain patterns</li>
                     </ul>
                 </div>
             </div>
@@ -99,79 +100,85 @@
 
         <div class="step">
             <h2>Featured Examples</h2>
-            
+
             <div class="example-showcase">
                 <div class="example-item">
-                    <h3>REST API Server</h3>
-                    <p>Build scalable web APIs using Ifá-Lang's domain system for routing, middleware, and data handling.</p>
+                    <h3>Password Manager</h3>
+                    <p>Secure password hashing and storage using Irete (crypto) and Odi (file I/O).</p>
                     <div class="code-preview">
-                        <pre><code>// REST API with domain-based routing
-import ifa-web;
-
-ese handle_users(req: Request) -> Response {
-    gbiyanju {
-        ayanmo users = Odi.read_all("users.json");
-        pada Response::json(users);
-    } gba (error) {
-        pada Response::error(500, "Database error");
-    }
+                        <pre><code>// Hash and store a password
+ese save_password(service: Str, password: Str) {
+    ayanmo hash = Irete.sha256(password);
+    ayanmo encoded = Irete.base64(hash);
+    ayanmo record = service + ":" + encoded;
+    Odi.ko("passwords.txt", record);
+    Irosu.fo("Password saved for " + service);
 }
 
-// Route configuration
-Iwori.route("/api/users", handle_users);
-Iwori.route("/api/users/:id", handle_user_by_id);
-Iwori.start(8080);</code></pre>
+// Verify a password
+ese check_password(service: Str, password: Str) -> Bool {
+    ti (Odi.wa("passwords.txt")) {
+        ayanmo data = Odi.ka("passwords.txt");
+        ayanmo hash = Irete.sha256(password);
+        ayanmo encoded = Irete.base64(hash);
+        pada encoded == data;
+    } bibẹkọ {
+        pada iro;
+    }
+}</code></pre>
                     </div>
-                    <a href="rest-api.html" class="btn">View Full Example</a>
+                    <a href="password-manager.html" class="btn">View Full Example</a>
                 </div>
 
                 <div class="example-item">
-                    <h3>Data Processing Pipeline</h3>
-                    <p>Process large datasets using Ifá-Lang's reactive system and domain operations.</p>
+                    <h3>Data Pipeline</h3>
+                    <p>Parallel data processing using CPU.par_map and CPU.par_reduce.</p>
                     <div class="code-preview">
-                        <pre><code>// Data pipeline with reactive processing
-import ifa-data;
+                        <pre><code>// Parallel data pipeline
+ese process_numbers(data: []) {
+    // Square all numbers in parallel
+    ayanmo squared = CPU.par_map(data, "square");
+    Irosu.fo("Squared: " + squared);
 
-ese process_data(source: Str) {
-    // Reactive data processing
-    ajose! {
-        ayanmo stream = Odi.read_stream(source);
-        ayanmo processed = stream
-            .map(Obara.filter_valid)
-            .group_by(Ika.category)
-            .aggregate(Obara.sum);
-        
-        processed.subscribe(Odi.write_output);
-    }
-}</code></pre>
+    // Sum in parallel
+    ayanmo total = CPU.par_reduce(data, "sum");
+    Irosu.fo("Sum: " + total);
+
+    // Find max in parallel
+    ayanmo maximum = CPU.par_reduce(data, "max");
+    Irosu.fo("Max: " + maximum);
+}
+
+// Run it
+ayanmo data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+process_numbers(data);</code></pre>
                     </div>
                     <a href="data-pipeline.html" class="btn">View Full Example</a>
                 </div>
 
                 <div class="example-item">
                     <h3>CLI Tool</h3>
-                    <p>Create powerful command-line tools with rich features and cultural error messages.</p>
+                    <p>Interactive command-line tool with file operations and task spawning.</p>
                     <div class="code-preview">
-                        <pre><code>// CLI tool with argument parsing
-import ifa-cli;
-
+                        <pre><code>// Interactive CLI REPL
 ese main() {
-    ayanmo args = Ogbe.parse_args();
-    
-    if args.contains("--help") {
-        Irosu.fo("Ifá-Lang CLI Tool v1.3.0");
-        Irosu.fo("Usage: ifa-tool [options]");
-        Oyeku.exit(0);
-    }
-    
-    if args.contains("--version") {
-        Irosu.fo("ifa-tool 1.3.0");
-        Oyeku.exit(0);
-    }
-    
-    // Process files
-    fun file ninu args.files {
-        process_file(file);
+    Irosu.fo("Ifá-Lang CLI v1.0");
+    ayanmo running = otito;
+
+    nigba (running) {
+        ayanmo input = Irosu.gbo("> ");
+        ayanmo parts = Ika.ge(input, 0, 4);
+
+        ti (parts == "exit") {
+            ayanmo running = iro;
+            Oyeku.jade(0);
+        } bibẹkọ ti (parts == "save") {
+            ayanmo content = Ika.ge(input, 5);
+            Odi.ko("output.txt", content);
+            Irosu.fo("Saved.");
+        } bibẹkọ {
+            Irosu.fo("Unknown: " + parts);
+        }
     }
 }</code></pre>
                     </div>
@@ -182,24 +189,24 @@ ese main() {
 
         <div class="step">
             <h2>Domain-Specific Examples</h2>
-            
+
             <h3>Core Domains</h3>
             <div class="domains-grid">
                 <div class="domain-item">
                     <h4><a href="ogbe-examples.html">Ogbe (1111)</a></h4>
-                    <p>System operations, file I/O, process management</p>
+                    <p>Version info</p>
                 </div>
                 <div class="domain-item">
                     <h4><a href="irosu-examples.html">Irosu (1100)</a></h4>
-                    <p>Console I/O, logging, user interaction</p>
+                    <p>Console I/O, print, input, clear, flush</p>
                 </div>
                 <div class="domain-item">
-                    <h4><a href="owonrin-examples.html">Owòn (0011)</a></h4>
-                    <p>Random numbers, cryptography, simulation</p>
+                    <h4><a href="owonrin-examples.html">Owonrin (0011)</a></h4>
+                    <p>Random number generation</p>
                 </div>
                 <div class="domain-item">
                     <h4><a href="oyeku-examples.html">Oyeku (0000)</a></h4>
-                    <p>Exit handling, cleanup, shutdown procedures</p>
+                    <p>Exit, sleep, process control</p>
                 </div>
             </div>
 
@@ -207,11 +214,11 @@ ese main() {
             <div class="domains-grid">
                 <div class="domain-item">
                     <h4><a href="obara-examples.html">Obara (1000)</a></h4>
-                    <p>Addition, multiplication, accumulation</p>
+                    <p>Add, multiply, power, square root</p>
                 </div>
                 <div class="domain-item">
                     <h4><a href="oturupon-examples.html">Oturupon (0101)</a></h4>
-                    <p>Subtraction, division, reduction</p>
+                    <p>Subtract, divide</p>
                 </div>
             </div>
 
@@ -219,189 +226,93 @@ ese main() {
             <div class="domains-grid">
                 <div class="domain-item">
                     <h4><a href="ika-examples.html">Ika (1010)</a></h4>
-                    <p>String operations, text processing</p>
+                    <p>String length, slice, concat, HTML processing</p>
                 </div>
                 <div class="domain-item">
                     <h4><a href="ogunda-examples.html">Ogunda (1101)</a></h4>
-                    <p>Array operations, list processing</p>
+                    <p>List length, push, pop, map, filter, reduce</p>
+                </div>
+            </div>
+
+            <h3>File & Networking Domains</h3>
+            <div class="domains-grid">
+                <div class="domain-item">
+                    <h4><a href="odi-examples.html">Odi (0110)</a></h4>
+                    <p>File read, write, existence check</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="otura-examples.html">Otura (1110) [backend]</a></h4>
+                    <p>HTTP GET, POST (requires <code>backend</code> feature)</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="irete-examples.html">Irete (1011) [crypto]</a></h4>
+                    <p>SHA256, HMAC, Base64 encode/decode</p>
+                </div>
+                <div class="domain-item">
+                    <h4><a href="ose-examples.html">Ose (1001) [game]</a></h4>
+                    <p>Terminal UI: draw, read key, layout</p>
                 </div>
             </div>
 
             <h3>Advanced Domains</h3>
             <div class="domains-grid">
                 <div class="domain-item">
-                    <h4><a href="odi-examples.html">Odi (0110)</a></h4>
-                    <p>File operations, database access</p>
-                </div>
-                <div class="domain-item">
-                    <h4><a href="otura-examples.html">Otura (1110)</a></h4>
-                    <p>Networking, communication protocols</p>
-                </div>
-                <div class="domain-item">
-                    <h4><a href="irete-examples.html">Irete (1011)</a></h4>
-                    <p>Cryptography, compression, encoding</p>
-                </div>
-                <div class="domain-item">
-                    <h4><a href="ose-examples.html">Ose (1001)</a></h4>
-                    <p>Graphics, visualization, UI</p>
-                </div>
-                <div class="domain-item">
                     <h4><a href="ofun-examples.html">Ofun (0001)</a></h4>
-                    <p>Permissions, security, access control</p>
+                    <p>Eval code, debug print</p>
                 </div>
-            </div>
-
-            <h3>Specialized Domains</h3>
-            <div class="domains-grid">
                 <div class="domain-item">
                     <h4><a href="okanran-examples.html">Okanran (0010)</a></h4>
-                    <p>Error handling, validation, debugging</p>
+                    <p>Assert, throw/panic</p>
                 </div>
                 <div class="domain-item">
                     <h4><a href="osa-examples.html">Osa (0100)</a></h4>
-                    <p>Concurrency, parallelism, async operations</p>
+                    <p>Spawn tasks, sleep, wait all, actors, send</p>
                 </div>
                 <div class="domain-item">
                     <h4><a href="iwori-examples.html">Iwori (0001)</a></h4>
-                    <p>Time operations, scheduling, delays</p>
+                    <p>Current time, Unix timestamp</p>
                 </div>
             </div>
         </div>
 
         <div class="step">
-            <h2>Technology Stacks</h2>
-            
+            <h2>Infrastructure & Platform Domains</h2>
+
             <div class="stacks-grid">
                 <div class="stack-item">
-                    <h3>Web Development Stack</h3>
-                    <p>Complete web application development with Ifá-Lang:</p>
+                    <h3>CPU Domain (18)</h3>
+                    <p>Parallel processing and buffer management:</p>
                     <ul>
-                        <li><strong>Backend:</strong> HTTP servers, REST APIs, WebSocket</li>
-                        <li><strong>Frontend:</strong> WebAssembly, reactive UI</li>
-                        <li><strong>Database:</strong> SQL and NoSQL integration</li>
-                        <li><strong>Deployment:</strong> Docker, cloud platforms</li>
+                        <li><strong>par_map:</strong> Apply ops (square, double, abs) to lists in parallel</li>
+                        <li><strong>par_reduce:</strong> Reduce lists (sum, product, min, max) in parallel</li>
+                        <li><strong>Buffers:</strong> Allocate, read, write buffers</li>
+                        <li><strong>Configure:</strong> CPU configuration and thread count</li>
                     </ul>
-                    <a href="stacks.html#web-development" class="btn">Learn More</a>
+                    <a href="infra.html#cpu-operations" class="btn">View Examples</a>
                 </div>
 
                 <div class="stack-item">
-                    <h3>Data Science Stack</h3>
-                    <p>Data analysis and machine learning capabilities:</p>
+                    <h3>Sys Domain (29)</h3>
+                    <p>System information:</p>
                     <ul>
-                        <li><strong>Data Processing:</strong> ETL pipelines, streaming</li>
-                        <li><strong>Analysis:</strong> Statistics, visualization</li>
-                        <li><strong>Machine Learning:</strong> Neural networks, algorithms</li>
-                        <li><strong>Big Data:</strong> Distributed processing</li>
+                        <li><strong>Cores:</strong> Number of CPU cores</li>
+                        <li><strong>Memory:</strong> Total and available memory (requires <code>sysinfo</code>)</li>
+                        <li><strong>Uptime:</strong> System uptime (requires <code>sysinfo</code>)</li>
                     </ul>
-                    <a href="stacks.html#data-science" class="btn">Learn More</a>
+                    <a href="infra.html#system-information" class="btn">View Examples</a>
                 </div>
 
                 <div class="stack-item">
-                    <h3>IoT Stack</h3>
-                    <p>Embedded systems and IoT device development:</p>
+                    <h3>Technology Stacks</h3>
+                    <p>Multi-domain patterns combining available domains:</p>
                     <ul>
-                        <li><strong>Embedded:</strong> Microcontroller programming</li>
-                        <li><strong>Communication:</strong> I2C, SPI, wireless protocols</li>
-                        <li><strong>Sensors:</strong> Data acquisition and processing</li>
-                        <li><strong>Edge Computing:</strong> Local processing and AI</li>
+                        <li><strong>Crypto:</strong> Irete for hashing and encoding</li>
+                        <li><strong>Backend:</strong> Otura HTTP + Odi file ops</li>
+                        <li><strong>GameDev:</strong> Ose terminal UI</li>
+                        <li><strong>Data:</strong> CPU parallel operations + Ogunda list ops</li>
                     </ul>
-                    <a href="stacks.html#iot-stack" class="btn">Learn More</a>
+                    <a href="stacks.html" class="btn">View All Stacks</a>
                 </div>
-
-                <div class="stack-item">
-                    <h3>Game Development Stack</h3>
-                    <p>Game creation and interactive applications:</p>
-                    <ul>
-                        <li><strong>Graphics:</strong> 2D/3D rendering, shaders</li>
-                        <li><strong>Audio:</strong> Sound effects, music synthesis</li>
-                        <li><strong>Physics:</strong> Collision detection, dynamics</li>
-                        <li><strong>Networking:</strong> Multiplayer, real-time sync</li>
-                    </ul>
-                    <a href="stacks.html#game-development" class="btn">Learn More</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="step">
-            <h2>Learning Path</h2>
-            
-            <h3>Beginner Examples</h3>
-            <p>Start with these examples to learn Ifá-Lang basics:</p>
-            <ol>
-                <li><strong>Hello World:</strong> Basic syntax and Irosu domain</li>
-                <li><strong>Simple Calculator:</strong> Obara domain and basic operations</li>
-                <li><strong>File Reader:</strong> Odi domain and file operations</li>
-                <li><strong>String Processing:</strong> Ika domain and text manipulation</li>
-            </ol>
-
-            <h3>Intermediate Examples</h3>
-            <p>Expand your knowledge with these applications:</p>
-            <ol>
-                <li><strong>REST API:</strong> Web development and Otura domain</li>
-                <li><strong>Data Pipeline:</strong> Reactive programming and Ajose system</li>
-                <li><strong>CLI Tool:</strong> Command-line interface and argument parsing</li>
-                <li><strong>Database App:</strong> Persistence and query operations</li>
-            </ol>
-
-            <h3>Advanced Examples</h3>
-            <p>Master Ifá-Lang with complex applications:</p>
-            <ol>
-                <li><strong>Game Engine:</strong> Graphics, physics, and real-time updates</li>
-                <li><strong>IoT System:</strong> Embedded programming and hardware integration</li>
-                <li><strong>Machine Learning:</strong> Data processing and algorithm implementation</li>
-                <li><strong>Cloud Service:</strong> Distributed systems and scalability</li>
-            </ol>
-        </div>
-
-        <div class="step">
-            <h2>Best Practices</h2>
-            
-            <h3>Code Organization</h3>
-            <ul>
-                <li><strong>Domain Usage:</strong> Choose appropriate domains for specific tasks</li>
-                <li><strong>Error Handling:</strong> Use Okanran domain for proper error management</li>
-                <li><strong>Resource Management:</strong> Use   (sacrifice) blocks for cleanup</li>
-                <li><strong>Reactive Programming:</strong> Leverage Ajose system for data flows</li>
-            </ul>
-
-            <h3>Performance</h3>
-            <ul>
-                <li><strong>Memory Management:</strong> Use Opon memory system efficiently</li>
-                <li><strong>Async Operations:</strong> Use Osa domain for concurrent tasks</li>
-                <li><strong>Caching:</strong> Implement caching strategies with Iwori domain</li>
-                <li><strong>Optimization:</strong> Profile and optimize hot paths</li>
-            </ul>
-
-            <h3>Cultural Integration</h3>
-            <ul>
-                <li><strong>Yoruba Concepts:</strong> Incorporate cultural meaning in applications</li>
-                <li><strong>Proverb Messages:</strong> Use culturally appropriate error messages</li>
-                <li><strong>Domain Philosophy:</strong> Understand the spiritual meaning of domains</li>
-                <li><strong>Community Values:</strong> Design applications that benefit the community</li>
-            </ul>
-        </div>
-
-        <div class="step">
-            <h2>Contributing Examples</h2>
-            
-            <p>Share your Ifá-Lang applications with the community:</p>
-            
-            <ul>
-                <li><strong>Submit Examples:</strong> Add your projects to the examples repository</li>
-                <li><strong>Documentation:</strong> Provide clear explanations and comments</li>
-                <li><strong>Testing:</strong> Include tests and usage instructions</li>
-                <li><strong>Cultural Context:</strong> Explain cultural significance when relevant</li>
-            </ul>
-
-            <div class="contribution-guide">
-                <h3>Example Guidelines</h3>
-                <ol>
-                    <li>Use proper Ifá-Lang syntax and domain usage</li>
-                    <li>Include comprehensive documentation</li>
-                    <li>Provide setup and run instructions</li>
-                    <li>Demonstrate best practices and patterns</li>
-                    <li>Consider cultural appropriateness and meaning</li>
-                </ol>
             </div>
         </div>
 

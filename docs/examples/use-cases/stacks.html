@@ -4,108 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stack Use Cases - If·-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        .stack-card {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            border-left: 4px solid var(--accent);
-        }
-
-        .stack-card h3 {
-            color: var(--gold);
-            margin: 0 0 0.5rem;
-        }
-
-        .stack-card p {
-            color: var(--text-dim);
-            margin: 0.5rem 0;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Stack Use Cases - If√°-Lang</title>
 </head>
 
-
+<body>
     <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
@@ -115,326 +18,240 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">stacks.ifa</span></div><div class="terminal-body">
         <header>
-            <h1>?? Stack Use Cases</h1>
-            <p style="color: var(--text-dim);">Real-world applications using If·-Lang's 7 technology stacks</p>
+            <h1>Stack Use Cases</h1>
+            <p style="color: var(--text-dim);">Applications using If√°-Lang's domain-specific stacks</p>
         </header>
 
-        <p>Stacks are high-level abstractions that combine multiple domains for specific application types.</p>
+        <p>Stacks combine multiple domains for specific application types. Each stack is feature-gated and imports additional methods.</p>
 
         <div class="stack-card">
-            <h3>?? Crypto Stack</h3>
-            <p>End-to-end encryption, secure key management, digital signatures</p>
-            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Encrypted Messaging</h4>
-            <pre><code>// Secure message sender
-ayanmo Crypto = import("@stacks/crypto");
+            <h3>Crypto Stack</h3>
+            <p>SHA256 hashing, HMAC, and Base64 encoding (requires <code>crypto</code> feature)</p>
+            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Message Integrity</h4>
+            <pre><code>// message_auth.ifa - Signed messages with HMAC
 
-ise encrypt_message(recipient_pubkey, message) {
-    // Generate ephemeral key pair
-    ayanmo ephemeral = Crypto.generate_keypair();
-    
-    // Derive shared secret using ECDH
-    ayanmo shared = Crypto.ecdh(ephemeral.private, recipient_pubkey);
-    
-    // Encrypt with AES-256-GCM
-    ayanmo nonce = Crypto.random_bytes(12);
-    ayanmo ciphertext = Crypto.aes_encrypt(shared, nonce, message);
-    
-    padap? {
-        "ephemeral_pub": ephemeral.public,
-        "nonce": nonce,
-        "ciphertext": ciphertext
-    };
+ayanmo SECRET = "shared_key_123";
+
+ese sign_message(message) {
+    ayanmo signature = Irete.hmac_sha256(message, SECRET);
+    padap? message + "." + signature;
 }
 
-// Usage
-ayanmo encrypted = encrypt_message(bob_public_key, "Secret meeting at noon");
-Otura.post("https://api.example.com/messages", encrypted);</code></pre>
-        </div>
-
-        <div class="stack-card">
-            <h3>?? Backend Stack</h3>
-            <p>REST APIs, WebSocket servers, database connections, middleware</p>
-            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: User Authentication API</h4>
-            <pre><code>// auth_server.ifa - JWT-based authentication
-ayanmo Backend = import("@stacks/backend");
-
-ayanmo router = Backend.router();
-ayanmo JWT_SECRET = Ogbe.env("JWT_SECRET");
-
-// POST /auth/login
-router.post("/auth/login", (req, res) => {
-    ayanmo body = req.json();
-    ayanmo user = db_find_user(body["email"]);
-    
-    ti (user == nil) {
-        res.status(401).json({"error": "Invalid credentials"});
-        padap?;
-    }
-    
-    ti (!Irete.verify_password(body["password"], user["password_hash"])) {
-        res.status(401).json({"error": "Invalid credentials"});
-        padap?;
-    }
-    
-    // Generate JWT
-    ayanmo token = Backend.jwt_sign({
-        "sub": user["id"],
-        "email": user["email"],
-        "exp": Iwori.now() + 86400  // 24 hours
-    }, JWT_SECRET);
-    
-    res.json({"token": token, "user": {"id": user["id"], "email": user["email"]}});
-});
-
-// Middleware: verify JWT
-ise auth_middleware(req, res, next) {
-    ayanmo auth = req.header("Authorization");
-    ti (auth == nil || !Ika.starts_with(auth, "Bearer ")) {
-        res.status(401).json({"error": "Missing token"});
-        padap?;
-    }
-    
-    ayanmo token = Ika.substring(auth, 7, Ika.len(auth));
-    ayanmo payload = Backend.jwt_verify(token, JWT_SECRET);
-    
-    ti (payload == nil) {
-        res.status(401).json({"error": "Invalid token"});
-        padap?;
-    }
-    
-    req.user = payload;
-    next();
-}
-
-Backend.serve(router, 3000);</code></pre>
-        </div>
-
-        <div class="stack-card">
-            <h3>?? Frontend Stack</h3>
-            <p>HTML generation, component rendering, static site building</p>
-            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Blog Static Site Generator</h4>
-            <pre><code>// ssg.ifa - Static site generator
-ayanmo Frontend = import("@stacks/frontend");
-
-ise build_blog() {
-    ayanmo posts = [];
-    ayanmo files = Odi.list("content/posts");
-    
-    // Parse markdown posts
-    fun file ninu files {
-        ti (Ika.ends_with(file, ".md")) {
-            ayanmo content = Odi.read("content/posts/" + file);
-            ayanmo post = Frontend.parse_markdown(content);
-            ayanmo posts = Ogunda.push(posts, post);
+ese verify_message(signed) {
+    ayanmo dot = 0;
+    ayanmo i = 0;
+    nigba (i < Ika.gigun(signed)) {
+        ti (Ika.ge(signed, i, i + 1) == ".") {
+            ayanmo dot = i;
         }
+        ayanmo i = i + 1;
     }
-    
-    // Sort by date
-    ayanmo posts = Osa.sort_by(posts, |p| p["date"]);
-    
-    // Generate index page
-    ayanmo index_html = Frontend.render("templates/index.html", {
-        "title": "My Blog",
-        "posts": posts
-    });
-    Odi.write("dist/index.html", index_html);
-    
-    // Generate individual post pages
-    fun post ninu posts {
-        ayanmo html = Frontend.render("templates/post.html", post);
-        Odi.write("dist/posts/" + post["slug"] + ".html", html);
+    ti (dot == 0) {
+        padap? iro;
     }
-    
-    Irosu.fo("? Built " + Ogunda.len(posts) + " posts");
-}
-
-build_blog();</code></pre>
-        </div>
-
-        <div class="stack-card">
-            <h3>?? GameDev Stack</h3>
-            <p>2D/3D rendering, sprites, collision, input handling, game loops</p>
-            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: 2D Platformer</h4>
-            <pre><code>// platformer.ifa - Simple 2D game
-ayanmo Game = import("@stacks/gamedev");
-
-ayanmo player = {
-    "x": 100, "y": 300,
-    "vx": 0, "vy": 0,
-    "on_ground": iro
-};
-
-ayanmo GRAVITY = 0.5;
-ayanmo JUMP_FORCE = -12;
-ayanmo SPEED = 5;
-
-ise update() {
-    // Input handling
-    ti (Game.key_down("ArrowLeft")) {
-        player["vx"] = -SPEED;
-    } bib?k? ti (Game.key_down("ArrowRight")) {
-        player["vx"] = SPEED;
-    } bib?k? {
-        player["vx"] = 0;
-    }
-    
-    ti (Game.key_pressed("Space") && player["on_ground"]) {
-        player["vy"] = JUMP_FORCE;
-        player["on_ground"] = iro;
-    }
-    
-    // Physics
-    player["vy"] = player["vy"] + GRAVITY;
-    player["x"] = player["x"] + player["vx"];
-    player["y"] = player["y"] + player["vy"];
-    
-    // Ground collision
-    ti (player["y"] >= 400) {
-        player["y"] = 400;
-        player["vy"] = 0;
-        player["on_ground"] = otito;
-    }
-}
-
-ise draw() {
-    Game.clear("#87CEEB");  // Sky blue
-    Game.rect(0, 420, 800, 80, "#228B22");  // Ground
-    Game.rect(player["x"], player["y"], 32, 48, "#FF6347");  // Player
-}
-
-Game.run(800, 600, "Platformer", update, draw);</code></pre>
-        </div>
-
-        <div class="stack-card">
-            <h3>?? ML Stack</h3>
-            <p>Neural networks, training, inference, data preprocessing</p>
-            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Sentiment Analysis</h4>
-            <pre><code>// sentiment.ifa - Text sentiment classifier
-ayanmo ML = import("@stacks/ml");
-
-// Load pre-trained model
-ayanmo model = ML.load_model("models/sentiment.onnx");
-
-ise analyze_sentiment(text) {
-    // Tokenize and embed
-    ayanmo tokens = ML.tokenize(text);
-    ayanmo embeddings = ML.embed(tokens);
-    
-    // Run inference
-    ayanmo output = model.predict(embeddings);
-    
-    // Interpret output
-    ayanmo positive = output[0];
-    ayanmo negative = output[1];
-    
-    ti (positive > negative) {
-        padap? {"sentiment": "positive", "confidence": positive};
-    } bib?k? {
-        padap? {"sentiment": "negative", "confidence": negative};
-    }
+    ayanmo msg = Ika.ge(signed, 0, dot);
+    ayanmo sig = Ika.ge(signed, dot + 1, Ika.gigun(signed));
+    ayanmo expected = Irete.hmac_sha256(msg, SECRET);
+    padap? sig == expected;
 }
 
 // Usage
-ayanmo reviews = [
-    "This product is amazing!",
-    "Terrible experience, never again.",
-    "It's okay, nothing special."
-];
-
-fun review ninu reviews {
-    ayanmo result = analyze_sentiment(review);
-    Irosu.fo(review);
-    Irosu.fo("  ? " + result["sentiment"] + " (" + result["confidence"] + ")\n");
-}</code></pre>
+ayanmo signed = sign_message("Transfer 100 units");
+Irosu.fo("Signed: " + signed);
+Irosu.fo("Verified: " + verify_message(signed));</code></pre>
         </div>
 
         <div class="stack-card">
-            <h3>?? IoT Stack</h3>
-            <p>Sensor reading, GPIO control, MQTT messaging, device management</p>
-            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Temperature Monitor</h4>
-            <pre><code>// temp_monitor.ifa - IoT temperature sensor
-ayanmo IoT = import("@stacks/iot");
+            <h3>Backend Stack</h3>
+            <p>HTTP requests and file I/O for server-side logic (requires <code>backend</code> feature)</p>
+            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Data Sync</h4>
+            <pre><code>// sync.ifa - Fetch and cache remote data
 
-ayanmo SENSOR_PIN = 4;
-ayanmo ALERT_THRESHOLD = 30.0;
-
-ise read_temperature() {
-    ayanmo raw = IoT.analog_read(SENSOR_PIN);
-    // Convert ADC value to Celsius
-    ayanmo voltage = (raw / 1024.0) * 3.3;
-    ayanmo celsius = (voltage - 0.5) * 100.0;
-    padap? celsius;
-}
-
-ise send_alert(temp) {
-    ayanmo message = {
-        "device_id": IoT.device_id(),
-        "temperature": temp,
-        "timestamp": Iwori.now(),
-        "alert": "HIGH_TEMP"
-    };
-    
-    IoT.mqtt_publish("sensors/alerts", Ogbe.format_json(message));
-}
-
-// Main monitoring loop
-Irosu.fo("Starting temperature monitor...");
-
-nigba (otito) {
-    ayanmo temp = read_temperature();
-    Irosu.fo("Temperature: " + temp + "∞C");
-    
-    ti (temp > ALERT_THRESHOLD) {
-        send_alert(temp);
-        IoT.led_on(13);  // Warning LED
-    } bib?k? {
-        IoT.led_off(13);
+ese fetch_and_cache(url, cache_file) {
+    ayanmo data = Otura.gba(url);
+    ti (data == ofifo) {
+        Irosu.kigbe("Fetch failed");
+        padap?;
     }
-    
-    Oyeku.sleep(5000);  // Read every 5 seconds
+    Odi.ko(cache_file, data);
+    Irosu.fo("Cached to: " + cache_file);
+}
+
+ese load_cached(cache_file) {
+    ti (Odi.wa(cache_file)) {
+        padap? Odi.ka(cache_file);
+    }
+    padap? ofifo;
+}
+
+// Usage
+fetch_and_cache("https://api.example.com/data", "cache.json");
+ayanmo cached = load_cached("cache.json");
+ti (cached != ofifo) {
+    Irosu.fo("Loaded from cache");
 }</code></pre>
         </div>
 
         <div class="stack-card">
-            <h3>? Fusion Stack</h3>
-            <p>Full-stack apps combining Backend + Frontend + ML</p>
-            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Image Classification API with Web UI</h4>
-            <pre><code>// fusion_app.ifa - Full-stack image classifier
-ayanmo Fusion = import("@stacks/fusion");
+            <h3>Frontend Stack</h3>
+            <p>String manipulation, file I/O, and HTML utilities</p>
+            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: HTML Title Extraction</h4>
+            <pre><code>// html_titles.ifa - Extract titles from HTML files
 
-// ML model for image classification
-ayanmo classifier = Fusion.ml.load_model("models/imagenet.onnx");
+ese extract_title(path) {
+    ti (!Odi.wa(path)) {
+        padap? ofifo;
+    }
+    ayanmo html = Odi.ka(path);
+    padap? Ika.oruko_html(html);
+}
 
-// API endpoint
-Fusion.api.post("/classify", (req, res) => {
-    ayanmo image = req.file("image");
-    
-    // Preprocess image
-    ayanmo tensor = Fusion.ml.image_to_tensor(image, 224, 224);
-    
-    // Run classification
-    ayanmo predictions = classifier.predict(tensor);
-    ayanmo top5 = Fusion.ml.top_k(predictions, 5);
-    
-    res.json({"predictions": top5});
-});
+ese strip_html_tags(path) {
+    ti (!Odi.wa(path)) {
+        padap? ofifo;
+    }
+    ayanmo html = Odi.ka(path);
+    padap? Ika.tumo_html(html);
+}
 
-// Static files for web UI
-Fusion.static("/", "public/");
+// Usage
+ayanmo title = extract_title("page.html");
+ti (title != ofifo) {
+    Irosu.fo("Page title: " + title);
+}
 
-// Start server
-Fusion.serve(8080);</code></pre>
+ayanmo text = strip_html_tags("page.html");
+Irosu.fo("Plain text: " + Ika.ge(text, 0, 50) + "...");</code></pre>
+        </div>
+
+        <div class="stack-card">
+            <h3>GameDev Stack</h3>
+            <p>Terminal UI operations for game-like interfaces (requires <code>game</code> feature)</p>
+            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Simple Game Screen</h4>
+            <pre><code>// game_screen.ifa - Game title screen
+
+Ose.bere();
+Ose.apoti("Ifa Quest", 30);
+Ose.ya("Press SPACE to start");
+Ose.ipinro("Controls");
+
+Irosu.fo("Arrow keys: move");
+Irosu.fo("Space: action");
+Irosu.fo("Q: quit");
+
+ayanmo key = Ose.gbile();
+ti (key == " ") {
+    Irosu.fo("Game started!");
+} bib·∫πk·ªç {
+    Irosu.fo("Exiting...");
+}
+
+Ose.pari();</code></pre>
+        </div>
+
+        <div class="stack-card">
+            <h3>ML Stack</h3>
+            <p>Data processing with parallel map/reduce on CPU domain</p>
+            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Batch Data Transform</h4>
+            <pre><code>// transform.ifa - Parallel data transformation
+
+ese normalize(data) {
+    ayanmo squares = CPU.par_map(data, "square");
+    ayanmo total = CPU.par_reduce(squares, "sum");
+    ayanmo count = Ogunda.iw·ªçn(data);
+    ti (count == 0) { padap? []; }
+
+    ayanmo mean = Oturupon.pipin(total, count);
+    ayanmo result = [];
+    ayanmo i = 0;
+    nigba (i < count) {
+        ayanmo diff = Oturupon.yokuro(data[i], mean);
+        ayanmo result = Ogunda.fi(result, diff);
+        ayanmo i = i + 1;
+    }
+    padap? result;
+}
+
+// Usage
+ayanmo values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+ayanmo norm = normalize(values);
+Irosu.fo("Normalized values computed");</code></pre>
+        </div>
+
+        <div class="stack-card">
+            <h3>IoT Stack</h3>
+            <p>File-based sensor data logging and monitoring</p>
+            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Temperature Logger</h4>
+            <pre><code>// temp_logger.ifa - Log sensor readings to file
+
+ese log_reading(sensor_id, value) {
+    ayanmo timestamp = Iwori.akoko();
+    ayanmo entry = "[" + timestamp + "] " + sensor_id + ": " + value;
+    ayanmo existing = "";
+    ti (Odi.wa("sensor.log")) {
+        ayanmo existing = Odi.ka("sensor.log");
+    }
+    Odi.ko("sensor.log", existing + entry + "\n");
+    Irosu.fo("Logged: " + entry);
+}
+
+ese read_history() {
+    ti (!Odi.wa("sensor.log")) {
+        Irosu.fo("No logs yet");
+        padap?;
+    }
+    ayanmo data = Odi.ka("sensor.log");
+    Irosu.fo("=== Sensor History ===");
+    Irosu.fo(data);
+}
+
+// Usage
+log_reading("temp_1", "23.5");
+log_reading("temp_1", "24.0");
+log_reading("humidity_2", "65.2");
+read_history();</code></pre>
+        </div>
+
+        <div class="stack-card">
+            <h3>Fusion Stack</h3>
+            <p>Combined file I/O, HTTP, and data processing</p>
+            <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Data Pipeline</h4>
+            <pre><code>// pipeline.ifa - Fetch, process, and save data
+
+ese run_pipeline(url, output_file) {
+    // Fetch
+    Irosu.fo("Fetching: " + url);
+    ayanmo raw = Otura.gba(url);
+    ti (raw == ofifo) {
+        Irosu.kigbe("Fetch failed");
+        padap? iro;
+    }
+
+    // Process
+    Irosu.fo("Processing data...");
+    ayanmo size = Ika.gigun(raw);
+    ayanmo hash = Irete.sha256(raw);
+
+    // Save
+    ayanmo result = "size=" + size + "\nhash=" + hash + "\n---\n" + raw;
+    Odi.ko(output_file, result);
+    Irosu.fo("Saved to: " + output_file);
+    padap? otito;
+}
+
+// Usage
+run_pipeline("https://api.example.com/data", "output.txt");</code></pre>
         </div>
 
         <footer class="doc-footer">
-            <p><a href="domains.html">? Domain Use Cases</a> ∑ <a href="infra.html">Infrastructure Use Cases ?</a></p>
+            <p><a href="domains.html">Domain Use Cases</a> | <a href="infra.html">Infrastructure Use Cases</a></p>
             <p><a href="../../index.html">Documentation Home</a></p>
         </footer>
-    </div>
+    </div></div>
     <script src="../../js/nav.js"></script>
     <script src="../../js/common.js"></script>
 </body>
 
 </html>
-

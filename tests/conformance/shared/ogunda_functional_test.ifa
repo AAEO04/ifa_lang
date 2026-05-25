@@ -1,0 +1,59 @@
+# expect: SUCCESS
+
+# 1. Initialize list
+ayanmo nums = Ogunda.da(1, 2, 3, 4, 5);
+
+# 2. Map (multiply by 2)
+ayanmo mapped = Ogunda.map(nums, |x| x * 2);
+ayanmo m1 = mapped[0];
+ayanmo m2 = mapped[1];
+ayanmo m3 = mapped[2];
+ayanmo m4 = mapped[3];
+ayanmo m5 = mapped[4];
+
+# 3. Filter (elements greater than 2)
+ayanmo filtered = Ogunda.filter(nums, |x| x > 2);
+ayanmo f1 = filtered[0];
+ayanmo f2 = filtered[1];
+ayanmo f3 = filtered[2];
+
+# 4. Reduce (sum) with initial value
+ayanmo sum = Ogunda.reduce(nums, 10, |acc, x| acc + x);
+
+# 5. Reduce without initial value
+ayanmo product = Ogunda.reduce(nums, |acc, x| acc * x);
+
+# Print results
+Irosu.fo(m1);
+Irosu.fo(m2);
+Irosu.fo(m3);
+Irosu.fo(m4);
+Irosu.fo(m5);
+Irosu.fo(f1);
+Irosu.fo(f2);
+Irosu.fo(f3);
+Irosu.fo(sum);
+Irosu.fo(product);
+
+# Verify
+if m1 == 2 {
+  if m2 == 4 {
+    if m3 == 6 {
+      if m4 == 8 {
+        if m5 == 10 {
+          if f1 == 3 {
+            if f2 == 4 {
+              if f3 == 5 {
+                if sum == 25 {
+                  if product == 120 {
+                    Irosu.fo("SUCCESS");
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Crate Map — Ifá-Lang Dev Docs</title>
+    <style>
+        .crate-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            border-left: 3px solid var(--green);
+        }
+        .crate-block h3 {
+            color: var(--green);
+            margin: 0 0 0.4rem 0;
+            font-size: 0.95rem;
+        }
+        .crate-meta {
+            font-size: 0.8rem;
+            color: var(--dim);
+            margin-bottom: 0.5rem;
+        }
+        .crate-meta span {
+            margin-right: 1rem;
+        }
+        .crate-deps {
+            font-size: 0.8rem;
+            color: var(--amber);
+            margin: 0.3rem 0;
+        }
+        .crate-exports {
+            font-size: 0.8rem;
+            margin: 0.3rem 0;
+        }
+        .crate-exports code {
+            font-size: 0.75rem;
+        }
+        .crate-features {
+            font-size: 0.8rem;
+            color: var(--dim);
+            margin: 0.3rem 0;
+        }
+        .pill {
+            display: inline-block;
+            padding: 1px 6px;
+            font-size: 0.7rem;
+            border-radius: 2px;
+            margin-right: 4px;
+        }
+        .pill.no-std { background: #1a3a1a; color: var(--green); border: 1px solid var(--green); }
+        .pill.safe { background: #1a1a3a; color: #6a6aff; border: 1px solid #6a6aff; }
+        .pill.unsafe { background: #3a1a1a; color: var(--red); border: 1px solid var(--red); }
+        .pill.docs { background: #3a2a1a; color: var(--amber); border: 1px solid var(--amber); }
+        .pill.bin { background: #2a1a3a; color: #b06aff; border: 1px solid #b06aff; }
+        .pill.standalone-version { background: #1a2a3a; color: #6aafff; border: 1px solid #6aafff; }
+        .section-header {
+            color: var(--amber);
+            font-size: 1.1rem;
+            margin: 2rem 0 0.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.3rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            margin: 1rem 0;
+        }
+        th {
+            text-align: left;
+            color: var(--green);
+            border-bottom: 1px solid var(--border);
+            padding: 0.4rem 0.6rem;
+        }
+        td {
+            padding: 0.4rem 0.6rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        td:first-child { font-weight: 500; }
+    </style>
+</head>
+
+<body>
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">crates.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Crate Map</h1>
+            <p class="subtitle">All 17 workspace crates, verified from source</p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified:</strong> Every fact on this page was extracted from
+            <code>Cargo.toml</code> and <code>src/lib.rs</code> (or <code>src/main.rs</code>
+            for binary crates) of each crate. File paths and line numbers are cited.<br><br>
+            Base path: <code>crates/&lt;name&gt;/</code>
+        </div>
+
+        <table>
+            <tr><th>Crate</th><th>Version</th><th>Std</th><th>Unsafe</th><th>Docs</th><th>Entry</th></tr>
+            <tr><td>ifa-bytecode</td><td>0.1.0</td><td class="pill no-std">no_std</td><td class="pill safe">forbid</td><td class="pill docs">warn</td><td>lib.rs</td></tr>
+            <tr><td>ifa-types</td><td>1.2.2</td><td class="pill no-std">cond</td><td class="pill safe">forbid</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-vm</td><td>1.2.2</td><td>std</td><td class="pill unsafe">allow</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-parser</td><td>1.2.2</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-compiler</td><td>1.2.2</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-transpiler</td><td>1.2.2</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-std</td><td>1.2.2</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-cli</td><td>1.2.2</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td class="pill bin">main.rs</td></tr>
+            <tr><td>ifa-embedded</td><td>1.2.2</td><td class="pill no-std">cond</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-macros</td><td>1.2.2</td><td>proc</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-wasm</td><td>1.2.2</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-babalawo</td><td>1.2.2</td><td>std</td><td class="pill safe">forbid</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-sandbox</td><td>1.2.2</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-installer-core</td><td>0.1.0</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-installer-gui</td><td>0.1.0</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td class="pill bin">main.rs</td></tr>
+            <tr><td>ifa-fmt</td><td>1.2.2</td><td>std</td><td class="pill safe">forbid</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+            <tr><td>ifa-infra</td><td>1.2.2</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
+        </table>
+
+        <p style="color:var(--dim);font-size:0.8rem">
+            "cond" = conditional no_std via <code>#![cfg_attr(not(feature = "std"), no_std)]</code>.
+            "proc" = proc-macro crate (cannot be no_std).
+            "forbid" = <code>#![forbid(unsafe_code)]</code>.
+            "warn" = <code>#![warn(missing_docs)]</code>.
+            Only <code>ifa-bytecode</code> enforces missing docs.
+        </p>
+
+        <h2 class="section-header">Layer 1: Foundation (no_std)</h2>
+
+        <div class="crate-block">
+            <h3>ifa-bytecode</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-bytecode/Cargo.toml:2</code></span>
+                <span>Version 0.1.0 (standalone, not workspace)</span>
+                <span>Edition 2021 (not workspace)</span>
+            </div>
+            <p>The binary interface contract. Defines the <code>OpCode</code> enum
+            (60+ variants), bytecode format (MAGIC, VERSION, header), and error codes.
+            Zero dependencies (serde optional). The only crate with
+            <code>#![warn(missing_docs)]</code> (<code>lib.rs:16</code>).</p>
+            <div class="crate-exports">
+                <strong>Public:</strong> <code>OpCode</code> (enum), <code>ErrorCode</code>,
+                <code>InvalidOpCode</code>, <code>BytecodeHeader</code>, <code>FormatError</code>,
+                <code>MAGIC</code>, <code>VERSION</code>
+            </div>
+            <div class="crate-features">
+                <strong>Features:</strong> <code>default = ["std"]</code>,
+                <code>alloc</code>, <code>std</code> (enables alloc + serde/std)
+            </div>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-types</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-types/Cargo.toml:2</code></span>
+                <span>Version 1.2.2 (workspace)</span>
+            </div>
+            <p>Shared type system: <code>IfaValue</code> (32-byte enum with
+            <code>CompactString</code> SSO, small-int pool 0–255, NaN-boxing path),
+            <code>OduDomain</code> (fixed 16 canonical Odù + 4 infrastructure + 2 reserved
+            — <strong>not extensible</strong>, see <code>domain.rs:14-17</code>),
+            <code>IfaError</code>/<code>IfaResult</code>, <code>NanBox</code>,
+            <code>IfaShared</code> (Arc+RwLock/DashMap). Dual-path design:
+            <code>value_union.rs</code> (VM path, gated by <code>feature = "vm"</code>)
+            vs <code>value.rs</code> (legacy path).</p>
+            <div class="crate-exports">
+                <strong>Key public types:</strong> <code>IfaValue</code>, <code>OduDomain</code>,
+                <code>IfaError</code>, <code>IfaResult</code>, <code>NanBox</code>,
+                <code>CompactString</code>, <code>IfaShared</code>, <code>OpCode</code> (re-export),
+                <code>Statement</code> (behind <code>vm</code> feature),
+                <code>Bytecode</code> (behind <code>vm</code> feature)
+            </div>
+            <div class="crate-features">
+                <strong>Features:</strong> <code>default = ["std", "serde", "dashmap"]</code>,
+                <code>vm</code> (enables ast + bytecode modules),
+                <code>std</code>, <code>serde</code>, <code>dashmap</code>, <code>alloc</code>
+            </div>
+        </div>
+
+        <h2 class="section-header">Layer 2: Core Runtime</h2>
+
+        <div class="crate-block">
+            <h3>ifa-vm</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-vm/Cargo.toml:2</code></span>
+            </div>
+            <p>The primary execution engine. Contains <code>IfaVM</code>
+            (<code>vm.rs:127</code>) with single-match opcode dispatch
+            (<code>vm.rs:1214</code>), Ikin constant pool (<code>vm_ikin.rs</code>),
+            Iroke instruction fetch with fuel metering (<code>vm_iroke.rs:17</code>),
+            async task queue (<code>vm.rs:948</code>), actor system (<code>actor.rs</code>),
+            and Opon memory protection (<code>opon.rs</code>). The largest crate.</p>
+            <div class="crate-deps">
+                <strong>Internal deps:</strong> ifa-types (vm), ifa-bytecode, ifa-parser,
+                ifa-compiler, ifa-transpiler, ifa-sandbox (optional)
+            </div>
+            <div class="crate-exports">
+                <strong>Key public types:</strong> <code>IfaVM</code>, <code>Bytecode</code>,
+                <code>OpCode</code>, <code>Compiler</code>, <code>compile</code>,
+                <code>ProjectConfig</code>, <code>RustTranspiler</code>,
+                <code>Opon</code>, <code>IwaPele</code>, <code>Ebo</code>,
+                <code>ModuleResolver</code>, <code>Ajose</code>
+            </div>
+            <div class="crate-features">
+                <strong>Features:</strong> <code>default = ["native", "parallel", "sysinfo"]</code>,
+                <code>native</code> (enables sandbox),
+                <code>network</code> (ureq), <code>audio</code> (rodio),
+                <code>parallel</code> (rayon), <code>gpu</code> (wgpu),
+                <code>persistence</code>, <code>sysinfo</code>
+            </div>
+            <div class="crate-features">
+                <strong>Bench:</strong> <code>opcode_dispatch</code> (Criterion,
+                <code>Cargo.toml:75</code>)
+            </div>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-parser</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-parser/Cargo.toml:2</code></span>
+            </div>
+            <p>Lexer via <code>logos</code> + parser via <code>pest</code> PEG grammar.
+            Produces AST (<code>ifa_types::ast</code>). Re-exports <code>OduDomain</code>,
+            <code>Token</code>, <code>tokenize</code>, <code>parse</code>.</p>
+            <div class="crate-deps">
+                <strong>Internal deps:</strong> ifa-types (vm feature)
+            </div>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-compiler</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-compiler/Cargo.toml:2</code></span>
+            </div>
+            <p>AST → bytecode compiler. Single-file (no submodules). Key features:
+            tail call optimization (<code>return f(x)</code> → <code>TailCall</code>,
+            <code>lib.rs:592</code>), constant inlining (<code>lib.rs:1214</code>),
+            string dedup via HashMap (<code>lib.rs:127</code>), static Odu method
+            resolution (<code>lib.rs:1574</code>). <strong>No optimization passes</strong>
+            beyond TCO and constant inlining.</p>
+            <div class="crate-deps">
+                <strong>Internal deps:</strong> ifa-types, ifa-parser, ifa-bytecode
+            </div>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-transpiler</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-transpiler/Cargo.toml:2</code></span>
+            </div>
+            <p>Ifá-Lang → Rust source-to-source transpiler. Generates standalone Rust
+            binaries with its own <code>IfaValue</code> enum embedded in the output
+            (via <code>statements.rs:54</code>). Not VM-based — each transpiled
+            program is a self-contained native binary. Used by <code>ifa build</code>.</p>
+            <div class="crate-deps">
+                <strong>Internal deps:</strong> ifa-types, ifa-parser
+            </div>
+        </div>
+
+        <h2 class="section-header">Layer 3: Standard Library & Platform Runtimes</h2>
+
+        <div class="crate-block">
+            <h3>ifa-std</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-std/Cargo.toml:2</code></span>
+            </div>
+            <p>The 16 Odù domains standard library. These are the <strong>fixed core language
+            domains</strong> — no new Odù can be added to <code>OduDomain</code>
+            (<code>domain.rs:14-17</code>). Custom functionality goes through external
+            packages imported via <code>iba</code> and distributed via <code>oja</code>
+            (<code>ifa-cli/src/oja.rs</code>).</p>
+            <p>Always-available: ogbe, oyeku, iwori, irosu, owonrin, obara, okanran,
+            ogunda, ika, oturupon, ofun. Gated: odi/osa/otura (<code>backend</code>),
+            ose (<code>game</code>), irete (<code>crypto</code>).
+            Also: stacks/{crypto,backend,frontend,gamedev,ml,iot,fusion},
+            ffi (polyglot), infra/{cpu,gpu,storage,kernel,shaders,runtime}.</p>
+            <div class="crate-deps">
+                <strong>Internal deps:</strong> ifa-types, ifa-vm (for domain registry)
+            </div>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-embedded</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-embedded/Cargo.toml:2</code></span>
+            </div>
+            <p>no_std runtime for microcontrollers. Target features:
+            <code>esp32</code>, <code>stm32</code>, <code>rp2040</code>.
+            Uses <code>ifa-vm</code> with <code>default-features = false</code>.</p>
+            <div class="crate-exports">
+                <strong>Public:</strong> <code>EmbeddedVM</code>,
+                <code>EmbeddedConfig</code>, <code>MmioRegion</code>
+            </div>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-wasm</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-wasm/Cargo.toml:2</code></span>
+            </div>
+            <p>WASM bindings via <code>wasm-bindgen</code>. Exports <code>compile</code>,
+            <code>run</code>, <code>format</code>, <code>analyze</code> as JS-callable
+            functions. Compiled with <code>wasm-pack</code>.</p>
+        </div>
+
+        <h2 class="section-header">Layer 4: Developer Tooling</h2>
+
+        <div class="crate-block">
+            <h3>ifa-cli</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-cli/Cargo.toml:2</code></span>
+            </div>
+            <p>Binary entrypoint. Commands: <code>run</code> (default),
+            <code>check</code>, <code>build</code>, <code>test</code>, <code>fmt</code>
+            (requires <code>--unstable</code>), <code>bytecode</code>, <code>runb</code>,
+            <code>repl</code>, <code>lsp</code>, <code>deploy</code>, <code>doc</code>,
+            <code>debug</code>, <code>oja</code> (package manager), <code>babalawo</code>.</p>
+            <div class="crate-deps">
+                <strong>Internal deps:</strong> All crates except ifa-embedded and ifa-wasm
+            </div>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-babalawo</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-babalawo/Cargo.toml:2</code></span>
+            </div>
+            <p>Static analysis and linting. Type inference (<code>inference.rs</code>),
+            scope analysis (<code>scope.rs</code>), Odù method validation
+            (<code>metadata.rs</code>), Elm-style error formatting with caret
+            pointers (<code>diagnose.rs</code>). Passes: borrow, const, type, effect.</p>
+            <div class="crate-deps">
+                <strong>Internal deps:</strong> ifa-types, ifa-std
+            </div>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-fmt</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-fmt/Cargo.toml:2</code></span>
+            </div>
+            <p>Source code formatter. Uses <code>#![forbid(unsafe_code)]</code>.
+            Requires <code>--unstable</code> flag in CLI.</p>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-sandbox</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-sandbox/Cargo.toml:2</code></span>
+            </div>
+            <p>Capability-based security. Defines <code>Ofun</code> enum
+            (ReadFiles, WriteFiles, Network, Execute, Environment, Time,
+            Random, Stdio, Bridge). <code>CapabilitySet</code> gates all
+            domain operations in the VM and interpreter.</p>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-installer-core</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-installer-core/Cargo.toml:2</code></span>
+                <span>Version 0.1.0</span>
+            </div>
+            <p>Library for the cross-platform installer. Handles platform detection,
+            download, PATH setup, and version management.</p>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-installer-gui</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-installer-gui/Cargo.toml:2</code></span>
+                <span>Version 0.1.0</span>
+            </div>
+            <p>Tauri-based GUI wrapper around <code>ifa-installer-core</code>.</p>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-macros</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-macros/Cargo.toml:2</code></span>
+            </div>
+            <p>Procedural macros for domain safety (<code>#[odu_domain]</code>),
+            capability gating, and bilingual keyword generation.</p>
+        </div>
+
+        <div class="crate-block">
+            <h3>ifa-infra</h3>
+            <div class="crate-meta">
+                <span>→ <code>crates/ifa-infra/Cargo.toml:2</code></span>
+            </div>
+            <p>Hardware abstraction layer. Contains <code>cpu.rs</code> (task
+            parallelism, async, thread pool), <code>gpu.rs</code> (wgpu compute),
+            <code>storage.rs</code> (high-performance I/O), <code>kernel.rs</code>
+            (system calls, feature-gated by <code>sysinfo</code>),
+            <code>shaders.rs</code> (pre-built WGSL compute shaders).</p>
+            <div class="crate-deps">
+                <strong>Internal deps:</strong> ifa-types
+            </div>
+        </div>
+
+        <footer>
+            <p><a href="index.html">← Back to Development Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

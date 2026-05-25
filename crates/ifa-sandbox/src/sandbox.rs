@@ -157,7 +157,7 @@ impl Sandbox {
 
     /// Check if sandbox is currently running
     pub fn is_running(&self) -> bool {
-        self.state == SandboxState::Running
+        self.state == SandboxState::Running && self.elapsed_time() < self.config.limits.max_execution_time
     }
 
     /// Terminate the sandbox
@@ -169,6 +169,8 @@ impl Sandbox {
     /// Check if sandbox was terminated (vs completed normally)
     pub fn was_terminated(&self) -> bool {
         self.state == SandboxState::Terminated
+            || (self.state == SandboxState::Running
+                && self.elapsed_time() >= self.config.limits.max_execution_time)
     }
 
     /// Get elapsed time since start
@@ -184,16 +186,12 @@ impl Sandbox {
 
     /// Check if file access is allowed (with path traversal prevention)
     pub fn can_access_file(&self, path: &Path) -> bool {
-        // Canonicalize to prevent path traversal attacks
-        let canonical = match path.canonicalize() {
-            Ok(p) => p,
-            Err(_) => return false, // If we can't resolve, deny
-        };
-
         // Check if it's a symlink (deny symlinks for security)
         if path.is_symlink() {
             return false;
         }
+
+        let canonical = ifa_types::capability::canonicalize_safe(path);
 
         // Check against granted file capabilities
         self.config
@@ -216,14 +214,14 @@ impl Sandbox {
     }
 
     /// Check if file creation is allowed (respects file limit)
-    pub fn can_create_file(&self, _path: &Path) -> bool {
-        // This would need actual file count tracking
-        // For now, just check write capability
+    pub fn can_create_file(&self, path: &Path) -> bool {
+        if path.is_symlink() {
+            return false;
+        }
+        let canonical = ifa_types::capability::canonicalize_safe(path);
         self.config
             .capabilities
-            .all()
-            .iter()
-            .any(|c| matches!(c, Ofun::WriteFiles { .. }))
+            .check(&Ofun::WriteFiles { root: canonical })
     }
 
     /// Check if process spawning is allowed

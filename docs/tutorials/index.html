@@ -4,123 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tutorials - If·-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2rem 0 1rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        .tutorial-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin: 2rem 0;
-        }
-
-        .tutorial-card {
-            background: var(--bg-card);
-            padding: 1.5rem;
-            border-radius: 12px;
-            border-left: 4px solid var(--accent);
-            transition: transform 0.2s;
-        }
-
-        .tutorial-card:hover {
-            transform: translateY(-4px);
-        }
-
-        .tutorial-card h3 {
-            color: var(--gold);
-            margin: 0 0 0.5rem;
-        }
-
-        .tutorial-card p {
-            color: var(--text-dim);
-            margin: 0.5rem 0;
-            font-size: 0.9rem;
-        }
-
-        .tutorial-card .level {
-            display: inline-block;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            margin-top: 0.5rem;
-        }
-
-        .level-beginner {
-            background: #2e7d32;
-        }
-
-        .level-intermediate {
-            background: #f57c00;
-        }
-
-        .level-advanced {
-            background: #c62828;
-        }
-
-        a {
-            color: var(--gold);
-            text-decoration: none;
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+        <link rel="stylesheet" href="../js/common.css">
+    <title>Tutorials - If√°-Lang</title>
 </head>
 
 
@@ -133,9 +18,10 @@
         </div>
     </div>
     <div class="container">
-        <header>
-            <h1>?? Tutorials</h1>
-            <p style="color: var(--text-dim);">In-depth guides for mastering If·-Lang</p>
+        
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">tutorials.ifa</span></div><div class="terminal-body"><header>
+            <h1>Tutorials</h1>
+            <p style="color: var(--text-dim);">In-depth guides for mastering If√°-Lang</p>
         </header>
 
         <p>These tutorials go beyond the basics, covering testing, debugging, performance optimization, and advanced
@@ -144,19 +30,19 @@
         <h2>Development Workflow</h2>
         <div class="tutorial-grid">
             <a href="testing.html" class="tutorial-card">
-                <h3>?? Testing</h3>
+                <h3>Testing</h3>
                 <p>Write unit tests, integration tests, and use assertions effectively.</p>
                 <span class="level level-intermediate">Intermediate</span>
             </a>
 
             <a href="debugging.html" class="tutorial-card">
-                <h3>?? Debugging</h3>
+                <h3>Debugging</h3>
                 <p>Debug with Babalawo diagnostics, trace execution, and fix common errors.</p>
                 <span class="level level-intermediate">Intermediate</span>
             </a>
 
             <a href="performance.html" class="tutorial-card">
-                <h3>? Performance</h3>
+                <h3>Performance</h3>
                 <p>Optimize with CPU parallelism, GPU compute, and memory management.</p>
                 <span class="level level-advanced">Advanced</span>
             </a>
@@ -164,19 +50,17 @@
 
         <h2>Related Resources</h2>
         <ul style="margin-left: 1.5rem;">
-            <li><a href="../index.html">Tour of If·</a> ó 15-lesson interactive tutorial</li>
-            <li><a href="../index.html">Use Cases</a> ó Real-world project examples</li>
-            <li><a href="../reference/errors.html">Error Reference</a> ó Common errors and fixes</li>
-            <li><a href="../community/community.html">Babalawo Linter</a> ó Static analysis documentation</li>
+            <li><a href="../index.html">Tour of If√°</a> - 15-lesson interactive tutorial</li>
+            <li><a href="../index.html">Use Cases</a> - Real-world project examples</li>
+            <li><a href="../reference/errors.html">Error Reference</a> - Common errors and fixes</li>
+            <li><a href="../community/community.html">Babalawo Linter</a> - Static analysis documentation</li>
         </ul>
 
         <footer class="doc-footer">
-            <p><a href="../index.html">? Documentation Home</a></p>
-        </footer>
-    </div>
-    <script src="../js/nav.js"></script>
+            <p><a href="../index.html">Documentation Home</a></p>
+        </footer></div></div>
+<script src="../js/nav.js"></script>
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

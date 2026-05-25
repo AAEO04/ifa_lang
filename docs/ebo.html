@@ -4,135 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>?b? - Resource Lifecycle - Ifá-Lang</title>
-    <link rel="stylesheet" href="js/common.css">
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-            --success: #4ade80;
-        }
+    <title>&#7864;b&#7901; - Resource Lifecycle - If&aacute;-Lang</title>
+    <link rel="stylesheet" href="../js/common.css">
+</head>
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-            margin: 2.5rem 0 1rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        .method {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            border-left: 4px solid var(--accent);
-        }
-
-        .method h3 {
-            margin-top: 0;
-        }
-
-        .concept {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin: 1rem 0;
-        }
-
-        .concept-item {
-            background: var(--bg-card);
-            padding: 1rem;
-            border-radius: 8px;
-            flex: 1;
-            min-width: 200px;
-            text-align: center;
-        }
-
-        .concept-item h4 {
-            color: var(--gold);
-            margin-bottom: 0.5rem;
-        }
-
-        .concept-item p {
-            color: var(--text-dim);
-            font-size: 0.9rem;
-            margin: 0;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
-</head>`r`n`r`n<body>
-    <div id="nav-placeholder"></div>`r`n
+<body>
+    <div id="nav-placeholder"></div>
     <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
@@ -142,48 +19,77 @@
         </div>
     </div>
     <div class="container">
-        <header>
-            <h1>?? ?b? - Resource Lifecycle</h1>
+        
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">ebo.ifa</span></div><div class="terminal-body"><header>
+            <h1>&#7864;b&#7901; - Resource Lifecycle</h1>
             <p style="color: var(--text-dim);">RAII resource management inspired by Yoruba sacrifice traditions</p>
         </header>
 
-        <h2>What is ?b??</h2>
-        <p><strong>?b?</strong> (Yoruba: "sacrifice/offering") is Ifá-Lang's resource lifecycle system. It ensures
-            cleanup code runs automatically when resources go out of scope — similar to Rust's RAII, Go's defer, or C++
-            destructors.</p>
+        <h2>What is Ebo?</h2>
+        <p><strong>&#7864;b&#7901;</strong> (Yoruba: "sacrifice/offering") is If&aacute;-Lang's resource lifecycle system. It ensures cleanup code runs automatically when resources go out of scope â€” similar to Rust's RAII, Go's defer, or C++ destructors.</p>
 
         <div class="concept">
             <div class="concept-item">
-                <h4>??? Ebo Guard</h4>
-                <p>Zero-cost RAII guard that runs cleanup on drop</p>
+                <h4>Ebo Guard</h4>
+                <p>Zero-cost RAII guard that runs cleanup on drop (Rust-level API)</p>
             </div>
             <div class="concept-item">
-                <h4>?? EboScope</h4>
-                <p>Wraps a resource with automatic cleanup</p>
+                <h4>EboScope</h4>
+                <p>Wraps a resource with automatic cleanup (Rust-level API)</p>
             </div>
             <div class="concept-item">
-                <h4>? defer!</h4>
-                <p>Go-style defer for end-of-scope cleanup</p>
+                <h4>defer</h4>
+                <p>Go-style defer for end-of-scope cleanup (language keyword)</p>
             </div>
         </div>
 
-        <h2>Basic Usage</h2>
+        <h2>Language-Level Ebo</h2>
+
         <div class="method">
             <h3>ebo "resource";</h3>
-            <p>Declare a resource lifecycle. Cleanup runs when the scope ends.</p>
-            <pre><code>// Open a file with automatic cleanup
+            <p>Declare a resource lifecycle as a semantic directive. The name is recorded for documentation purposes.</p>
+            <pre><code>// Semantic directive (no body)
 ebo "tempfile";
-ayanmo file = Odi.write("temp.txt", "data");
+ayanmo file = Odi.ko("temp.txt", "data");
 
-// When scope ends, resource is cleaned up automatically</code></pre>
+// Cleanup must be handled explicitly or via defer</code></pre>
         </div>
 
-        <h2>Ebo Guard (Rust API)</h2>
+        <div class="method">
+            <h3>ebo "name" { body }</h3>
+            <p>Scoped memory epoch. Resources allocated within the block are released when the epoch ends.</p>
+            <pre><code>// Scoped memory epoch
+ebo "request" {
+    ayanmo data = fetch_from_api();
+    Irosu.fo("Processing " + data);
+    // Memory is released when this block exits
+}</code></pre>
+        </div>
+
+        <h2>defer â€” Scope-Exit Cleanup</h2>
+        <div class="method">
+            <h3>defer { ... }</h3>
+            <p>Run cleanup at end of current scope (like Go's defer). Parsed and compiled by the compiler.</p>
+            <pre><code>fn process() {
+    defer {
+        Irosu.fo("Done processing");
+    };
+    
+    // Do work...
+    Irosu.fo("Working...");
+    
+    // "Done processing" printed when function returns
+}</code></pre>
+        </div>
+
+        <h2>Rust-Level APIs (ifa-vm)</h2>
+        <p>The following APIs are available when using IfÃ¡-Lang as a Rust library, not from IfÃ¡-Lang source code.</p>
+
         <div class="method">
             <h3>Ebo::new(name, cleanup)</h3>
             <p>Create a guard that runs cleanup when dropped.</p>
-            <pre><code>// Create RAII guard
-ayanmo guard = Ebo.new("db_connection", || {
+            <pre><code>// Rust API â€” not available in If&aacute;-Lang source
+let guard = Ebo::new("db_connection", || {
     db.close();
 });
 
@@ -194,8 +100,9 @@ ayanmo guard = Ebo.new("db_connection", || {
 
         <div class="method">
             <h3>guard.dismiss()</h3>
-            <p>Cancel cleanup — resource will NOT be cleaned up.</p>
-            <pre><code>ayanmo guard = Ebo.new("lock", || release_lock());
+            <p>Cancel cleanup â€” resource will NOT be cleaned up.</p>
+            <pre><code>// Rust API
+let guard = Ebo::new("lock", || release_lock());
 
 // Decide to keep the lock
 guard.dismiss();  // Cleanup cancelled</code></pre>
@@ -204,54 +111,40 @@ guard.dismiss();  // Cleanup cancelled</code></pre>
         <div class="method">
             <h3>guard.sacrifice()</h3>
             <p>Run cleanup early, then dismiss the guard.</p>
-            <pre><code>ayanmo guard = Ebo.new("cache", || cache.flush());
+            <pre><code>// Rust API
+let guard = Ebo::new("cache", || cache.flush());
 
 // Force early cleanup
 guard.sacrifice();  // Runs immediately, not on scope exit</code></pre>
         </div>
 
-        <h2>EboScope (Scoped Resources)</h2>
         <div class="method">
             <h3>EboScope::new(value, cleanup)</h3>
             <p>Wrap a value with automatic cleanup when scope ends.</p>
-            <pre><code>// Scoped file handle
-ayanmo scoped = EboScope.new(
-    Odi.open("data.txt"),
-    |file| file.sync()  // Cleanup: sync before close
+            <pre><code>// Rust API
+let scoped = EboScope::new(
+    File::open("data.txt")?,
+    |file| { file.sync_all().ok(); }
 );
 
-// Use the file
-scoped.write("Hello");
-
-// sync() called automatically when scoped drops</code></pre>
+// Use the file via Deref
+// sync_all() called automatically when scoped drops</code></pre>
         </div>
 
         <div class="method">
             <h3>scoped.into_inner()</h3>
             <p>Extract the value, running cleanup first.</p>
-            <pre><code>ayanmo scoped = EboScope.new(42, |n| Irosu.fo("Cleaned: " + n));
-ayanmo value = scoped.into_inner();  // Prints "Cleaned: 42"</code></pre>
+            <pre><code>// Rust API
+let scoped = EboScope::new(42, |n| println!("Cleaned: {}", n));
+let value = scoped.into_inner();  // Prints "Cleaned: 42"</code></pre>
         </div>
 
         <div class="method">
             <h3>scoped.leak()</h3>
             <p>Extract value WITHOUT running cleanup.</p>
-            <pre><code>ayanmo scoped = EboScope.new(resource, |r| r.close());
-ayanmo leaked = scoped.leak();  // No cleanup runs</code></pre>
-        </div>
-
-        <h2>defer! Macro (Go-style)</h2>
-        <div class="method">
-            <h3>defer!(cleanup)</h3>
-            <p>Run cleanup at end of current scope (like Go's defer).</p>
-            <pre><code>ise process() {
-    defer!(|| Irosu.fo("Done processing"));
-    
-    // Do work...
-    Irosu.fo("Working...");
-    
-    // "Done processing" printed when function returns
-}</code></pre>
+            <pre><code>// Rust API
+let scoped = EboScope::new(resource, |r| r.close());
+let leaked = scoped.leak();  // No cleanup runs</code></pre>
         </div>
 
         <h2>Use Cases</h2>
@@ -264,13 +157,11 @@ ayanmo leaked = scoped.leak();  // No cleanup runs</code></pre>
         </ul>
 
         <footer class="doc-footer">
-            <p><a href="ewo.html">Èw?` (Taboos/Assertions) ?</a></p>
-            <p><a href="api/api.html">? API Reference</a> · <a href="index.html">Documentation Home</a></p>
-        </footer>
-    </div>
-        <script src="js/nav.js"></script>
-    <script src="js/common.js"></script>
+            <p><a href="ewo.html">&#7864;&#768;w&#7901;&#768; (Taboos/Assertions)</a> Â· <a href="api/api.html">API Reference</a></p>
+            <p><a href="index.html">Documentation Home</a></p>
+        </footer></div></div>
+<script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
 </body>
 
 </html>
-

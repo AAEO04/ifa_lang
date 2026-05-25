@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Value System — Ifá-Lang Dev Docs</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 1rem 0; }
+        .field-table th { text-align: left; color: var(--green); border-bottom: 1px solid var(--border); padding: 0.4rem 0.6rem; }
+        .field-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .field-table td:first-child { color: var(--amber); font-weight: 500; }
+        .field-table td:nth-child(3) { color: var(--dim); font-size: 0.75rem; }
+    </style>
+</head>
+
+<body>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">values.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Value System</h1>
+            <p class="subtitle">IfaValue layout, NaN-boxing, memory model — source-verified</p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified.</strong> Extracted from
+            <code>crates/ifa-types/src/value_union.rs</code>,
+            <code>crates/ifa-types/src/compact_str.rs</code>,
+            <code>crates/ifa-types/src/nan_box.rs</code>,
+            <code>crates/ifa-vm/src/vm_ikin.rs</code>.
+        </div>
+
+        <h2 class="section-header">1. IfaValue Layout</h2>
+
+        <p>The active VM path uses <code>value_union.rs</code> (gated by
+        <code>feature = "vm"</code>). Size: <strong>32 bytes</strong> on 64-bit
+        (<code>value_union.rs:595</code>). Regular Rust enum — not a hand-packed union.</p>
+
+        <table class="field-table">
+            <tr><th>Variant</th><th>Storage</th><th>Heap?</th><th>Notes</th></tr>
+            <tr><td><code>Null</code></td><td>0 bytes (unit variant)</td><td>No</td><td></td></tr>
+            <tr><td><code>Bool(bool)</code></td><td>1 byte</td><td>No</td><td></td></tr>
+            <tr><td><code>Int(i64)</code></td><td>8 bytes</td><td>No</td><td>Values 0–255 cached in <code>OnceLock</code> pool</td></tr>
+            <tr><td><code>Float(f64)</code></td><td>8 bytes</td><td>No</td><td></td></tr>
+            <tr><td><code>Str(CompactString)</code></td><td>24 bytes (Inline) or 8 bytes (Heap pointer)</td><td>Small: No; Large: Yes (Arc)</td><td>≤21 bytes inline, else Arc&lt;str&gt;</td></tr>
+            <tr><td><code>List(Arc&lt;Vec&lt;IfaValue&gt;&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>COW via Arc::make_mut</td></tr>
+            <tr><td><code>Map(Arc&lt;HashMap&lt;CompactString, IfaValue&gt;&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>Keys are CompactString, COW</td></tr>
+            <tr><td><code>Fn(Arc&lt;BytecodeFnData&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>name, start_ip, arity, is_async</td></tr>
+            <tr><td><code>Closure(Arc&lt;ClosureData&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>fn_data + captured env</td></tr>
+            <tr><td><code>Upvalue(UpvalueCell)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc&lt;Mutex&gt;)</td><td>Mutable binding cell</td></tr>
+            <tr><td><code>Future(FutureCell)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc&lt;Mutex&gt;)</td><td>async task state</td></tr>
+            <tr><td><code>Actor { id, handle }</code></td><td>u64 + pointer</td><td>Yes (Arc&lt;dyn Any&gt;)</td><td>Type-erased actor handle</td></tr>
+            <tr><td><code>Return(Arc&lt;IfaValue&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>Return signal with value</td></tr>
+            <tr><td><code>Result(Box&lt;ResultPayload&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Box)</td><td>ok/err discriminated</td></tr>
+            <tr><td><code>Break / Continue</code></td><td>0 bytes (unit variants)</td><td>No</td><td>Loop control signals</td></tr>
+        </table>
+
+        <h2 class="section-header">2. Small-Int Pool</h2>
+
+        <p><code>value_union.rs:165-178</code>. Integers 0–255 are cached in a
+        <code>OnceLock&lt;[IfaValue; 256]&gt;</code>. <code>IfaValue::int(n)</code>
+        returns a clone of the pre-allocated cell for values in range, avoiding
+        unnecessary allocations for small integers.</p>
+
+        <div class="code-block">
+<pre>pub fn int(n: i64) -> Self {
+    static SMALL_INT_POOL: OnceLock<[IfaValue; 256]> = OnceLock::new();
+    if (0..=255).contains(&n) {
+        let pool = SMALL_INT_POOL.get_or_init(|| {
+            std::array::from_fn(|i| IfaValue::Int(i as i64))
+        });
+        return pool[n as usize].clone();
+    }
+    IfaValue::Int(n)
+}</pre></div>
+
+        <h2 class="section-header">3. NaN-Boxing Fast Path</h2>
+
+        <p><code>nan_box.rs</code> implements a NaN-boxing scheme that packs
+        Null, Bool (true/false), Int (47-bit signed), and Float (including NaN)
+        into a single 64-bit value (<code>NanBox</code>).</p>
+
+        <p><code>IfaValue::to_nan_boxed_primitive()</code>
+        (<code>value_union.rs:245</code>) converts the four primitive variants
+        to <code>NanBox</code>. Returns <code>None</code> for heap-backed variants.
+        Ints outside the 47-bit range cannot be NaN-boxed.</p>
+
+        <p>Used by <strong>arithmetic opcode handlers</strong> in the VM
+        (<code>vm.rs</code>): operands are first converted to <code>NanBox</code>,
+        the operation is performed on 64-bit values directly, and the result is
+        converted back. This avoids the full enum match for Int/Float operations.</p>
+
+        <h2 class="section-header">4. CompactString (SSO)</h2>
+
+        <p><code>compact_str.rs</code> — Small String Optimization.</p>
+
+        <table class="field-table">
+            <tr><th>Variant</th><th>Capacity</th><th>Allocation</th></tr>
+            <tr><td><code>Inline { len: u8, char_len: u8, data: [u8; 21] }</code></td><td>≤21 bytes</td><td>No heap allocation</td></tr>
+            <tr><td><code>Heap(Arc&lt;str&gt;)</code></td><td>≥22 bytes</td><td>Arc-allocated on heap</td></tr>
+        </table>
+
+        <p><code>CompactString::new(s)</code> (<code>compact_str.rs:17</code>):
+        if <code>len &lt;= 21</code>, stores inline with zero allocation.
+        Otherwise, copies to <code>Arc&lt;str&gt;</code>. Precomputed
+        <code>char_len</code> for O(1) Unicode scalar length on the inline
+        variant.</p>
+
+        <h2 class="section-header">5. Ikin Constant Pool</h2>
+
+        <p><code>vm_ikin.rs</code> — the VM's runtime interned string table.</p>
+        <ul>
+            <li>Stores strings as <code>Arc&lt;str&gt;</code> in a flat <code>Vec</code></li>
+            <li>String length cached via <code>string_lengths: Vec&lt;usize&gt;</code> indexed by string ID for O(1) length lookup</li>
+            <li>ASCII fast path: returns byte length directly without lookup</li>
+            <li>Access by <code>consult_string(idx: usize) -> Option&lt;&Arc&lt;str&gt;&gt;</code> with a <code>bytecode_to_ikin: Vec&lt;u32&gt;</code> mapping</li>
+            <li>Loaded from bytecode at each <code>execute()</code> call (<code>vm.rs:539</code>, ikin load at <code>vm.rs:547</code>)</li>
+            <li>In the compiler, strings are deduped via <code>string_index: HashMap&lt;String, u16&gt;</code>
+            (<code>ifa-compiler/src/lib.rs:31</code>)</li>
+        </ul>
+
+        <h2 class="section-header">6. Send + Sync Design</h2>
+
+        <p>All <code>IfaValue</code> variants use <code>Arc</code> or scalars —
+        never <code>Rc</code> or <code>RefCell</code>. The enum is
+        <code>Send + Sync</code>, enabling:</p>
+        <ul>
+            <li>Actor threads sharing values across OS thread boundaries</li>
+            <li><code>IfaShared</code> using <code>Arc&lt;RwLock&gt;</code> / <code>DashMap</code></li>
+            <li>Async task queue with <code>VecDeque&lt;Task&gt;</code></li>
+        </ul>
+
+        <h2 class="section-header">7. Legacy IfaValue (value.rs)</h2>
+
+        <p>An older <code>IfaValue</code> definition exists at <code>value.rs</code>,
+        used when <code>feature = "vm"</code> is not enabled. Differences:</p>
+        <ul>
+            <li><code>Str</code> uses <code>Arc&lt;str&gt;</code> directly (no CompactString)</li>
+            <li>Has <code>AstFn</code>, <code>BytecodeFn</code>, <code>Class</code>,
+            <code>Ptr</code>, <code>Ref</code> variants directly in the enum</li>
+            <li>Uses <code>Arc&lt;Mutex&lt;HashMap&gt;&gt;</code> for Object (not RwLock/DashMap)</li>
+            <li>No small-int pool, no NaN-boxing support</li>
+        </ul>
+
+        <footer>
+            <p><a href="index.html">← Back to Development Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

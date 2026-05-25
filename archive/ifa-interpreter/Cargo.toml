@@ -1,0 +1,31 @@
+[package]
+name = "ifa-interpreter"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Tree-walking interpreter for Ifá-Lang"
+
+[dependencies]
+ifa-types = { path = "../ifa-types" }
+ifa-parser = { path = "../ifa-parser" }
+ifa-vm = { path = "../ifa-vm" }
+ifa-bytecode = { path = "../ifa-bytecode" }
+ifa-sandbox = { path = "../ifa-sandbox", optional = true }
+ifa-std = { path = "../ifa-std", optional = true }
+base64.workspace = true
+getrandom = { version = "0.2", features = ["std", "js"] }
+serde_json.workspace = true
+sha2 = "0.10"
+ureq = { version = "3", optional = true }
+uuid = { workspace = true }
+rayon = { workspace = true, optional = true }
+rodio = { version = "0.17", optional = true }
+
+[features]
+default = ["std"]
+std = ["ifa-std", "ifa-std/crypto", "ifa-std/game"]
+native = ["ifa-sandbox"]
+parallel = ["dep:rayon"]
+network = ["dep:ureq"]
+audio = ["dep:rodio"]

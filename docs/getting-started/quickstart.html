@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quick Start - If·-Lang</title>
+    <title>Quick Start - If√°-Lang</title>
     <meta name="description"
-        content="Get started with If·-Lang in 5 minutes. Install, write, and run your first program.">
+        content="Get started with If√°-Lang in 5 minutes. Install, write, and run your first program.">
     <link rel="stylesheet" href="../js/common.css">
 </head>
 
@@ -23,14 +23,15 @@
     </div>
 
     <div class="container">
-        <header>
+        
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">quickstart.ifa</span></div><div class="terminal-body"><header>
             <h1>Quick Start Guide</h1>
-            <p class="subtitle">From zero to your first If·-Lang program in 5 minutes</p>
+            <p class="subtitle">From zero to your first If√°-Lang program in 5 minutes</p>
         </header>
 
         <h2>Installation</h2>
         <div class="step">
-            <p><span class="step-number">1</span> <strong>Install If·-Lang</strong></p>
+            <p><span class="step-number">1</span> <strong>Install If√°-Lang</strong></p>
             <p><strong>Option A: GUI Installer (Recommended)</strong></p>
             <p>Download the cross-platform installer:</p>
             <pre><code># Download from:
@@ -49,7 +50,7 @@ curl -sSf https://aaeo04.github.io/ifa_lang/install.sh | sh
 # Rust users
 cargo install ifa-cli</code></pre>
             <p style="color: var(--text-dim); font-size: 0.9rem;">See <a
-                    href="../getting-started/quickstart.html">detailed installation</a>
+                    href="../getting-started/install.html">detailed installation</a>
                 for profiles and options</p>
         </div>
 
@@ -58,7 +59,7 @@ cargo install ifa-cli</code></pre>
             <pre><code>ifa --version</code></pre>
             <div class="output">
                 <div class="output-label">Output:</div>
-                <code>If·-Lang v1.2.2</code>
+                <code>If√°-Lang v1.2.3</code>
             </div>
         </div>
 
@@ -74,11 +75,11 @@ cargo install ifa-cli</code></pre>
                         <button class="toggle-english" onclick="setLang('english')">English</button>
                     </div>
                 </div>
-                <pre class="code-yoruba"><code>// If·-Lang Hello World
-ayanmo oruko = "If·";
+                <pre class="code-yoruba"><code>// If√°-Lang Hello World
+ayanmo oruko = "If√°";
 Irosu.fo("Kaabo, " + oruko + "!");</code></pre>
-                <pre class="code-english"><code>// If·-Lang Hello World
-let name = "If·";
+                <pre class="code-english"><code>// If√°-Lang Hello World
+let name = "If√°";
 Irosu.println("Hello, " + name + "!");</code></pre>
             </div>
         </div>
@@ -88,7 +89,7 @@ Irosu.println("Hello, " + name + "!");</code></pre>
             <pre><code>ifa run hello.ifa</code></pre>
             <div class="output">
                 <div class="output-label">Output:</div>
-                <code>Kaabo, If·!</code>
+                <code>Kaabo, If√°!</code>
             </div>
         </div>
 
@@ -116,7 +117,7 @@ ayanmo iro_ni = iro;       // false
 ayanmo awon_nomba = [1, 2, 3, 4, 5];
 
 // Null
-ayanmo ohunkohun_ko_si = ohunkohun;</code></pre>
+ayanmo ohunkohun_ko_si = ofifo;</code></pre>
             <pre class="code-english"><code>// Numbers
 let count = 42;
 let price = 3.14;
@@ -145,11 +146,11 @@ let nothing = null;</code></pre>
                 </div>
             </div>
             <pre class="code-yoruba"><code>// If statement
-ayanmo ?j?_ori = 18;
+ayanmo ·ªçj·ªç_ori = 18;
 
-ti (?j?_ori >= 18) {
+ti (·ªçj·ªç_ori >= 18) {
     Irosu.fo("O ti dagba!");
-} bib?k? {
+} bib·∫πk·ªç {
     Irosu.fo("O tun kere.");
 }
 
@@ -188,7 +189,7 @@ for n in items {
 }</code></pre>
         </div>
 
-        <h2>Using Od˘ Domains</h2>
+        <h2>Using Odu Domains</h2>
         <div class="code-example">
             <div class="code-header">
                 <span class="code-title">domains.ifa</span>
@@ -198,24 +199,24 @@ for n in items {
                 </div>
             </div>
             <pre class="code-yoruba"><code>// Irete - Crypto operations
-ayanmo hash = Irete.sha256("if·");
+ayanmo hash = Irete.sha256_hex("If√°");
 Irosu.fo("SHA256: " + hash);
 
-// Osa - Parallel operations
+// Ogunda - List operations
 ayanmo awon = [1, 2, 3, 4, 5];
-ayanmo apap? = Osa.sum(awon);
-Irosu.fo("Sum: " + apap?);
+ayanmo lapapo = Obara.apapo(awon);
+Irosu.fo("Sum: " + lapapo);
 
 // Ogbe - System info
 ayanmo eto = Ogbe.eto();
 Irosu.fo("OS: " + eto);</code></pre>
             <pre class="code-english"><code>// Irete - Crypto operations
-let hash = Irete.sha256("if·");
+let hash = Irete.sha256_hex("If√°");
 Irosu.println("SHA256: " + hash);
 
-// Osa - Parallel operations
+// Ogunda - List operations
 let numbers = [1, 2, 3, 4, 5];
-let total = Osa.sum(numbers);
+let total = Obara.apapo(numbers);
 Irosu.println("Sum: " + total);
 
 // Ogbe - System info
@@ -226,29 +227,27 @@ Irosu.println("OS: " + os);</code></pre>
         <h2>Next Steps</h2>
         <div class="next-steps">
             <a href="../language/philosophy.html" class="next-step">
-                <h3>?? Philosophy</h3>
-                <p>Learn about the 16 Od˘ domains</p>
+                <h3>Philosophy</h3>
+                <p>Learn about the 16 Odu domains</p>
             </a>
             <a href="../examples/examples.html" class="next-step">
-                <h3>?? Examples</h3>
+                <h3>Examples</h3>
                 <p>More complete programs</p>
             </a>
             <a href="../tutorials/tour/10-errors.html" class="next-step">
-                <h3>?? Error Handling</h3>
+                <h3>Error Handling</h3>
                 <p>Debugging and troubleshooting</p>
             </a>
             <a href="../tutorials/playground.html" class="next-step">
-                <h3>?? Playground</h3>
-                <p>Try If·-Lang in your browser</p>
+                <h3>Playground</h3>
+                <p>Try If√°-Lang in your browser</p>
             </a>
         </div>
 
         <footer>
-            <p><a href="../index.html">? Back to Documentation</a></p>
-        </footer>
-    </div>
-
-    <script src="../js/nav.js"></script>
+            <p><a href="../index.html">Back to Documentation</a></p>
+        </footer></div></div>
+<script src="../js/nav.js"></script>
     <script src="../js/common.js"></script>
     <script>
         function setLang(lang) {

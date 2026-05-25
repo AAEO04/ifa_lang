@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Release Process — Ifá-Lang Maintainer Docs</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 1rem 0; }
+        .field-table th { text-align: left; color: var(--green); border-bottom: 1px solid var(--border); padding: 0.4rem 0.6rem; }
+        .field-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .field-table td:first-child { font-weight: 500; }
+    </style>
+</head>
+
+<body>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">release.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Release Process</h1>
+            <p class="subtitle">Tag-based release pipeline — source-verified from <code>.github/workflows/release.yml</code></p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified.</strong> Extracted from
+            <code>.github/workflows/release.yml</code> (153 lines) and
+            root <code>Cargo.toml</code> (workspace config).
+        </div>
+
+        <h2 class="section-header">1. Trigger</h2>
+
+        <p>Pushing a <code>v*</code> tag to GitHub triggers the release workflow
+        (<code>release.yml:4</code>):</p>
+        <div class="code-block">
+        <pre>on:
+  push:
+    tags:
+      - 'v*'</pre></div>
+
+        <p>Pre-release detection (<code>release.yml:139</code>): if the tag contains
+        <code>-alpha</code>, <code>-beta</code>, or <code>-rc</code>, the release
+        is marked as a prerelease on GitHub.</p>
+
+        <h2 class="section-header">2. Build Matrix</h2>
+
+        <p>Five targets (<code>release.yml:16-40</code>):</p>
+
+        <table class="field-table">
+            <tr><th>Platform</th><th>Target triple</th><th>Cross-compiled?</th></tr>
+            <tr><td>Linux x86_64</td><td><code>x86_64-unknown-linux-gnu</code></td><td>No</td></tr>
+            <tr><td>Linux ARM64</td><td><code>aarch64-unknown-linux-gnu</code></td><td>Yes (gcc-aarch64-linux-gnu)</td></tr>
+            <tr><td>Windows x86_64</td><td><code>x86_64-pc-windows-msvc</code></td><td>No</td></tr>
+            <tr><td>macOS Intel</td><td><code>x86_64-apple-darwin</code></td><td>No</td></tr>
+            <tr><td>macOS ARM</td><td><code>aarch64-apple-darwin</code></td><td>No</td></tr>
+        </table>
+
+        <h2 class="section-header">3. Artifacts Built</h2>
+
+        <p>Each build job produces (<code>release.yml:79-91</code>):</p>
+        <ul>
+            <li><strong><code>ifa-&lt;version&gt;-&lt;platform&gt;</code></strong> —
+            the primary CLI binary (<code>cargo build --release -p ifa-cli</code>)</li>
+            <li><strong><code>ifa-installer-&lt;version&gt;-&lt;platform&gt;</code></strong> —
+            GUI installer binary (<code>cargo build --release -p ifa-installer-gui</code>),
+            skipped for cross-compiled targets</li>
+        </ul>
+
+        <p>Artifacts are uploaded with 1-day retention (<code>release.yml:93-97</code>).</p>
+
+        <h2 class="section-header">4. Release Assembly</h2>
+
+        <p>The <code>release</code> job (<code>release.yml:101</code>) runs after all
+        builds complete:</p>
+        <ol>
+            <li>Downloads all platform artifacts</li>
+            <li>Generates <code>sha256sum</code> checksums (<code>release.yml:113-117</code>)</li>
+            <li>Generates release notes from <code>git log</code> since previous tag
+            (<code>release.yml:119-141</code>)</li>
+            <li>Creates a GitHub Release with all artifacts attached
+            (<code>release.yml:143-150</code>)</li>
+        </ol>
+
+        <h2 class="section-header">5. Versioning</h2>
+
+        <p>Workspace version: <code>1.2.2</code> (<code>Cargo.toml:22</code>).
+        Crate versions:</p>
+        <ul>
+            <li>Most crates inherit workspace version (<code>1.2.2</code>)</li>
+            <li><code>ifa-bytecode</code> uses standalone <code>0.1.0</code> with edition 2021</li>
+            <li><code>ifa-installer-core</code> uses standalone <code>0.1.0</code></li>
+            <li><code>ifa-installer-gui</code> uses standalone <code>0.1.0</code></li>
+        </ul>
+
+        <p>Release tag format: <code>v&lt;workspace_version&gt;</code> (e.g., <code>v1.2.2</code>).</p>
+
+        <h2 class="section-header">6. docs.rs</h2>
+
+        <p>Only <code>ifa-bytecode</code> has docs.rs metadata configured
+        (<code>Cargo.toml:19-20</code>): <code>all-features = true</code>.
+        No other crate has <code>[package.metadata.docs.rs]</code>,
+        <code>documentation</code>, or <code>homepage</code> fields.</p>
+
+        <footer>
+            <p><a href="index.html">← Back to Maintainer Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

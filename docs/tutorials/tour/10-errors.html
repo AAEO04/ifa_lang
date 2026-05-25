@@ -4,153 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lesson 10: Error Handling - Tour of If·</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-            --error: #ef4444;
-            --success: #4ade80;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .lesson-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--accent);
-        }
-
-        .lesson-num {
-            background: var(--accent);
-            color: white;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        .concept-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin: 1rem 0;
-        }
-
-        .concept {
-            background: var(--bg-card);
-            padding: 1rem;
-            border-radius: 8px;
-        }
-
-        .concept h4 {
-            color: var(--gold);
-            margin-bottom: 0.5rem;
-        }
-
-        .concept.danger {
-            border-left: 3px solid var(--error);
-        }
-
-        .concept.safe {
-            border-left: 3px solid var(--success);
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--accent);
-        }
-
-        .nav-btn {
-            background: var(--bg-card);
-            color: var(--gold);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            border: 1px solid var(--accent);
-        }
-
-        .nav-btn:hover {
-            background: var(--accent);
-            color: white;
-        }
-
-        .nav-btn.primary {
-            background: var(--accent);
-            color: white;
-        }
-
-        a {
-            color: var(--gold);
-        }
-    </style>
+    <title>Lesson 10: Errors - Tour of If√°</title>
+    <link rel="stylesheet" href="../../../js/common.css">
+    <script src="../../../js/nav.js" defer></script>
+    <script src="../../../js/common.js" defer></script>
+    
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
     <!-- Breadcrumbs -->
     <div class="breadcrumbs">
@@ -161,156 +23,138 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">10-errors.ifa</span></div><div class="terminal-body">
         <div class="lesson-header">
             <div class="lesson-num">10</div>
             <div>
-                <h1>Error Handling</h1>
-                <p style="color: var(--text-dim); margin: 0;">Okanran domain and »w?` assertions</p>
+                <h1>Errors</h1>
+                <p style="color: var(--text-dim); margin: 0;">Assertions and error handling with Okanran</p>
             </div>
         </div>
 
-        <h2>Two Approaches</h2>
-        <div class="concept-grid">
-            <div class="concept safe">
-                <h4>??? Recoverable Errors (Okanran)</h4>
-                <p style="color: var(--text-dim); margin: 0;">Expected failures that you can handle gracefully</p>
+        <div class="info-box"
+            style="border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px;">
+            <div class="info-box-title" style="color: #ef4444; font-weight: bold; margin-bottom: 0.5rem;">
+                Okanran: The Od√π of Challenges
             </div>
-            <div class="concept danger">
-                <h4>?? Assertions (»w?`)</h4>
-                <p style="color: var(--text-dim); margin: 0;">Invariants that must never be violated ó program panics
-                </p>
-            </div>
+            <p style="margin: 0;">
+                In Yoruba tradition, Okanran represents challenges and obstacles.
+                In If√°-Lang, the Okanran domain handles error handling, assertions, and exceptions.
+            </p>
         </div>
 
-        <h2>Okanran: Recoverable Errors</h2>
-        <p>Use <strong>Okanran</strong> for operations that might fail (file not found, network error, invalid input).
-        </p>
+        <h2>Assertions (beeni / sise)</h2>
+        <p>Use <code>Okanran.beeni()</code> to assert conditions are true:</p>
 
-        <h3>Try / Catch Pattern</h3>
-        <pre><code>// Wrap risky operation
-ayanmo result = Okanran.try(|| {
-    padap? Odi.read("config.txt");
-});
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Assertions</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo x = 42;
 
-// Check if it's an error
-ti (Okanran.is_error(result)) {
-    Irosu.fo("Failed to read config, using defaults");
-    ayanmo result = default_config();
-} bib?k? {
-    Irosu.fo("Config loaded successfully");
-}</code></pre>
+// Assert that x equals 42
+Okanran.beeni(x == 42, "x should be 42");
 
-        <h3>unwrap_or ó Default on Error</h3>
-        <pre><code>// Get value or use default
-ayanmo data = Okanran.unwrap_or(
-    Okanran.try(|| Odi.read("optional.txt")),
+// Assert that x is greater than 0
+Okanran.sise(x > 0, "x must be positive");</code></pre>
+        </div>
+
+        <h2>Checking Conditions</h2>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Condition Checks</span>
+            </div>
+            <pre class="code-yoruba"><code>Okanran.dogba(a, b);           // assert equal
+Okanran.yato(a, b);            // assert not equal
+Okanran.beko(condition, msg);   // assert false
+Okanran.ko_si(value, msg);     // assert null/nil</code></pre>
+        </div>
+
+        <h2>Fallible Operations (gbiyanju)</h2>
+        <p>Use <code>Okanran.gbiyanju()</code> to try an operation with a default fallback:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Try with Fallback</span>
+            </div>
+            <pre class="code-yoruba"><code>// Try an operation, use fallback on failure
+ayanmo result = Okanran.gbiyanju(
+    { -> Odi.ka("maybe_exists.txt") },
     "default content"
 );
-
-Irosu.fo(data);  // Either file content or "default content"</code></pre>
-
-        <h3>Creating Errors</h3>
-        <pre><code>ise divide(a, b) {
-    ti (b == 0) {
-        padap? Okanran.error("Division by zero");
-    }
-    padap? a / b;
-}
-
-ayanmo result = divide(10, 0);
-ti (Okanran.is_error(result)) {
-    Irosu.kigbe("Error: " + Okanran.message(result));
-}</code></pre>
-
-        <h2>»w?`: Assertions (Taboos)</h2>
-        <p>Use <strong>ewo</strong> for conditions that must ALWAYS be true. If violated, the program panics.</p>
-
-        <pre><code>// Basic assertion
-ayanmo age = 25;
-ewo age >= 0;  // OK - continues
-
-ayanmo balance = -100;
-ewo balance >= 0;  // PANIC! Program stops</code></pre>
-
-        <h3>With Error Messages</h3>
-        <pre><code>ise withdraw(account, amount) {
-    ewo amount > 0, "Amount must be positive";
-    ewo amount <= account, "Insufficient funds";
-    
-    padap? account - amount;
-}
-
-// This will panic with message:
-withdraw(100, 200);  // "Insufficient funds"</code></pre>
-
-        <h3>English Alias: assert</h3>
-        <pre><code>// assert is the English alias for ewo
-assert x > 0, "x must be positive";
-assert list != nil, "list cannot be nil";</code></pre>
-
-        <h2>When to Use Each</h2>
-        <div class="concept-grid">
-            <div class="concept safe">
-                <h4>Use Okanran when:</h4>
-                <ul style="color: var(--text-dim); margin: 0.5rem 0 0 1rem;">
-                    <li>File might not exist</li>
-                    <li>Network request might fail</li>
-                    <li>User input might be invalid</li>
-                    <li>Recovery is possible</li>
-                </ul>
-            </div>
-            <div class="concept danger">
-                <h4>Use »w?` when:</h4>
-                <ul style="color: var(--text-dim); margin: 0.5rem 0 0 1rem;">
-                    <li>Condition should never be false</li>
-                    <li>Bug in logic if violated</li>
-                    <li>No recovery is possible</li>
-                    <li>Security invariant</li>
-                </ul>
-            </div>
+Irosu.fo(result);  // file content or "default content"</code></pre>
         </div>
 
-        <h2>Practical Example: Input Validation</h2>
-        <pre><code>ise process_order(items, quantity) {
-    // Assertions for programming errors
-    ewo items != nil, "Items list required";
-    ewo Ogbe.type(quantity) == "number", "Quantity must be number";
-    
-    // Recoverable validation
-    ti (quantity <= 0) {
-        padap? Okanran.error("Quantity must be positive");
+        <h2>Throwing Errors</h2>
+        <p>Use <code>Okanran.ta()</code> to throw an error:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Throwing</span>
+            </div>
+            <pre class="code-yoruba"><code>is·ªçd·∫πl·∫π divide(a, b) {
+    ti (b == 0) {
+        Okanran.ta("Cannot divide by zero");
     }
-    
-    ti (quantity > Ogunda.len(items)) {
-        padap? Okanran.error("Not enough items in stock");
-    }
-    
-    // Process order...
-    Irosu.fo("Order processed for " + quantity + " items");
-    padap? otito;
+    a / b
 }
 
-// Usage
-ayanmo result = process_order(["apple", "banana"], 1);
-ti (Okanran.is_error(result)) {
-    Irosu.kigbe(Okanran.message(result));
-}</code></pre>
+ayanmo result = divide(10, 2);  // 5
+// divide(10, 0) would halt with error message</code></pre>
+        </div>
+
+        <h2>Custom Assertions</h2>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Custom Checks</span>
+            </div>
+            <pre class="code-yoruba"><code>is·ªçd·∫πl·∫π validate_age(age) {
+    Okanran.sise(age >= 0, "Age cannot be negative");
+    Okanran.sise(age < 150, "Age seems too high");
+    Irosu.fo("Age " + age + " is valid");
+}
+
+validate_age(25);   // OK
+validate_age(-1);   // halts: "Age cannot be negative"</code></pre>
+        </div>
+
+        <h2>Proverbs as Error Messages</h2>
+        <p>Okanran includes Yoruba proverbs (<code>Okanran.owe()</code>) for meaningful error context:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Proverbs</span>
+            </div>
+            <pre class="code-yoruba"><code>// Get a random Yoruba proverb
+ayanmo proverb = Okanran.owe();
+Irosu.fo(proverb);  // "Bi a ba n·π£e ire, a ko nii ·π£e ibi"</code></pre>
+        </div>
+
+        <div class="info-box"
+            style="border: 1px solid #facc15; background: rgba(250, 204, 21, 0.1); padding: 1rem; border-radius: 8px;">
+            <div class="info-box-title" style="color: #facc15; font-weight: bold; margin-bottom: 0.5rc;">Note</div>
+            <p style="margin: 0;">
+                If√°-Lang does not have try/catch blocks. Use <code>Okanran.gbiyanju()</code> for fallible operations
+                with a default value, and <code>Okanran.ta()</code> to halt on unrecoverable errors.
+            </p>
+        </div>
 
         <h2>What You Learned</h2>
         <ul style="margin-left: 2rem; color: var(--text-dim);">
-            <li><strong>Okanran</strong>: try, is_error, unwrap_or, error, message</li>
-            <li><strong>»w?`/assert</strong>: Fatal assertions for invariants</li>
-            <li>When to use recoverable vs fatal errors</li>
+            <li>Assertions: <code>Okanran.beeni()</code>, <code>Okanran.sise()</code></li>
+            <li>Equality checks: <code>Okanran.dogba()</code>, <code>Okanran.yato()</code></li>
+            <li>Fallible operations: <code>Okanran.gbiyanju()</code></li>
+            <li>Throwing errors: <code>Okanran.ta()</code></li>
+            <li>Proverbs: <code>Okanran.owe()</code></li>
         </ul>
 
         <div class="nav-buttons">
-            <a href="09-files.html" class="nav-btn">? Previous: File I/O</a>
-            <a href="11-parallel.html" class="nav-btn primary">Next: Parallel Processing ?</a>
+            <a href="09-files.html" class="nav-btn">Previous: Files</a>
+            <a href="11-parallel.html" class="nav-btn primary">Next: Parallel</a>
         </div>
     </div>
-        <script src="../../../js/nav.js"></script>
-    <script src="../../../js/common.js"></script>
 </body>
 
 </html>
-

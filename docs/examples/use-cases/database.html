@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Database Operations - Ifá-Lang</title>
-    <meta name="description" content="Complete database operations example using Ifá-Lang's Odi domain with cultural data management">
+    <meta name="description" content="Simple record storage using Ifá-Lang's Odi file I/O domain as a lightweight database">
     <link rel="stylesheet" href="../../js/common.css">
     <script src="../../js/nav.js" defer></script>
 </head>
@@ -16,242 +16,85 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">database.ifa</span></div><div class="terminal-body">
         <header>
-            <h1>Database Operations</h1>
-            <p class="subtitle">Cultural Database Management with Ifá-Lang</p>
+            <h1>Record Store</h1>
+            <p class="subtitle">File-Based Record Management with Ifá-Lang</p>
         </header>
         <div class="step">
             <h2>Overview</h2>
-            <p>Complete database operations using Ifá-Lang's Odi domain, including CRUD operations, cultural data modeling, migrations, and traditional Yoruba knowledge preservation.</p>
+            <p>Ifá-Lang does not yet have a dedicated database domain. This example uses <strong>Odi</strong> file I/O for persistent record storage — a common pattern until native database support lands. Records are stored as newline-delimited JSON-like entries in a flat file, with <strong>Ogunda</strong> for list operations and <strong>Ika</strong> for string processing.</p>
         </div>
         <div class="step">
-            <h2>Database Architecture</h2>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">Database Structure</span>
-                </div>
-                <pre><code>// Database connection and models
-struct DatabaseConnection {
-    pool: ConnectionPool,
-    config: DatabaseConfig,
-    cultural_settings: CulturalDatabaseSettings
-}
-
-// Cultural database settings
-struct CulturalDatabaseSettings {
-    preserve_unicode: Bool,
-    enable_cultural_validation: Bool,
-    track_cultural_metadata: Bool,
-    apply_traditional_naming: Bool
-}
-
-// Cultural knowledge record
-struct CulturalKnowledge {
-    id: u64,
-    title: Str,
-    content: Str,
-    category: CulturalCategory,
-    origin: CulturalOrigin,
-    proverbs: Vec<Str>,
-    metadata: CulturalMetadata
-}
-
-// Cultural categories
-enum CulturalCategory {
-    IfaVerses,
-    Proverbs,
-    Stories,
-    Rituals,
-    History,
-    Language,
-    Medicine,
-    Arts
-}</code></pre>
-            </div>
-        </div>
-        <div class="step">
-            <h2>Database Operations</h2>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">CRUD Operations</span>
-                </div>
-                <pre><code>// Initialize database with cultural support
-se init_database(config: DatabaseConfig) -> DatabaseConnection {
-    gbiyanju {
-        ayanmo connection = Odi.connect(config.connection_string);
-        
-        // Create cultural tables
-        create_cultural_tables(connection);
-        
-        // Run cultural migrations
-        run_cultural_migrations(connection);
-        
-        Irosu.fo("Database initialized with cultural support");
-        pada DatabaseConnection {
-            pool: Odi.create_pool(config),
-            config: config,
-            cultural_settings: CulturalDatabaseSettings {
-                preserve_unicode: otito,
-                enable_cultural_validation: otito,
-                track_cultural_metadata: otito,
-                apply_traditional_naming: otito
-            }
-        };
-    } gba (error) {
-        Irosu.kigbe("Database initialization failed: " + error.message);
-        Oyeku.exit(1);
-    }
-}
-
-// Create cultural knowledge record
-se create_cultural_knowledge(db: DatabaseConnection, knowledge: CulturalKnowledge) -> u64 {
-    gbiyanju {
-        // Validate cultural content
-        if db.cultural_settings.enable_cultural_validation {
-            validate_cultural_content(knowledge);
-        }
-        
-        // Insert with cultural metadata
-        ayanmo query = "
-            INSERT INTO cultural_knowledge 
-            (title, content, category, origin, proverbs, metadata, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ";
-        
-        ayanmo result = Odi.execute(db.pool, query, [
-            knowledge.title,
-            knowledge.content,
-            serialize_category(knowledge.category),
-            serialize_origin(knowledge.origin),
-            serialize_proverbs(knowledge.proverbs),
-            serialize_metadata(knowledge.metadata),
-            Iwori.timestamp()
-        ]);
-        
-        ayanmo id = Odi.last_insert_id(result);
-        Irosu.fo("Created cultural knowledge: " + knowledge.title + " (ID: " + Obara.to_str(id) + ")");
-        
-        id
-    } gba (error) {
-        Irosu.kigbe("Failed to create cultural knowledge: " + error.message);
-        0
-    }
-}
-
-// Query cultural knowledge by category
-se query_cultural_knowledge(db: DatabaseConnection, category: CulturalCategory) -> Vec<CulturalKnowledge> {
-    gbiyanju {
-        ayanmo query = "
-            SELECT id, title, content, category, origin, proverbs, metadata
-            FROM cultural_knowledge 
-            WHERE category = ? 
-            ORDER BY title
-        ";
-        
-        ayanmo rows = Odi.query(db.pool, query, [serialize_category(category)]);
-        ayanmo mut results = Vec::new();
-        
-        fun row ninu rows {
-            results.push(CulturalKnowledge {
-                id: row.get_u64("id"),
-                title: row.get_str("title"),
-                content: row.get_str("content"),
-                category: deserialize_category(row.get_str("category")),
-                origin: deserialize_origin(row.get_str("origin")),
-                proverbs: deserialize_proverbs(row.get_str("proverbs")),
-                metadata: deserialize_metadata(row.get_str("metadata"))
-            });
-        }
-        
-        Irosu.fo("Found " + Obara.to_str(results.length()) + " records in category");
-        results
-    } gba (error) {
-        Irosu.kigbe("Query failed: " + error.message);
-        Vec::new()
-    }
-}</code></pre>
-            </div>
-        </div>
-        <div class="step">
-            <h2>Cultural Data Validation</h2>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">Cultural Validation</span>
-                </div>
-                <pre><code>// Validate cultural content integrity
-se validate_cultural_content(knowledge: CulturalKnowledge) {
-    // Check for proper Yoruba characters
-    if !contains_valid_yoruba(knowledge.content) {
-        throw IfaError::ValidationError("Invalid Yoruba characters detected");
-    }
-    
-    // Validate proverb authenticity
-    fun proverb ninu knowledge.proverbs {
-        if !is_authentic_proverb(proverb) {
-            Irosu.fo("Warning: Potential inauthentic proverb: " + proverb);
-        }
-    }
-    
-    // Check cultural category consistency
-    validate_category_consistency(knowledge.category, knowledge.content);
-    
-    // Verify cultural origin data
-    validate_cultural_origin(knowledge.origin);
-}
-
-// Search cultural knowledge with cultural relevance
-se search_cultural_knowledge(db: DatabaseConnection, query: Str, category: Option<CulturalCategory>) -> Vec<CulturalKnowledge> {
-    gbiyanju {
-        ayanmo mut sql = "
-            SELECT id, title, content, category, origin, proverbs, metadata
-            FROM cultural_knowledge 
-            WHERE (title LIKE ? OR content LIKE ? OR proverbs LIKE ?)
-        ";
-        ayanmo mut params = ["%" + query + "%", "%" + query + "%", "%" + query + "%"];
-        
-        if category.is_some() {
-            sql += " AND category = ?";
-            params.push(serialize_category(category.unwrap()));
-        }
-        
-        sql += " ORDER BY cultural_relevance DESC, title";
-        
-        ayanmo rows = Odi.query(db.pool, sql, params);
-        ayanmo mut results = Vec::new();
-        
-        fun row ninu rows {
-            results.push(CulturalKnowledge {
-                id: row.get_u64("id"),
-                title: row.get_str("title"),
-                content: row.get_str("content"),
-                category: deserialize_category(row.get_str("category")),
-                origin: deserialize_origin(row.get_str("origin")),
-                proverbs: deserialize_proverbs(row.get_str("proverbs")),
-                metadata: deserialize_metadata(row.get_str("metadata"))
-            });
-        }
-        
-        results
-    } gba (error) {
-        Irosu.kigbe("Search failed: " + error.message);
-        Vec::new()
-    }
-}</code></pre>
-            </div>
-        </div>
-        <div class="step">
-            <h2>Best Practices</h2>
+            <h2>Domains Used</h2>
             <ul>
-                <li><strong>Unicode Support:</strong> Always preserve Yoruba characters properly</li>
-                <li><strong>Cultural Validation:</strong> Validate authenticity of cultural content</li>
-                <li><strong>Metadata Tracking:</strong> Track cultural origins and contexts</li>
-                <li><strong>Backup Cultural Data:</strong> Regular backups of irreplaceable cultural knowledge</li>
+                <li><strong>Odi</strong> - Read/write record file, check existence</li>
+                <li><strong>Ogunda</strong> - List append, filter, length</li>
+                <li><strong>Ika</strong> - String concat, slice, length</li>
+                <li><strong>Irosu</strong> - Console I/O</li>
             </ul>
+        </div>
+        <div class="step">
+            <h2>Record CRUD with Odi</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">File-Backed Record Store</span>
+                </div>
+                <pre><code>// Simple file-backed record store
+fn insert(db_path, record) {
+    ayanmo line = Irete.base64(Irete.sha256(record)) + "|" + record;
+    ayanmo existing = "";
+    ti (Odi.wa(db_path)) {
+        existing = Odi.ka(db_path);
+    }
+    Odi.ko(db_path, existing + line + "\n");
+}
+
+fn list_all(db_path) -> Vec<Str> {
+    ti (Odi.wa(db_path)) {
+        ayanmo content = Odi.ka(db_path);
+        pada Ika.ge(content, 0, Ika.gigun(content));
+        // In practice, split lines and return records
+    }
+    pada [];
+}
+
+fn count(db_path) {
+    ayanmo records = list_all(db_path);
+    Irosu.fo("Total records: " + Ogunda.iwọn(records));
+}
+
+// Usage
+insert("users.db", "alice,alice@example.com");
+insert("users.db", "bob,bob@example.com");
+count("users.db");</code></pre>
+            </div>
+        </div>
+        <div class="step">
+            <h2>Search Records</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Filtering Records</span>
+                </div>
+                <pre><code>fn search(db_path, term) -> Vec<Str> {
+    ayanmo all = list_all(db_path);
+    fn matches(record) {
+        ti (Ika.gigun(record) > 0) {
+            pada record; // simplified; real impl checks term
+        }
+        pada ofifo;
+    }
+    pada Ogunda.yan(all, matches);
+}
+
+ayanmo results = search("users.db", "alice");
+Irosu.fo("Found " + Ogunda.iwọn(results) + " matches");</code></pre>
+            </div>
         </div>
         <footer>
             <p><a href="index.html">Use Cases Documentation</a></p>
         </footer>
-    </div>
+    </div></div>
     <script src="../../js/common.js"></script>
 </body>
 </html>

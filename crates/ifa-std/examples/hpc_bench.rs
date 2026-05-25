@@ -24,7 +24,7 @@ fn main() {
     // --- Parallel Map (via CpuContext) ---
     #[cfg(feature = "parallel")]
     {
-        use ifa_std::infra::cpu::CpuContext;
+        use ifa_infra::cpu::CpuContext;
 
         let start = Instant::now();
         let _result = CpuContext::par_map(&data, |x| x * 2.0 + 1.0);

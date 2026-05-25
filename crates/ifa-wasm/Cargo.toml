@@ -10,8 +10,10 @@ description = "WebAssembly bindings for Ifa-Lang playground"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# Use ifa-core without native/sandbox features
-ifa-core = { path = "../ifa-core", default-features = false }
+# Use ifa-vm without native/sandbox features
+ifa-vm = { path = "../ifa-vm", default-features = false, features = ["compiler"] }
+ifa-parser = { path = "../ifa-parser" }
+ifa-types = { path = "../ifa-types" }
 # Use ifa-std with WASM-compatible features
 ifa-std = { path = "../ifa-std", default-features = false, features = ["wasm", "gpu"] }
 wasm-bindgen = "0.2"
@@ -24,7 +26,6 @@ wasm-opt = ['-O', '--enable-bulk-memory', '--enable-nontrapping-float-to-int']
 
 [package.metadata.wasm-pack.profile.dev]
 wasm-opt = false
-
 
 [profile.release]
 opt-level = "s"

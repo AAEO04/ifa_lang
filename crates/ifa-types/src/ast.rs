@@ -145,8 +145,17 @@ pub enum Statement {
         span: Span,
     },
 
-    /// Ebo (offering/initiation): ebo "server";
-    Ebo { offering: Expression, span: Span },
+    /// Ebo (offering/initiation): ebo "server"; or ebo "region" { ... }
+    /// Body creates a scoped memory epoch — allocations are released at scope exit
+    Ebo {
+        offering: Expression,
+        body: Option<Vec<Statement>>,
+        span: Span,
+    },
+
+    /// Defer: defer { ... } — deferred cleanup block, runs at scope exit
+    /// Yoruba: firanṣẹ (defer/put off), gbe (keep/preserve)
+    Defer { body: Vec<Statement>, span: Span },
 
     /// Update: x += 5; x++;
     Update {
@@ -181,12 +190,19 @@ pub enum Statement {
     /// This implements the guarantee in §12.4 of the spec.
     Try {
         try_body: Vec<Statement>,
-        catch_var: String, // The error variable name (e.g., "e")
+        catch_var: String,
         catch_body: Vec<Statement>,
-        /// Yoruba: nipari = "finally / in conclusion". Executes unconditionally.
         finally_body: Option<Vec<Statement>>,
         span: Span,
     },
+
+    /// Break out of the nearest loop: da;
+    /// Dual lexicon: da; or break;
+    Break { span: Span },
+
+    /// Continue to the next loop iteration: tesiwaju;
+    /// Dual lexicon: tesiwaju; or bayan; or continue;
+    Continue { span: Span },
 }
 
 /// Match arm: pattern => body
@@ -228,6 +244,8 @@ pub enum UpdateOp {
     SubAssign,
     MulAssign,
     DivAssign,
+    /// `%=` modulo-assign
+    ModAssign,
 }
 
 /// Function parameter
@@ -419,10 +437,17 @@ pub enum Expression {
     /// §12.3: If `expr` evaluates to an error value, immediately return it from
     /// the enclosing function. Otherwise, unwrap and yield the Ok value.
     Try(Box<Expression>),
-    
+
     /// Interpolated string literal: $"Count: {x}"
     InterpolatedString {
         parts: Vec<InterpolatedPart>,
+    },
+
+    /// Anonymous function (lambda): ese(params) { body }
+    /// Captures enclosing scope as a closure.
+    Lambda {
+        params: Vec<String>,
+        body: Vec<Statement>,
     },
 }
 
@@ -440,6 +465,10 @@ pub struct OduCall {
     pub method: String,
     pub args: Vec<Expression>,
     pub is_optional: bool,
+    /// E6: Set by semantic analyzer if the domain ID is known statically
+    pub resolved_domain: Option<u8>,
+    /// E6: Set by semantic analyzer if the method ID is known statically (for CallOduFast)
+    pub resolved_method_id: Option<u16>,
     pub span: Span,
 }
 
@@ -452,6 +481,8 @@ pub enum BinaryOperator {
     Mul,
     Div,
     Mod,
+    /// `**` exponentiation (right-associative)
+    Power,
 
     // Comparison
     Eq,
@@ -464,6 +495,9 @@ pub enum BinaryOperator {
     // Logical
     And,
     Or,
+
+    /// `??` null coalescing: evaluates to rhs if lhs is null/nil
+    NullCoalesce,
 }
 
 /// Unary operators
@@ -483,6 +517,7 @@ impl std::fmt::Display for BinaryOperator {
             Self::Mul => write!(f, "*"),
             Self::Div => write!(f, "/"),
             Self::Mod => write!(f, "%"),
+            Self::Power => write!(f, "**"),
             Self::Eq => write!(f, "=="),
             Self::NotEq => write!(f, "!="),
             Self::Lt => write!(f, "<"),
@@ -491,6 +526,40 @@ impl std::fmt::Display for BinaryOperator {
             Self::GtEq => write!(f, ">="),
             Self::And => write!(f, "&&"),
             Self::Or => write!(f, "||"),
+            Self::NullCoalesce => write!(f, "??"),
         }
     }
 }
+
+impl Statement {
+    pub fn span(&self) -> &Span {
+        match self {
+            Statement::VarDecl { span, .. }
+            | Statement::Assignment { span, .. }
+            | Statement::Import { span, .. }
+            | Statement::Const { span, .. }
+            | Statement::Instruction { span, .. }
+            | Statement::OduDef { span, .. }
+            | Statement::EseDef { span, .. }
+            | Statement::If { span, .. }
+            | Statement::While { span, .. }
+            | Statement::For { span, .. }
+            | Statement::Return { span, .. }
+            | Statement::Ase { span }
+            | Statement::Taboo { span, .. }
+            | Statement::Ewo { span, .. }
+            | Statement::Opon { span, .. }
+            | Statement::Ebo { span, .. }
+            | Statement::Defer { span, .. }
+            | Statement::Update { span, .. }
+            | Statement::Match { span, .. }
+            | Statement::Expr { span, .. }
+            | Statement::Ailewu { span, .. }
+            | Statement::Yield { span, .. }
+            | Statement::Try { span, .. }
+            | Statement::Break { span }
+            | Statement::Continue { span } => span,
+        }
+    }
+}
+

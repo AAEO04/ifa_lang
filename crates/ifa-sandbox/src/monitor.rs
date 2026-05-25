@@ -2,14 +2,16 @@
 //!
 //! Monitors memory, CPU, file descriptors, and network usage during execution.
 
+use std::cell::Cell;
 use std::time::{Duration, Instant};
+use sysinfo::{ProcessRefreshKind, System};
 
 /// Tracks resource usage during sandbox execution
 #[derive(Debug)]
 pub struct ResourceMonitor {
     start_time: Option<Instant>,
-    peak_memory: usize,
-    current_memory: usize,
+    peak_memory: Cell<usize>,
+    current_memory: Cell<usize>,
     cpu_time: Duration,
     file_count: usize,
     bytes_sent: u64,
@@ -28,8 +30,8 @@ impl ResourceMonitor {
     pub fn new() -> Self {
         ResourceMonitor {
             start_time: None,
-            peak_memory: 0,
-            current_memory: 0,
+            peak_memory: Cell::new(0),
+            current_memory: Cell::new(0),
             cpu_time: Duration::ZERO,
             file_count: 0,
             bytes_sent: 0,
@@ -44,8 +46,9 @@ impl ResourceMonitor {
         self.running = true;
 
         // Get initial memory snapshot if possible
-        self.current_memory = Self::get_process_memory();
-        self.peak_memory = self.current_memory;
+        let mem = Self::get_process_memory();
+        self.current_memory.set(mem);
+        self.peak_memory.set(mem);
     }
 
     /// Stop monitoring
@@ -53,6 +56,7 @@ impl ResourceMonitor {
         if let Some(start) = self.start_time {
             self.cpu_time = start.elapsed();
         }
+        self.update_peak_memory();
         self.running = false;
     }
 
@@ -68,52 +72,47 @@ impl ResourceMonitor {
     /// Get current memory usage in bytes
     pub fn memory_usage(&self) -> usize {
         if self.running {
-            Self::get_process_memory()
+            let current = Self::get_process_memory();
+            self.current_memory.set(current);
+            if current > self.peak_memory.get() {
+                self.peak_memory.set(current);
+            }
+            current
         } else {
-            self.current_memory
+            self.current_memory.get()
         }
     }
 
     /// Get peak memory usage
     pub fn peak_memory_usage(&self) -> usize {
         let current = self.memory_usage();
-        if current > self.peak_memory {
+        let peak = self.peak_memory.get();
+        if current > peak {
             current
         } else {
-            self.peak_memory
+            peak
         }
     }
 
     /// Update peak memory tracking
-    pub fn update_peak_memory(&mut self) {
+    pub fn update_peak_memory(&self) {
         let current = Self::get_process_memory();
-        if current > self.peak_memory {
-            self.peak_memory = current;
+        self.current_memory.set(current);
+        if current > self.peak_memory.get() {
+            self.peak_memory.set(current);
         }
-        self.current_memory = current;
     }
 
     /// Get process memory (platform-specific)
     fn get_process_memory() -> usize {
-        #[cfg(target_os = "linux")]
-        {
-            // Read from /proc/self/statm
-            if let Ok(statm) = std::fs::read_to_string("/proc/self/statm") {
-                if let Some(pages) = statm.split_whitespace().next() {
-                    if let Ok(pages) = pages.parse::<usize>() {
-                        return pages * 4096; // Convert pages to bytes
-                    }
-                }
+        if let Ok(pid) = sysinfo::get_current_pid() {
+            let mut system = System::new();
+            system.refresh_processes_specifics(ProcessRefreshKind::new().with_memory());
+            if let Some(process) = system.process(pid) {
+                return process.memory() as usize;
             }
-            0
         }
-
-        #[cfg(not(target_os = "linux"))]
-        {
-            // Placeholder for other platforms
-            // Could use GetProcessMemoryInfo on Windows
-            0
-        }
+        0
     }
 
     // =========================================================================

@@ -8,76 +8,7 @@
     <link rel="stylesheet" href="../../../js/common.css">
     <script src="../../../js/nav.js" defer></script>
     <script src="../../../js/common.js" defer></script>
-    <style>
-        .lesson-num {
-            background: var(--accent);
-            color: white;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .lesson-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--accent);
-        }
-
-        table {
-            width: 100%;
-            background: var(--bg-card);
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 1rem 0;
-        }
-
-        th {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.75rem;
-            text-align: left;
-            color: var(--gold);
-        }
-
-        td {
-            padding: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--accent);
-        }
-
-        .nav-btn {
-            background: var(--bg-card);
-            color: var(--gold);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            border: 1px solid var(--accent);
-        }
-
-        .nav-btn:hover {
-            background: var(--accent);
-            color: white;
-        }
-
-        .nav-btn.primary {
-            background: var(--accent);
-            color: white;
-        }
-    </style>
+    
 </head>
 
 <body>
@@ -92,6 +23,7 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">03-operators.ifa</span></div><div class="terminal-body">
         <div class="lesson-header">
             <div class="lesson-num">3</div>
             <div>
@@ -163,11 +95,11 @@ Irosu.fo("Remainder: " + (a % b));  // 6</code></pre>
             <pre class="code-english"><code>let a = 20;
 let b = 7;
 
-Fmt.println("Sum: " + (a + b));        // 27
-Fmt.println("Difference: " + (a - b)); // 13
-Fmt.println("Product: " + (a * b));    // 140
-Fmt.println("Quotient: " + (a / b));   // 2.857...
-Fmt.println("Remainder: " + (a % b));  // 6</code></pre>
+Irosu.println("Sum: " + (a + b));        // 27
+Irosu.println("Difference: " + (a - b)); // 13
+Irosu.println("Product: " + (a * b));    // 140
+Irosu.println("Quotient: " + (a / b));   // 2.857...
+Irosu.println("Remainder: " + (a % b));  // 6</code></pre>
         </div>
 
         <h2>Comparison Operators</h2>
@@ -235,9 +167,9 @@ Irosu.fo(age >= 21);  // iro (false)
 Irosu.fo(age < 100);  // otito (true)</code></pre>
             <pre class="code-english"><code>let age = 18;
 
-Fmt.println(age == 18);  // true
-Fmt.println(age >= 21);  // false
-Fmt.println(age < 100);  // true</code></pre>
+Irosu.println(age == 18);  // true
+Irosu.println(age >= 21);  // false
+Irosu.println(age < 100);  // true</code></pre>
         </div>
 
         <h2>Logical Operators</h2>
@@ -302,17 +234,17 @@ let is_admin = false;
 
 // Both must be true
 if (logged_in && is_admin) {
-    Fmt.println("Admin access granted");
+    Irosu.println("Admin access granted");
 }
 
 // Either can be true
 if (logged_in || is_admin) {
-    Fmt.println("Some access granted");
+    Irosu.println("Some access granted");
 }
 
 // Negation
 if (!is_admin) {
-    Fmt.println("Not an admin");
+    Irosu.println("Not an admin");
 }</code></pre>
         </div>
 
@@ -336,11 +268,11 @@ Irosu.fo("Version: " + version);  // "Version: 1.2"</code></pre>
             <pre class="code-english"><code>let first = "Ifá";
 let last = "Lang";
 let full = first + "-" + last;
-Fmt.println(full);  // "Ifá-Lang"
+Irosu.println(full);  // "Ifá-Lang"
 
 // Numbers auto-convert in concatenation
 let version = 1.2;
-Fmt.println("Version: " + version);  // "Version: 1.2"</code></pre>
+Irosu.println("Version: " + version);  // "Version: 1.2"</code></pre>
         </div>
 
         <h2>What You Learned</h2>
@@ -353,8 +285,8 @@ Fmt.println("Version: " + version);  // "Version: 1.2"</code></pre>
         </ul>
 
         <div class="nav-buttons">
-            <a href="02-variables.html" class="nav-btn">← Previous: Variables</a>
-            <a href="04-control-flow.html" class="nav-btn primary">Next: Control Flow →</a>
+            <a href="02-variables.html" class="nav-btn">Previous: Variables</a>
+            <a href="04-control-flow.html" class="nav-btn primary">Next: Control Flow</a>
         </div>
     </div>
 </body>

@@ -4,80 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ohun & Fidio Use Cases - Audio/Video Examples</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Ohun & Fidio Use Cases - Media Simulation Examples</title>
 </head>
 
-
+<body>
     <!-- Breadcrumbs -->
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
@@ -87,261 +18,105 @@
         </div>
     </div>
     <div class="container">
-        <h1>???? Ohun & Fidio: Audio/Video</h1>
-        <p>Audio playback, recording, and video processing.</p>
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">ohun-fidio-examples.ifa</span></div><div class="terminal-body">
+        <h1>Ohun & Fidio: Media Simulation</h1>
+        <p>Text-based media player simulation using Irosu I/O, Oyeku sleep, and string operations.</p>
 
-        <h2>Use Case 1: Music Player</h2>
-        <pre><code>// music_player.ifa - Simple audio player
+        <h2>Use Case 1: Media Player Controller</h2>
+        <pre><code>// media_player.ifa - Simulate playback controls
 
-ayanmo playlist = [];
-ayanmo current_track = 0;
-ayanmo volume = 0.8;
-ayanmo playing = iro;
+ayanmo state = "stopped";
+ayanmo position = 0;
+ayanmo duration = 300;
 
-ise add_to_playlist(path) {
-    ti (!Odi.exists(path)) {
-        Irosu.kigbe("File not found: " + path);
-        padap?;
-    }
-    
-    ayanmo metadata = Ohun.get_metadata(path);
-    ayanmo playlist = Ogunda.push(playlist, {
-        "path": path,
-        "title": metadata["title"],
-        "artist": metadata["artist"],
-        "duration": metadata["duration"]
-    });
-    
-    Irosu.fo("Added: " + metadata["title"]);
+ese play() {
+    ayanmo state = "playing";
+    Irosu.fo("Playing...");
 }
 
-ise play() {
-    ti (Ogunda.len(playlist) == 0) {
-        Irosu.fo("Playlist empty");
-        padap?;
-    }
-    
-    ayanmo track = Ogunda.get(playlist, current_track);
-    Ohun.play(track["path"], volume);
-    ayanmo playing = otito;
-    
-    Irosu.fo("? Now playing: " + track["title"] + " - " + track["artist"]);
+ese pause_media() {
+    ayanmo state = "paused";
+    Irosu.fo("Paused at " + position + "s");
 }
 
-ise pause() {
-    Ohun.pause();
-    ayanmo playing = iro;
-    Irosu.fo("? Paused");
+ese stop() {
+    ayanmo state = "stopped";
+    ayanmo position = 0;
+    Irosu.fo("Stopped");
 }
 
-ise next_track() {
-    ayanmo current_track = Oturupon.mod(current_track + 1, Ogunda.len(playlist));
-    ti (playing) { play(); }
+ese seek_to(seconds) {
+    ti (seconds < 0) { ayanmo seconds = 0; }
+    ti (seconds > duration) { ayanmo seconds = duration; }
+    ayanmo position = seconds;
+    Irosu.fo("Seeked to " + position + "s");
 }
 
-ise prev_track() {
-    ayanmo current_track = current_track - 1;
-    ti (current_track < 0) {
-        ayanmo current_track = Ogunda.len(playlist) - 1;
-    }
-    ti (playing) { play(); }
-}
-
-ise set_volume(vol) {
-    ayanmo volume = Obara.max(0, Obara.min(1, vol));
-    Ohun.set_volume(volume);
-    Irosu.fo("?? Volume: " + (volume * 100) + "%");
-}
-
-// Usage
-add_to_playlist("music/song1.mp3");
-add_to_playlist("music/song2.mp3");
-add_to_playlist("music/song3.mp3");
-
-play();
-Oyeku.sleep(5000);
-next_track();
-Oyeku.sleep(3000);
-set_volume(0.5);
-Oyeku.sleep(2000);
-pause();</code></pre>
-
-        <h2>Use Case 2: Sound Effects System</h2>
-        <pre><code>// sfx.ifa - Game sound effects manager
-
-ayanmo sounds = {};
-ayanmo sound_enabled = otito;
-
-ise load_sounds(sound_map) {
-    fun name key(sound_map) {
-        ayanmo path = sound_map[name];
-        sounds[name] = Ohun.load(path);
-        Irosu.fo("Loaded: " + name);
-    }
-}
-
-ise play_sound(name, volume) {
-    ti (!sound_enabled) { padap?; }
-    
-    ayanmo sound = sounds[name];
-    ti (sound == nil) {
-        Irosu.kigbe("Sound not found: " + name);
-        padap?;
-    }
-    
-    ayanmo vol = 1.0;
-    ti (volume != nil) { ayanmo vol = volume; }
-    
-    Ohun.play_oneshot(sound, vol);
-}
-
-ise toggle_sound() {
-    ayanmo sound_enabled = !sound_enabled;
-    ti (sound_enabled) {
-        Irosu.fo("?? Sound enabled");
-    } bib?k? {
-        Irosu.fo("?? Sound muted");
-    }
-}
-
-// Usage: Load game sounds
-load_sounds({
-    "jump": "sfx/jump.wav",
-    "coin": "sfx/coin.wav",
-    "explosion": "sfx/explosion.wav",
-    "powerup": "sfx/powerup.wav",
-    "gameover": "sfx/gameover.wav"
-});
-
-// Game events
-play_sound("jump");
-Oyeku.sleep(200);
-play_sound("coin", 0.7);
-play_sound("coin", 0.8);
-play_sound("coin", 0.9);
-Oyeku.sleep(500);
-play_sound("powerup");
-Oyeku.sleep(1000);
-play_sound("explosion", 1.0);</code></pre>
-
-        <h2>Use Case 3: Video Thumbnail Generator</h2>
-        <pre><code>// thumbnails.ifa - Extract video thumbnails
-
-ise generate_thumbnail(video_path, time_seconds, output_path) {
-    ti (!Odi.exists(video_path)) {
-        padap? Okanran.error("Video not found: " + video_path);
-    }
-    
-    // Get video info
-    ayanmo info = Fidio.get_info(video_path);
-    Irosu.fo("Video: " + info["width"] + "x" + info["height"] + 
-             ", Duration: " + info["duration"] + "s");
-    
-    // Validate time
-    ti (time_seconds >= info["duration"]) {
-        ayanmo time_seconds = info["duration"] / 2;
-    }
-    
-    // Extract frame
-    ayanmo frame = Fidio.extract_frame(video_path, time_seconds);
-    
-    // Resize to thumbnail
-    ayanmo thumbnail = Fidio.resize_image(frame, 320, 180);
-    
-    // Save
-    Fidio.save_image(thumbnail, output_path);
-    Irosu.fo("? Saved thumbnail: " + output_path);
-    
-    padap? output_path;
-}
-
-ise batch_thumbnails(video_dir, output_dir) {
-    Odi.mkdir(output_dir);
-    
-    ayanmo files = Odi.list(video_dir);
-    ayanmo count = 0;
-    
-    fun file ninu files {
-        ti (Ika.ends_with(file, ".mp4") || 
-            Ika.ends_with(file, ".avi") ||
-            Ika.ends_with(file, ".mkv")) {
-            
-            ayanmo video = video_dir + "/" + file;
-            ayanmo name = Ika.split(file, ".")[0];
-            ayanmo thumb = output_dir + "/" + name + ".jpg";
-            
-            generate_thumbnail(video, 10, thumb);
-            ayanmo count = count + 1;
+ese show_progress() {
+    ayanmo pct = (position * 100) / duration;
+    ayanmo filled = (position * 20) / duration;
+    ayanmo bar = "";
+    ayanmo i = 0;
+    nigba (i < 20) {
+        ti (i < filled) {
+            ayanmo bar = bar + "#";
+        } bibẹkọ {
+            ayanmo bar = bar + "-";
         }
+        ayanmo i = i + 1;
     }
-    
-    Irosu.fo("\n? Generated " + count + " thumbnails");
+    Irosu.fo("[" + bar + "] " + pct + "%");
 }
 
 // Usage
-batch_thumbnails("./videos", "./thumbnails");</code></pre>
+play();
+Oyeku.sun(1000);
+seek_to(45);
+show_progress();
+Oyeku.sun(500);
+pause_media();
+stop();</code></pre>
 
-        <h2>Use Case 4: Video Playback Controller</h2>
-        <pre><code>// player.ifa - Video player with controls
+        <h2>Use Case 2: Video Library Browser</h2>
+        <pre><code>// library.ifa - Browse media library
 
-ayanmo player = nil;
-ayanmo current_time = 0;
-ayanmo duration = 0;
+ayanmo library = [];
 
-ise open_video(path) {
-    ayanmo player = Fidio.open(path);
-    ayanmo info = Fidio.get_info(path);
-    ayanmo duration = info["duration"];
-    ayanmo current_time = 0;
-    
-    Irosu.fo("??? Opened: " + path);
-    Irosu.fo("   Resolution: " + info["width"] + "x" + info["height"]);
-    Irosu.fo("   Duration: " + format_time(duration));
-    Irosu.fo("   FPS: " + info["fps"]);
+ese scan_library() {
+    ayanmo library = [];
+    ayanmo library = Ogunda.fi(library, "intro.mp4");
+    ayanmo library = Ogunda.fi(library, "tutorial.mp4");
+    ayanmo library = Ogunda.fi(library, "demo.mp4");
+    Irosu.fo("Found " + Ogunda.iwọn(library) + " files");
+    padap? library;
 }
 
-ise format_time(seconds) {
-    ayanmo mins = Oturupon.div(seconds, 60);
-    ayanmo secs = Oturupon.mod(seconds, 60);
-    padap? mins + ":" + Ika.pad_left(secs, 2, "0");
+ese show_library(items) {
+    Irosu.fo("=== Media Library ===");
+    ayanmo i = 0;
+    nigba (i < Ogunda.iwọn(items)) {
+        Irosu.fo((i + 1) + ". " + items[i]);
+        ayanmo i = i + 1;
+    }
 }
 
-ise play_video() {
-    Fidio.play(player);
-    Irosu.fo("? Playing");
-}
-
-ise pause_video() {
-    Fidio.pause(player);
-    Irosu.fo("? Paused at " + format_time(current_time));
-}
-
-ise seek(seconds) {
-    ayanmo new_time = Obara.max(0, Obara.min(current_time + seconds, duration));
-    Fidio.seek(player, new_time);
-    ayanmo current_time = new_time;
-    Irosu.fo("? Seeked to " + format_time(current_time));
-}
-
-ise show_status() {
-    ayanmo pos = (current_time * 30) / duration;
-    ayanmo bar = Ika.repeat("�", pos) + Ika.repeat("�", 30 - pos);
-    Irosu.fo("[" + bar + "] " + format_time(current_time) + " / " + format_time(duration));
+ese select_and_play(items, index) {
+    ti (index < 0 || index >= Ogunda.iwọn(items)) {
+        Irosu.kigbe("Invalid selection");
+        padap?;
+    }
+    ayanmo file = items[index];
+    Irosu.fo("Opening: " + file);
+    play();
 }
 
 // Usage
-open_video("movie.mp4");
-play_video();
-Oyeku.sleep(3000);
-show_status();
-seek(60);  // Forward 1 minute
-show_status();
-seek(-30);  // Back 30 seconds
-show_status();
-pause_video();</code></pre>
+ayanmo files = scan_library();
+show_library(files);
+select_and_play(files, 1);</code></pre>
 
         <footer class="doc-footer">
-            <p><a href="domains.html">? All Domain Use Cases</a></p>
+            <p><a href="domains.html">All Domain Use Cases</a></p>
             <p><a href="../../index.html">Documentation Home</a></p>
         </footer>
     </div>
@@ -350,4 +125,3 @@ pause_video();</code></pre>
 </body>
 
 </html>
-

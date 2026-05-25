@@ -1,0 +1,165 @@
+//! # Ifá-Lang Domain Handlers
+//!
+//! Trait-based handler architecture for Odù domain operations.
+//! Each handler implements the `OduHandler` trait to process domain-specific methods.
+//!
+//! This modular approach replaces the monolithic `execute_odu_call()` function,
+//! improving maintainability and extensibility.
+
+use std::collections::HashMap;
+
+use crate::error::{IfaError, IfaResult};
+use crate::lexer::OduDomain;
+use crate::value::IfaValue;
+
+// Import Environment
+pub use super::environment::EnvRef;
+
+// Sub-modules containing domain-specific handlers (16 core Odù)
+mod ika; // 0100 - Strings
+mod irete; // 1101 - Crypto/Security
+mod irosu; // 1100 - Console I/O
+mod iwori; // 0110 - Time/DateTime
+mod obara; // 1000 - Math (Add/Mul)
+mod odi; // 1001 - Files/Database
+mod ofun; // 0101 - Permissions/Reflection
+mod ogbe; // 1111 - System/Lifecycle
+mod ogunda; // 1110 - Arrays/Lists
+mod okanran; // 0001 - Errors/Assertions
+mod osa; // 0111 - Concurrency
+mod ose;
+mod otura; // 1011 - Networking
+mod oturupon; // 0010 - Math (Sub/Div)
+mod owonrin; // 0011 - Random
+mod oyeku; // 0000 - Exit/Sleep // 1010 - Graphics/UI
+
+// Infrastructure handlers (none here — audio routes through Irosu, video is a library)
+
+// Re-export handlers
+pub use ika::IkaHandler;
+pub use irete::IreteHandler;
+pub use irosu::IrosuHandler;
+pub use iwori::IworiHandler;
+pub use obara::ObaraHandler;
+pub use odi::OdiHandler;
+pub use ofun::OfunHandler;
+pub use ogbe::OgbeHandler;
+pub use ogunda::OgundaHandler;
+pub use okanran::OkanranHandler;
+pub use osa::OsaHandler;
+pub use ose::OseHandler;
+pub use otura::OturaHandler;
+pub use oturupon::OturuponHandler;
+pub use owonrin::OwonrinHandler;
+pub use oyeku::OyekuHandler;
+
+
+
+/// Helper trait to relax Send+Sync bound on WASM
+#[cfg(not(target_arch = "wasm32"))]
+pub trait OduHandlerSendSync {}
+#[cfg(not(target_arch = "wasm32"))]
+impl<T> OduHandlerSendSync for T {}
+
+#[cfg(target_arch = "wasm32")]
+pub trait OduHandlerSendSync {}
+#[cfg(target_arch = "wasm32")]
+impl<T> OduHandlerSendSync for T {}
+
+/// Trait for domain-specific operation handlers.
+///
+/// Each Odù domain implements this trait to handle its methods.
+/// The interpreter dispatches to the appropriate handler based on the domain.
+pub trait OduHandler: OduHandlerSendSync {
+    /// Returns the domain this handler is responsible for.
+    fn domain(&self) -> OduDomain;
+
+    /// Execute a method call on this domain.
+    fn call(
+        &self,
+        method: &str,
+        args: Vec<IfaValue>,
+        env: &EnvRef,
+        output: &mut Vec<String>,
+        capabilities: &ifa_types::capability::CapabilitySet,
+    ) -> IfaResult<IfaValue>;
+
+    /// Returns the list of methods this handler supports.
+    fn methods(&self) -> &'static [&'static str];
+}
+
+/// Registry of domain handlers.
+pub struct HandlerRegistry {
+    handlers: HashMap<OduDomain, Box<dyn OduHandler>>,
+}
+
+impl HandlerRegistry {
+    /// Create a new registry with all built-in handlers registered.
+    pub fn new() -> Self {
+        let mut handlers: HashMap<OduDomain, Box<dyn OduHandler>> = HashMap::new();
+
+        // Register all 16 core Odù handlers
+        handlers.insert(OduDomain::Irosu, Box::new(IrosuHandler));
+        handlers.insert(OduDomain::Ogbe, Box::new(OgbeHandler));
+        handlers.insert(OduDomain::Obara, Box::new(ObaraHandler));
+        handlers.insert(OduDomain::Oturupon, Box::new(OturuponHandler));
+        handlers.insert(OduDomain::Ika, Box::new(IkaHandler));
+        handlers.insert(OduDomain::Oyeku, Box::new(OyekuHandler));
+        handlers.insert(OduDomain::Owonrin, Box::new(OwonrinHandler));
+        handlers.insert(OduDomain::Ogunda, Box::new(OgundaHandler));
+        handlers.insert(OduDomain::Iwori, Box::new(IworiHandler));
+        handlers.insert(OduDomain::Okanran, Box::new(OkanranHandler));
+        handlers.insert(OduDomain::Otura, Box::new(OturaHandler));
+        handlers.insert(OduDomain::Odi, Box::new(OdiHandler));
+        handlers.insert(OduDomain::Osa, Box::new(OsaHandler));
+        handlers.insert(OduDomain::Ofun, Box::new(OfunHandler));
+        handlers.insert(OduDomain::Irete, Box::new(IreteHandler));
+        handlers.insert(OduDomain::Ose, Box::new(OseHandler));
+
+
+
+        HandlerRegistry { handlers }
+    }
+
+    /// Get a handler for the given domain.
+    pub fn get(&self, domain: &OduDomain) -> Option<&dyn OduHandler> {
+        self.handlers
+            .get(domain)
+            .map(|b: &Box<dyn OduHandler>| b.as_ref())
+    }
+
+    /// Execute an Odù call using the appropriate handler.
+    pub fn dispatch(
+        &self,
+        domain: OduDomain,
+        method: &str,
+        args: Vec<IfaValue>,
+        env: &EnvRef,
+        output: &mut Vec<String>,
+        capabilities: &ifa_types::capability::CapabilitySet,
+    ) -> IfaResult<IfaValue> {
+        match self.handlers.get(&domain) {
+            Some(handler) => handler.call(method, args, env, output, capabilities),
+            None => Err(IfaError::Runtime(format!(
+                "No handler registered for domain {:?}",
+                domain
+            ))),
+        }
+    }
+
+    /// List all registered domains.
+    pub fn domains(&self) -> Vec<OduDomain> {
+        self.handlers.keys().cloned().collect()
+    }
+
+    /// Register a new handler (Dependency Injection)
+    pub fn register(&mut self, handler: Box<dyn OduHandler>) {
+        self.handlers.insert(handler.domain(), handler);
+    }
+}
+
+impl Default for HandlerRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}

@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
     <title>Àjọṣe - Reactive Relationships - Ifá-Lang</title>
     <meta name="description"
         content="Learn about Àjọṣe, the reactive relationship model in Ifá-Lang for handling events and state changes.">
-    <link rel="stylesheet" href="js/common.css">
-    <script src="js/nav.js" defer></script>
-    <script src="js/common.js" defer></script>
+    <script src="../js/nav.js" defer></script>
+    <script src="../js/common.js" defer></script>
 </head>
 
 <body>
@@ -24,26 +24,31 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">ajose.ifa</span></div><div class="terminal-body">
         <header>
-            <h1>⚡ Àjọṣe - Reactive Relationships</h1>
+            <h1>Àjọṣe - Reactive Relationships</h1>
             <p style="color: var(--text-dim);">Signal-based reactivity with automatic dependency tracking</p>
         </header>
 
-        <h2>What is Àjọṣe?</h2>
-        <p><strong>Àjọṣe</strong> (Yoruba: "relationship") is Ifá-Lang's reactive programming engine. It enables
-            automatic updates when data changes, similar to SolidJS or Vue's Composition API.</p>
+        <div class="warning" style="border-left-color: var(--warning-color);">
+            <div class="warning-title">Àjọṣe is a planned reactive system — not yet implemented in the crate.</div>
+            <p style="margin: 0;">The <code>Ajose</code>, <code>Signal</code>, <code>Computed</code>, and <code>Effect</code> types exist as Rust-level APIs in <code>ifa-vm/src/ajose.rs</code> but are not yet exposed to Ifá-Lang source code. The <code>ajose</code> keyword in the lexer maps to <code>OduDomain::Coop</code> (FFI bridge). The examples below describe the aspirational design.</p>
+        </div>
+
+        <h2>What is Ajose?</h2>
+        <p><strong>Àjọṣe</strong> (Yoruba: "relationship") is Ifá-Lang's planned reactive programming engine. It would enable automatic updates when data changes, similar to SolidJS or Vue's Composition API.</p>
 
         <div class="concept">
             <div class="concept-item">
-                <h4>📡 Signal</h4>
+                <h4>Signal</h4>
                 <p>Reactive primitive that holds a value and notifies subscribers on change</p>
             </div>
             <div class="concept-item">
-                <h4>🔄 Computed</h4>
+                <h4>Computed</h4>
                 <p>Derived value that auto-updates when dependencies change</p>
             </div>
             <div class="concept-item">
-                <h4>💥 Effect</h4>
+                <h4>Effect</h4>
                 <p>Side-effect that runs when tracked signals change</p>
             </div>
         </div>
@@ -52,9 +57,9 @@
         <div class="method">
             <h3>Signal.new(value) / Ami.tuntun(iye)</h3>
             <p>Create a reactive signal with an initial value.</p>
-            <pre><code>// Create signals
+            <pre><code>// Create signals (ASPIRATIONAL — not yet implemented)
 ayanmo count = Signal.new(0);
-ayanmo name = Ami.tuntun("Ifá");
+ayanmo name = Ami.tuntun("Ifa");
 
 // Read value
 Irosu.fo(count.get());  // 0
@@ -67,7 +72,8 @@ count.update(|n| n + 1);  // Now 6</code></pre>
         <div class="method">
             <h3>signal.subscribe(callback)</h3>
             <p>Register a callback to run when the signal changes.</p>
-            <pre><code>ayanmo temperature = Signal.new(20);
+            <pre><code>// ASPIRATIONAL — not yet implemented
+ayanmo temperature = Signal.new(20);
 
 // Subscribe to changes
 temperature.subscribe(|temp| {
@@ -81,25 +87,27 @@ temperature.set(25);  // Prints: "Temperature changed to: 25"</code></pre>
         <div class="method">
             <h3>Computed.from(signals, fn)</h3>
             <p>Create a derived value that auto-updates when source signals change.</p>
-            <pre><code>ayanmo firstName = Signal.new("Ọba");
-ayanmo lastName = Signal.new("Adé");
+            <pre><code>// ASPIRATIONAL — not yet implemented
+ayanmo firstName = Signal.new("Oba");
+ayanmo lastName = Signal.new("Ade");
 
 // Computed full name
 ayanmo fullName = Computed.from([firstName, lastName], || {
-    padapọ firstName.get() + " " + lastName.get()
+    firstName.get() + " " + lastName.get()
 });
 
-Irosu.fo(fullName.get());  // "Ọba Adé"
+Irosu.fo(fullName.get());  // "Oba Ade"
 
-lastName.set("Olúwọlé");
-Irosu.fo(fullName.get());  // "Ọba Olúwọlé" (auto-updated!)</code></pre>
+lastName.set("Oluwole");
+Irosu.fo(fullName.get());  // "Oba Oluwole" (auto-updated!)</code></pre>
         </div>
 
         <h2>Effects</h2>
         <div class="method">
-            <h3>Effect.create(fn) / Ipa.da(iṣẹ)</h3>
+            <h3>Effect.create(fn) / Ipa.da(ise)</h3>
             <p>Run side-effects when tracked signals change.</p>
-            <pre><code>ayanmo price = Signal.new(100);
+            <pre><code>// ASPIRATIONAL — not yet implemented
+ayanmo price = Signal.new(100);
 ayanmo quantity = Signal.new(2);
 
 // Effect: log total whenever price or quantity changes
@@ -116,7 +124,8 @@ quantity.set(5);  // Prints: "Total: $500"</code></pre>
         <div class="method">
             <h3>batch(fn)</h3>
             <p>Group multiple signal updates to trigger effects only once.</p>
-            <pre><code>ayanmo x = Signal.new(0);
+            <pre><code>// ASPIRATIONAL — not yet implemented
+ayanmo x = Signal.new(0);
 ayanmo y = Signal.new(0);
 
 Effect.create(|| {
@@ -141,7 +150,7 @@ batch(|| {
         </ul>
 
         <footer class="doc-footer">
-            <p><a href="language/philosophy.html">← Language Philosophy</a> · <a href="api/api.html">API Reference</a>
+            <p><a href="language/philosophy.html">Language Philosophy</a> · <a href="api/api.html">API Reference</a>
             </p>
             <p><a href="index.html">Documentation Home</a></p>
         </footer>

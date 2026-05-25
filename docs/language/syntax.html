@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Syntax Reference - Ifá-Lang</title>
-    <meta name="description" content="Complete syntax reference for Ifá-Lang programming language">
+    <title>Syntax Reference - Ifa-Lang</title>
+    <meta name="description" content="Complete syntax reference for Ifa-Lang programming language">
     <link rel="stylesheet" href="../js/common.css">
     <script src="../js/nav.js" defer></script>
 </head>
@@ -22,6 +22,7 @@
     </div>
 
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">syntax.ifa</span></div><div class="terminal-body">
         <header>
             <h1>Syntax Reference</h1>
             <p class="subtitle">Complete Grammar and Language Structure</p>
@@ -29,21 +30,18 @@
 
         <div class="step">
             <h2>Program Structure</h2>
-            <p>An Ifá-Lang program is a sequence of statements, from top to bottom execution:</p>
+            <p>An Ifa-Lang program is a sequence of statements, from top to bottom execution. The 16 Odu domains (Ogbe, Irosu, Obara, etc.) are <strong>built-in</strong> and globally available without imports.</p>
             
             <div class="code-example">
                 <div class="code-header">
                     <span class="code-title">Basic Program</span>
                 </div>
-                <pre><code>// Import statements
-iba std.irosu;
-iba { fo, ka } from std.irosu;
+                <pre><code>// Variables
+ayanmo name = "Ifa-Lang";
 
 // Constants
 const PI = 3.14159;
-
-// Variables
-ayanmo name = "Ifá-Lang";
+ayanfe VERSION = 1;
 
 // Functions
 ese greet(who) {
@@ -65,16 +63,18 @@ greet("World");</code></pre>
                 </div>
                 <pre><code>// Yoruba keywords
 ayanmo x = 5;                    // Mutable variable
-const NAME = "Ifá";              // Constant
+ayanfe VERSION = 1;              // Constant (Yoruba)
+ayanmo age: Int = 25;            // With type hint
 
-// English keywords  
+// English keywords
 let x = 5;                       // Mutable variable
-const NAME = "Ifá";              // Constant
+const NAME = "Ifa";              // Constant (English)
 
 // With type hints
-ayanmo age: Int = 25;
-let name: Str = "Alice";</code></pre>
+let name: Str = "Alice";
+let count: i64 = 100;</code></pre>
             </div>
+            <p><strong>Note:</strong> <code>ayanfe</code>/<code>ayanfe</code> is the Yoruba keyword for constants. English <code>const</code> is also valid. Constant values must be known at compile time.</p>
 
             <h3>Assignment</h3>
             <div class="code-example">
@@ -82,8 +82,14 @@ let name: Str = "Alice";</code></pre>
                     <span class="code-title">Assignments</span>
                 </div>
                 <pre><code>x = 10;                         // Simple assignment
-*ptr = 20;                       // Pointer dereference
-arr[0] = 30;                     // Array indexing</code></pre>
+arr[0] = 30;                     // Index assignment
+
+// Update operators
+x += 5;
+x -= 1;
+x *= 2;
+x /= 3;
+x %= 4;</code></pre>
             </div>
 
             <h3>Function Definition</h3>
@@ -96,19 +102,28 @@ ese add(a, b) {
     pada a + b;
 }
 
-// Async function
-ese fetch_data() async {
-    // Async operations here
-}
-
 // English
 fn add(a, b) {
     return a + b;
 }
 
-// Public function
-public ese calculate(x) {
+// Public function (gbangba / pub / gbangba / fi / export)
+gbangba ese calculate(x) {
     // Accessible from other modules
+}
+
+fi ese public_helper(x) {
+    // Also public
+}
+
+// Async function
+daro ese fetch_data() {
+    Irosu.fo("Fetching...");
+}
+
+// Function with type hints
+ese divide(a: Int, b: Int) {
+    Oturupon.pipin(a, b);
 }</code></pre>
             </div>
         </div>
@@ -122,17 +137,21 @@ public ese calculate(x) {
                     <span class="code-title">Conditional Logic</span>
                 </div>
                 <pre><code>// Yoruba
-bi x > 0 {
+ti x > 0 {
     Irosu.fo("Positive");
-} bi kosi {
-    Irosu.fo("Non-positive");
+} bibekọ ti x == 0 {
+    Irosu.fo("Zero");
+} bibekọ {
+    Irosu.fo("Negative");
 }
 
 // English
 if x > 0 {
     Irosu.fo("Positive");
+} else if x == 0 {
+    Irosu.fo("Zero");
 } else {
-    Irosu.fo("Non-positive");
+    Irosu.fo("Negative");
 }</code></pre>
             </div>
 
@@ -141,35 +160,53 @@ if x > 0 {
                 <div class="code-header">
                     <span class="code-title">Iteration</span>
                 </div>
-                <pre><code>// While loop
-nigita x < 10 {
+                <pre><code>// While loop (Yoruba: nigba)
+nigba x < 10 {
+    Irosu.fo(x);
     x = x + 1;
 }
 
-// For loop
-fun i ninu 0..10 {
+// For loop - iterates over list items
+fun i ninu items {
     Irosu.fo(i);
 }
 
 // English equivalents
 while x < 10 {
+    Irosu.fo(x);
     x = x + 1;
 }
 
-for i in 0..10 {
+for i in items {
     Irosu.fo(i);
-}</code></pre>
+}
+
+// Break and Continue
+da;              // Yoruba: break
+tesiwaju;        // Yoruba: continue
+break;
+continue;</code></pre>
             </div>
+            <p><strong>Note:</strong> The <code>for</code> loop iterates over list values only. There is no range (<code>0..10</code>) syntax for for-loop expressions; use while for counter-based iteration.</p>
 
             <h3>Match Statement</h3>
+            <p><strong>Status:</strong> The grammar includes a <code>match_stmt</code> rule with literal, range, and wildcard patterns. Implementation in the VM is partial; basic literal matching is functional.</p>
             <div class="code-example">
                 <div class="code-header">
                     <span class="code-title">Pattern Matching</span>
                 </div>
-                <pre><code>match (x) {
+                <pre><code>// Yoruba: yàn
+yan (x) {
     0 => Irosu.fo("Zero"),
-    1..10 => Irosu.fo("Small"),
-    _ => Irosu.fo("Large")
+    1, 2 => Irosu.fo("Small"),
+    _ => Irosu.fo("Other")
+}
+
+// English: match
+match (x) {
+    200 => Irosu.fo("OK"),
+    404 => Irosu.fo("Not Found"),
+    _ => Irosu.fo("Unknown")
 }</code></pre>
             </div>
         </div>
@@ -186,7 +223,7 @@ for i in 0..10 {
 gbiyanju {
     risky_operation();
 } gba (error) {
-    Irosu.fo("Error: " + error.message);
+    Irosu.fo("Error: " + error);
 } nipari {
     cleanup();
 }
@@ -195,7 +232,7 @@ gbiyanju {
 try {
     risky_operation();
 } catch (error) {
-    Irosu.fo("Error: " + error.message);
+    Irosu.fo("Error: " + error);
 } finally {
     cleanup();
 }</code></pre>
@@ -212,7 +249,10 @@ ewo balance >= 0;
 
 // English
 assert x >= 0, "x must be non-negative";
-verify balance >= 0;</code></pre>
+verify balance >= 0;
+
+// Okanran (explicit throw)
+Okanran.kigbe("Something went wrong");</code></pre>
             </div>
         </div>
 
@@ -220,10 +260,10 @@ verify balance >= 0;</code></pre>
             <h2>Imports and Modules</h2>
             
             <h3>When You Need Imports</h3>
-            <p><strong>NOTE:</strong> The 16 Odù domains (Ogbe, Irosu, Obara, etc.) are <strong>built-in</strong> and <strong>do NOT need imports</strong>. They're fundamental language primitives.</p>
+            <p><strong>NOTE:</strong> The 16 Odu domains (Ogbe, Irosu, Obara, etc.) are <strong>built-in</strong> and <strong>do NOT need imports</strong>. They're fundamental language primitives.</p>
             
             <h3>Import Statements</h3>
-            <p>Use imports for external modules, utilities, or specific functions:</p>
+            <p>Use imports for external packages, libraries, and application stacks (crypto, ml, gamedev, backend, frontend, iot, video):</p>
             <div class="code-example">
                 <div class="code-header">
                     <span class="code-title">Module Imports</span>
@@ -232,17 +272,12 @@ verify balance >= 0;</code></pre>
 iba std.utils;
 import std.utils;
 
-// Import specific functions from modules
-iba { fo, ka } from std.irosu;  // Specific Irosu functions
-import { println, read } from std.irosu;
+// Import specific functions
+iba { yokuro, pipin } from std.oturupon;
 
 // Import from sub-modules
 iba std.crypto.sha256;
-import std.crypto.sha256;
-
-// Import third-party packages
-iba external_crate;
-import external_crate;</code></pre>
+import std.crypto.sha256;</code></pre>
             </div>
 
             <h3>What DOESN'T Need Imports</h3>
@@ -250,55 +285,108 @@ import external_crate;</code></pre>
                 <div class="code-header">
                     <span class="code-title">Built-in Domains (No Imports)</span>
                 </div>
-                <pre><code>// These are WRONG - don't import the 16 Odù domains!
+                <pre><code>// These are WRONG - don't import the 16 Odu domains!
 // iba std.irosu;    // NO! Irosu is built-in
 // iba std.obara;    // NO! Obara is built-in  
-// import std.ogbe;   // NO! Ogbe is built-in
 
 // These are CORRECT - use domains directly
 ese main() {
-    Irosu.fo("Hello");     // Built-in, no import needed
-    ayanmo sum = Obara.fikun(1, 2);  // Built-in, no import needed
-    Ogbe.jade(0);          // Built-in, no import needed
+    Irosu.fo("Hello");                    // Built-in, no import needed
+    ayanmo sum = Obara.fikun(1, 2);      // Built-in, no import needed
+    Oyeku.jade(0);                       // Built-in, no import needed
 }</code></pre>
             </div>
         </div>
 
         <div class="step">
             <h2>Domain Calls</h2>
-            <p>Call methods on the 16 Odù domains - <strong>NO IMPORTS NEEDED</strong>:</p>
+            <p>Call methods on the 16 Odu domains - <strong>NO IMPORTS NEEDED</strong>:</p>
             
             <div class="code-example">
                 <div class="code-header">
                     <span class="code-title">Domain Operations</span>
                 </div>
-                <pre><code>// The 16 Odù domains are built-in and globally available
-// No imports required - they're fundamental language primitives
+                <pre><code>// The 16 Odu domains are built-in and globally available
 
-// Console I/O (Irosu - 0011)
-Irosu.fo("Hello, World!");
-ayanmo input = Irosu.ka("Enter name: ");
+// Console I/O (Irosu)
+Irosu.fo("Hello, World!");          // println
+Irosu.so("Enter name: ");           // print
+ayanmo input = Irosu.gbo();         // read line
+Irosu.mo();                         // clear
+Irosu.kigbe("Error!");              // stderr
 
-// Mathematics (Obara - 1000)
-ayanmo result = Obara.fikun(10, 20);
-ayanmo sqrt = Obara.akako(16);
+// Mathematics (Obara)
+Obara.fikun(10, 20);                // add
+Obara.isodipupo(3, 4);              // mul
+Obara.agbara(2, 8);                 // pow
+Obara.gbongbo(16);                  // sqrt
 
-// Cryptography (Irete - 1101)
-ayanmo hash = Irete.sha256("data");
-ayanmo encoded = Irete.base64("data");
+// Oturupon (inverse math)
+Oturupon.yokuro(20, 10);            // sub
+Oturupon.pipin(10, 3);              // div
 
-// Time operations (Iwori - 0110)
-ayanmo now = Iwori.bayi();
-ayanmo formatted = Iwori.ohun(now);
+// Cryptography (Irete, needs 'crypto' feature)
+Irete.hash("data");                 // sha256
+Irete.hmac("key", "data");         // hmac_sha256
+Irete.base64("data");               // base64_encode
+Irete.decode("ZGF0YQ==");          // base64_decode
 
-// System operations (Ogbe - 1111)
-ayanmo args = Ogbe.args();
-Ogbe.jade(0);
+// Time operations (Iwori)
+Iwori.bayi();                       // now
+Iwori.akoko();                      // timestamp
 
-// And all other 16 Odù domains work the same way</code></pre>
+// Random (Owonrin)
+Owonrin.pese();                     // random number
+
+// System operations (Ogbe)
+Ogbe.bere();                        // version
+
+// File operations (Odi)
+Odi.ka("file.txt");                 // read
+Odi.ko("file.txt", "content");      // write
+Odi.wa("file.txt");                 // exists
+
+// Exit (Oyeku)
+Oyeku.jade(0);                      // exit code 0
+Oyeku.sun(1000);                    // sleep ms
+
+// List ops (Ogunda)
+Ogunda.iwon(list);                  // len
+Ogunda.fi(list, 42);                // push
+Ogunda.mu(list);                    // pop
+Ogunda.yi_pada(list, fn);           // map
+Ogunda.yan(list, fn);               // filter
+Ogunda.seku(list, fn, 0);           // reduce
+
+// String ops (Ika)
+Ika.gigun("hello");                 // len
+Ika.ge("hello", 0, 2);              // slice
+Ika.so("hello", " world");          // concat
+
+// Assertions (Okanran)
+Okanran.sise(x > 0);                // assert
+Okanran.kigbe("error!");            // throw/panic
+
+// Meta (Ofun)
+Ofun.le("1 + 2");                   // eval
+Ofun.dbg(value);                    // debug print
+
+// Concurrency (Osa, needs 'sync' feature)
+Osa.sun(100);                       // sleep
+Osa.gbogbo(tasks);                  // all/join
+
+// Networking (Otura, needs 'backend' feature)
+Otura.gba("https://example.com");   // HTTP GET
+Otura.ran("https://api.com", body); // HTTP POST
+
+// Graphics/TUI (Ose, needs 'game' feature)
+Ose.bere();                         // init
+Ose.ya(x, y, "text");              // draw
+Ose.pari();                         // end
+Ose.gbile();                        // read_key</code></pre>
             </div>
 
-            <h3>Available Domains (Built-in)</h3>
+            <h3>Correct Binary Patterns for the 16 Odu</h3>
             <div class="domain-grid">
                 <div class="domain-item">
                     <span class="pattern">1111</span>
@@ -306,7 +394,7 @@ Ogbe.jade(0);
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0000</span>
-                    <strong>Oyeku</strong> - Exit
+                    <strong>Oyeku</strong> - Exit/Sleep
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0110</span>
@@ -334,7 +422,7 @@ Ogbe.jade(0);
                 </div>
                 <div class="domain-item">
                     <span class="pattern">1110</span>
-                    <strong>Ogunda</strong> - Arrays
+                    <strong>Ogunda</strong> - Collections
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0111</span>
@@ -346,7 +434,7 @@ Ogbe.jade(0);
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0010</span>
-                    <strong>Oturupon</strong> - Math
+                    <strong>Oturupon</strong> - Math (inverse)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">1011</span>
@@ -358,11 +446,11 @@ Ogbe.jade(0);
                 </div>
                 <div class="domain-item">
                     <span class="pattern">1010</span>
-                    <strong>Ose</strong> - Graphics
+                    <strong>Ose</strong> - Graphics/TUI
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0101</span>
-                    <strong>Ofun</strong> - Permissions
+                    <strong>Ofun</strong> - Meta
                 </div>
             </div>
         </div>
@@ -376,46 +464,58 @@ Ogbe.jade(0);
                     <span class="code-title">Memory Configuration</span>
                 </div>
                 <pre><code>// Memory size directives
-opon: kekere;              // Small memory
-#opon arinrin;               // Medium memory  
-mem: nla;                   // Large memory
-#mem ailopin;               // Unlimited memory</code></pre>
+#opon kekere;              // Small (256 slots, 64 frames)
+#opon arinrin;             // Medium (4096 slots, 512 frames)
+#opon nla;                 // Large (65536 slots, 4096 frames)
+#opon ailopin;             // Unlimited
+
+// Opon directive also accepts colon syntax
+opon: arinrin;
+mem: nla;</code></pre>
             </div>
 
-            <h3>Resource Management ( )</h3>
+            <h3>Resource Management (Ebo and Defer)</h3>
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">Resource Sacrifice</span>
+                    <span class="code-title">Resource Scopes</span>
                 </div>
-                <pre><code>// Resource acquisition with obligation
+                <pre><code>// Ebo (offering): creates a scoped memory epoch
 ebo "server_config.json";
 
-// File handling with automatic cleanup
-ebo file = Odi.open("data.txt");
-// Use file...
-// File automatically closed when scope ends</code></pre>
+// Ebo with body: allocs released at scope exit
+ebo "region" {
+    // Allocations here are released on block exit
+    ayanmo data = Odi.ka("config.txt");
+    // Process data...
+}
+
+// Defer: schedule cleanup at scope exit
+defer {
+    Irosu.fo("Cleaning up...");
+}</code></pre>
             </div>
         </div>
 
         <div class="step">
-            <h2>Unsafe Code</h2>
-            <p>For low-level operations when needed:</p>
+            <h2>Closures (Lambda Expressions)</h2>
+            <p>Anonymous functions use the <code>ese</code>/<code>fn</code> keyword with parentheses for parameters:</p>
             
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">Unsafe Blocks</span>
+                    <span class="code-title">Lambda/Closure Syntax</span>
                 </div>
-                <pre><code>// Yoruba
-ailewu {
-    // Unsafe operations here
-    // Direct memory manipulation
-    // FFI calls
-}
+                <pre><code>// Yoruba: ese(params) { body }
+ayanmo double = ese(x) { pada x * 2; };
 
-// English
-unsafe {
-    // Unsafe operations here
-}</code></pre>
+// English: fn(params) { body }
+let transform = fn(x) { return x * 2; };
+
+// Used with Ogunda collection methods
+ayanmo result = Ogunda.yi_pada(items, ese(x) { pada x + 1; });
+
+// Filter and reduce
+ayanmo evens = Ogunda.yan(items, ese(x) { pada x % 2 == 0; });
+ayanmo sum = Ogunda.seku(items, ese(acc, x) { pada acc + x; }, 0);</code></pre>
             </div>
         </div>
 
@@ -425,25 +525,13 @@ unsafe {
             <h3>Yield</h3>
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">Generators</span>
+                    <span class="code-title">Yield Execution</span>
                 </div>
                 <pre><code>// Yoruba
 jowo 1000;
 
 // English  
 yield 1000;</code></pre>
-            </div>
-
-            <h3>Return</h3>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">Function Return</span>
-                </div>
-                <pre><code>// Yoruba
-pada result;
-
-// English
-return result;</code></pre>
             </div>
 
             <h3>End Statement</h3>
@@ -456,6 +544,57 @@ ase;
 
 // English
 end;</code></pre>
+            </div>
+
+            <h3>Await</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Await Expression</span>
+                </div>
+                <pre><code>// Yoruba
+reti async_call();
+
+// English
+await async_call();</code></pre>
+            </div>
+
+            <h3>Unsafe Block</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Unsafe Blocks</span>
+                </div>
+                <pre><code>// Yoruba
+ailewu {
+    // Unsafe operations here
+    // Direct memory manipulation, FFI calls
+}
+
+// English
+unsafe {
+    // Unsafe operations here
+}</code></pre>
+            </div>
+
+            <h3>Odu (Class) Definition</h3>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Class-like Struct</span>
+                </div>
+                <pre><code>// Yoruba: odu
+odu Server {
+    ayanmo port = 8080;
+    ese start() {
+        Irosu.fo("Server starting...");
+    }
+}
+
+// English: class
+class Counter {
+    let count = 0;
+    fn increment() {
+        count = count + 1;
+    }
+}</code></pre>
             </div>
         </div>
 
@@ -470,39 +609,41 @@ end;</code></pre>
                 <pre><code>// Numbers
 ayanmo i: Int = 42;
 ayanmo f: Float = 3.14;
-ayanmo u8: u8 = 255;
-ayanmo i64: i64 = 1000000;
 
 // Text
 ayanmo s: Str = "Hello";
-ayanmo c: char = 'A';
 
 // Boolean
-ayanmo b: Bool = otito;
+ayanmo b: Bool = otito;     // true
+ayanmo b2: Bool = iro;       // false
+
+// Null
+ayanmo n = ofo;              // null / nil
 
 // Collections
-ayanmo list: List[Int] = [1, 2, 3];
-ayanmo map: Map[Str, Int] = {"a": 1, "b": 2};
+ayanmo list = [1, 2, 3];
+ayanmo map = {"a": 1, "b": 2};
 
-// Universal
-ayanmo anything: Any = 42;</code></pre>
+// Low-level types (in unsafe contexts)
+ayanmo addr: u64 = 0xdeadbeef;
+ayanmo byte: u8 = 255;</code></pre>
             </div>
 
-            <h3>Type Hints</h3>
+            <h3>Type Hints on Functions</h3>
             <div class="code-example">
                 <div class="code-header">
                     <span class="code-title">Type Annotations</span>
                 </div>
-                <pre><code>// Function parameters with types
-ese add(a: Int, b: Int) -> Int {
+                <pre><code>// Function parameters with type hints
+ese add(a: Int, b: Int) {
     pada a + b;
 }
 
 // Variable with type hint
 ayanmo name: Str = "Alice";
 
-// Complex types
-ayanmo matrix: List[List[Float]] = [[1.0, 2.0], [3.0, 4.0]];</code></pre>
+// Nested types (type hints only, no generics syntax)
+ayanmo matrix = [[1.0, 2.0], [3.0, 4.0]];</code></pre>
             </div>
         </div>
 
@@ -511,38 +652,56 @@ ayanmo matrix: List[List[Float]] = [[1.0, 2.0], [3.0, 4.0]];</code></pre>
             
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">Comments</span>
+                    <span class="code-title">Comment Styles</span>
                 </div>
-                <pre><code>// Single line comment
+                <pre><code>// Single line comment (slash style)
 
-/* 
+# Hash-style comment
+
+/// Documentation comment (for functions)
+
+/*
    Multi-line comment
    Can span multiple lines
-*/
-
-/// Documentation comment
-ese documented_function() {
-    // Implementation
-}</code></pre>
+*/</code></pre>
             </div>
         </div>
 
         <div class="step">
             <h2>Taboo Declarations</h2>
-            <p>Declare architectural constraints:</p>
+            <p>Declare architectural constraints between domains:</p>
             
             <div class="code-example">
                 <div class="code-header">
                     <span class="code-title">Taboo Rules</span>
                 </div>
-                <pre><code>// Taboo: Graphics operations in error context
-èèwò: Ose -> Odi;
+                <pre><code>// Yoruba
+eewo: Ose -> Odi;
 
-// Taboo: Network operations in crypto context  
-taboo: Otura -> Irete;
+// English
+taboo: Otura -> Irete;</code></pre>
+            </div>
+            <p>Taboo declarations prevent certain domain combinations. The Babalawo static analyzer validates these constraints.</p>
+        </div>
 
-// This means certain domain combinations are forbidden
-// to prevent architectural violations</code></pre>
+        <div class="step">
+            <h2>String Features</h2>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">String Operations</span>
+                </div>
+                <pre><code>// Concatenation
+ayanmo s = "Hello " + "World";
+
+// Interpolated strings
+ayanmo name = "Ifa";
+ayanmo greeting = $"Kaabo, {name}!";  // "Kaabo, Ifa!"
+
+// String methods via Ika
+Ika.gigun("hello");                    // 5 (length)
+Ika.ge("hello", 1, 3);                // "el" (slice)
+Ika.oruko_html("<h1>Title</h1>");     // "Title" (HTML title extraction)
+Ika.tumo_html("<b>text</b>");         // "text" (strip HTML)</code></pre>
             </div>
         </div>
 
@@ -560,31 +719,51 @@ taboo: Otura -> Irete;
                 </thead>
                 <tbody>
                     <tr><td>Variable</td><td>ayanmo</td><td>let</td></tr>
+                    <tr><td>Constant</td><td>ayanfe</td><td>const</td></tr>
                     <tr><td>Function</td><td>ese</td><td>fn</td></tr>
-                    <tr><td>If</td><td>bi</td><td>if</td></tr>
-                    <tr><td>Else</td><td>bi kosi</td><td>else</td></tr>
-                    <tr><td>While</td><td>nigita</td><td>while</td></tr>
+                    <tr><td>If</td><td>ti</td><td>if</td></tr>
+                    <tr><td>Else</td><td>bibeko</td><td>else</td></tr>
+                    <tr><td>While</td><td>nigba</td><td>while</td></tr>
                     <tr><td>For</td><td>fun</td><td>for</td></tr>
                     <tr><td>In</td><td>ninu</td><td>in</td></tr>
                     <tr><td>Return</td><td>pada</td><td>return</td></tr>
                     <tr><td>Try</td><td>gbiyanju</td><td>try</td></tr>
                     <tr><td>Catch</td><td>gba</td><td>catch</td></tr>
                     <tr><td>Finally</td><td>nipari</td><td>finally</td></tr>
-                    <tr><td>Assert</td><td>ewo</td><td>assert</td></tr>
+                    <tr><td>Assert</td><td>ewo</td><td>assert/verify</td></tr>
                     <tr><td>Import</td><td>iba</td><td>import</td></tr>
                     <tr><td>From</td><td>lati</td><td>from</td></tr>
                     <tr><td>Unsafe</td><td>ailewu</td><td>unsafe</td></tr>
                     <tr><td>Yield</td><td>jowo</td><td>yield</td></tr>
-                    <tr><td>Taboo</td><td>èèwò</td><td>taboo</td></tr>
+                    <tr><td>Taboo</td><td>eewo</td><td>taboo</td></tr>
+                    <tr><td>Break</td><td>da</td><td>break</td></tr>
+                    <tr><td>Continue</td><td>tesiwaju/bayan</td><td>continue</td></tr>
+                    <tr><td>End</td><td>ase</td><td>end</td></tr>
+                    <tr><td>Await</td><td>reti</td><td>await</td></tr>
+                    <tr><td>Async</td><td>daro</td><td>async</td></tr>
+                    <tr><td>Match</td><td>yan</td><td>match</td></tr>
+                    <tr><td>Defer</td><td>gbe</td><td>defer</td></tr>
+                    <tr><td>Ebo</td><td>ebo</td><td>sacrifice</td></tr>
+                    <tr><td>Public</td><td>gbangba/fi</td><td>public/export</td></tr>
+                    <tr><td>Odu</td><td>odu</td><td>class</td></tr>
                 </tbody>
             </table>
 
             <h3>Special Values</h3>
             <ul>
                 <li><strong>otito/true</strong> - Boolean true</li>
-                <li><strong>eke/false</strong> - Boolean false</li>
-                <li><strong>ofo/null</strong> - Null value</li>
-                <li><strong>ofun/void</strong> - Void type</li>
+                <li><strong>iro/false</strong> - Boolean false</li>
+                <li><strong>ofo/null/nil</strong> - Null value</li>
+            </ul>
+
+            <h3>Operators</h3>
+            <ul>
+                <li><strong>Arithmetic:</strong> +, -, *, /, %, ** (power via grammar? power operator used in expression parsing?)</li>
+                <li><strong>Comparison:</strong> ==, !=, &lt;, &lt;=, &gt;, &gt;=</li>
+                <li><strong>Logical:</strong> &amp;&amp; (ati/and), || (tabi/or), ! (kii/not)</li>
+                <li><strong>Null coalescing:</strong> ??</li>
+                <li><strong>Error propagation:</strong> ? (postfix on expressions)</li>
+                <li><strong>Update:</strong> +=, -=, *=, /=, %=</li>
             </ul>
         </div>
 

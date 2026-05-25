@@ -1,5 +1,5 @@
 use ifa_babalawo::{BabalawoConfig, LintContext, Severity as IfaSeverity, analyze_program};
-use ifa_core::parse;
+use ifa_vm::parse;
 use lsp_server::{Connection, Message, Notification, RequestId, Response};
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionOptions, Diagnostic, DiagnosticSeverity,
@@ -237,7 +237,7 @@ fn publish_diagnostics(
                 severity: Some(DiagnosticSeverity::ERROR),
                 code: None,
                 code_description: None,
-                source: Some("ifa-core".to_string()),
+                source: Some("ifa-vm".to_string()),
                 message: msg,
                 related_information: None,
                 tags: None,

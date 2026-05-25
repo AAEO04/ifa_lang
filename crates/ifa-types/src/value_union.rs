@@ -11,12 +11,23 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+#[cfg(feature = "std")]
+use std::sync::OnceLock;
 #[cfg(feature = "vm")]
-use std::{cell::RefCell, rc::Rc, sync::Mutex};
+use std::sync::Mutex;
+
+#[cfg(feature = "std")]
+// Dashmap removed for PR-28 / I-Stream (No global caching)
 
 #[cfg(feature = "vm")]
 use crate::ast::Statement;
+use crate::nan_box::{BoxedPrimitive, NanBox};
 use crate::token::ResourceToken;
+use crate::error::{IfaError, IfaResult};
+use crate::shared::IfaShared;
+
+#[cfg(feature = "std")]
+// UNICODE_LEN_CACHE removed for PR-28 (No global caching)
 
 // ============================================================================
 // 1. Core Implementation (The "Nano-Boxed" Enum)
@@ -24,10 +35,9 @@ use crate::token::ResourceToken;
 
 /// Universal value type for the Ifá-Lang Host Runtime.
 ///
-/// Layout on 64-bit systems: 16 bytes.
-/// - Tag: 1 byte
-/// - Padding: 7 bytes
-/// - Payload: 8 bytes (i64, f64, or Arc pointer)
+/// Layout on 64-bit systems: currently 32 bytes.
+/// This is a regular Rust enum, so the final size is driven by the
+/// discriminator plus the largest variant payload, not a hand-packed union.
 #[derive(Clone, Debug)]
 pub enum IfaValue {
     // 1. Primitives (Inline, No Alloc)
@@ -37,9 +47,9 @@ pub enum IfaValue {
     Float(f64),
 
     // 2. Heap Objects (Ref-Counted, Shared)
-    Str(Arc<str>),
+    Str(crate::CompactString),
     List(Arc<Vec<IfaValue>>),
-    Map(Arc<HashMap<Arc<str>, IfaValue>>),
+    Map(Arc<HashMap<crate::CompactString, IfaValue>>),
 
     // 3. Special / VM Objects
     Fn(Arc<BytecodeFnData>),
@@ -58,6 +68,16 @@ pub enum IfaValue {
     /// Async future value (VM/AST only).
     #[cfg(feature = "vm")]
     Future(FutureCell),
+    /// H2: Actor handle — a reference to a running isolated VM thread.
+    /// Uses type-erased Arc so ifa-types has no dependency on ifa-vm's ActorHandle.
+    /// Callers in ifa-vm downcast via `Arc::downcast` after cloning.
+    #[cfg(feature = "vm")]
+    Actor {
+        /// Monotonic actor ID for routing and display.
+        id: u64,
+        /// Type-erased SyncSender<ActorMsg>. Downcast in ifa-vm.
+        handle: Arc<dyn std::any::Any + Send + Sync>,
+    },
 
     // Legacy / Other
     #[allow(dead_code)]
@@ -66,6 +86,12 @@ pub enum IfaValue {
     // VM Specific
     #[cfg(feature = "vm")]
     Return(Arc<IfaValue>),
+    /// Loop break signal — consumed by the nearest While/For handler.
+    #[cfg(feature = "vm")]
+    Break,
+    /// Loop continue signal — consumed by the nearest While/For handler.
+    #[cfg(feature = "vm")]
+    Continue,
 
     // 4. Okanran (Error Handling)
     Result(Box<ResultPayload>),
@@ -77,7 +103,7 @@ pub enum IfaValue {
 
 /// Shared mutable cell used for closure capture (by-reference semantics).
 #[cfg(feature = "vm")]
-pub type UpvalueCell = Rc<RefCell<IfaValue>>;
+pub type UpvalueCell = Arc<Mutex<IfaValue>>;
 
 /// Closure payload for the bytecode VM.
 #[cfg(feature = "vm")]
@@ -112,6 +138,18 @@ pub enum ResultPayload {
 // ============================================================================
 
 impl IfaValue {
+    /// Unicode scalar length for a string value.
+    ///
+    /// The global DashMap cache has been removed to prevent memory exhaustion and
+    /// mutex contention. Lengths are computed dynamically until the VM implements
+    /// an O(1) integer-indexed local cache (PR-28).
+    pub fn unicode_string_len(s: &str) -> usize {
+        if s.is_ascii() {
+            return s.len();
+        }
+        s.chars().count()
+    }
+
     // --- Primitives ---
     #[inline(always)]
     pub const fn null() -> Self {
@@ -124,7 +162,19 @@ impl IfaValue {
     }
 
     #[inline(always)]
-    pub const fn int(n: i64) -> Self {
+    pub fn int(n: i64) -> Self {
+        #[cfg(feature = "std")]
+        {
+            static SMALL_INT_POOL: OnceLock<[IfaValue; 256]> = OnceLock::new();
+
+            if (0..=255).contains(&n) {
+                let pool = SMALL_INT_POOL.get_or_init(|| {
+                    std::array::from_fn(|i| IfaValue::Int(i as i64))
+                });
+                return pool[n as usize].clone();
+            }
+        }
+
         IfaValue::Int(n)
     }
 
@@ -135,7 +185,7 @@ impl IfaValue {
 
     // --- Heap Types ---
     pub fn str(s: impl Into<String>) -> Self {
-        IfaValue::Str(Arc::from(s.into().into_boxed_str()))
+        IfaValue::Str(crate::CompactString::new(&s.into()))
     }
 
     pub fn list(items: Vec<IfaValue>) -> Self {
@@ -145,7 +195,7 @@ impl IfaValue {
     pub fn map(m: HashMap<String, IfaValue>) -> Self {
         let mut internal = HashMap::with_capacity(m.len());
         for (k, v) in m {
-            internal.insert(Arc::from(k.into_boxed_str()), v);
+            internal.insert(crate::CompactString::new(&k), v);
         }
         IfaValue::Map(Arc::new(internal))
     }
@@ -188,10 +238,56 @@ impl IfaValue {
         IfaValue::Result(Box::new(ResultPayload::Err(val)))
     }
 
+    /// Convert an inline primitive into the initial NaN-boxed representation.
+    ///
+    /// Heap-backed variants are intentionally excluded until pointer tagging is
+    /// migrated.
+    pub fn to_nan_boxed_primitive(&self) -> Option<NanBox> {
+        match self {
+            IfaValue::Null => Some(NanBox::from_null()),
+            IfaValue::Bool(b) => Some(NanBox::from_bool(*b)),
+            IfaValue::Int(i) => NanBox::from_int(*i).ok(),
+            IfaValue::Float(f) => Some(NanBox::from_float(*f)),
+            _ => None,
+        }
+    }
+
+    /// Reconstruct an `IfaValue` from the primitive NaN-boxed subset.
+    pub fn from_nan_boxed_primitive(value: NanBox) -> Option<Self> {
+        match value.to_primitive().ok()? {
+            BoxedPrimitive::Null => Some(Self::null()),
+            BoxedPrimitive::Bool(b) => Some(Self::bool(b)),
+            BoxedPrimitive::Int(i) => Some(Self::int(i)),
+            BoxedPrimitive::Float(f) => Some(Self::float(f)),
+        }
+    }
+
     pub fn is_return(&self) -> bool {
         #[cfg(feature = "vm")]
         {
             matches!(self, IfaValue::Return(_))
+        }
+        #[cfg(not(feature = "vm"))]
+        {
+            false
+        }
+    }
+
+    pub fn is_break(&self) -> bool {
+        #[cfg(feature = "vm")]
+        {
+            matches!(self, IfaValue::Break)
+        }
+        #[cfg(not(feature = "vm"))]
+        {
+            false
+        }
+    }
+
+    pub fn is_continue(&self) -> bool {
+        #[cfg(feature = "vm")]
+        {
+            matches!(self, IfaValue::Continue)
         }
         #[cfg(not(feature = "vm"))]
         {
@@ -218,16 +314,18 @@ impl IfaValue {
             IfaValue::Closure(_) => "Closure",
             #[cfg(feature = "vm")]
             IfaValue::Future(_) => "Future",
+            #[cfg(feature = "vm")]
+            IfaValue::Actor { .. } => "Actor",
             _ => "Unknown",
         }
     }
 
     pub fn is_truthy(&self) -> bool {
+        if let Some(boxed) = self.to_nan_boxed_primitive() {
+            return boxed.is_truthy();
+        }
+
         match self {
-            IfaValue::Null => false,
-            IfaValue::Bool(b) => *b,
-            IfaValue::Int(i) => *i != 0,
-            IfaValue::Float(f) => *f != 0.0 && !f.is_nan(),
             IfaValue::Str(s) => !s.is_empty(),
             IfaValue::List(l) => !l.is_empty(),
             IfaValue::Map(m) => !m.is_empty(),
@@ -243,7 +341,8 @@ impl IfaValue {
             IfaValue::Future(_) => true,
             #[cfg(feature = "vm")]
             IfaValue::Upvalue(cell) => cell
-                .try_borrow()
+                .try_lock()
+                .ok()
                 .map(|value| value.is_truthy())
                 .unwrap_or(false),
             #[allow(unreachable_patterns)]
@@ -287,7 +386,40 @@ impl IfaValue {
                 | (ResultPayload::Err(av), ResultPayload::Err(bv)) => av.is_equal(bv),
                 _ => false,
             },
+            #[cfg(feature = "vm")]
+            (IfaValue::Upvalue(a), IfaValue::Upvalue(b)) => Arc::ptr_eq(a, b),
             _ => false,
+        }
+    }
+
+    /// Freeze: Convert Local Value (The Hut) to Shared Value (The Village).
+    /// Performs a deep copy. Fails on closures/functions consistently.
+    pub fn freeze(&self) -> IfaResult<IfaShared> {
+        match self {
+            IfaValue::Int(n) => Ok(IfaShared::Int(*n)),
+            IfaValue::Float(n) => Ok(IfaShared::Float(*n)),
+            IfaValue::Str(s) => Ok(IfaShared::Str(s.as_str().into())),
+            IfaValue::Bool(b) => Ok(IfaShared::Bool(*b)),
+            IfaValue::Null => Ok(IfaShared::Null),
+            IfaValue::List(l) => {
+                let mut frozen_list = Vec::with_capacity(l.len());
+                for item in l.iter() {
+                    frozen_list.push(item.freeze()?);
+                }
+                Ok(IfaShared::List(frozen_list))
+            }
+            IfaValue::Map(m) => {
+                let mut frozen_map = HashMap::new();
+                for (k, v) in m.iter() {
+                    frozen_map.insert(k.as_str().into(), v.freeze()?);
+                }
+                Ok(IfaShared::Map(frozen_map))
+            }
+            IfaValue::Resource(token) => Ok(IfaShared::Resource(**token)),
+            _ => Err(IfaError::Runtime(format!(
+                "Cannot freeze value of type {} for thread-safe sharing",
+                self.type_name()
+            ))),
         }
     }
 }
@@ -323,6 +455,8 @@ impl fmt::Display for IfaValue {
             },
             #[cfg(feature = "vm")]
             IfaValue::Future(_) => write!(f, "<future>"),
+            #[cfg(feature = "vm")]
+            IfaValue::Actor { id, .. } => write!(f, "<actor:{id}>"),
             _ => write!(f, "<?>"),
         }
     }
@@ -423,6 +557,33 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("not serializable"));
     }
+
+    #[test]
+    fn unicode_string_len_counts_code_points() {
+        assert_eq!(IfaValue::unicode_string_len("hello"), 5);
+        assert_eq!(IfaValue::unicode_string_len("e\u{301}"), 2);
+        assert_eq!(IfaValue::unicode_string_len("🔥a"), 2);
+    }
+    #[test]
+    fn nan_boxed_primitive_roundtrip_matches_ifa_value() {
+        let values = [
+            IfaValue::null(),
+            IfaValue::bool(false),
+            IfaValue::bool(true),
+            IfaValue::int(42),
+            IfaValue::int(-42),
+            IfaValue::float(2.5),
+        ];
+
+        for value in values {
+            let boxed = value
+                .to_nan_boxed_primitive()
+                .expect("primitive should box");
+            let roundtrip = IfaValue::from_nan_boxed_primitive(boxed)
+                .expect("boxed primitive should unbox");
+            assert_eq!(roundtrip, value);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -430,8 +591,8 @@ mod layout_tests {
     use super::*;
 
     #[test]
-    fn ifa_value_stays_within_16_bytes_on_64_bit() {
-        assert_eq!(std::mem::size_of::<IfaValue>(), 16);
+    fn ifa_value_stays_within_32_bytes_on_64_bit() {
+        assert_eq!(std::mem::size_of::<IfaValue>(), 32);
     }
 }
 

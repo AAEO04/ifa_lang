@@ -5,8 +5,9 @@
 
 use crate::diagnose::Babalawo;
 use crate::iwa::IwaEngine;
+use crate::movement::{MoveTracker, MoveCheckResult, is_copy_eligible, move_args_from_odu_call};
 use crate::taboo::TabooEnforcer;
-use ifa_core::ast::{Expression, Program, Statement, TypeHint, Visibility};
+use ifa_types::ast::{Expression, Program, Statement, TypeHint, Visibility};
 use crate::Severity;
 use std::collections::{HashMap, HashSet};
 
@@ -14,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 #[derive(Debug)]
 pub struct LintContext {
     /// Variables that have been defined (with their declaration span)
-    pub defined_vars: HashMap<String, ifa_core::ast::Span>,
+    pub defined_vars: HashMap<String, ifa_types::ast::Span>,
     /// Variables that have been used
     pub used_vars: HashSet<String>,
     /// Variable types (for static type checking)
@@ -44,6 +45,12 @@ pub struct LintContext {
     pub in_async_function: bool,
     /// Current domain (class/odu) name, for visibility scoping
     pub current_domain: Option<String>,
+    /// H1: Move tracker — enforces linear type discipline at actor boundaries.
+    pub move_tracker: MoveTracker,
+    /// H4: Whether currently inside a parallel execution body (e.g. iwori.yipo.ori)
+    pub in_parallel_body: bool,
+    /// H4: Variables declared locally inside the parallel body
+    pub parallel_locals: HashSet<String>,
 }
 
 impl Default for LintContext {
@@ -70,21 +77,26 @@ impl LintContext {
             opon_size: None,
             in_async_function: false,
             current_domain: None,
+            move_tracker: MoveTracker::new(),
+            in_parallel_body: false,
+            parallel_locals: HashSet::new(),
         }
     }
 
-    pub fn define_var(&mut self, name: &str, span: ifa_core::ast::Span, visibility: Visibility) {
+    pub fn define_var(&mut self, name: &str, span: ifa_types::ast::Span, visibility: Visibility) {
         self.defined_vars.insert(name.to_string(), span);
         self.var_visibility.insert(name.to_string(), visibility);
         self.var_domain.insert(name.to_string(), self.current_domain.clone());
+        self.move_tracker.declare(name);
     }
 
     /// Define a variable with a type hint
-    pub fn define_var_typed(&mut self, name: &str, type_hint: TypeHint, span: ifa_core::ast::Span, visibility: Visibility) {
+    pub fn define_var_typed(&mut self, name: &str, type_hint: TypeHint, span: ifa_types::ast::Span, visibility: Visibility) {
         self.defined_vars.insert(name.to_string(), span);
         self.var_types.insert(name.to_string(), type_hint);
         self.var_visibility.insert(name.to_string(), visibility);
         self.var_domain.insert(name.to_string(), self.current_domain.clone());
+        self.move_tracker.declare(name);
     }
 
     pub fn use_var(&mut self, name: &str) {
@@ -416,6 +428,11 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                 );
             }
 
+            // H4: Track parallel locals
+            if ctx.in_parallel_body {
+                ctx.parallel_locals.insert(name.clone());
+            }
+
             // Type checking for statically typed variables
             if let Some(th) = type_hint {
                 // Check if low-level type requires ailewu context
@@ -453,19 +470,9 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             span,
         } => {
             check_expression(value, ctx, baba, file, span);
+            check_assign_target(target, ctx, baba, file, span);
 
-            // Check if target variable is defined
-            if let ifa_core::ast::AssignTarget::Variable(name) = target {
-                if !ctx.defined_vars.contains_key(name) {
-                    baba.error(
-                        "UNDEFINED_VARIABLE",
-                        &format!("Variable '{}' assigned before declaration", name),
-                        file,
-                        span.line,
-                        span.column,
-                    );
-                }
-
+            if let ifa_types::ast::AssignTarget::Variable(name) = target {
                 // Check type compatibility for static types
                 if let Some(declared_type) = ctx.get_var_type(name) {
                     if let Some(inferred_type) = infer_expression_type(value, ctx) {
@@ -497,7 +504,76 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                         );
                     }
                 }
+
+                // H1: Re-assignment revives a moved variable. After `x = new_value;`
+                // the binding is live again regardless of prior move state.
+                ctx.move_tracker.revive(name);
             }
+        }
+
+        Statement::Update {
+            target,
+            value,
+            span,
+            ..
+        } => {
+            if let Some(v) = value {
+                check_expression(v, ctx, baba, file, span);
+            }
+            check_assign_target(target, ctx, baba, file, span);
+
+            if let ifa_types::ast::AssignTarget::Variable(name) = target {
+                // Read-and-write: if name was moved, it is use-after-move!
+                if let Some(result) = ctx.move_tracker.check_use(name) {
+                    match result {
+                        MoveCheckResult::UseAfterMove { moved_at_line, moved_at_col, .. } => {
+                            baba.error(
+                                "USE_AFTER_MOVE",
+                                &format!(
+                                    "Variable '{}' used in update after being moved (moved at {}:{})",
+                                    name, moved_at_line, moved_at_col
+                                ),
+                                file,
+                                span.line,
+                                span.column,
+                            );
+                        }
+                        MoveCheckResult::MaybeUseAfterMove { moved_at_line, moved_at_col, .. } => {
+                            baba.warning(
+                                "MAYBE_USE_AFTER_MOVE",
+                                &format!(
+                                    "Variable '{}' may have been moved on a prior branch before update (moved at {}:{})",
+                                    name, moved_at_line, moved_at_col
+                                ),
+                                file,
+                                span.line,
+                                span.column,
+                            );
+                        }
+                    }
+                }
+
+                // Check visibility
+                if let Some(visibility) = ctx.get_var_visibility(name) {
+                    let target_domain = ctx.get_var_domain(name).as_ref().and_then(|d| d.as_ref());
+                    if !ctx.is_accessible(visibility, target_domain) {
+                        baba.error(
+                            "VISIBILITY_VIOLATION",
+                            &format!("Èèwọ̀: Cannot access private variable '{}' from outside its domain", name),
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
+                }
+
+                // Revive it now that it has a new value
+                ctx.move_tracker.revive(name);
+            }
+        }
+
+        Statement::Const { value, span, .. } => {
+            check_expression(value, ctx, baba, file, span);
         }
 
         Statement::Instruction { call, span } => {
@@ -613,15 +689,31 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
         } => {
             check_expression(condition, ctx, baba, file, span);
 
+            // H1: Snapshot move tracker before each branch, then merge.
+            // A move on only one branch produces MaybeMoved; on both produces Moved.
+            let pre_if_snapshot = ctx.move_tracker.snapshot();
+
+            // Walk then-branch on a clone so its moves don't contaminate else-branch.
+            let mut then_tracker = pre_if_snapshot.clone();
+            std::mem::swap(&mut ctx.move_tracker, &mut then_tracker);
             for s in then_body {
                 check_statement(s, ctx, baba, file);
             }
+            // Recover the then-branch final state.
+            std::mem::swap(&mut ctx.move_tracker, &mut then_tracker);
 
+            let mut else_tracker = pre_if_snapshot.clone();
             if let Some(else_stmts) = else_body {
+                std::mem::swap(&mut ctx.move_tracker, &mut else_tracker);
                 for s in else_stmts {
                     check_statement(s, ctx, baba, file);
                 }
+                std::mem::swap(&mut ctx.move_tracker, &mut else_tracker);
             }
+
+            // Merge branch outcomes back into context.
+            let merged = crate::movement::MoveTracker::merge_branches(&then_tracker, &else_tracker);
+            ctx.move_tracker.apply(&merged);
         }
 
         Statement::While {
@@ -678,6 +770,71 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             }
         }
 
+        Statement::Ebo { offering: _offering, body: None, .. } => {
+            // Ebo without body: semantic directive, no checks needed
+        }
+
+        Statement::Ebo { offering: _offering, body: Some(body), span } => {
+            // Ebo with body: scoped memory epoch — warn if return/break/continue
+            // could bypass epoch cleanup
+            for stmt in body {
+                match stmt {
+                    Statement::Return { .. } => {
+                        baba.warning(
+                            "EBO_RETURN",
+                            "return inside ẹbọ epoch will release epoch memory before returning",
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            for s in body {
+                check_statement(s, ctx, baba, file);
+            }
+        }
+
+        Statement::Defer { body, span } => {
+            // Deferred cleanup — check body for forbidden control flow
+            for stmt in body {
+                match stmt {
+                    Statement::Return { .. } => {
+                        baba.warning(
+                            "DEFER_RETURN",
+                            "return inside defer block will run deferred cleanup first, then return the function",
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
+                    Statement::Break { .. } => {
+                        baba.warning(
+                            "DEFER_BREAK",
+                            "break inside defer block has no effect on the deferred cleanup scope",
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
+                    Statement::Continue { .. } => {
+                        baba.warning(
+                            "DEFER_CONTINUE",
+                            "continue inside defer block has no effect on the deferred cleanup scope",
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            for s in body {
+                check_statement(s, ctx, baba, file);
+            }
+        }
+
         Statement::Ailewu { body, span } => {
             // Enter ailewu (unsafe) context
             let was_in_ailewu = ctx.in_ailewu;
@@ -701,11 +858,68 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             ctx.in_ailewu = was_in_ailewu;
         }
 
+        Statement::Expr { expr, span } => {
+            check_expression(expr, ctx, baba, file, span);
+        }
+
         _ => {}
     }
 }
 
-use ifa_core::ast::Span;
+use ifa_types::ast::{Span, AssignTarget};
+
+fn check_assign_target(
+    target: &AssignTarget,
+    ctx: &mut LintContext,
+    baba: &mut Babalawo,
+    file: &str,
+    span: &Span,
+) {
+    match target {
+        AssignTarget::Variable(name) => {
+            if !ctx.defined_vars.contains_key(name) {
+                baba.error(
+                    "UNDEFINED_VARIABLE",
+                    &format!("Variable '{}' assigned before declaration", name),
+                    file,
+                    span.line,
+                    span.column,
+                );
+            } else if ctx.in_parallel_body && !ctx.parallel_locals.contains(name) {
+                baba.error(
+                    "PARALLEL_MUTATION",
+                    &format!("Cannot mutate captured variable '{}' inside parallel body", name),
+                    file,
+                    span.line,
+                    span.column,
+                );
+            }
+        }
+        AssignTarget::Index { name, index } => {
+            check_expression(index, ctx, baba, file, span);
+            if !ctx.defined_vars.contains_key(name) {
+                baba.error(
+                    "UNDEFINED_VARIABLE",
+                    &format!("Variable '{}' used before declaration", name),
+                    file,
+                    span.line,
+                    span.column,
+                );
+            } else if ctx.in_parallel_body && !ctx.parallel_locals.contains(name) {
+                baba.error(
+                    "PARALLEL_MUTATION",
+                    &format!("Cannot mutate captured variable '{}' inside parallel body", name),
+                    file,
+                    span.line,
+                    span.column,
+                );
+            }
+        }
+        AssignTarget::Dereference(expr) => {
+            check_expression(expr, ctx, baba, file, span);
+        }
+    }
+}
 
 /// Check an expression for issues
 fn check_expression(
@@ -718,6 +932,36 @@ fn check_expression(
     match expr {
         Expression::Identifier(name) => {
             ctx.use_var(name);
+
+            // H1: Check for use-after-move before any other checks.
+            if let Some(result) = ctx.move_tracker.check_use(name) {
+                match result {
+                    MoveCheckResult::UseAfterMove { moved_at_line, moved_at_col, .. } => {
+                        baba.error(
+                            "USE_AFTER_MOVE",
+                            &format!(
+                                "Variable '{}' used after being moved (moved at {}:{})",
+                                name, moved_at_line, moved_at_col
+                            ),
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
+                    MoveCheckResult::MaybeUseAfterMove { moved_at_line, moved_at_col, .. } => {
+                        baba.warning(
+                            "MAYBE_USE_AFTER_MOVE",
+                            &format!(
+                                "Variable '{}' may have been moved on a prior branch (moved at {}:{})",
+                                name, moved_at_line, moved_at_col
+                            ),
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
+                }
+            }
 
             // Check if variable is defined
             if !ctx.defined_vars.contains_key(name) && !is_builtin(name) {
@@ -754,7 +998,7 @@ fn check_expression(
             // Check for division by zero in binary op
             if matches!(
                 op,
-                ifa_core::ast::BinaryOperator::Div | ifa_core::ast::BinaryOperator::Mod
+                ifa_types::ast::BinaryOperator::Div | ifa_types::ast::BinaryOperator::Mod
             ) && let Expression::Int(0) = **right
             {
                 baba.error(
@@ -794,8 +1038,49 @@ fn check_expression(
 
         Expression::OduCall(call) => {
             check_unsafe_ffi_call(call, baba, file, span);
+
+            // H1: Record actor-boundary moves (Osa domain calls move non-copy args).
+            for (moved_name, line, col) in move_args_from_odu_call(call) {
+                // Guard: warn if borrowed at point of move.
+                if ctx.iwa_engine.is_borrowed(moved_name) {
+                    baba.error(
+                        "MOVE_WHILE_BORROWED",
+                        &format!(
+                            "Cannot move '{}' into actor boundary while it is borrowed",
+                            moved_name
+                        ),
+                        file,
+                        line,
+                        col,
+                    );
+                } else {
+                    ctx.move_tracker.record_move(moved_name, line, col);
+                }
+            }
+
+            // H4: Parallel-For Gate
+            if ctx.in_parallel_body && call.domain.has_side_effects() {
+                baba.error(
+                    "PARALLEL_SIDE_EFFECT",
+                    &format!("Cannot call side-effecting domain '{}' inside parallel body", call.domain.yoruba_name()),
+                    file,
+                    span.line,
+                    span.column,
+                );
+            }
+
+            let is_parallel_for = call.domain == ifa_types::OduDomain::Iwori && call.method == "yipo.ori";
+            if is_parallel_for {
+                ctx.in_parallel_body = true;
+            }
+
             for arg in &call.args {
                 check_expression(arg, ctx, baba, file, span);
+            }
+
+            if is_parallel_for {
+                ctx.in_parallel_body = false;
+                ctx.parallel_locals.clear();
             }
         }
 
@@ -810,6 +1095,21 @@ fn check_expression(
                     span.column,
                 );
             }
+
+            // H3: daro Async Enforcement
+            // Enforce that &mut borrows do not cross daro suspension points.
+            for (var_name, var_type) in &ctx.var_types {
+                if let TypeHint::RefMut(_) = var_type {
+                    baba.error(
+                        "MUTABLE_BORROW_ACROSS_DARO",
+                        &format!("Mutable borrow '{}' cannot be held across an await suspension point", var_name),
+                        file,
+                        span.line,
+                        span.column,
+                    );
+                }
+            }
+
             check_expression(inner, ctx, baba, file, span);
         }
 
@@ -841,7 +1141,7 @@ fn check_expression(
 
         Expression::InterpolatedString { parts } => {
             for part in parts {
-                if let ifa_core::ast::InterpolatedPart::Expression(expr) = part {
+                if let ifa_types::ast::InterpolatedPart::Expression(expr) = part {
                     check_expression(expr, ctx, baba, file, span);
                 }
             }
@@ -851,12 +1151,25 @@ fn check_expression(
             check_expression(expr, ctx, baba, file, span);
         }
 
+        Expression::Lambda { params, body } => {
+            for param in params {
+                // If in parallel body, lambda params are parallel locals
+                if ctx.in_parallel_body {
+                    ctx.parallel_locals.insert(param.clone());
+                }
+                ctx.define_var(param, span.clone(), Visibility::Private);
+            }
+            for stmt in body {
+                check_statement(stmt, ctx, baba, file);
+            }
+        }
+
         _ => {}
     }
 }
 
-fn check_unsafe_ffi_call(call: &ifa_core::ast::OduCall, baba: &mut Babalawo, file: &str, span: &Span) {
-    if call.domain == ifa_core::OduDomain::Coop
+fn check_unsafe_ffi_call(call: &ifa_types::ast::OduCall, baba: &mut Babalawo, file: &str, span: &Span) {
+    if call.domain == ifa_types::OduDomain::Coop
         && (call.method.eq_ignore_ascii_case("itumo")
             || call.method.eq_ignore_ascii_case("summon"))
     {
@@ -1021,7 +1334,7 @@ fn is_builtin(name: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ifa_core::parser::parse;
+    use ifa_parser::parse;
 
     #[test]
     fn test_undefined_variable() {
@@ -1165,5 +1478,36 @@ mod tests {
             let has_error = baba.diagnostics.iter().any(|d| d.error.code == "VISIBILITY_VIOLATION");
             assert!(!has_error, "Unexpected VISIBILITY_VIOLATION on internal member access");
         }
+    }
+
+    // §H1: USE_AFTER_MOVE — passing a list to Osa and then reading it must error.
+    // NOTE: This test validates the move-tracker data structures directly since
+    // the parser does not yet emit Osa.ise() calls that the checker can observe.
+    #[test]
+    fn test_move_tracker_use_after_move() {
+        let mut tracker = crate::movement::MoveTracker::new();
+        tracker.declare("payload");
+        tracker.record_move("payload", 5, 3);
+        let result = tracker.check_use("payload");
+        assert!(
+            matches!(result, Some(crate::movement::MoveCheckResult::UseAfterMove { .. })),
+            "Expected USE_AFTER_MOVE for moved variable"
+        );
+    }
+
+    // §H1: MAYBE_USE_AFTER_MOVE — merged branch where only one branch moves.
+    #[test]
+    fn test_move_tracker_maybe_move_on_branch() {
+        let mut then_t = crate::movement::MoveTracker::new();
+        then_t.declare("data");
+        then_t.record_move("data", 10, 1);
+
+        let else_t = crate::movement::MoveTracker::new(); // data alive
+
+        let merged = crate::movement::MoveTracker::merge_branches(&then_t, &else_t);
+        assert!(
+            matches!(merged.check_use("data"), Some(crate::movement::MoveCheckResult::MaybeUseAfterMove { .. })),
+            "Expected MAYBE_USE_AFTER_MOVE after divergent branch"
+        );
     }
 }

@@ -8,75 +8,7 @@
     <link rel="stylesheet" href="../../../js/common.css">
     <script src="../../../js/nav.js" defer></script>
     <script src="../../../js/common.js" defer></script>
-    <style>
-        .lesson-num {
-            background: var(--accent);
-            color: white;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .lesson-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--accent);
-        }
-
-        .alias-box {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-            display: flex;
-            gap: 2rem;
-            border: 1px solid var(--accent);
-        }
-
-        .alias-box .yoruba {
-            color: var(--gold);
-        }
-
-        .alias-box .english {
-            color: var(--text-dim);
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--accent);
-        }
-
-        .nav-btn {
-            background: var(--bg-card);
-            color: var(--gold);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            border: 1px solid var(--accent);
-            transition: all 0.2s;
-        }
-
-        .nav-btn:hover {
-            background: var(--accent);
-            color: white;
-        }
-
-        .nav-btn.primary {
-            background: var(--accent);
-            color: white;
-        }
-    </style>
+    
 </head>
 
 <body>
@@ -91,6 +23,7 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">04-control-flow.ifa</span></div><div class="terminal-body">
         <div class="lesson-header">
             <div class="lesson-num">4</div>
             <div>
@@ -127,13 +60,13 @@ ti (score >= 90) {
             <pre class="code-english"><code>let score = 85;
 
 if (score >= 90) {
-    Fmt.println("Grade: A");
+    Irosu.println("Grade: A");
 } else if (score >= 80) {
-    Fmt.println("Grade: B");
+    Irosu.println("Grade: B");
 } else if (score >= 70) {
-    Fmt.println("Grade: C");
+    Irosu.println("Grade: C");
 } else {
-    Fmt.println("Grade: F");
+    Irosu.println("Grade: F");
 }</code></pre>
         </div>
 
@@ -161,7 +94,7 @@ nigba (i <= 5) {
             <pre class="code-english"><code>let i = 1;
 
 while (i <= 5) {
-    Fmt.println("Count: " + i);
+    Irosu.println("Count: " + i);
     let i = i + 1;
 }
 // Output: Count: 1, Count: 2, ... Count: 5</code></pre>
@@ -193,7 +126,7 @@ fun fruit ninu fruits {
             <pre class="code-english"><code>let fruits = ["apple", "banana", "orange"];
 
 for fruit in fruits {
-    Fmt.println("I like " + fruit);
+    Irosu.println("I like " + fruit);
 }
 // Output:
 // I like apple
@@ -202,6 +135,7 @@ for fruit in fruits {
         </div>
 
         <h3>Iterating with Range</h3>
+        <p>The <code>range</code> function (from Iwori domain) creates number sequences:</p>
         <div class="code-example">
             <div class="code-header">
                 <span class="code-title">Range Loop</span>
@@ -210,24 +144,23 @@ for fruit in fruits {
                     <button class="toggle-english" onclick="setLang('english')">English</button>
                 </div>
             </div>
-            <pre class="code-yoruba"><code>// Using Iwori.range() to create number sequences
-ayanmo numbers = Iwori.range(1, 6);  // [1, 2, 3, 4, 5]
+            <pre class="code-yoruba"><code>// Using range() to create number sequences
+ayanmo numbers = range(1, 6);  // [1, 2, 3, 4, 5]
 
 fun n ninu numbers {
     Irosu.fo("Number: " + n);
 }</code></pre>
-            <pre class="code-english"><code>// Using Time/Iwori.range()
-// 'Iwori' maps to 'Time' (0110)
-let numbers = Time.range(1, 6);  // [1, 2, 3, 4, 5]
+            <pre class="code-english"><code>// Using range() to create number sequences
+let numbers = range(1, 6);  // [1, 2, 3, 4, 5]
 
 for n in numbers {
-    Fmt.println("Number: " + n);
+    Irosu.println("Number: " + n);
 }</code></pre>
         </div>
 
         <h2>Break and Continue</h2>
         <div class="alias-box">
-            <div class="yoruba"><strong>Yoruba:</strong> duro, tesiwaju</div>
+            <div class="yoruba"><strong>Yoruba:</strong> da (break), tesiwaju (continue)</div>
             <div class="english"><strong>English:</strong> break, continue</div>
         </div>
 
@@ -249,7 +182,7 @@ nigba (i < 10) {
     }
     
     ti (i == 7) {
-        duro;  // stop at 7 (break)
+        da;  // stop at 7 (break)
     }
     
     Irosu.fo(i);
@@ -268,7 +201,7 @@ while (i < 10) {
         break;  // stop at 7
     }
     
-    Fmt.println(i);
+    Irosu.println(i);
 }
 // Output: 1, 2, 4, 5, 6</code></pre>
         </div>
@@ -283,8 +216,8 @@ while (i < 10) {
                 </div>
             </div>
             <pre class="code-yoruba"><code>// Multiplication table
-fun i ninu Iwori.range(1, 4) {
-    fun j ninu Iwori.range(1, 4) {
+fun i ninu range(1, 4) {
+    fun j ninu range(1, 4) {
         ayanmo product = i * j;
         Irosu.so(product + " ");
     }
@@ -295,12 +228,12 @@ fun i ninu Iwori.range(1, 4) {
 // 2 4 6
 // 3 6 9</code></pre>
             <pre class="code-english"><code>// Multiplication table
-for i in Time.range(1, 4) {
-    for j in Time.range(1, 4) {
+for i in range(1, 4) {
+    for j in range(1, 4) {
         let product = i * j;
-        Fmt.print(product + " ");
+        Irosu.print(product + " ");
     }
-    Fmt.println("");  // newline
+    Irosu.println("");  // newline
 }</code></pre>
         </div>
 
@@ -311,12 +244,12 @@ for i in Time.range(1, 4) {
             </li>
             <li>While loops: <code>nigba</code>/<code>while</code></li>
             <li>For-each loops: <code>fun</code>/<code>for</code> ... <code>ninu</code>/<code>in</code></li>
-            <li>Loop control: <code>duro</code>/<code>break</code>, <code>tesiwaju</code>/<code>continue</code></li>
+            <li>Loop control: <code>da</code>/<code>break</code>, <code>tesiwaju</code>/<code>continue</code></li>
         </ul>
 
         <div class="nav-buttons">
-            <a href="03-operators.html" class="nav-btn">← Previous: Operators</a>
-            <a href="05-functions.html" class="nav-btn primary">Next: Functions →</a>
+            <a href="03-operators.html" class="nav-btn">Previous: Operators</a>
+            <a href="05-functions.html" class="nav-btn primary">Next: Functions</a>
         </div>
     </div>
 </body>

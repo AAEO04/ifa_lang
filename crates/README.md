@@ -1,122 +1,70 @@
-# Ifá-Lang Rust Workspace
+# Ifá-Lang Workspace (crates/)
 
-This directory contains the Rust implementation of Ifá-Lang.
+This workspace contains the Rust implementation of the Ifá-Lang ecosystem. It is designed around a **Decoupled Architecture** to ensure high-performance, modularity, and cross-platform safety.
 
-## Crates
+## 🏛️ Core Architecture
 
-| Crate | Description |
-|-------|-------------|
-| `ifa-core` | Core VM, bytecode, parser, interpreter, and IfaValue type system |
-| `ifa-std` | Standard library - 16 Odù domains + stacks + infra |
-| `ifa-cli` | Command-line interface and REPL |
-| `ifa-embedded` | no_std runtime for embedded/IoT devices |
-| `ifa-sandbox` | WASM sandbox with capability-based security |
-| `ifa-macros` | Procedural macros (ẹbọ, àjọṣe, etc.) |
-| `ifa-babalawo` | LSP server & developer tools |
-| `ifa-wasm` | WASM bindings for browser playground |
-| `ifa-installer-core` | Cross-platform installer logic |
-| `ifa-installer-gui` | Graphical installer UI |
+The system is divided into three distinct execution layers:
 
-## Building
+| Layer | Concept | Crates | Role |
+| :--- | :--- | :--- | :--- |
+| **Analysis** | **Ikin** (Wisdom) | `ifa-babalawo`, `ifa-parser` | Static analysis, constant evaluation, and safety validation. |
+| **Translation** | **Forge** | `ifa-compiler`, `ifa-bytecode`, `ifa-transpiler` | Transforming AST into optimized execution formats. |
+| **Execution** | **Iroke** (Action) | `ifa-vm`, `ifa-std`, `ifa-embedded` | Striking the hardware and enforcing sandboxed capabilities. |
+
+## 📦 Crate Registry
+
+### Core Execution
+- **`ifa-vm`**: High-performance stack-based bytecode engine. The "Iroke" wand.
+- **`ifa-compiler`**: AST-to-Bytecode compiler with support for incremental REPL injection.
+- **`ifa-bytecode`**: The binary interface definition. 100% stable, `no_std` compatible.
+- **`ifa-types`**: Shared type system (IfaValue) and Odù domain definitions.
+
+### Frontend & Analysis
+- **`ifa-parser`**: High-speed parser generating the canonical Abstract Syntax Tree.
+- **`ifa-babalawo`**: LSP engine and Partial Evaluator. Handles "Constant Divination."
+- **`ifa-fmt`**: Source code formatter and stylistic enforcer.
+
+### Platforms & Tools
+- **`ifa-std`**: The standard library (16 Odù domains). Transitioning low-level logic to `ifa-infra`.
+- **`ifa-cli`**: The unified command-line tool (`ifa run`, `ifa check`, `ifa repl`).
+- **`ifa-sandbox`**: WASM-based execution environment for browser/edge deployment.
+- **`ifa-embedded`**: `no_std` runtime for IoT and microcontrollers.
+
+## 🛠️ Building & Testing
 
 ```bash
-# Build all crates
+# Build the entire workspace
 cargo build --workspace
 
-# Run tests
+# Run the full test suite (including drift tests)
 cargo test --workspace
 
-# Build release
-cargo build --workspace --release
-
-# Run CLI
+# Run the CLI locally
 cargo run -p ifa-cli -- --help
 ```
 
-## Standard Library (ifa-std)
+## 📜 Standard Library (16 Odù)
 
-### 16 Odù Domains
+The `ifa-std` crate implements the high-level API for the hardware domains:
 
-| Binary | Name | Purpose | Key Features |
-|--------|------|---------|--------------|
-| 1111 | Ọ̀gbè | System | CLI args, env vars |
-| 0000 | Ọ̀yẹ̀kú | Exit | Process termination |
-| 0110 | Ìwòrì | Time | chrono, timers |
-| 1001 | Òdí | Files | rusqlite, I/O |
-| 1100 | Ìrosù | Console | I/O, logging |
-| 0011 | Ọ̀wọ́nrín | Random | rand_chacha |
-| 1000 | Ọ̀bàrà | Math | arithmetic |
-| 0001 | Ọ̀kànràn | Errors | Result types |
-| 1110 | Ògúndá | Arrays | std::process |
-| 0111 | Ọ̀sá | Flow | async, tokio |
-| 0100 | Ìká | Strings | regex, ropey |
-| 0010 | Òtúúrúpọ̀n | Reduce | sub/div/mod |
-| 1011 | Òtúrá | Net | reqwest, TLS |
-| 1101 | Ìrẹtẹ̀ | Crypto | ring, zstd |
-| 1010 | Ọ̀ṣẹ́ | UI | ratatui |
-| 0101 | Òfún | Perms | capabilities |
+| Domain | Name | Purpose | Hardware Bridge |
+| :--- | :--- | :--- | :--- |
+| **0111** | Ọ̀sá | Flow | Async/Parallelism |
+| **1001** | Òdí | Seal | Storage/Persistence |
+| **1010** | Ọ̀ṣẹ́ | Painter | Graphics/UI |
+| **1011** | Òtúrá | Messenger | Networking |
+| **1111** | Ọ̀gbè | Source | System/Kernel |
 
-### Domain Stacks
+## 🛡️ Security Model (#opon)
 
-| Stack | Description |
-|-------|-------------|
-| `stacks/crypto` | SHA, HMAC, Argon2, Base64, SecureRng |
-| `stacks/backend` | HTTP, Request/Response, ORM |
-| `stacks/frontend` | XSS-safe HTML, Element builder |
-| `stacks/gamedev` | Vec2, AABB, ECS, Animation |
-| `stacks/ml` | Tensor, activations, matmul |
-| `stacks/iot` | GPIO, Serial, I2C/SPI |
-| `stacks/fusion` | Fullstack IPC runtime |
+Ifá-Lang utilizes **Capability-Based Security**. Access to hardware (via `ifa-std` or `ifa-infra`) is gated by the **#opon** (Calabash) configuration.
+1.  **Validation**: `ifa-babalawo` checks resource requirements at build-time.
+2.  **Enforcement**: `ifa-vm` verifies `ResourceTokens` in the hot-path before every hardware strike.
 
-### Infrastructure
+## 🚀 Performance Strategy
 
-| Module | Description |
-|--------|-------------|
-| `infra/cpu` | Parallel iterators (rayon), task graphs |
-| `infra/gpu` | WGPU compute, memory pools |
-| `infra/storage` | OduStore key-value database |
-| `infra/kernel` | System info, memory stats |
-| `infra/shaders` | Pre-built WGSL compute shaders |
-
-## Architecture
-
-```
-crates/
-├── ifa-core/          # Core runtime
-│   └── src/
-│       ├── lib.rs     # Module exports
-│       ├── value.rs   # IfaValue enum
-│       ├── bytecode.rs # OpCode definitions
-│       ├── vm.rs      # Stack-based VM
-│       ├── opon.rs    # Memory (calabash)
-│       └── error.rs   # Error types
-├── ifa-std/           # Standard library
-│   └── src/
-│       ├── lib.rs     # Domain exports
-│       ├── stacks/    # Crypto, ML, IoT, etc.
-│       └── infra/     # CPU, GPU, Storage
-├── ifa-cli/           # CLI
-│   └── src/main.rs    # Clap-based CLI
-├── ifa-embedded/      # Embedded runtime
-│   └── src/lib.rs     # no_std VM
-├── ifa-sandbox/       # WASM sandbox
-├── ifa-macros/        # Proc macros
-├── ifa-babalawo/      # LSP server
-├── ifa-wasm/          # Browser bindings
-├── ifa-installer-core/# Installer logic
-└── ifa-installer-gui/ # Installer UI
-
-## Hardening Roadmap & Security Advisories
-
-### ⚠️ FFI Security Context (Shield of Ọ̀kànràn)
-The FFI Bridge in `ifa-std/src/ffi.rs` is currently under a high-priority hardening mandate.
-- **Vulnerabilities**: Thread-unsafe environment manipulation (BUG-018), lack of guest-level sandbox isolation (BUG-019), and native memory leaks (BUG-020).
-- **Hardening Pass**: Future work will implement hash-locked library verification and guest-side audit hooks.
-
-### 🚀 String Interpolation Architectural Tier
-- **Current**: Symmetric String Interpolation is supported via `OpCode::Add` overloading in `ifa-core`.
-- **Planned**: Specialized `OpCode::Concat` and `OpCode::ToString` to remove string-building logic from the arithmetic hot path, improving VM performance for pure numeric operations.
-
-### ⚖️ Babalawo Taboos
-- All FFI `itumo()` summons must be sanctified. The `TABOO_UNSAFE_FFI` rule enforces architectural oversight over polyglot bridges.
+1.  **Zero-Copy UMA**: Optimized for Unified Memory architectures (Apple Silicon/APUs).
+2.  **Constant Folding**: Babalawo evaluates constant expressions during the "Wisdom" phase.
+3.  **Slab Allocation**: Using `ifa-infra` slab pools to avoid the system `malloc` in the VM.
 ```

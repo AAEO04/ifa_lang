@@ -33,7 +33,7 @@ force_64bit = [] # Evaluate as i64 even on 32-bit (software emulation)
 
 [dependencies]
 # Core without std
-ifa-core = { path = "../ifa-core", default-features = false }
+ifa-vm = { path = "../ifa-vm", default-features = false }
 # Bounded collections for no_std
 heapless = "0.8"
 # Interrupt-safe critical sections

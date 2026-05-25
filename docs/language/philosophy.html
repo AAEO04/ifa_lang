@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Philosophy - The 16 Odù Domains</title>
-    <meta name="description" content="The 16 Odù domains of Ifá-Lang explained. Each domain maps to a core programming concept.">
+    <title>Philosophy - The 16 Odu Domains</title>
+    <meta name="description" content="The 16 Odu domains of Ifa-Lang explained. Each domain maps to a core programming concept.">
     <link rel="stylesheet" href="../js/common.css">
     <script src="../js/nav.js" defer></script>
 </head>
@@ -22,24 +22,25 @@
     </div>
 
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">philosophy.ifa</span></div><div class="terminal-body">
         <header>
-            <h1>Philosophy of Ifá-Lang</h1>
-            <p class="subtitle">The 16 Odù Domains - Sacred Patterns of Programming</p>
+            <h1>Philosophy of Ifa-Lang</h1>
+            <p class="subtitle">The 16 Odu Domains - Sacred Patterns of Programming</p>
         </header>
 
         <div class="step">
             <h2>Core Philosophy</h2>
-            <p>Ifá-Lang is built on Yoruba cosmology where every aspect of programming maps to an Odù - the sacred patterns of Ifá divination. The language embodies the principle that <strong>programming is a form of divination</strong>, where we seek wisdom through structured patterns and logical reasoning.</p>
+            <p>Ifa-Lang is built on Yoruba cosmology where every aspect of programming maps to an Odu - the sacred patterns of Ifa divination. The language embodies the principle that <strong>programming is a form of divination</strong>, where we seek wisdom through structured patterns and logical reasoning.</p>
             
             <blockquote>
-                "A kì í wo oun kan soso." - One never looks in only one direction.<br>
-                <small>Every problem has multiple perspectives; the 16 Odù provide different approaches to programming challenges.</small>
+                "A ki i wo oun kan soso." - One never looks in only one direction.<br>
+                <small>Every problem has multiple perspectives; the 16 Odu provide different approaches to programming challenges.</small>
             </blockquote>
         </div>
 
         <div class="step">
             <h2>The Three-Tier Runtime Model</h2>
-            <p>Ifá-Lang implements a unified three-tier execution model that mirrors the three levels of Yoruba spiritual hierarchy:</p>
+            <p>Ifa-Lang implements a unified three-tier execution model that mirrors the three levels of Yoruba spiritual hierarchy:</p>
             
             <h3>1. AST Interpreter (The Diviner)</h3>
             <ul>
@@ -68,179 +69,196 @@
 
         <div class="step">
             <h2>Protocol-Oriented Design</h2>
-            <p>Ifá-Lang rejects traditional object-oriented programming in favor of a <strong>protocol-oriented data model</strong>. This aligns with Yoruba philosophy where relationships and capabilities matter more than rigid hierarchies.</p>
+            <p>Ifa-Lang rejects traditional object-oriented programming in favor of a <strong>protocol-oriented data model</strong>. This aligns with Yoruba philosophy where relationships and capabilities matter more than rigid hierarchies.</p>
 
             <h3>No Classes or Inheritance</h3>
+            <p><strong>Note:</strong> The grammar does include an <code>odu</code> (class) definition construct (<code>odu Server { }</code>), but the language does not implement classical inheritance. The <code>odu</code> keyword defines domain-like structs with methods, closer to a module or protocol than a traditional class.</p>
             <ul>
                 <li><strong>Instead of classes:</strong> Values implement protocols (capabilities)</li>
-                <li><strong>Instead of inheritance:</strong> Structural subtyping</li>
-                <li><strong>Instead of polymorphism:</strong> Domain protocols</li>
-                <li><strong>Instead of interfaces:</strong> Odù domain contracts</li>
+                <li><strong>Instead of inheritance:</strong> Structural subtyping via Babalawo analysis</li>
+                <li><strong>Instead of interfaces:</strong> Odu domain contracts</li>
             </ul>
 
-            <h3>Values Have Character (Ìwà)</h3>
+            <h3>Values Have Character (Iwa)</h3>
             <blockquote>
-                "Ìwà l'ewà." - Character is beauty.<br>
-                <small>In Ifá-Lang, types encode character, not just structure. A FileHandle isn't just a descriptor - it's a value with obligations (must be closed).</small>
+                "Iwa l'ewa." - Character is beauty.<br>
+                <small>In Ifa-Lang, types encode character, not just structure. A FileHandle isn't just a descriptor - it's a value with obligations.</small>
             </blockquote>
         </div>
 
         <div class="step">
-            <h2>The 16 Odù Domains</h2>
-            <p>Each Odù represents a fundamental aspect of programming, with a binary pattern that reflects its character:</p>
+            <h2>The 16 Odu Domains</h2>
+            <p>Each Odu represents a fundamental aspect of programming, with a binary pattern that reflects its character:</p>
 
             <div class="domains-grid">
                 <div class="domain-card">
                     <h3><span class="pattern">1111</span> Ogbe</h3>
-                    <p><strong>System</strong> - Process control, environment variables, command-line arguments</p>
-                    <p>The fully illuminated - complete system access and control</p>
+                    <p><strong>System</strong> - Version info, CLI args, lifecycle</p>
+                    <p>The fully illuminated - complete system access</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">0000</span> Òyèkú</h3>
-                    <p><strong>Random</strong> - Random number generation, entropy, non-determinism</p>
-                    <p>The void - pure randomness and unpredictability</p>
+                    <h3><span class="pattern">0000</span> Oyeku</h3>
+                    <p><strong>Exit/Sleep</strong> - Process termination, sleep, halt</p>
+                    <p>The void - termination and pause</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">0001</span> Ìwòrì</h3>
-                    <p><strong>Time</strong> - Timestamps, durations, scheduling, calendars</p>
-                    <p>The beginning - temporal awareness and timing</p>
+                    <h3><span class="pattern">0110</span> Iwori</h3>
+                    <p><strong>Time</strong> - Current time, timestamps</p>
+                    <p>The beginning - temporal awareness</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">0010</span> Òdí</h3>
-                    <p><strong>Errors</strong> - Error types, exception handling, result types</p>
-                    <p>The obstacle - error handling and recovery</p>
+                    <h3><span class="pattern">1001</span> Odi</h3>
+                    <p><strong>File I/O</strong> - Read, write, file existence</p>
+                    <p>The obstacle - persistent storage</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">0011</span> Ìròsú</h3>
-                    <p><strong>Console</strong> - Print, read, colored output, terminal control</p>
+                    <h3><span class="pattern">1100</span> Irosu</h3>
+                    <p><strong>Console</strong> - Print, read input, clear, error output</p>
                     <p>The speaker - communication and interface</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">0100</span> Owonrin</h3>
-                    <p><strong>Collections</strong> - Lists, maps, sets, iterators, comprehensions</p>
-                    <p>The wanderer - data structures and navigation</p>
+                    <h3><span class="pattern">0011</span> Owonrin</h3>
+                    <p><strong>Random</strong> - Random number generation</p>
+                    <p>The wanderer - entropy and chance</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">0101</span> Obara</h3>
-                    <p><strong>Math</strong> - Arithmetic, trig, statistics</p>
+                    <h3><span class="pattern">1000</span> Obara</h3>
+                    <p><strong>Math</strong> - Add, multiply, power, sqrt</p>
                     <p>The calculation - mathematical operations</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">0110</span> Okanran</h3>
-                    <p><strong>Assertions/Debug</strong> - Assert, debug output, panic</p>
-                    <p>The troublemaker - debugging and validation</p>
+                    <h3><span class="pattern">0001</span> Okanran</h3>
+                    <p><strong>Assertions</strong> - Assert, throw/panic</p>
+                    <p>The troublemaker - validation and errors</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">0111</span> Ogunda</h3>
-                    <p><strong>Collections/Process</strong> - Array ops, map/filter, child processes</p>
-                    <p>The transformation - data processing and execution</p>
+                    <h3><span class="pattern">1110</span> Ogunda</h3>
+                    <p><strong>Collections</strong> - List ops: len, push, pop, map, filter, reduce</p>
+                    <p>The transformation - data processing</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">1000</span> Osa</h3>
-                    <p><strong>Concurrency</strong> - Async tasks, channels, sleep</p>
-                    <p>The abundance - parallel execution and resources</p>
+                    <h3><span class="pattern">0111</span> Osa</h3>
+                    <p><strong>Concurrency</strong> - Sleep, all/join, spawn (via ifa-vm)</p>
+                    <p>The abundance - parallel execution</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">1001</span> Ika</h3>
-                    <p><strong>Strings</strong> - String manipulation, regex</p>
-                    <p>The measurement - text processing and analysis</p>
+                    <h3><span class="pattern">0100</span> Ika</h3>
+                    <p><strong>Strings</strong> - Length, slice, concat, HTML title/strip</p>
+                    <p>The measurement - text processing</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">1010</span> Oturupon</h3>
-                    <p><strong>Math (inverse)</strong> - Subtraction, division, rounding</p>
-                    <p>The opposition - inverse mathematical operations</p>
+                    <h3><span class="pattern">0010</span> Oturupon</h3>
+                    <p><strong>Math (inverse)</strong> - Subtract, divide</p>
+                    <p>The opposition - inverse operations</p>
                 </div>
 
                 <div class="domain-card">
                     <h3><span class="pattern">1011</span> Otura</h3>
-                    <p><strong>Networking</strong> - HTTP, TCP/UDP, sockets</p>
-                    <p>The transmission - communication and networking</p>
+                    <p><strong>Networking</strong> - HTTP GET/POST, listen, connect (requires <code>backend</code> feature)</p>
+                    <p>The transmission - communication</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">1100</span> Irete</h3>
-                    <p><strong>Crypto/Compression</strong> - SHA-256, HMAC, base64, zlib</p>
+                    <h3><span class="pattern">1101</span> Irete</h3>
+                    <p><strong>Crypto</strong> - SHA-256, HMAC, base64, compress (requires <code>crypto</code> feature)</p>
                     <p>The crusher - data transformation and security</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">1101</span> Ose</h3>
-                    <p><strong>Graphics/Canvas</strong> - Drawing, GUI, canvas</p>
-                    <p>The creation - visual representation and graphics</p>
+                    <h3><span class="pattern">1010</span> Ose</h3>
+                    <p><strong>Graphics/TUI</strong> - Drawing, read key, box/section (requires <code>game</code> feature)</p>
+                    <p>The creation - visual representation</p>
                 </div>
 
                 <div class="domain-card">
-                    <h3><span class="pattern">1110</span> Ofun</h3>
-                    <p><strong>Capabilities/Reflection</strong> - Type inspection, permission queries</p>
+                    <h3><span class="pattern">0101</span> Ofun</h3>
+                    <p><strong>Meta</strong> - eval (<code>le</code>), debug</p>
                     <p>The completion - introspection and capabilities</p>
                 </div>
             </div>
         </div>
 
         <div class="step">
-            <h2>The 256 Odù Lattice Vision</h2>
-            <p>In the long-term design, the 256 Odù combinations become the 256 fundamental type categories. Each combination represents a specific character of program behavior:</p>
+            <h2>Infrastructure Domains</h2>
+            <p>Beyond the 16 principal Odu, the runtime exposes infrastructure domains for hardware/OS access:</p>
+            <ul>
+                <li><strong>Cpu (ID 18)</strong> - Parallel computing via rayon: map, reduce, sort, buffer ops</li>
+                <li><strong>Gpu (ID 19)</strong> - GPU compute via wgpu: pipeline dispatch, buffer ops (requires <code>gpu</code> feature)</li>
+                <li><strong>Storage (ID 20)</strong> - Key-value persistence (requires <code>persistence</code> feature)</li>
+                <li><strong>Sys (ID 29)</strong> - Kernel/OS interface: num_cores, total_memory, available_memory, uptime</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h2>The 256 Odu Lattice Vision</h2>
+            <p>In the long-term design, the 256 Odu combinations become the 256 fundamental type categories. Each combination represents a specific character of program behavior:</p>
 
             <div class="lattice-examples">
                 <h3>Type Characters</h3>
                 <ul>
-                    <li><strong>Ogbe + Ogbe (1111 + 1111):</strong> The fully illuminated - complete, self-consistent values</li>
-                    <li><strong>Oyeku + Ogbe (0000 + 1111):</strong> The transition from darkness to light - generator types, lazy values</li>
                     <li><strong>Ogbe + Oyeku (1111 + 0000):</strong> The full-to-empty transformation - compression, hashing, encryption</li>
-                    <li><strong>Odi + Otura (0010 + 1011):</strong> Containment + transmission - serializable types</li>
-                    <li><strong>Irete + Osa (1100 + 0111):</strong> Compression + concurrency - parallel-safe immutable values</li>
+                    <li><strong>Odi + Otura (1001 + 1011):</strong> Storage + transmission - serializable types</li>
                 </ul>
             </div>
 
             <blockquote>
-                "The 256 Odù as a type lattice is the horizon this language is moving toward. It is not the current state. It is the direction."<br>
-                <small>This vision guides the evolution of Ifá-Lang's type system.</small>
+                "The 256 Odu as a type lattice is the horizon this language is moving toward. It is not the current state. It is the direction."<br>
+                <small>This vision guides the evolution of Ifa-Lang's type system.</small>
             </blockquote>
         </div>
 
         <div class="step">
             <h2>Memory Management: Opon</h2>
-            <p>Opon (the divination tray) is Ifá-Lang's memory management system, inspired by the physical divination tray used in Ifá ceremonies.</p>
+            <p>Opon (the divination tray) is Ifa-Lang's memory management system, inspired by the physical divination tray used in Ifa ceremonies.</p>
 
             <h3>Memory Philosophy</h3>
             <ul>
                 <li><strong>Sacred Space:</strong> Memory is a sacred space for computation</li>
-                <li><strong>Ritual Cleanup:</strong> Resources must be properly sacrificed (closed)</li>
+                <li><strong>Ritual Cleanup:</strong> Resources must be properly closed</li>
                 <li><strong>Pattern Recognition:</strong> Memory allocation follows sacred patterns</li>
-                <li><strong>Community Sharing:</strong> Memory is shared but respected</li>
             </ul>
 
-            <h3>Resource Lifecycle:  </h3>
-            <p>Every resource acquired through an Odù domain carries an <strong> </strong> (obligation) - a sacred duty to properly release the resource. This is enforced through the language's resource management system.</p>
+            <h3>Opon Directives</h3>
+            <p>The language supports memory size directives that configure the VM stack:</p>
+            <ul>
+                <li><code>#opon kekere</code> - Small memory (256 value slots, 64 call frames)</li>
+                <li><code>#opon arinrin</code> - Medium memory (4096 value slots, 512 call frames, default)</li>
+                <li><code>#opon nla</code> - Large memory (65536 value slots, 4096 call frames)</li>
+                <li><code>#opon ailopin</code> - Unlimited memory</li>
+            </ul>
+
+            <h3>Resource Lifecycle: Ebo</h3>
+            <p>The <code>ebo</code> keyword creates a scoped memory epoch - allocations within the block are released when the scope exits. The <code>defer</code> keyword schedules cleanup at scope exit.</p>
         </div>
 
         <div class="step">
-            <h2>Reactive System: Àjõsé</h2>
-            <p>Àjõsé (the gathering) is Ifá-Lang's reactive system for managing dependencies and updates. It embodies the Yoruba concept of community gathering where changes propagate through relationships.</p>
+            <h2>Reactive System: Ajose</h2>
+            <p>Ajose (the gathering) is Ifa-Lang's reactive system for managing dependencies and updates. It embodies the Yoruba concept of community gathering where changes propagate through relationships.</p>
+
+            <p><strong>Current status:</strong> The <code>ajose!</code> reactive binding macro exists in the <code>ifa-macros</code> proc-macro crate for Rust-level use. Language-level reactive syntax is not yet implemented in the Ifa-Lang parser/grammar.</p>
 
             <h3>Reactive Philosophy</h3>
             <ul>
                 <li><strong>Community:</strong> Values exist in relationship to each other</li>
                 <li><strong>Communication:</strong> Changes are communicated through the system</li>
                 <li><strong>Adaptation:</strong> The system adapts to changing conditions</li>
-                <li><strong>Harmony:</strong> All parts work together in harmony</li>
             </ul>
         </div>
 
         <div class="step">
             <h2>Bilingual Design</h2>
-            <p>Ifá-Lang is fundamentally bilingual, supporting both Yoruba and English keywords. This reflects the dual nature of wisdom - traditional and modern, sacred and practical.</p>
+            <p>Ifa-Lang is fundamentally bilingual, supporting both Yoruba and English keywords. This reflects the dual nature of wisdom - traditional and modern, sacred and practical.</p>
 
             <h3>Language Philosophy</h3>
             <ul>
@@ -255,31 +273,32 @@
                     <span class="code-title">Bilingual Examples</span>
                 </div>
                 <pre><code>// Variable declaration
-ayanmo name = "Ifá";        // Yoruba
-let name = "Ifá";           // English
+ayanmo name = "Ifa";          // Yoruba
+let name = "Ifa";             // English
 
 // Function definition  
-ese greet(name) { ... }     // Yoruba
-fn greet(name) { ... }       // English
+ese greet(name) { ... }       // Yoruba
+fn greet(name) { ... }        // English
 
 // Error handling
 gbiyanju { ... } gba(e) { ... }    // Yoruba  
 try { ... } catch(e) { ... }       // English
 
 // Assertions
-ewo x > 0;                  // Yoruba
-assert x > 0;               // English</code></pre>
+ewo x > 0;                    // Yoruba (ewo/verify)
+assert x > 0;                 // English (assert/verify)</code></pre>
             </div>
         </div>
 
         <div class="step">
-            <h2>Taboo System: Èèwò</h2>
-            <p>Èèwò (taboo) defines architectural constraints and safety rules. In Yoruba tradition, taboos protect the community from harm; in Ifá-Lang, they protect the program from errors and vulnerabilities.</p>
+            <h2>Taboo System: Eewo</h2>
+            <p>Eewo (taboo) defines architectural constraints and safety rules. In Yoruba tradition, taboos protect the community from harm; in Ifa-Lang, they protect the program from errors and vulnerabilities.</p>
+
+            <p><strong>Current status:</strong> The grammar includes a <code>taboo_stmt</code> rule for declaring domain-to-domain taboos (<code>eewo: Ose -> Odi;</code>). The Babalawo static analyzer performs basic taboo validation. Full compile-time enforcement is under development.</p>
 
             <h3>Architectural Taboos</h3>
             <ul>
                 <li><strong>Thread Safety:</strong> Certain operations are taboo in multi-threaded contexts</li>
-                <li><strong>Memory Safety:</strong> Direct pointer manipulation is taboo in safe code</li>
                 <li><strong>Resource Management:</strong> Leaking resources is taboo</li>
                 <li><strong>Type Safety:</strong> Violating type contracts is taboo</li>
             </ul>
@@ -288,24 +307,32 @@ assert x > 0;               // English</code></pre>
                 <div class="code-header">
                     <span class="code-title">Taboo Declaration</span>
                 </div>
-                <pre><code>// Declare taboo: Ose (Graphics) -> Odi (Errors) in multi-threaded context
-èèwò: Ose -> Odi;
-
-// This means graphics operations that might error are forbidden
-// in multi-threaded contexts without proper synchronization</code></pre>
+                <pre><code>// Declare taboo: Ose (Graphics) -> Odi (Errors)
+eewo: Ose -> Odi;</code></pre>
             </div>
         </div>
 
         <div class="step">
+            <h2>Grammar Notes</h2>
+            <h3>Implemented Grammar Rules</h3>
+            <p>The Ifa-Lang grammar (defined in <code>grammar.pest</code>) includes these major rules: <code>program</code>, <code>statement</code> (with ~25 variants), <code>expression</code> (with full binary/unary operators, precedence), <code>odu_call</code>, <code>if_stmt</code>, <code>while_stmt</code>, <code>for_stmt</code>, <code>match_stmt</code>, <code>try_stmt</code>, <code>ese_def</code>, <code>odu_def</code>, <code>import_stmt</code>, <code>const_stmt</code>, <code>taboo_stmt</code>, <code>ewo_stmt</code>, <code>yield_stmt</code>, <code>defer_stmt</code>, <code>ailewu_stmt</code>, and others.</p>
+
+            <h3>Planned Grammar Rules</h3>
+            <ul>
+                <li><strong>eku:</strong> The <code>eku</code> grammar rule (for method dispatch / domain routing in the Opele compound Odu system) is not yet implemented. It is reserved for a future extension where the 240 derived Odu combinations receive explicit grammar support.</li>
+            </ul>
+        </div>
+
+        <div class="step">
             <h2>Conclusion: Wisdom Through Patterns</h2>
-            <p>Ifá-Lang represents a synthesis of ancient wisdom and modern programming. The 16 Odù domains provide a comprehensive framework for thinking about programming problems, while the protocol-oriented design ensures flexibility and safety.</p>
+            <p>Ifa-Lang represents a synthesis of ancient wisdom and modern programming. The 16 Odu domains provide a comprehensive framework for thinking about programming problems, while the protocol-oriented design ensures flexibility and safety.</p>
 
             <blockquote>
                 "Programming is divination. Code is prayer. Execution is revelation."<br>
-                <small>Through the sacred patterns of the Odù, we seek not just to instruct machines, but to gain wisdom in the process of creation.</small>
+                <small>Through the sacred patterns of the Odu, we seek not just to instruct machines, but to gain wisdom in the process of creation.</small>
             </blockquote>
 
-            <p>The language continues to evolve toward the vision of the 256 Odù lattice, where types encode not just structure but character, and where every program becomes a form of sacred communication between human intent and machine execution.</p>
+            <p>The language continues to evolve toward the vision of the 256 Odu lattice, where types encode not just structure but character, and where every program becomes a form of sacred communication between human intent and machine execution.</p>
         </div>
 
         <footer>

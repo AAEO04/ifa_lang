@@ -4,147 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Examples - If�-Lang</title>
+    <title>Examples - Ifá-Lang</title>
     <link rel="stylesheet" href="../js/common.css">
     <link rel="stylesheet" href="../js/language-switcher.css">
     <script src="../js/language-switcher.js"></script>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-            margin: 2.5rem 0 1rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        .lang-toggle {
-            display: flex;
-            gap: 4px;
-            margin-bottom: 1rem;
-        }
-
-        .lang-toggle button {
-            background: transparent;
-            border: 1px solid var(--accent);
-            color: var(--text-dim);
-            padding: 6px 14px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        .lang-toggle button.active {
-            background: var(--accent);
-            color: white;
-        }
-
-        .example {
-            background: var(--bg-card);
-            border-radius: 12px;
-            overflow: hidden;
-            margin: 1.5rem 0;
-        }
-
-        .example-header {
-            padding: 1rem;
-            background: rgba(0, 0, 0, 0.3);
-            border-bottom: 1px solid var(--accent);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .example-title {
-            color: var(--gold);
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-
-        pre {
-            background: #0d1321;
-            padding: 1rem;
-            margin: 0;
-            overflow-x: auto;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        .code-english {
-            display: none;
-        }
-
-        .output {
-            background: #0a0f1a;
-            border-top: 1px solid #4ade80;
-            padding: 1rem;
-        }
-
-        .output-label {
-            color: #4ade80;
-            font-size: 0.8rem;
-            margin-bottom: 0.5rem;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
 </head>
 
 
@@ -157,9 +20,10 @@
         </div>
     </div>
     <div class="container">
-        <header>
+        
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">examples.ifa</span></div><div class="terminal-body"><header>
             <h1>Example Programs</h1>
-            <p style="color: var(--text-dim);">Complete, working If�-Lang programs</p>
+            <p style="color: var(--text-dim);">Complete, working Ifá-Lang programs</p>
         </header>
 
         <div class="lang-toggle">
@@ -178,11 +42,11 @@ ayanmo i = 1;
 nigba (i <= 20) {
     ti (i % 15 == 0) {
         Irosu.fo("FizzBuzz");
-    } bib?k? ti (i % 3 == 0) {
+    } bibẹkọ ti (i % 3 == 0) {
         Irosu.fo("Fizz");
-    } bib?k? ti (i % 5 == 0) {
+    } bibẹkọ ti (i % 5 == 0) {
         Irosu.fo("Buzz");
-    } bib?k? {
+    } bibẹkọ {
         Irosu.fo(i);
     }
     ayanmo i = i + 1;
@@ -245,35 +109,29 @@ while (i < n) {
             </div>
         </div>
 
-        <h2>Password Generator</h2>
+        <h2>Password Hashing</h2>
         <div class="example">
             <div class="example-header">
                 <span class="example-title">password.ifa</span>
             </div>
-            <pre class="code-yoruba"><code>// Generate secure random password using Irete
-ayanmo bytes = Irete.random_bytes(16);
-ayanmo id = Irete.uuid();
-
-Irosu.fo("=== Password Generator ===");
-Irosu.fo("Random key: " + bytes);
-Irosu.fo("Session ID: " + id);
-
-// Hash a password
+            <pre class="code-yoruba"><code>// Hash a password using Irete (crypto domain)
 ayanmo password = "mySecretPassword123";
 ayanmo hash = Irete.sha256(password);
-Irosu.fo("Password hash: " + hash);</code></pre>
-            <pre class="code-english"><code>// Generate secure random password using Irete
-let bytes = Irete.random_bytes(16);
-let id = Irete.uuid();
+Irosu.fo("Password hash: " + hash);
 
-Irosu.println("=== Password Generator ===");
-Irosu.println("Random key: " + bytes);
-Irosu.println("Session ID: " + id);
-
-// Hash a password
+// Base64 encode a message
+ayanmo msg = "Ifá-Lang";
+ayanmo encoded = Irete.base64(msg);
+Irosu.fo("Encoded: " + encoded);</code></pre>
+            <pre class="code-english"><code>// Hash a password using Irete (crypto domain)
 let password = "mySecretPassword123";
 let hash = Irete.sha256(password);
-Irosu.println("Password hash: " + hash);</code></pre>
+Irosu.println("Password hash: " + hash);
+
+// Base64 encode a message
+let msg = "Ifá-Lang";
+let encoded = Irete.base64(msg);
+Irosu.println("Encoded: " + encoded);</code></pre>
         </div>
 
         <h2>Data Analysis</h2>
@@ -281,45 +139,57 @@ Irosu.println("Password hash: " + hash);</code></pre>
             <div class="example-header">
                 <span class="example-title">analysis.ifa</span>
             </div>
-            <pre class="code-yoruba"><code>// Parallel data analysis using Osa
+            <pre class="code-yoruba"><code>// Manual data analysis using basic operators
 ayanmo data = [23, 45, 12, 67, 89, 34, 56, 78, 90, 11];
 
 Irosu.fo("=== Data Analysis ===");
 Irosu.fo("Data: " + data);
 Irosu.fo("");
 
-// Parallel operations
-ayanmo apap? = Osa.sum(data);
-ayanmo kekere = Osa.min(data);
-ayanmo tobi = Osa.max(data);
-ayanmo tito = Osa.sort(data);
+// Calculate sum, min, max
+ayanmo apapọ = 0;
+ayanmo kekere = data[0];
+ayanmo tobi = data[0];
+ayanmo i = 0;
 
-Irosu.fo("Sum: " + apap?);
+nigba (i < 10) {
+    ayanmo apapọ = apapọ + data[i];
+    ti (data[i] < kekere) { ayanmo kekere = data[i]; }
+    ti (data[i] > tobi) { ayanmo tobi = data[i]; }
+    ayanmo i = i + 1;
+}
+
+Irosu.fo("Sum: " + apapọ);
 Irosu.fo("Min: " + kekere);
 Irosu.fo("Max: " + tobi);
-Irosu.fo("Sorted: " + tito);
 
 // Average calculation
 ayanmo iye = 10;
-ayanmo aropin = apap? / iye;
+ayanmo aropin = apapọ / iye;
 Irosu.fo("Average: " + aropin);</code></pre>
-            <pre class="code-english"><code>// Parallel data analysis using Osa
+            <pre class="code-english"><code>// Manual data analysis using basic operators
 let data = [23, 45, 12, 67, 89, 34, 56, 78, 90, 11];
 
 Irosu.println("=== Data Analysis ===");
 Irosu.println("Data: " + data);
 Irosu.println("");
 
-// Parallel operations
-let total = Osa.sum(data);
-let minimum = Osa.min(data);
-let maximum = Osa.max(data);
-let sorted = Osa.sort(data);
+// Calculate sum, min, max
+let total = 0;
+let minimum = data[0];
+let maximum = data[0];
+let i = 0;
+
+while (i < 10) {
+    let total = total + data[i];
+    if (data[i] < minimum) { let minimum = data[i]; }
+    if (data[i] > maximum) { let maximum = data[i]; }
+    let i = i + 1;
+}
 
 Irosu.println("Sum: " + total);
 Irosu.println("Min: " + minimum);
 Irosu.println("Max: " + maximum);
-Irosu.println("Sorted: " + sorted);
 
 // Average calculation
 let count = 10;
@@ -333,24 +203,24 @@ Irosu.println("Average: " + average);</code></pre>
                 <span class="example-title">guess.ifa</span>
             </div>
             <pre class="code-yoruba"><code>// Number guessing game
-Irosu.fo("=== Ere Aros? N?mba ===");
-Irosu.fo("Mo ti yan n?mba kan laarin 1 ati 10.");
+Irosu.fo("=== Ere Arosọ Nọmba ===");
+Irosu.fo("Mo ti yan nọmba kan laarin 1 ati 10.");
 
 ayanmo answer = 7;  // In real game, use Owonrin.pese(1, 10)
 ayanmo tries = 0;
 ayanmo won = iro;
 
 nigba (won == iro) {
-    ayanmo guess = Irosu.ka("Gbiyanju: ");
+    ayanmo guess = Irosu.gbo("Gbiyanju: ");
     ayanmo tries = tries + 1;
     
     ti (guess == answer) {
-        Irosu.fo("O ??gun! O gba ni igba " + tries);
+        Irosu.fo("O ṣẹgun! O gba ni igba " + tries);
         ayanmo won = otito;
-    } bib?k? ti (guess < answer) {
-        Irosu.fo("K�r� j�, gbiyanju s�i.");
-    } bib?k? {
-        Irosu.fo("T�bi j�, gbiyanju s�i.");
+    } bibẹkọ ti (guess < answer) {
+        Irosu.fo("Kere ju, gbiyanju si.");
+    } bibẹkọ {
+        Irosu.fo("Tobi ju, gbiyanju si.");
     }
 }</code></pre>
             <pre class="code-english"><code>// Number guessing game
@@ -362,7 +232,7 @@ let tries = 0;
 let won = false;
 
 while (won == false) {
-    let guess = Irosu.input("Guess: ");
+    let guess = Irosu.gbo("Guess: ");
     let tries = tries + 1;
     
     if (guess == answer) {
@@ -377,12 +247,10 @@ while (won == false) {
         </div>
 
         <footer>
-            <p><a href="playground.html">Try in Playground ?</a></p>
-            <p><a href="../index.html">? Back to Documentation</a></p>
-        </footer>
-    </div>
-
-    <script>
+            <p><a href="playground.html">Try in Playground →</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
+        </footer></div></div>
+<script>
         function setLang(lang) {
             document.querySelectorAll('.code-yoruba').forEach(el => el.style.display = lang === 'yoruba' ? 'block' : 'none');
             document.querySelectorAll('.code-english').forEach(el => el.style.display = lang === 'english' ? 'block' : 'none');
@@ -395,4 +263,3 @@ while (won == false) {
 </body>
 
 </html>
-

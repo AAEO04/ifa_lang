@@ -27,49 +27,22 @@
 //! | 1010 | Ọ̀ṣẹ́ | Graphics, UI |
 //! | 0101 | Òfún | Permissions, Reflection |
 
-pub mod handlers;
+pub mod esu;
 pub mod sandbox_shim;
 pub mod traits;
+
 pub mod vm_registry;
 
-// Core domains (always available)
-pub mod ika; // 0100 - Strings
+// Core Odù Domains
+pub mod odu;
 
-pub mod irosu; // 1100 - Console I/O
-pub mod iwori; // 0110 - Time/Iteration
-pub mod obara; // 1000 - Math Add/Mul
-#[cfg(feature = "backend")]
-pub mod odi; // 1001 - Files/DB
-pub mod ofun;
-pub mod ogbe; // 1111 - System/Lifecycle
-pub mod ogunda; // 1110 - Arrays
-pub mod okanran; // 0001 - Errors
-pub mod oturupon; // 0010 - Math Sub/Div
-pub mod owonrin; // 0011 - Random
-pub mod oyeku; // 0000 - Exit/Sleep // 0101 - Permissions
-
-// Optional domains (feature-gated)
-#[cfg(feature = "backend")]
-pub mod osa; // 0111 - Concurrency
-
-#[cfg(feature = "game")]
-pub mod ose; // 1010 - Graphics/UI
-
-#[cfg(feature = "backend")]
-pub mod otura; // 1011 - Networking
-
-#[cfg(feature = "crypto")]
-pub mod irete; // 1101 - Crypto
+// Hardware layer
+pub mod hardware;
 
 // Priority Stacks (Phase 4)
-pub mod stacks;
 
 // Infrastructure Layer (Hardware/OS)
-pub mod infra;
-#[cfg(feature = "kernel")]
-pub mod sys {
-    pub use super::infra::*;
-}
+// Removed infra module
 
 // FFI - Foreign Function Interface
 #[cfg(feature = "native_ffi")]
@@ -80,3 +53,4 @@ pub mod opele;
 
 // Re-exports
 pub use traits::OduDomain;
+pub use esu::Esu;

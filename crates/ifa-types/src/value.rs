@@ -3,13 +3,11 @@
 //! The universal container for Ifá-Lang's dynamic type system.
 //! Supports integers, floats, strings, booleans, lists, maps, and functions.
 
-use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
 use std::ops::{Add, Mul, Neg, Not, Rem, Sub};
-use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 
@@ -21,8 +19,8 @@ use crate::error::{IfaError, IfaResult};
 use crate::token::ResourceToken;
 
 /// Function signature for lambdas: takes arguments, returns a value
-/// Note: !Send + !Sync (Thread-local)
-pub type IfaFn = Rc<dyn Fn(Vec<IfaValue>) -> IfaValue>;
+/// Send + Sync so actor/task handoff can move function values safely.
+pub type IfaFn = Arc<dyn Fn(Vec<IfaValue>) -> IfaValue + Send + Sync>;
 
 /// The universal container (Odù wrapper) for dynamic typing
 #[derive(Clone, Serialize, Deserialize)]
@@ -39,10 +37,10 @@ pub enum IfaValue {
     List(Vec<IfaValue>),
     /// Map/Dictionary
     Map(HashMap<Arc<str>, IfaValue>),
-    /// Object (heap-allocated, thread-local access)
-    /// "The Hut" - Zero-cost local access, no atomic overhead
+    /// Object (heap-allocated, shareable handle around local mutable state)
+    /// "The Hut" - local mutation remains behind a `Mutex`
     #[serde(skip)]
-    Object(Rc<RefCell<HashMap<Arc<str>, IfaValue>>>),
+    Object(Arc<Mutex<HashMap<Arc<str>, IfaValue>>>),
     /// Function (Standard/Native)
     #[serde(skip)]
     Fn(IfaFn),
@@ -103,8 +101,8 @@ impl fmt::Debug for IfaValue {
             IfaValue::List(v) => write!(f, "List({:?})", v),
             IfaValue::Map(v) => write!(f, "Map({:?})", v),
             IfaValue::Object(v) => {
-                // Use try_borrow to avoid panics during debugging
-                if let Ok(map) = v.try_borrow() {
+                // Use try_lock to avoid panics during debugging
+                if let Ok(map) = v.try_lock() {
                     write!(f, "Object({:?})", map)
                 } else {
                     write!(f, "Object(<locked>)")
@@ -157,7 +155,7 @@ impl fmt::Display for IfaValue {
                 write!(f, "}}")
             }
             IfaValue::Object(obj_ref) => {
-                if let Ok(obj) = obj_ref.try_borrow() {
+                if let Ok(obj) = obj_ref.try_lock() {
                     write!(f, "<Object with {} fields>", obj.len())
                 } else {
                     write!(f, "<Object (locked)>")
@@ -525,10 +523,8 @@ impl IfaValue {
                 .cloned()
                 .ok_or_else(|| IfaError::KeyNotFound(k.to_string())),
             (IfaValue::Object(o), IfaValue::Str(k)) => {
-                let map = o.borrow();
-                map.get(k)
-                    .cloned()
-                    .ok_or_else(|| IfaError::KeyNotFound(k.to_string()))
+                let map = o.lock().map_err(|e| IfaError::Runtime(format!("Object lock poisoned: {}", e)))?;
+                map.get(k).cloned().ok_or_else(|| IfaError::KeyNotFound(k.to_string()))
             }
             _ => Err(IfaError::TypeError {
                 expected: "indexable type".to_string(),
@@ -557,7 +553,10 @@ impl IfaValue {
                 Ok(())
             }
             (IfaValue::Object(o), IfaValue::Str(k)) => {
-                o.borrow_mut().insert(k.clone(), value);
+                let mut map = o
+                    .lock()
+                    .map_err(|e| IfaError::Runtime(format!("Object lock poisoned: {}", e)))?;
+                map.insert(k.clone(), value);
                 Ok(())
             }
             _ => Err(IfaError::TypeError {
@@ -673,21 +672,24 @@ impl IfaValue {
                 #[cfg(feature = "dashmap")]
                 {
                     let frozen = Arc::new(DashMap::new());
-                    if let Ok(map) = o.try_borrow() {
+                    if let Ok(map) = o.try_lock() {
                         for (k, v) in map.iter() {
                             frozen.insert(k.clone(), v.freeze()?);
                         }
-                    } // Else: Object is locked, maybe return error? For now treating as empty/skipped.
+                    } else {
+                        return Err(IfaError::Runtime("Object lock is contended during freeze".into()));
+                    }
                     Ok(IfaShared::Object(frozen))
                 }
                 #[cfg(not(feature = "dashmap"))]
                 {
                     use std::sync::Arc;
                     let mut map = HashMap::new();
-                    if let Ok(local_map) = o.try_borrow() {
-                        for (k, v) in local_map.iter() {
-                            map.insert(k.clone(), v.freeze()?);
-                        }
+                    let local_map = o
+                        .lock()
+                        .map_err(|e| IfaError::Runtime(format!("Object lock poisoned during freeze: {}", e)))?;
+                    for (k, v) in local_map.iter() {
+                        map.insert(k.clone(), v.freeze()?);
                     }
                     Ok(IfaShared::Object(Arc::new(RwLock::new(map))))
                 }
@@ -755,6 +757,8 @@ impl From<()> for IfaValue {
 mod tests {
     use super::*;
 
+    fn assert_send_sync<T: Send + Sync>() {}
+
     #[test]
     fn test_arithmetic() {
         let a = IfaValue::Int(10);
@@ -774,7 +778,12 @@ mod tests {
         assert!(!IfaValue::Null.is_truthy());
 
         // Spec: objects are always truthy (even if "empty").
-        let obj = IfaValue::Object(Rc::new(RefCell::new(HashMap::new())));
+        let obj = IfaValue::Object(Arc::new(Mutex::new(HashMap::new())));
         assert!(obj.is_truthy());
+    }
+
+    #[test]
+    fn test_ifavalue_is_send_and_sync() {
+        assert_send_sync::<IfaValue>();
     }
 }

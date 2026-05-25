@@ -1,5 +1,5 @@
-use ifa_core::ast::{Expression, Program, Statement};
-use ifa_sandbox::{CapabilitySet, Ofun};
+use ifa_types::ast::{Expression, Program, Statement};
+use ifa_types::capability::{CapabilitySet, Ofun};
 use std::path::PathBuf;
 
 /// Infer required capabilities from the program AST

@@ -11,7 +11,7 @@ pub type IfaResult<T> = Result<T, IfaError>;
 
 /// Core error type for Ifá-Lang runtime
 ///
-/// This is the ONE error type. ifa-core, ifa-std, ifa-cli all re-export it.
+/// This is the ONE error type. ifa-vm, ifa-std, ifa-cli all re-export it.
 /// If you need a different error shape (lint diagnostics, installer errors),
 /// use a different type name — never another `IfaError`.
 #[derive(Error, Debug, Clone)]
@@ -85,6 +85,20 @@ pub enum IfaError {
     #[error("Execution yielded")]
     Yielded,
 
+    /// Internal VM signal: break out of the nearest enclosing loop.
+    /// Never user-visible; consumed by the run loop before returning.
+    #[error("(internal) loop break")]
+    LoopBreak,
+
+    /// Internal VM signal: continue to the next iteration of the nearest loop.
+    /// Never user-visible; consumed by the run loop before returning.
+    #[error("(internal) loop continue")]
+    LoopContinue,
+
+    /// Internal VM signal: exit the process/VM with a status code.
+    #[error("Process exit requested with code: {0}")]
+    Exit(i32),
+
     #[error("Unknown opcode: {0}")]
     UnknownOpcode(u8),
 
@@ -97,7 +111,10 @@ pub enum IfaError {
     #[error("stack overflow — program declared #opon {directive:?} (limit: {limit} slots)")]
     StackOverflow {
         limit: usize,
+        #[cfg(feature = "vm")]
         directive: crate::bytecode::OponSize,
+        #[cfg(not(feature = "vm"))]
+        directive: &'static str,
     },
 
     #[error("Undefined variable: {0}")]
@@ -191,6 +208,9 @@ impl IfaError {
             | IfaError::Custom(_)
             | IfaError::UserError(_)
             | IfaError::Yielded
+            | IfaError::LoopBreak
+            | IfaError::LoopContinue
+            | IfaError::Exit(_)
             | IfaError::RegistryNotAttached(_)
             | IfaError::Runtime(_) => ErrorCode::VmError,
         }
@@ -217,6 +237,9 @@ impl IfaError {
             }
             IfaError::UserError(_) => {
                 "Ọwọ́ ara ẹni la fí tún ìwà ara ẹni ṣe. (One shapes their own character with their own hands.)"
+            }
+            IfaError::Exit(_) => {
+                "Ìbẹ̀rẹ̀ kì í ṣe oníṣẹ́, ẹni tí ó bá parí rẹ̀ ni ó ń jẹ́ oníṣẹ́. (Starting is not the master, he who finishes is.)"
             }
             _ => "Gbogbo ìṣòro ní ojúùtù. (Every problem has a solution.)",
         }

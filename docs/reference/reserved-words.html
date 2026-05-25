@@ -22,6 +22,7 @@
     </div>
 
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">reserved-words.ifa</span></div><div class="terminal-body">
         <header>
             <h1>Reserved Words</h1>
             <p class="subtitle">Bilingual Keywords and Language Primitives</p>
@@ -30,6 +31,7 @@
         <div class="step">
             <h2>Overview</h2>
             <p>Ifá-Lang supports bilingual keywords with both Yoruba and English variants. All reserved words have cultural significance and reflect Yoruba philosophical concepts while maintaining accessibility for English speakers.</p>
+            <p>This list is <strong>source-verified</strong> against <code>crates/ifa-parser/src/grammar.pest</code>. Every keyword shown is parsed by the actual compiler.</p>
         </div>
 
         <div class="step">
@@ -37,7 +39,7 @@
             
             <div class="keywords-grid">
                 <div class="keyword-card">
-                    <h3>ayanmo / let</h3>
+                    <h3>ayanmo / let / var / variable</h3>
                     <p><strong>Meaning:</strong> Destiny / to have</p>
                     <p><strong>Usage:</strong> Variable declaration</p>
                     <div class="code-example">
@@ -47,7 +49,17 @@ let name = "Alice";</code></pre>
                 </div>
 
                 <div class="keyword-card">
-                    <h3>ese / fn</h3>
+                    <h3>const / loruko / ka / ayanfe</h3>
+                    <p><strong>Meaning:</strong> Constant / name / beloved</p>
+                    <p><strong>Usage:</strong> Constant declaration</p>
+                    <div class="code-example">
+                        <pre><code>const PI = 3.14159;
+loruko VERSION = "1.3.0";</code></pre>
+                    </div>
+                </div>
+
+                <div class="keyword-card">
+                    <h3>ese / fn / function / def</h3>
                     <p><strong>Meaning:</strong> Verse / function</p>
                     <p><strong>Usage:</strong> Function definition</p>
                     <div class="code-example">
@@ -67,31 +79,21 @@ class Database { ... }</code></pre>
                 </div>
 
                 <div class="keyword-card">
-                    <h3>const / loruko</h3>
-                    <p><strong>Meaning:</strong> Constant / name</p>
-                    <p><strong>Usage:</strong> Constant declaration</p>
+                    <h3>gbangba / public / fi / export</h3>
+                    <p><strong>Meaning:</strong> Openly / public</p>
+                    <p><strong>Usage:</strong> Visibility modifier on declarations</p>
                     <div class="code-example">
-                        <pre><code>const PI = 3.14159;
-loruko VERSION = "1.3.0";</code></pre>
-                    </div>
-                </div>
-
-                <div class="keyword-card">
-                    <h3>public</h3>
-                    <p><strong>Meaning:</strong> Public visibility</p>
-                    <p><strong>Usage:</strong> Public modifier</p>
-                    <div class="code-example">
-                        <pre><code>public ese main() { ... }
+                        <pre><code>gbangba ese main() { ... }
 public let API_KEY = "secret";</code></pre>
                     </div>
                 </div>
 
                 <div class="keyword-card">
-                    <h3>async</h3>
-                    <p><strong>Meaning:</strong> Asynchronous execution</p>
+                    <h3>daro / async</h3>
+                    <p><strong>Meaning:</strong> Wait / asynchronous</p>
                     <p><strong>Usage:</strong> Async function modifier</p>
                     <div class="code-example">
-                        <pre><code>async ese fetch_data() { ... }
+                        <pre><code>daro ese fetch_data() { ... }
 async fn process() { ... }</code></pre>
                     </div>
                 </div>
@@ -103,31 +105,31 @@ async fn process() { ... }</code></pre>
             
             <div class="keywords-grid">
                 <div class="keyword-card">
-                    <h3>bi / if</h3>
+                    <h3>ti / bi / if</h3>
                     <p><strong>Meaning:</strong> If / conditional</p>
                     <p><strong>Usage:</strong> Conditional statement</p>
                     <div class="code-example">
-                        <pre><code>bi x > 0 { ... }
+                        <pre><code>ti x > 0 { ... }
 if condition { ... }</code></pre>
                     </div>
                 </div>
 
                 <div class="keyword-card">
-                    <h3>bi kosi / else</h3>
-                    <p><strong>Meaning:</strong> If not / otherwise</p>
-                    <p><strong>Usage:</strong> Else clause</p>
+                    <h3>bibeko / else</h3>
+                    <p><strong>Meaning:</strong> Otherwise / else</p>
+                    <p><strong>Usage:</strong> Else clause (supports else-if chaining)</p>
                     <div class="code-example">
-                        <pre><code>bi x > 0 { ... } bi kosi { ... }
+                        <pre><code>ti x > 0 { ... } bibeko { ... }
 if condition { ... } else { ... }</code></pre>
                     </div>
                 </div>
 
                 <div class="keyword-card">
-                    <h3>nigita / while</h3>
-                    <p><strong>Meaning:</strong> While / during</p>
+                    <h3>nigba / while</h3>
+                    <p><strong>Meaning:</strong> During / while</p>
                     <p><strong>Usage:</strong> While loop</p>
                     <div class="code-example">
-                        <pre><code>nigita x < 10 { ... }
+                        <pre><code>nigba x < 10 { ... }
 while condition { ... }</code></pre>
                     </div>
                 </div>
@@ -153,14 +155,48 @@ for i in range { ... }</code></pre>
                 </div>
 
                 <div class="keyword-card">
-                    <h3>match</h3>
-                    <p><strong>Meaning:</strong> Pattern matching</p>
-                    <p><strong>Usage:</strong> Match statement</p>
+                    <h3>yan / match</h3>
+                    <p><strong>Meaning:</strong> To choose / match</p>
+                    <p><strong>Usage:</strong> Pattern matching statement</p>
                     <div class="code-example">
-                        <pre><code>match (value) {
+                        <pre><code>yan (value) {
     0 => Irosu.fo("zero"),
     _ => Irosu.fo("other")
+}
+match (value) {
+    1 => "one",
+    _ => "other"
 }</code></pre>
+                    </div>
+                </div>
+
+                <div class="keyword-card">
+                    <h3>da / break</h3>
+                    <p><strong>Meaning:</strong> To stop / break</p>
+                    <p><strong>Usage:</strong> Break from loop</p>
+                    <div class="code-example">
+                        <pre><code>da;
+break;</code></pre>
+                    </div>
+                </div>
+
+                <div class="keyword-card">
+                    <h3>tesiwaju / bayan / continue</h3>
+                    <p><strong>Meaning:</strong> To continue / continue</p>
+                    <p><strong>Usage:</strong> Continue to next loop iteration</p>
+                    <div class="code-example">
+                        <pre><code>tesiwaju;
+continue;</code></pre>
+                    </div>
+                </div>
+
+                <div class="keyword-card">
+                    <h3>pada / return</h3>
+                    <p><strong>Meaning:</strong> To return / come back</p>
+                    <p><strong>Usage:</strong> Return from function</p>
+                    <div class="code-example">
+                        <pre><code>pada result;
+return value;</code></pre>
                     </div>
                 </div>
             </div>
@@ -201,21 +237,13 @@ try { ... } finally { ... }</code></pre>
                 </div>
 
                 <div class="keyword-card">
-                    <h3>ewo / assert</h3>
+                    <h3>ewo / assert / verify</h3>
                     <p><strong>Meaning:</strong> Prohibition / assertion</p>
                     <p><strong>Usage:</strong> Assertion statement</p>
                     <div class="code-example">
                         <pre><code>ewo x >= 0;
-assert condition;</code></pre>
-                    </div>
-                </div>
-
-                <div class="keyword-card">
-                    <h3>verify</h3>
-                    <p><strong>Meaning:</strong> To verify</p>
-                    <p><strong>Usage:</strong> Assertion alternative</p>
-                    <div class="code-example">
-                        <pre><code>verify balance >= 0;</code></pre>
+assert condition;
+verify balance >= 0;</code></pre>
                     </div>
                 </div>
             </div>
@@ -226,11 +254,11 @@ assert condition;</code></pre>
             
             <div class="keywords-grid">
                 <div class="keyword-card">
-                    <h3>iba / import</h3>
-                    <p><strong>Meaning:</strong> To borrow / import</p>
+                    <h3>iba / import / mu</h3>
+                    <p><strong>Meaning:</strong> To borrow / import / take</p>
                     <p><strong>Usage:</strong> Import statement</p>
                     <div class="code-example">
-                        <pre><code>iba std.irosu;
+                        <pre><code>iba std.irose;
 import std.utils;</code></pre>
                     </div>
                 </div>
@@ -238,10 +266,10 @@ import std.utils;</code></pre>
                 <div class="keyword-card">
                     <h3>lati / from</h3>
                     <p><strong>Meaning:</strong> From / source</p>
-                    <p><strong>Usage:</strong> Named import</p>
+                    <p><strong>Usage:</strong> Named import clause</p>
                     <div class="code-example">
-                        <pre><code>iba { fo, ka } from std.irosu;
-import { print, read } from std.irosu;</code></pre>
+                        <pre><code>iba { fo, ka } lati std.irose;
+import { print, read } from std.irose;</code></pre>
                     </div>
                 </div>
             </div>
@@ -254,7 +282,7 @@ import { print, read } from std.irosu;</code></pre>
                 <div class="keyword-card">
                     <h3>opon / mem</h3>
                     <p><strong>Meaning:</strong> Divination tray / memory</p>
-                    <p><strong>Usage:</strong> Memory configuration</p>
+                    <p><strong>Usage:</strong> Memory configuration directive</p>
                     <div class="code-example">
                         <pre><code>opon: kekere;
 mem: nla;</code></pre>
@@ -262,18 +290,28 @@ mem: nla;</code></pre>
                 </div>
 
                 <div class="keyword-card">
-                    <h3>  / sacrifice</h3>
+                    <h3>ebo / sacrifice</h3>
                     <p><strong>Meaning:</strong> Offering / sacrifice</p>
-                    <p><strong>Usage:</strong> Resource acquisition</p>
+                    <p><strong>Usage:</strong> Resource acquisition / epoch region</p>
                     <div class="code-example">
-                        <pre><code>  "config.json";
-sacrifice file = open("data.txt");</code></pre>
+                        <pre><code>ebo "config.json";
+ebo "scope" { ... }</code></pre>
+                    </div>
+                </div>
+
+                <div class="keyword-card">
+                    <h3>defer / gbe</h3>
+                    <p><strong>Meaning:</strong> Keep / defer</p>
+                    <p><strong>Usage:</strong> Deferred cleanup at scope exit</p>
+                    <div class="code-example">
+                        <pre><code>defer { close(file); }
+gbe { free(buffer); }</code></pre>
                     </div>
                 </div>
 
                 <div class="keyword-card">
                     <h3>ailewu / unsafe</h3>
-                    <p><strong>Meaning:</strong> Without danger / unsafe</p>
+                    <p><strong>Meaning:</strong> Without danger / unsafe (ironic)</p>
                     <p><strong>Usage:</strong> Unsafe code block</p>
                     <div class="code-example">
                         <pre><code>ailewu { ... }
@@ -284,36 +322,16 @@ unsafe { ... }</code></pre>
         </div>
 
         <div class="step">
-            <h2>Control Flow Keywords</h2>
+            <h2>Async and Await</h2>
             
             <div class="keywords-grid">
                 <div class="keyword-card">
-                    <h3>pada / return</h3>
-                    <p><strong>Meaning:</strong> To return / come back</p>
-                    <p><strong>Usage:</strong> Return statement</p>
+                    <h3>reti / await</h3>
+                    <p><strong>Meaning:</strong> To wait / await</p>
+                    <p><strong>Usage:</strong> Await an async expression</p>
                     <div class="code-example">
-                        <pre><code>pada result;
-return value;</code></pre>
-                    </div>
-                </div>
-
-                <div class="keyword-card">
-                    <h3>jowo / yield</h3>
-                    <p><strong>Meaning:</strong> Please / yield</p>
-                    <p><strong>Usage:</strong> Yield statement</p>
-                    <div class="code-example">
-                        <pre><code>jowo 1000;
-yield value;</code></pre>
-                    </div>
-                </div>
-
-                <div class="keyword-card">
-                    <h3>ase / end</h3>
-                    <p><strong>Meaning:</strong> So be it / end</p>
-                    <p><strong>Usage:</strong> Program termination</p>
-                    <div class="code-example">
-                        <pre><code>ase;
-end;</code></pre>
+                        <pre><code>reti fetch_data();
+await promise;</code></pre>
                     </div>
                 </div>
             </div>
@@ -324,30 +342,32 @@ end;</code></pre>
             
             <div class="keywords-grid">
                 <div class="keyword-card">
-                    <h3>èèwò / taboo</h3>
+                    <h3>jowo / yield</h3>
+                    <p><strong>Meaning:</strong> Please / yield</p>
+                    <p><strong>Usage:</strong> Yield execution control</p>
+                    <div class="code-example">
+                        <pre><code>jowo 1000;
+yield value;</code></pre>
+                    </div>
+                </div>
+
+                <div class="keyword-card">
+                    <h3>ase / end</h3>
+                    <p><strong>Meaning:</strong> So be it / end</p>
+                    <p><strong>Usage:</strong> Program termination marker</p>
+                    <div class="code-example">
+                        <pre><code>ase;
+end;</code></pre>
+                    </div>
+                </div>
+
+                <div class="keyword-card">
+                    <h3>eevo / taboo</h3>
                     <p><strong>Meaning:</strong> Taboo / prohibition</p>
-                    <p><strong>Usage:</strong> Taboo declaration</p>
+                    <p><strong>Usage:</strong> Domain taboo declaration</p>
                     <div class="code-example">
-                        <pre><code>èèwò: Ose -> Odi;
+                        <pre><code>eevo: Ose -> Odi;
 taboo: Otura -> Irete;</code></pre>
-                    </div>
-                </div>
-
-                <div class="keyword-card">
-                    <h3>ayanfe / àyànfé</h3>
-                    <p><strong>Meaning:</strong> Beloved / constant</p>
-                    <p><strong>Usage:</strong> Constant declaration</p>
-                    <div class="code-example">
-                        <pre><code>ayanfe PI = 3.14159;</code></pre>
-                    </div>
-                </div>
-
-                <div class="keyword-card">
-                    <h3>ka</h3>
-                    <p><strong>Meaning:</strong> To write / constant</p>
-                    <p><strong>Usage:</strong> Constant declaration</p>
-                    <div class="code-example">
-                        <pre><code>ka MAX_SIZE = 1000;</code></pre>
                     </div>
                 </div>
             </div>
@@ -360,7 +380,7 @@ taboo: Otura -> Irete;</code></pre>
                 <div class="keyword-card">
                     <h3>otito / true</h3>
                     <p><strong>Meaning:</strong> Truth / true</p>
-                    <p><strong>Usage:</strong> Boolean true</p>
+                    <p><strong>Usage:</strong> Boolean true value</p>
                     <div class="code-example">
                         <pre><code>ayanmo active = otito;
 let enabled = true;</code></pre>
@@ -368,29 +388,30 @@ let enabled = true;</code></pre>
                 </div>
 
                 <div class="keyword-card">
-                    <h3>eke / false</h3>
+                    <h3>iro / false</h3>
                     <p><strong>Meaning:</strong> Falsehood / false</p>
-                    <p><strong>Usage:</strong> Boolean false</p>
+                    <p><strong>Usage:</strong> Boolean false value</p>
                     <div class="code-example">
-                        <pre><code>ayanmo done = eke;
+                        <pre><code>ayanmo done = iro;
 let finished = false;</code></pre>
                     </div>
                 </div>
 
                 <div class="keyword-card">
-                    <h3>ofo / null</h3>
-                    <p><strong>Meaning:</strong> Empty / null</p>
+                    <h3>ofo / null / nil</h3>
+                    <p><strong>Meaning:</strong> Empty / null / nothing</p>
                     <p><strong>Usage:</strong> Null value</p>
                     <div class="code-example">
                         <pre><code>ayanmo empty = ofo;
-let nothing = null;</code></pre>
+let nothing = null;
+let nada = nil;</code></pre>
                     </div>
                 </div>
 
                 <div class="keyword-card">
                     <h3>void</h3>
                     <p><strong>Meaning:</strong> Empty / void</p>
-                    <p><strong>Usage:</strong> Void type</p>
+                    <p><strong>Usage:</strong> Void return type</p>
                     <div class="code-example">
                         <pre><code>ese process() -> void { ... }
 fn execute() -> void { ... }</code></pre>
@@ -448,8 +469,8 @@ let ready: bool = true;</code></pre>
                     <p><strong>Meaning:</strong> List/array</p>
                     <p><strong>Usage:</strong> List type</p>
                     <div class="code-example">
-                        <pre><code>ayanmo items: List[Int] = [1, 2, 3];
-let data: list[str] = ["a", "b"];</code></pre>
+                        <pre><code>ayanmo items: List = [1, 2, 3];
+let data: list = ["a", "b"];</code></pre>
                     </div>
                 </div>
 
@@ -458,8 +479,8 @@ let data: list[str] = ["a", "b"];</code></pre>
                     <p><strong>Meaning:</strong> Map/dictionary</p>
                     <p><strong>Usage:</strong> Map type</p>
                     <div class="code-example">
-                        <pre><code>ayanmo dict: Map[Str, Int] = {"a": 1};
-let lookup: map[str, int] = {"key": 2};</code></pre>
+                        <pre><code>ayanmo dict: Map = {"a": 1};
+let lookup: map = {"key": 2};</code></pre>
                     </div>
                 </div>
 
@@ -512,9 +533,9 @@ ayanmo double: f64 = 2.718281828;</code></pre>
         </div>
 
         <div class="step">
-            <h2>Odù Domain Names</h2>
+            <h2>Odu Domain Names</h2>
             
-            <p>The 16 core Odù domains are reserved words and don't require imports:</p>
+            <p>The 16 core Odu domains are reserved words and don't require imports:</p>
             
             <div class="domains-grid">
                 <div class="domain-item">
@@ -643,10 +664,11 @@ mem: unlimited;</code></pre>
 
             <h3>Best Practices</h3>
             <ul>
-                <li><strong>Domain Names:</strong> Use Odù domains without imports</li>
+                <li><strong>Domain Names:</strong> Use Odu domains without imports</li>
                 <li><strong>Type Names:</strong> Use type hints for clarity</li>
                 <li><strong>Constants:</strong> Use const/loruko for immutable values</li>
                 <li><strong>Error Handling:</strong> Use gbiyanju/gba for robust error handling</li>
+                <li><strong>Cleanup:</strong> Use defer/gbe for guaranteed scope cleanup</li>
             </ul>
 
             <h3>Reserved Word Restrictions</h3>
@@ -654,7 +676,6 @@ mem: unlimited;</code></pre>
                 <li><strong>No Shadowing:</strong> Cannot shadow reserved words</li>
                 <li><strong>No Redefinition:</strong> Cannot redefine reserved words</li>
                 <li><strong>Context Sensitive:</strong> Some words are context-sensitive (e.g., public)</li>
-                <li><strong>Future Reserved:</strong> Additional words may be reserved in future versions</li>
             </ul>
         </div>
 

@@ -4,6 +4,8 @@
 **Status:** Normative target with ratified engineering decisions  
 **Date:** 2026-04-08
 
+> **⚠️ Implementation Status**: This specification is the *design target* for Ifá-Lang. Not all features described here are fully implemented in the current `crates/` source. See `docs/design/UNFINISHED.md`, `docs/design/GOOD_FEATURES.md`, and `docs/design/AMBITIOUS_FEATURES.md` for a verified accounting of what exists in compiled code vs what remains aspirational. Where concrete keyword, type, or crate references in this spec conflict with `crates/` source, the source is the current ground truth.
+
 This document is the unified canonical specification for Ifá-Lang. It restores the extensive legacy baseline while incorporating recently ratified architectural shifts (most notably the transition to Protocol-Oriented design). Where the runtime implementation disagrees with this document, the runtime is incorrect.
 
 ---
@@ -22,7 +24,7 @@ This document is the unified canonical specification for Ifá-Lang. It restores 
 6. [Operators and Expressions](#6-operators-and-expressions)
 7. [Variables and Scope](#7-variables-and-scope)
 8. [Functions and Closures](#8-functions-and-closures)
-9. [Classes](#9-classes)
+9. [Protocol-Oriented Data Model](#9-protocol-oriented-data-model-ratified)
 10. [Control Flow](#10-control-flow)
 11. [Pattern Matching](#11-pattern-matching)
 12. [Error Handling](#12-error-handling)
@@ -98,27 +100,26 @@ Each section carries one of three implementation status markers:
 
 ### 2.1 The Tiers
 
-IfáLang has three execution paths. They serve different purposes and have different performance characteristics. They are **not** interchangeable — each is optimized for a distinct phase of the development lifecycle.
+IfáLang has two execution paths (the AST interpreter `ifa-interpreter` was archived in favor of a unified pipeline). Both current paths share the same frontend.
 
 ```
-ifa run    →  AST Interpreter   —  Development tier
-ifa runb   →  Bytecode VM       —  Execution tier  (canonical semantics)
-ifa build  →  Transpiler        —  Deployment tier
+ifa run    →  Parse + Compile to bytecode + VM   —  Development/execution tier
+ifa runb   →  Parse + Compile to bytecode + VM   —  With Babalawo integrity verification
+ifa build  →  Transpiler to Rust + cargo build   —  Deployment tier
 ```
 
 ### 2.2 Tier Roles
 
-#### `ifa run` — Development Tier
+#### `ifa run` — Development/Execution Tier
 
-**Purpose:** Fast iteration during development.
+**Purpose:** The primary execution path — parse, compile to bytecode, and execute in the VM.
 
-- Parses source → walks the AST directly. No bytecode compilation.
-- Starts instantly. Zero compilation latency.
-- Best error messages: every error **MUST** include source file, line number, and column.
-- Optimized for correctness and clarity, not performance.
-- Supports the Tier 1 feature set (see §20).
+- Parses source → compiles to bytecode → executes in `IfaVM`.
+- Before execution, Babalawo static analysis runs (5-layer integrity defence).
+- Supports Babalawo verification and capability sandboxing.
+- Includes REPL mode for interactive development.
 
-**What it is not:** The semantic authority. If `ifa run` and `ifa runb` produce different results for a conforming program, `ifa run` has a bug.
+**What it is not:** A separate AST interpreter. The legacy `ifa-interpreter` crate is archived at `archive/ifa-interpreter/`.
 
 #### `ifa runb` — Execution Tier
 
@@ -151,29 +152,28 @@ All three runtimes share a single frontend. No runtime does its own parsing or n
 Source (.ifa)
     │
     ▼
-  Lexer
+ifa-parser (Lexer + Parser)
     │
     ▼
-  Parser  →  AST
+AST (ifa-types)
     │
     ▼
-  Resolver Pass  ←── shared, runs once before any backend
-  (annotated AST)
+ifa-babalawo (Resolver / Static Analysis)
     │
     ├─────────────────────────────────────────────┐
     │                                             │
     ▼                                             ▼
-ifa run                                      ifa runb
-AST Walker                               Bytecode Compiler
-(eval annotated AST directly)            (annotated AST → opcodes)
+(Constant Eval / Pre-compute)                 ifa-compiler
+                                              (AST → ifa-bytecode)
                                                   │
                                                   ▼
-                                             Bytecode VM
+                                                ifa-vm
     │
     ▼
-ifa build
-Transpiler
-(annotated AST → Rust source)
+ifa-transpiler
+(AST → Rust source)
+
+*Note: The AST Interpreter (`ifa-interpreter`) has been archived to `archive/ifa-interpreter/` and removed from the workspace. Its semantic knowledge (type rules, scope model, Odu method tables) was extracted into `ifa-types` and `ifa-babalawo` data modules. The execution logic (core.rs) is superseded by `ifa-vm` — `ifa run` uses the bytecode VM, not the interpreter.*
 ```
 
 ### 2.4 The Resolver Pass
@@ -208,13 +208,17 @@ Source files **MUST** be UTF-8 encoded. A BOM (`U+FEFF`) at the start of a file 
 ### 3.2 Comments
 
 ```
-# This is a line comment — extends to end of line
+// This is a line comment — extends to end of line
+// Also valid: # line comment (hash style)
+/// Doc comment — extends to end of line
 
-#{
+/*
   This is a block comment.
-  Block comments may be nested: #{ nested }#
-}#
+  Block comments may be nested: /* nested */
+*/
 ```
+
+> **Note**: The initial spec draft documented `#{` / `}#` block comments and `eke` for `false`. The ratified grammar (`grammar.pest`) uses `/*` / `*/` for block comments, `//` and `#` for line comments, `///` for doc comments, and `iro` (not `eke`) for boolean `false`. Examples in this spec may still use `eke` in code blocks — the canonical keyword is `iro`. All runtimes conform to the grammar.
 
 ### 3.3 Whitespace
 
@@ -226,36 +230,41 @@ The following are reserved. They cannot be used as identifiers. The Yoruba form 
 
 | Yoruba | English Alias | Category |
 |--------|--------------|----------|
-| `ayanmo` | `let` | Variable declaration (mutable) |
-| `ayanfe` | `const` | Variable declaration (immutable) |
-| `ese` | `fn` | Function definition |
-| (LEGACY) | (LEGACY) | `odu` / `class` hard-rejected in v0.2 |
+| `ayanmo` / `ayanmọ` / `àyànmọ́` | `let` / `var` / `variable` | Variable declaration (mutable) |
+| `ayanfe` / `àyànfẹ́` | `const` / `loruko` / `ka` | Variable declaration (immutable) |
+| `ese` / `ẹsẹ` | `fn` / `function` / `def` | Function definition |
+| `odu` / `odù` | `class` | Odu (protocol-oriented structure) definition |
 | `pada` | `return` | Return from function |
-| `ti` | `if` | Conditional |
+| `ti` / `bí` | `if` | Conditional |
 | `bibẹkọ` | `else` | Else branch |
 | `nigba` | `while` | While loop |
 | `fun` | `for` | For loop |
+| `ninu` | `in` | Iterator binding |
 | `da` | `break` | Break from loop |
 | `tesiwaju` / `bayan` | `continue` | Continue to next iteration |
-| (alias) | `match` | Pattern match (no canonical Yoruba yet) |
-| `gbiyanju` | `try` | Error handling block |
-| `gba` | `catch` | Catch block |
-| `ailewu` | `unsafe` | Unsafe pointer block (embedded/VM only) |
-| `jowo` | `yield` | Cooperative yield |
-| `iba` | `import` | Import module |
-| (alias) | `export` | Export symbol |
-| `otito` | `true` | Boolean true |
+| `yàn` / `yán` | `match` | Pattern match |
+| `gbiyanju` / `gbìyànjú` | `try` | Error handling block |
+| `gba` / `gbà` | `catch` | Catch block |
+| `nipari` / `nípàrí` | `finally` | Finalization block |
+| `ailewu` / `àìléwu` | `unsafe` | Unsafe pointer block (embedded/VM only) |
+| `jowo` / `jọ̀wọ́` | `yield` | Cooperative yield |
+| `iba` / `ìbà` | `import` / `mu` | Import module |
+| `lati` / `láti` | `from` | Named import source |
+| `gbangba` | `public` / `fi` / `export` | Public visibility |
+| `otito` | `true` / `otito` | Boolean true |
 | `iro` | `false` | Boolean false |
-| `ofo` / `ohunkohun` | `null` | Null value |
-| `ati` | `and` | Logical AND (word form) |
-| `tabi` | `or` | Logical OR (word form) |
-| `ko` | `not` | Logical NOT (word form) |
-| (LEGACY) | (LEGACY) | `ara` / `self` hard-rejected in v0.2 |
-| (LEGACY) | (LEGACY) | `iya` / `super` hard-rejected in v0.2 |
-| `gbangba` | `pub` | Public visibility |
-| `aladani` | `private` | Private visibility |
+| `ofo` | `null` / `nil` | Null value |
+| `ati` | `and` / `&&` | Logical AND (word form) |
+| `tabi` | `or` / `\|\|` | Logical OR (word form) |
+| `kii` | `not` / `!` | Logical NOT (word form) |
+| `ase` / `àṣẹ` | `end` | Program/file terminator |
+| `èèwọ̀` / `ewọ` | `taboo` | Architectural taboo declaration |
+| `ewo` / `ẹ̀wọ̀` | `assert` / `verify` | Runtime assertion |
+| `defer` / `gbe` | *same* | Deferred cleanup block |
+| `ebo` / `ẹbọ` | `sacrifice` | Scoped memory epoch |
 | `daro` | `async` | Async function |
 | `reti` | `await` | Await async value |
+| `coop` / `ajose` / `Àjọṣe` | *same* | Coop/Ajose domain name |
 
 
 
@@ -310,7 +319,7 @@ Irosu.fo($"2 + 2 = {2 + 2}");   # 2 + 2 = 4
 
 ```
 otito    # true
-eke      # false
+iro      # false
 ofo      # null
 ```
 
@@ -324,29 +333,20 @@ IfáLang is **dynamically typed**. Values carry their type at runtime. There is 
 
 | Type | Description | Yoruba Name |
 |------|-------------|-------------|
+| `Null` | Absence of value (`ofo`) | `Òfò` |
+| `Bool` | `otito` or `iro` | `Òtítọ́` |
 | `Int` | 64-bit signed integer | `Nọ́mbà` |
 | `Float` | 64-bit IEEE 754 double | `Ìpínpọ̀` |
-| `Bool` | `otito` or `eke` | `Òtítọ́` |
-| `String` | Immutable UTF-8 sequence | `Ọ̀rọ̀` |
-| `Null` | Absence of value (`ofo`) | `Òfò` |
-| `List` | Ordered mutable sequence | `Àkójọ` |
+| `Str` | Immutable UTF-8 sequence | `Ọ̀rọ̀` |
+| `List` | Ordered sequence (reference-counted) | `Àkójọ` |
 | `Map` | Unordered key-value store | `Àpótí` |
-| `Function` | Callable value | `Iṣẹ́` |
-| `Object` | Class instance | `Ohun` |
-| `Ptr` | Raw pointer (embedded/unsafe only) | `Ìtọ́kasí` |
+| `Fn` / `Closure` | Callable value / closure with captured environment | `Iṣẹ́` |
+| `Future` | In-progress async computation | `Ọjọ́` |
+| `Actor` | Reference to a running actor VM | `Òṣèré` |
 
 ### 4.2 Runtime Type Inspection
 
-```
-Ofun.iru(42)           # => "Int"
-Ofun.iru(3.14)         # => "Float"
-Ofun.iru("hello")      # => "String"
-Ofun.iru(otito)        # => "Bool"
-Ofun.iru(ofo)          # => "Null"
-Ofun.iru([1,2,3])      # => "List"
-Ofun.iru({a: 1})       # => "Map"
-Ofun.iru(ese(){})      # => "Function"
-```
+> **Status**: `Ofun.iru()` is **not yet wired** in the VM dispatch table. Ofun currently supports only `le`/`can` (capability checks) and `dbg`/`debug` (debug print). Runtime type inspection is a planned feature.
 
 ### 4.3 Null (`ofo`) `[DEFINED]`
 
@@ -414,11 +414,12 @@ Strings are **immutable** sequences of Unicode code points, stored as UTF-8. Len
 "Ifá"[10]        # => ofo  (out of bounds returns ofo, never an error)
 ```
 
-String concatenation with `+`: if **either** operand of `+` is a `String`, the other is coerced to its string representation.
+> **Note**: `OpCode::Add (0x01)` is purely numeric (Int/Float only). String concatenation uses the dedicated `OpCode::Concat (0x27)`, which requires both operands to be `Str` and is strict `Str + Str` only. There is no implicit coercion from non-string types.
 
 ```
-"count: " + 5      # => "count: 5"
-otito + "!"        # => "otito!"
+// NOT VALID: + is numeric-only. Use Ika string operations.
+// "count: " + 5   => TypeError
+// otito + "!"     => TypeError
 ```
 
 ### 4.8 Lists `[DEFINED]`
@@ -467,7 +468,7 @@ Every value in IfáLang has a truthiness. This governs `ti`, `nigba`, `!`, `&&`,
 | Value | Truthy? | Notes |
 |-------|---------|-------|
 | `ofo` | **false** | The only null value. Always falsy. |
-| `eke` | **false** | Boolean false. |
+| `iro` | **false** | Boolean false. (`eke` in legacy spec drafts) |
 | `otito` | **true** | Boolean true. |
 | `Int: 0` | **false** | Zero is falsy. |
 | `Int: non-zero` | **true** | Any non-zero integer. |
@@ -481,9 +482,9 @@ Every value in IfáLang has a truthiness. This governs `ti`, `nigba`, `!`, `&&`,
 | `List: non-empty` | **true** | Any list with at least one element. |
 | `Map: {}` | **false** | Empty map is falsy. |
 | `Map: non-empty` | **true** | Any map with at least one key. |
-| `Function` | **true** | All function values are truthy. |
-| `Object` | **true** | All class instances are truthy. |
-| `Ptr` | **true** | All pointer values are truthy (embedded only). |
+| `Fn` / `Closure` | **true** | All function/closure values are truthy. |
+| `Future` | **true** | All async future values are truthy. |
+| `Actor` | **true** | All actor references are truthy. |
 
 > **Note:** `"0"` is truthy. `"false"` is truthy. Only the empty string `""` is falsy. This is intentional — stringly-typed truthiness is a footgun.
 
@@ -558,13 +559,14 @@ Equality is **structural** (deep value comparison), not reference equality, for 
 | `Int` and `Float` | `Int` promoted to `Float`; compare as floats. `3 == 3.0` is `otito`. |
 | Two `Float` | IEEE 754. `NaN == NaN` is **`eke`**. `-0.0 == 0.0` is `otito`. |
 | Two `String` | Equal if same code point sequence |
-| Two `Bool` | Equal if both `otito` or both `eke` |
+| Two `Bool` | Equal if both `otito` or both `iro` |
 | `ofo == ofo` | Always `otito` |
-| `ofo == anything` | Always `eke` |
+| `ofo == anything` | Always `iro` |
 | Two `List` | Equal if same length and pairwise `==` elements (recursive) |
 | Two `Map` | Equal if same keys and pairwise `==` values (recursive) |
-| Two `Object` | **Reference equality** — same instance only |
-| Two `Function` | Always `eke` — functions are never equal |
+| Two `Fn` / `Closure` | Always `iro` — functions are never equal |
+| Two `Future` | Always `iro` — futures are never equal |
+| Two `Actor` | Equal if same actor ID |
 
 > ⚠️ **NaN is never equal to anything, including itself.** `NaN == NaN` is `eke`. Implementations **MUST NOT** normalize NaN for equality.
 
@@ -830,11 +832,11 @@ pipeline[1](5)                   # => 10
 
 ## 9. Protocol-Oriented Data Model (Ratified) `[DEFINED]`
 
-Ifá-Lang does not have classes, inheritance, or object-oriented hierarchies. This is a permanent language design decision ratified on 2026-04-07. Polymorphism and data grouping are achieved through **structural subtyping** (Map shape checking) and **Domain Protocols**.
+Ifá-Lang does not have traditional classes, inheritance, or object-oriented hierarchies. This is a permanent language design decision ratified on 2026-04-07. Polymorphism and data grouping are achieved through **Protocol-Oriented `odu` structures**, **structural subtyping** (Map shape checking), and **Domain Protocols**.
 
 ### 9.1 Data Grouping (Maps)
 
-In place of classes, data is grouped in Map literals. Methods are functions that take a Map as their first argument by convention.
+Instead of classical inheritance, data is encapsulated using `odu` blocks which define capabilities. Methods are functions that take a Map as their first argument by convention.
 
 ```
 # Data definition
@@ -1357,7 +1359,7 @@ mu Ika from "std/ika";                 # import standard module alias
 ```
 fi ese helper(x) { ... }         # export a function
 fi ayanfe MAX = 100;             # export a constant
-fi odu Circle { ... }            # export a class
+fi odu Circle { ... }            # export an odu structure
 ```
 
 Everything not marked `fi` is private to the module.
@@ -1379,7 +1381,12 @@ daro ese fetch(url) {
 }
 ```
 
-An `async` function returns a `Future`. `reti` inside an async function suspends until the future resolves.
+An `async` function (declared with `daro`) returns a `Future`. Awaiting a future (via `reti`) suspends execution until the future resolves.
+
+#### 15.1.1 Async Safety Gates (H3)
+To prevent data races across asynchronous yield boundaries, the Babalawo static analyzer enforces a strict safety gate:
+- **No leak of mutable borrows across await points**: A program **MUST NOT** perform a `reti` (await) operation while any active mutable borrow (e.g., `TypeHint::RefMut`) exists in the local lexical scope.
+- If a mutable reference is in scope when an `Expression::Await` is traversed, the compiler **MUST** reject the build with a compile-time `MUTABLE_BORROW_ACROSS_DARO` error.
 
 ### 15.2 Cooperative Yield — `jowo`
 
@@ -1392,6 +1399,23 @@ In the **hosted tier**: `jowo` is a scheduler hint. The runtime may sleep the cu
 In the **embedded tier**: `jowo` is a hardware sleep. The MCU enters a low-power state for the given duration.
 
 The transpiler **MUST** emit `std::thread::sleep(Duration::from_micros(N))` for `jowo N` in hosted Rust output.
+
+### 15.3 Parallel Loop Iteration — `Iwori.yipo.ori` (H4)
+
+```
+// Iterate in parallel over a list with a closure
+Iwori.yipo.ori(items, |item| {
+  // Parallel body
+});
+```
+
+High-performance parallel iteration is implemented via the standard library call `Iwori.yipo.ori`. When compiled, the compiler intercepts calls to `Iwori.yipo.ori` and emits a dedicated `ParallelFor` bytecode instruction, bypassing standard runtime dynamic FFI dispatch.
+
+#### 15.3.1 Parallel Isolation Model
+- **Worker Isolation**: The virtual machine executes the iteration closure in parallel using a thread-pool managed by `rayon`.
+- **Zero Shared Mutable State**: Each worker thread receives a lightweight clone of the `IfaVM` execution stack. Global states are shared read-only.
+- **Mutation Safety Gate**: The Babalawo static analyzer tracks `in_parallel_body` flags during AST checking. A parallel closure **MUST NOT** assign to or mutate any variable defined in an outer lexical scope. 
+- If an assignment (`Assignment` statement) targets a variable declared outside the parallel closure's block, the compiler **MUST** reject execution with a `PARALLEL_MUTATION` error. All mutable variables used inside a parallel body must be declared locally within that body.
 
 ---
 
@@ -1415,7 +1439,7 @@ The embedded runtime (`ifa-embedded`) is a restricted Tier 1 implementation for 
 
 | Feature | Restriction |
 |---------|-------------|
-| Classes (odu) | Not available — no heap, no vtable |
+| Odu structures | Not available — no heap allocation |
 | Heap-allocated List / Map | Not available — static arrays only |
 | String concatenation (allocating) | Not available |
 | File I/O (Odi domain) | Not available — no filesystem |
@@ -1529,6 +1553,7 @@ Float constant pool:
 | `CallOdu` | 0x52 | `u8` domain byte, `u16` string pool idx, `u8` arg count | arg... → result | Call standard domain method |
 | `Return` | 0x53 | — | val → | Return from function, restore frame |
 | `TailCall` | 0x54 | `u8` arg count | fn arg... → (reuses frame) | Replace current frame — no stack growth. Only valid for TCO-eligible calls. |
+| `ParallelFor` | 0x5C | — | list closure → list | High-performance parallel loop execution (H4) |
 | `MakeList` | 0x60 | `u16` element count | val... → List | Collect N stack values into a List |
 | `MakeMap` | 0x61 | `u16` pair count | k v... → Map | Collect N key-value pairs into a Map |
 | `GetField` | 0x62 | `u16` string pool idx | obj → val | Get field by name |
@@ -1682,7 +1707,7 @@ This table defines the current implementation status across all three runtimes. 
 | Anonymous functions / lambdas| N | N | N | N |
 | Closures / upvalue capture | Y | Y | N | N |
 | Recursion | Y | Y | Y | N |
-| Classes and methods | **REMOVED** | **REMOVED** | **REMOVED** | **REMOVED** |
+| Protocol-oriented Odu | Y | P | P | N |
 | Inheritance | **REMOVED** | **REMOVED** | **REMOVED** | **REMOVED** |
 | `ara` / self | **REMOVED** | **REMOVED** | **REMOVED** | **REMOVED** |
 | List literals | Y | Y | Y | N |
@@ -1838,6 +1863,8 @@ After both passes: unused variable warnings, unclosed resource errors from the �
 | Capability undeclared | `CAPABILITY_UNDECLARED` | Warning | Domain call uses capability not in `ifa.toml [capabilities]` |
 | Dynamic network target | `DYNAMIC_NETWORK` | Warning | `Otura` call with dynamic URL — inferred `Network { domains: ["*"] }`. Declare explicitly. |
 | Dynamic env key | `DYNAMIC_ENV` | Warning | `Ogbe.ayika()` with dynamic key — inferred `Environment { keys: ["*"] }`. Declare explicitly. |
+| Mutable borrow across daro | `MUTABLE_BORROW_ACROSS_DARO` | Error | Exclusive mutable borrow held across an await boundary (H3) |
+| Parallel mutation | `PARALLEL_MUTATION` | Error | Mutation of a captured variable within a parallel execution body (H4) |
 
 **Warning deduplication:** The same warning code at the same source location is emitted at most once per Babalawo pass. If the same warning code fires at ten different locations, all ten are shown. If it fires at the same location twice (e.g., inside a loop body that is analyzed twice due to branching), only the first occurrence is shown. Implementations **MUST NOT** suppress distinct-location warnings of the same code.
 
@@ -2051,12 +2078,12 @@ The `#freeze` modifier produces a thread-safe binding. The value is converted to
 
 ### 25.3 The Global Àjọṣe Registry `[DEFINED]`
 
-The global Àjọṣe registry is the runtime data structure that holds all active subscriptions and dispatches updates when sources change. It is **part of the language runtime** (`ifa-core`), not a user library.
+The global Àjọṣe registry is the runtime data structure that holds all active subscriptions and dispatches updates when sources change. It is **part of the language runtime** (`ifa-vm`), not a user library.
 
 #### 25.3.1 Registry Structure
 
 ```rust
-// In ifa-core — the canonical Àjọṣe runtime
+// In ifa-vm — the canonical Àjọṣe runtime
 pub struct AjoseRegistry {
     // All active subscriptions, keyed by source object ID + field name
     subscriptions: Arc<Mutex<HashMap<SubscriptionKey, Vec<Callback>>>>,
@@ -3075,14 +3102,14 @@ Quick reference for the complete Babalawo rule set, indexed by Odù domain.
 |-----|-------|---------------------|
 | Ogbè | The Light | `UNDEFINED_VARIABLE`, `UNINITIALIZED`, `NULL_REFERENCE` |
 | Ọ̀yẹ̀kú | The Darkness | `UNCLOSED_RESOURCE`, `ORPHAN_PROCESS`, `INCOMPLETE_SHUTDOWN` |
-| Ìwòrì | The Mirror | `INFINITE_LOOP`, `ITERATOR_EXHAUSTED`, `LOOP_INVARIANT_VIOLATED` |
+| Ìwòrì | The Mirror | `INFINITE_LOOP`, `ITERATOR_EXHAUSTED`, `LOOP_INVARIANT_VIOLATED`, `PARALLEL_MUTATION` |
 | Òdí | The Vessel | `FILE_NOT_FOUND`, `FILE_NOT_CLOSED`, `PERMISSION_DENIED`, `PRIVATE_ACCESS` |
 | Ìrosù | The Speaker | `FORMAT_ERROR`, `OUTPUT_OVERFLOW` |
 | Ọ̀wọ́nrín | The Chaotic | `SEED_ERROR` |
 | Ọ̀bàrà | The King | `OVERFLOW`, `ARITHMETIC_ERROR` |
 | Ọ̀kànràn | The Troublemaker | `UNHANDLED_EXCEPTION`, `ASSERTION_FAILED`, `UNUSED_VARIABLE` |
 | Ògúndá | The Cutter | `INDEX_OUT_OF_BOUNDS`, `ARRAY_EMPTY` |
-| Ọ̀sá | The Wind | `UNREACHABLE_CODE`, `INVALID_JUMP`, `MISSING_RETURN` |
+| Ọ̀sá | The Wind | `UNREACHABLE_CODE`, `INVALID_JUMP`, `MISSING_RETURN`, `MUTABLE_BORROW_ACROSS_DARO` |
 | Ìká | The Constrictor | `INVALID_ENCODING`, `STRING_OVERFLOW` |
 | Òtúúrúpọ̀n | The Bearer | `UNDERFLOW`, `DIVISION_BY_ZERO` |
 | Òtúrá | The Messenger | `CONNECTION_REFUSED`, `TIMEOUT`, `NETWORK_UNREACHABLE` |
@@ -3357,7 +3384,7 @@ Output is written to `./target/doc/` by default, mirroring the `oja doc` convent
 
 ### 38.2 Doc Comment Syntax
 
-Doc comments use triple-hash `###` for items (functions, classes, constants) and `##` for module-level documentation:
+Doc comments use triple-hash `###` for items (functions, odu structures, constants) and `##` for module-level documentation:
 
 ```
 ## The shapes module provides geometric calculations.
@@ -4175,7 +4202,7 @@ daro ese main() {
   ayanmo model = reti Model.load("./models/classifier.onnx");
   ayanmo input = Tensor.from_list([0.5, 0.3], [1, 2]);
   ayanmo output = reti model.forward(input);
-  Irosu.fo($"Class probabilities: {output.to_list()}");
+  Irosu.fo($"Category probabilities: {output.to_list()}");
 }
 ```
 
@@ -4399,7 +4426,7 @@ The `~` operator is **only available inside `ailewu`** blocks for use in registe
 ailewu {
   ayanmo mask: u32 = ~0x00000020u32;   # 0xFFFFFFDF — clears bit 5
 }
-ko otito    # logical NOT, outside ailewu — evaluates to eke
+kii otito    # logical NOT — evaluates to iro
 ```
 
 ---
@@ -4653,7 +4680,7 @@ The globals table (`HashMap<String, IfaValue>`) is allocated before the first RE
 
 **Constraints:**
 - Functions defined in one input **MUST** be stored in the function registry and remain available for subsequent inputs.
-- Classes defined in one input **MUST** remain in the class registry.
+- Odu structures defined in one input **MUST** remain in the registry.
 - The Babalawo runs on each input individually, with the accumulated globals visible as externally-defined names.
 
 **Approach B — Long-running top-level coroutine:**
@@ -4930,7 +4957,7 @@ The RAM snapshot shows values as hex bytes in an 8-byte wide display. Stack valu
 
 ### 45.7 The Babalawo Narrations — Complete Table
 
-Every opcode class has a canonical one-sentence narration that appears in the frame footer across all four acts.
+Every opcode category has a canonical one-sentence narration that appears in the frame footer across all four acts.
 
 | Opcode class | Narration |
 |---|---|
@@ -5086,5 +5113,5 @@ The renderer is a pure function: it takes the captured trace and writes movie fr
 ---
 
 *IfáLang Language Runtime Specification v0.2 — March 2026*
-*Authority: this document. Implementation: ifa-core, ifa-std, ifa-embedded, ifa-babalawo, ifa-sandbox, ifa-wasm, ifa-oja, ifa-dap, ifa-deploy, ifa-lsp, ifa-fmt, ifa-docgen.*
+*Authority: this document. Implementation: ifa-vm, ifa-compiler, ifa-parser, ifa-interpreter, ifa-transpiler, ifa-bytecode, ifa-types, ifa-std, ifa-embedded, ifa-babalawo, ifa-sandbox, ifa-wasm, ifa-oja, ifa-dap, ifa-deploy, ifa-lsp, ifa-fmt, ifa-docgen.*
 *IfáLang is not trying to be Python with Yoruba keywords. It is trying to make Ifá philosophy computable.*

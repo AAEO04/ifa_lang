@@ -1,0 +1,85 @@
+[package]
+name = "ifa-vm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Core VM and runtime for Ifá-Lang"
+
+[lib]
+name = "ifa_vm"
+path = "src/lib.rs"
+
+[features]
+default = ["native", "parallel", "sysinfo"]
+native = ["ifa-sandbox"]
+std = []
+network = ["ureq"]
+audio = ["rodio"]
+parallel = ["rayon"]
+sysinfo = ["dep:sysinfo"]
+gpu = ["dep:wgpu"]
+persistence = []
+compiler = ["dep:ifa-parser", "dep:ifa-compiler", "dep:ifa-transpiler"]
+
+[dependencies]
+
+# Shared types (IfaValue, IfaError, OduDomain)
+ifa-types = { path = "../ifa-types", features = ["vm"] }
+ifa-bytecode = { path = "../ifa-bytecode" }
+ifa-parser = { path = "../ifa-parser", optional = true }
+ifa-compiler = { path = "../ifa-compiler", optional = true }
+ifa-transpiler = { path = "../ifa-transpiler", optional = true }
+
+# For CPU thread count (lightweight, no cycle)
+num_cpus = "1.16"
+
+# Sandbox is only for native builds (not WASM)
+ifa-sandbox = { path = "../ifa-sandbox", optional = true }
+
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+# Error handling
+thiserror.workspace = true
+eyre.workspace = true
+
+# Serialization (for bytecode)
+serde = { workspace = true, features = ["derive"] }
+bincode.workspace = true
+
+# Data structures
+indexmap = "2.2"
+serde_json = "1.0"
+
+
+# Crypto for handlers (lightweight)
+sha2 = "0.10"
+getrandom = { version = "0.2", features = ["std", "js"] }
+base64 = "0.22"
+uuid = { workspace = true, optional = false }
+
+# Network for handlers (optional, blocking)
+ureq = { version = "3", optional = true }
+
+# Parallel operations (used internally on primitives)
+rayon = { workspace = true, optional = true }
+
+# Audio for ohun handler (optional)
+rodio = { version = "0.17", optional = true }
+
+# System info
+sysinfo = { workspace = true, optional = true }
+
+# GPU (optional, for GpuHandler data types)
+wgpu = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest = "1.4"
+criterion = { version = "0.5", features = ["html_reports"] }
+ifa-compiler = { path = "../ifa-compiler" }
+ifa-parser = { path = "../ifa-parser" }
+ifa-std = { path = "../ifa-std", features = ["full", "crypto"] }
+
+[[bench]]
+name = "opcode_dispatch"
+harness = false

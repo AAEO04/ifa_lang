@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>VM Internals — Ifá-Lang Dev Docs</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 1rem 0; }
+        .field-table th { text-align: left; color: var(--green); border-bottom: 1px solid var(--border); padding: 0.4rem 0.6rem; }
+        .field-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .field-table td:first-child { color: var(--amber); font-weight: 500; }
+        .field-table td:nth-child(3) { color: var(--dim); font-size: 0.75rem; }
+    </style>
+</head>
+
+<body>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">vm.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> VM Internals</h1>
+            <p class="subtitle">IfaVM execution model — source-verified from <code>crates/ifa-vm/src/</code></p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified.</strong> Every fact on this page was extracted from
+            <code>crates/ifa-vm/src/vm.rs</code>,
+            <code>crates/ifa-vm/src/vm_iroke.rs</code>,
+            <code>crates/ifa-vm/src/vm_ikin.rs</code>,
+            <code>crates/ifa-vm/src/native.rs</code>,
+            <code>crates/ifa-vm/src/opon.rs</code>,
+            <code>crates/ifa-vm/src/actor.rs</code>, and
+            <code>crates/ifa-bytecode/src/lib.rs</code>.
+        </div>
+
+        <h2 class="section-header">1. Main Execution Loop</h2>
+
+        <p><code>IfaVM::execute()</code> (<code>vm.rs:525</code>) is the entry point.
+        It:</p>
+        <ol>
+            <li>Resets IP and halted flag</li>
+            <li>Loads the Ikin constant pool from bytecode (<code>vm.rs:533</code>)</li>
+            <li>Sets stack/frame capacity limits from <code>OponSize</code></li>
+            <li>Calls <code>resume_execution()</code></li>
+        </ol>
+
+        <p><code>resume_execution()</code> (<code>vm.rs:868</code>) is the main loop:</p>
+
+        <div class="code-block">
+<pre>while !self.ctx.halted && ip &lt; bytecode.code.len() {
+    self.ctx.ip = ip;
+    if let Err(e) = self.step(bytecode) {
+        if matches!(e, IfaError::Yielded) {
+            return Err(e);  // suspend for async
+        }
+        if self.attempt_recovery(&e)? {  // Shield of Ọkànràn
+            ip = self.ctx.ip;
+            continue;
+        }
+        return Err(e);
+    }
+    ip = self.ctx.ip;
+}
+Ok(self.ctx.stack.pop().unwrap_or(IfaValue::null()))</pre></div>
+
+        <table class="field-table">
+            <tr><th>Component</th><th>Source</th><th>Role</th></tr>
+            <tr><td><code>ExecutionContext</code></td><td><code>vm.rs:198</code></td><td>Stack, frames, IP, halted, recovery frames, loop stack</td></tr>
+            <tr><td><code>GlobalState</code></td><td><code>vm.rs:211</code></td><td>Global variable names + values (Vec-indexed)</td></tr>
+            <tr><td><code>CallFrame</code></td><td><code>vm.rs:28</code></td><td>return_addr, base_ptr, local_count, closure_env, async_return</td></tr>
+            <tr><td><code>Opon</code></td><td><code>opon.rs</code></td><td>Memory protection / directive enforcement</td></tr>
+            <tr><td><code>Ikin</code></td><td><code>vm_ikin.rs</code></td><td>Constant pool: interned <code>Arc&lt;str&gt;</code> by index</td></tr>
+        </table>
+
+        <h2 class="section-header">2. Opcode Dispatch (Irokè)</h2>
+
+        <p><code>step()</code> (<code>vm.rs:1152</code>) uses a <strong>single
+        <code>match opcode { ... }</code></strong> — not a handler chain. Each opcode variant
+        is dispatched directly in one level of pattern matching.</p>
+
+        <p><code>tap()</code> (<code>vm_iroke.rs:17</code>) handles fetch + decode:</p>
+
+        <div class="code-block">
+<pre>#[inline(always)]
+pub fn tap(vm: &mut IfaVM, bytecode: &Bytecode) -> IfaResult&lt;OpCode&gt; {
+    // Fuel check — every 1024 ticks (bitmask: ticks & 1023 == 0)
+    if vm.ticks & 1023 == 0 {
+        if let Some(ref mut remaining) = vm.fuel {
+            if *remaining == 0 {
+                return Err("fuel exhausted");
+            }
+            *remaining = remaining.saturating_sub(1024);
+        }
+    }
+    vm.ticks = vm.ticks.wrapping_add(1);
+
+    // Bounds check, fetch byte, decode via OpCode::from_u8()
+    let byte = bytecode.code[vm.ctx.ip];
+    vm.ctx.ip += 1;
+    OpCode::from_u8(byte).ok_or_else(|| ...)
+}</pre></div>
+
+        <p><strong>Key dispatch properties:</strong></p>
+        <ul>
+            <li>Fuel decremented in chunks of 1024 — amortized, not per-opcode</li>
+            <li>Bounds-check on instruction fetch (safe for interpreter, would omit in JIT)</li>
+            <li>~80 opcode variants defined in <code>ifa-bytecode/src/lib.rs:42</code></li>
+            <li>Each variant has: mnemonic, operand_bytes, stack_effect (defined inline)</li>
+        </ul>
+
+        <h2 class="section-header">3. Opcode Categories</h2>
+
+        <p>From <code>ifa-bytecode/src/lib.rs</code>, the opcodes break into functional groups:</p>
+
+        <table class="field-table">
+            <tr><th>Category</th><th>Examples</th><th>Notes</th></tr>
+            <tr><td>Push constants</td><td><code>PushNull, PushTrue, PushInt, PushFloat, PushStr</code></td><td>Immediate values or Ikin-indexed strings</td></tr>
+            <tr><td>Stack ops</td><td><code>Pop, Dup, Swap, Rot</code></td><td>Direct stack manipulation</td></tr>
+            <tr><td>Load/Store</td><td><code>LoadLocal, StoreLocal, LoadGlobal, StoreGlobal, LoadUpvalue, StoreUpvalue</code></td><td>Local via base_ptr + offset; Global via Vec-index</td></tr>
+            <tr><td>Jumps</td><td><code>Jump, JumpIfFalse, JumpIfTrue</code></td><td>Conditional + unconditional; JumpIfFalse tracks loop stack</td></tr>
+            <tr><td>Functions</td><td><code>PushFn, MakeClosure, Call, TailCall, Return</code></td><td>Frame push/pop; TailCall reuses frame</td></tr>
+            <tr><td>Arithmetic</td><td><code>Add, Sub, Mul, Div, Pow, Mod, Neg</code></td><td>NaN-boxing fast path via <code>to_nan_boxed_primitive()</code></td></tr>
+            <tr><td>Collections</td><td><code>ListGet, ListSet, MapGet, MapSet, Push, Pop</code></td><td>List/Map element access</td></tr>
+            <tr><td>Odu calls</td><td><code>CallOdu, CallOduFast</code></td><td><code>CallOduFast</code> = static dispatch by method ID (zero string overhead)</td></tr>
+            <tr><td>Async</td><td><code>Spawn, Await, Yield</code></td><td>Cooperative multitasking</td></tr>
+            <tr><td>Import</td><td><code>Import</code> (<code>0x83</code>)</td><td>Module loading via <code>OduRegistry::import()</code></td></tr>
+            <tr><td>Exception</td><td><code>Throw, CatchSetup, FinallyEnd</code></td><td>Error recovery via RecoveryFrame stack</td></tr>
+        </table>
+
+        <h2 class="section-header">4. Stack &amp; Call Frames</h2>
+
+        <p>The stack is a flat <code>Vec&lt;IfaValue&gt;</code> in <code>ExecutionContext</code>
+        (<code>vm.rs:199</code>). Locals are addressed by <code>base_ptr + offset</code> from the
+        current <code>CallFrame</code>.</p>
+
+        <p><strong><code>CallFrame</code> fields</strong> (<code>vm.rs:28</code>):</p>
+        <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Purpose</th></tr>
+            <tr><td><code>return_addr</code></td><td><code>usize</code></td><td>IP to resume after call returns</td></tr>
+            <tr><td><code>base_ptr</code></td><td><code>usize</code></td><td>Stack index where this frame's locals begin</td></tr>
+            <tr><td><code>local_count</code></td><td><code>usize</code></td><td>Number of local variables in this frame</td></tr>
+            <tr><td><code>closure_env</code></td><td><code>Option&lt;Arc&lt;Vec&lt;UpvalueCell&gt;&gt;&gt;</code></td><td>Captured upvalues if this is a closure call</td></tr>
+            <tr><td><code>async_return</code></td><td><code>bool</code></td><td>True if the return value should be wrapped in a Future</td></tr>
+        </table>
+
+        <p><strong>Limits:</strong><br>
+        &nbsp;&nbsp;Default: stack = 4096, frames = 512 (<code>vm.rs:338-339</code>)<br>
+        &nbsp;&nbsp;Sandbox: stack = 1024, frames = 128 (<code>vm.rs:372-373</code>)</p>
+
+        <h2 class="section-header">5. Function Calls</h2>
+
+        <p><strong>Regular calls</strong> (<code>dispatch_call()</code> at <code>vm.rs:1429</code>):
+        pushes a new <code>CallFrame</code>, copies arguments onto stack, sets IP to callee.</p>
+
+        <p><strong>Tail calls</strong> (<code>dispatch_tail_call()</code> at <code>vm.rs:2363</code>):
+        <strong>reuses the current call frame</strong> instead of pushing a new one:</p>
+        <ol>
+            <li>Pop function + arguments from stack</li>
+            <li>Truncate stack to <code>frame.base_ptr</code></li>
+            <li>Update existing frame's <code>closure_env</code> and <code>local_count</code></li>
+            <li>Push arguments onto truncated stack</li>
+            <li>Set IP to callee's <code>start_ip</code> — frame count unchanged</li>
+        </ol>
+
+        <p>Compiler emits <code>TailCall</code> for <code>return f(x)</code> patterns
+        (<code>ifa-compiler/src/lib.rs:592</code>).</p>
+
+        <p><strong>Async tail calls</strong>: spawn a task and pop the current frame
+        (<code>vm.rs:2397-2409</code>), wrapping the result in a Future.</p>
+
+        <h2 class="section-header">6. Async Task System</h2>
+
+        <p><strong>Cooperative, single-threaded.</strong> No preemption.</p>
+
+        <table class="field-table">
+            <tr><th>Function</th><th>Line</th><th>Role</th></tr>
+            <tr><td><code>spawn_task()</code></td><td><code>vm.rs:1064</code></td><td>Creates <code>Task</code> with fresh ExecutionContext, pushes to <code>task_queue</code> (VecDeque). Returns a <code>Future</code> value.</td></tr>
+            <tr><td><code>run_task_slice()</code></td><td><code>vm.rs:948</code></td><td>Swaps ExecutionContext with task, runs <code>step()</code> in a loop until frames unwind to <code>base_depth</code> (completion) or <code>Yield</code> (suspend).</td></tr>
+            <tr><td><code>poll_one_task()</code></td><td><code>vm.rs:982</code></td><td>Pops front of queue, runs one slice. If completed, sets <code>FutureState::Ready</code>. If suspended, pushes back to queue.</td></tr>
+            <tr><td><code>await_future()</code></td><td><code>vm.rs:1000</code></td><td>Busy-polls future: checks state, calls <code>poll_one_task()</code> if pending.</td></tr>
+        </table>
+
+        <p><strong><code>OpCode::Yield</code></strong> returns <code>Err(IfaError::Yielded)</code>,
+        which propagates up to <code>run_task_slice()</code> and causes the task to be re-queued.</p>
+
+        <h2 class="section-header">7. Actors</h2>
+
+        <p><strong>True OS-thread parallelism</strong> (not cooperative).</p>
+        <ul>
+            <li><code>actor.rs</code> — spawns isolated VMs on separate OS threads</li>
+            <li>Communication via bounded channels: <code>SyncSender&lt;ActorMsg&gt;</code> (capacity 64)</li>
+            <li><code>ActorTable</code> is <code>Arc</code>-shared across parent VM + all actor threads</li>
+            <li>Created through <code>VmContext::spawn_actor()</code> (<code>native.rs:27</code>)</li>
+            <li>Messaging via <code>VmContext::actor_send()</code> (<code>native.rs:33</code>) — non-blocking, errors on full inbox</li>
+        </ul>
+
+        <h2 class="section-header">8. Odu Domain Dispatch</h2>
+
+        <p>The <code>OduRegistry</code> trait (<code>native.rs:39</code>) bridges VM opcodes
+        to standard library domain implementations:</p>
+
+        <ul>
+            <li><strong><code>call(domain_id, method_name, args, ctx)</code></strong> — string-based dispatch, called by <code>CallOdu</code></li>
+            <li><strong><code>call_fast(domain_id, method_id, args, ctx)</code></strong> (<code>native.rs:63</code>) — integer-based dispatch, called by <code>CallOduFast</code>. Encodes domain + method index in a u16: high byte = domain_id, low byte = method index. <strong>Zero string overhead</strong> — no method name lookup.</li>
+            <li><strong><code>import(path)</code></strong> (<code>native.rs:88</code>) — module loading for <code>OpCode::Import</code></li>
+        </ul>
+
+        <p>The concrete registry is provided by <code>ifa-std</code>'s <code>vm_registry</code>
+        module, which wires each of the 16 Odù domains into the VM via integer dispatch IDs.</p>
+
+        <h2 class="section-header">9. Fuel &amp; Sandboxing</h2>
+
+        <p><strong>Fuel</strong> (<code>vm.rs:161</code>): <code>fuel: Option&lt;u64&gt;</code>.
+        Checked every 1024 instructions in <code>tap()</code>. Consumed in chunks of 1024.
+        Sandbox mode (<code>vm.rs:370-376</code>) sets <code>fuel = 4096</code> (4 chunks before exhaustion).</p>
+
+        <p><strong>Capability enforcement</strong>: not per-instruction in the VM. The
+        <code>CapabilitySet</code> from <code>ifa-sandbox</code> is checked at the
+        domain handler level (per-call), not in the opcode dispatch loop.</p>
+
+        <h2 class="section-header">10. Ikin Constant Pool</h2>
+
+        <p><code>vm_ikin.rs</code> — the runtime constant pool.</p>
+        <ul>
+            <li><code>Ikin</code> stores strings as <code>Arc&lt;str&gt;</code> in a flat Vec</li>
+            <li>O(1) access by index: <code>consult_string(idx) -> Option&lt;Arc&lt;str&gt;&gt;</code></li>
+            <li>String length cached via <code>Arc</code> pointer for O(1) <code>.len()</code></li>
+            <li>Loaded from bytecode at <code>execute()</code> time (<code>vm.rs:533</code>)</li>
+        </ul>
+
+        <h2 class="section-header">11. Error Recovery (Shield of Ọkànràn)</h2>
+
+        <p><code>attempt_recovery()</code> (<code>vm.rs:1082</code>) handles runtime errors:</p>
+        <ol>
+            <li>Pops a <code>RecoveryFrame</code> from <code>ctx.recovery_stack</code></li>
+            <li>Restores stack and frame depth to saved snapshots</li>
+            <li>Pushes the error value as the catch binding</li>
+            <li>Sets IP to the catch handler</li>
+            <li>If a finally block exists, stores a <code>FinallyResumption</code> for post-catch execution</li>
+        </ol>
+
+        <footer>
+            <p><a href="index.html">← Back to Development Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

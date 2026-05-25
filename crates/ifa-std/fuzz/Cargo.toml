@@ -1,0 +1,22 @@
+[package]
+name = "ifa-std-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.ifa-std]
+path = ".."
+features = ["native_ffi"]
+
+[[bin]]
+name = "ffi_args"
+path = "fuzz_targets/ffi_args.rs"
+test = false
+doc = false
+bench = false

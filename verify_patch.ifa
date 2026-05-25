@@ -1,10 +1,82 @@
-// Hardening Verification Test
+Viewed unified_implementation_plan.md:321-337
+Listed directory src
+Listed directory src
+Viewed lib.rs:1-31
+Listed directory src
 
-ayanmo s1 = "Hello";
-ayanmo s2 = "World";
+Continuing with the missing components and architectural gaps within the **`crates/`** directory:
 
-// 1. Verify Compiler uses Concat/ToString for Interpolation
-ayanmo interp = $"Combine: {s1} {s2}";
-Irosu.fo(interp);
+### 8. `ifa-types` & `ifa-bytecode` (Data Invariants)
+*   **Bytecode Round-Trip Compatibility**: There is an active blocker regarding legacy bytecode string-pool compatibility. The way strings are interned and serialized needs a cleanup to ensure different VM versions can consistently reload snapshots (active task in Stream E5).
+*   **Layout Assertions**: `IfaValue` layout documentation is currently mismatched with the actual memory implementation, which could lead to alignment issues on non-x86 platforms.
 
-Irosu.fo("Verification Complete.");
+### 9. `ifa-embedded` (Low-Level Runtime)
+*   **Flat-Buffer Transition**: As noted in the Roadmap's "Linus Verdict," this crate is still using `Rc<RefCell<IfaValue>>` boxed garbage for its heap logic. It is missing the planned transition to a **Flat-Buffer memory model** (linear array of bytes with integer index pointers) to improve cache locality on microcontrollers like ESP32/STM32.
+*   **Micro-VM Dispatch**: Missing the high-performance integer-based jump table dispatch specifically optimized for raw I/O (SPI/I2C streams).
+
+### 10. `ifa-sandbox` (The OmniBox)
+*   **OmniBox Integration**: While the crate defines the `OmniBox` structure, the actual WASM-based isolation logic is incomplete. It currently lacks the rigid resource monitoring (CPU/Memory caps) promised in `monitor.rs`.
+*   **Secure Library Verification**: Part of **BUG-021**; the sandbox doesn't yet cryptographically verify native libraries before loading them into the environment.
+
+### 11. `ifa-wasm` (Browser/Web Support)
+*   **Runtime Completeness**: This crate is currently a minimal shell. It is missing the full logic to map Ifá-Lang’s Odù domains to Web APIs (e.g., mapping `Òtúrá` to `fetch` or `WebSockets`).
+
+### 12. `ifa-transpiler` (Native Output)
+*   **Semantic Parity**: The transpiler sometimes generates Rust code that deviates slightly from the VM's bytecode behavior (e.g., edge cases in string interpolation). A **Symmetric Parity Test Suite** (Stream A7) is missing to ensure `ifa run` and `ifa runb` always yield identical results.
+
+### 13. `ifa-installer-core` & `gui` (Distribution)
+*   **Windows PATH Integration**: The installer does not yet reliably add the `ifa` command to the system PATH, and it is missing the mandatory "verification gate" to ensure the environment is correctly set up after installation.
+
+### 14. Deferred Stacks (Advanced Domains)
+As seen in the implementation plan, three major specialized domains are explicitly **DEFERRED**:
+*   **`stacks/ml.rs` (Domain 24)**: Missing the VM callback mechanism required for training loops.
+*   **`stacks/gamedev.rs` (Domain 25)**: Missing the cooperative scheduler hardening.
+*   **`stacks/iot.rs` (Domain 26)**: Missing the platform-dependent dispatch for ARM-based GPIO access.   
+
+ GPU (gpu.rs): Unified Memory Architecture (UMA)
+Currently, data must be explicitly "Sent" to the GPU and "Read back." On modern systems (Apple Silicon, APUs), this is a waste of cycles.
+
+Improvement: Implement a Unified Bridge. If the hardware supports it, allow the GPU and CPU to share the same physical memory page.
+This would enable Zero-Copy GPU Dispatch, where you pass a List to a GPU shader and it operates on the same memory without a memcpy over the PCIe bus.
+Improvement: Shader Hot-Patching. Integrate the compiler into the gpu domain so that WGSL shaders can be recompiled and swapped in the VM live, without restarting the program.
+3. CPU (cpu.rs): Priority-Aware Work Stealing
+The current TaskGraph is a simple DAG executor. It doesn't know the difference between a "Math task" and a "UI task."
+
+Improvement: Latency-Sensitive Scheduling. Implement a work-stealing scheduler that prioritizes tasks based on their Àjọṣe (Reactivity) level. If a task is blocking a Signal that the user is waiting for, it should jump to the front of the CPU queue.
+Improvement: Hardware SIMD Abstraction. Expose a "Vector" type in the cpu domain that automatically lowers to AVX-512 or ARM NEON instructions, giving Ifá-Lang C-like performance for numerical loops without requiring manual assembly.
+4. The "Flat-Buffer" Embedded Goal
+As noted in the Linus Verdict, the embedded and sandbox runtimes are still "pointer chasing" too much.
+
+Improvement: Contiguous Opon Layout. Change how IfaValue is stored in the infra layers. Instead of scattered Rc<RefCell> objects, use a Tightly Packed Array (a "tape").
+This improves Cache Locality. Moving from one element to the next should be a simple memory increment, not a pointer jump. This is critical for the iot.rs and embedded performance targets.
+5. Capability-Integrated Observability
+Improvement: Infra-Tracing. Because the language owns the infra domains, we can bake "Tracing" into the types.
+Imagine a command like ifa profile my_script.ifa that shows you exactly how many microseconds were spent in a storage.set call versus a gpu.matmul call, with zero extra code from the developer.
+The current storage.rs uses an append-only log with a HashMap index. This is fine for small tools, but has two major flaws: the index must fit in RAM, and "Key-After-Key" scans are slow.
+
+Improvement: Transition to an LSM-Tree (Log-Structured Merge-Tree).
+Implement SSTables (Sorted String Tables) and Bloom Filters.
+This allows the language to handle datasets much larger than the available RAM while maintaining O(1) lookups.
+Improvement: Zero-Copy Deserialization. Replace bincode with a library like rkyv. This allows storage.get to return a reference to data directly in the memory-mapped file, bypassing the CPU cost of "unpacking" the object.
+
+1. Layer 1: The Ọ̀fún Capability System (Software)
+Every call to a domain like Òdí (Files) or Òtúrá (Network) currently goes through a check_read or check_write function.
+
+Is it a good idea to disable? Generally, no.
+The "Ifá" Reason: The Ọ̀fún system isn't just about security; it's about Determinism. Because every resource is tracked by a ResourceToken, the compiler can guarantee that your code is "Safe" and "Orderly." If you turn it off, you break the mathematical contract of the language.
+The Performance Reason: The overhead of checking a bitmask (a Capability) is nanoseconds. Disabling it provides almost zero performance gain while introducing massive security debt.
+2. Layer 2: The Opon/Sandbox Runtime (Infrastructure)
+This is the ifa-sandbox crate which runs code inside a WASM container.
+
+Is it a good idea to disable? Yes, for specific use cases.
+The Use Case: If you are writing a high-performance native tool (like a compiler or a driver) that needs raw access to the hardware (kernel.rs), you would run it via the ifa-cli (Native Mode) rather than the ifa-sandbox (WASM Mode).
+The Risk: Once you leave the Sandbox, you are relying solely on the Ọ̀fún capability checks to keep you safe.
+The Recommended Path: "The Sovereign Grant"
+Rather than "turning off" security, Ifá-Lang follows the "Full Authority" model (similar to deno run --allow-all):
+
+Instead of disabling the code that checks for permissions, you simply grant a module Ofun::All.
+
+Why this is better:
+Code Integrity: The check_read calls still exist, so your code remains portable.
+Auditability: You can still see exactly where the code requested a resource, even if the request was automatically granted.
+No "Broken States": You don't have two versions of the standard library (one secure, one "unlocked").

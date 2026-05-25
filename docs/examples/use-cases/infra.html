@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Infrastructure Management - Ifá-Lang</title>
-    <meta name="description" content="Complete infrastructure management example using Ifá-Lang's infrastructure domains">
+    <meta name="description" content="System monitoring and parallel processing using Ifá-Lang's CPU and Sys domains">
     <link rel="stylesheet" href="../../js/common.css">
     <script src="../../js/nav.js" defer></script>
 </head>
+
 <body>
     <div id="nav-placeholder"></div>
     <div class="breadcrumbs">
@@ -16,396 +18,131 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">infra.ifa</span></div><div class="terminal-body">
         <header>
             <h1>Infrastructure Management</h1>
-            <p class="subtitle">Infrastructure Operations with Ifá-Lang</p>
+            <p class="subtitle">System monitoring and parallel processing with CPU Domain 18 and Sys Domain 29</p>
         </header>
+
         <div class="step">
             <h2>Overview</h2>
-            <p>Complete infrastructure management system using Ifá-Lang's infrastructure domains, including CPU monitoring, GPU operations, storage management, and hardware abstraction.</p>
+            <p>Infrastructure operations using Ifá-Lang's CPU domain (parallel map/reduce, buffer allocation) and Sys domain (core count, memory info, uptime).</p>
         </div>
+
         <div class="step">
-            <h2>Infrastructure Architecture</h2>
+            <h2>System Information</h2>
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">Infrastructure Manager</span>
+                    <span class="code-title">System Monitor</span>
                 </div>
-                <pre><code>// Infrastructure manager using Ifá-Lang infrastructure domains
-struct InfrastructureManager {
-    cpu_manager: CPUMonitor,
-    gpu_manager: GPUManager,
-    storage_manager: StorageManager,
-    kernel_interface: KernelInterface,
-    shader_manager: ShaderManager
+                <pre><code>// sys_info.ifa - Display system information
+
+ese show_system_info() {
+    Irosu.fo("=== System Information ===");
+    Irosu.fo("CPU cores: " + Sys.cores());
+    Irosu.fo("Total memory: " + Sys.mem_total() + " bytes");
+    Irosu.fo("Available memory: " + Sys.mem_available() + " bytes");
+    Irosu.fo("Uptime: " + Sys.uptime() + " seconds");
 }
 
-// CPU monitoring and management
-struct CPUMonitor {
-    cores: Vec<CPUCore>,
-    usage_tracker: CPUUsageTracker,
-    thermal_monitor: ThermalMonitor
+ese show_cpu_info() {
+    CPU.configure("info");
+    ayanmo threads = CPU.threads();
+    Irosu.fo("CPU threads: " + threads);
 }
 
-// GPU operations
-struct GPUManager {
-    devices: Vec<GPUDevice>,
-    compute_units: Vec<ComputeUnit>,
-    memory_manager: GPUMemoryManager
-}
-
-// Storage management
-struct StorageManager {
-    volumes: Vec<StorageVolume>,
-    filesystems: Vec<Filesystem>,
-    io_monitor: IOMonitor
-}</code></pre>
+// Usage
+show_system_info();
+show_cpu_info();</code></pre>
             </div>
         </div>
+
         <div class="step">
-            <h2>CPU Management</h2>
+            <h2>Parallel Data Processing</h2>
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">CPU Operations</span>
+                    <span class="code-title">Parallel Map & Reduce</span>
                 </div>
-                <pre><code>// Initialize CPU monitoring
-se init_cpu_monitoring() -> CPUMonitor {
-    gbiyanju {
-        ayanmo cpu_info = Ogbe.get_cpu_info();
-        
-        ayanmo mut cores = Vec::new();
-        fun i ninu 0..cpu_info.core_count {
-            cores.push(CPUCore {
-                id: i,
-                frequency: cpu_info.base_frequency,
-                usage: 0.0,
-                temperature: 0.0,
-                load_average: [0.0, 0.0, 0.0]
-            });
-        }
-        
-        Irosu.fo("CPU monitoring initialized for " + Obara.to_str(cpu_info.core_count) + " cores");
-        
-        CPUMonitor {
-            cores: cores,
-            usage_tracker: CPUUsageTracker::new(),
-            thermal_monitor: ThermalMonitor::new()
-        }
-    } gba (error) {
-        Irosu.kigbe("Failed to initialize CPU monitoring: " + error.message);
-        CPUMonitor::empty()
-    }
+                <pre><code>// parallel.ifa - Parallel data processing
+
+ese square_all(numbers) {
+    padap? CPU.par_map(numbers, "square");
 }
 
-// Monitor CPU usage
-se monitor_cpu_usage(cpu_monitor: CPUMonitor) -> CPUMonitor {
-    ayanmo mut updated_monitor = cpu_monitor;
-    
-    fun core ninu updated_monitor.cores.iter_mut() {
-        core.usage = Ogbe.get_core_usage(core.id);
-        core.temperature = Ogbe.get_core_temperature(core.id);
-        core.load_average = Ogbe.get_core_load_average(core.id);
-    }
-    
-    updated_monitor
+ese double_all(numbers) {
+    padap? CPU.par_map(numbers, "double");
 }
 
-// Optimize CPU performance
-se optimize_cpu_performance(cpu_monitor: CPUMonitor) {
-    ayanmo total_usage = cpu_monitor.cores.iter().map(|c| c.usage).sum::<f64>() / cpu_monitor.cores.length() as f64;
-    
-    if total_usage > 80.0 {
-        Irosu.fo("High CPU usage detected: " + Obara.format(total_usage, 1) + "%");
-        
-        // Apply performance optimizations
-        apply_cpu_optimizations();
-        
-        // Adjust CPU governor
-        Ogbe.set_cpu_governor("performance");
-    } else if total_usage < 20.0 {
-        // Switch to power saving
-        Ogbe.set_cpu_governor("powersave");
-    }
+ese sum_all(numbers) {
+    padap? CPU.par_reduce(numbers, "sum");
 }
 
-// Apply CPU optimizations
-se apply_cpu_optimizations() {
-    // Adjust process priorities
-    adjust_process_priorities();
-    
-    // Optimize CPU affinity
-    optimize_cpu_affinity();
-    
-    // Enable CPU frequency scaling
-    enable_frequency_scaling();
-    
-    Irosu.fo("CPU optimizations applied");
-}</code></pre>
+ese find_max(numbers) {
+    padap? CPU.par_reduce(numbers, "max");
+}
+
+// Usage
+ayanmo data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+ayanmo squares = square_all(data);
+Irosu.fo("Squares computed in parallel");
+
+ayanmo total = sum_all(data);
+Irosu.fo("Sum: " + total);
+
+ayanmo biggest = find_max(data);
+Irosu.fo("Max: " + biggest);</code></pre>
             </div>
         </div>
+
         <div class="step">
-            <h2>GPU Operations</h2>
+            <h2>Buffer Operations</h2>
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">GPU Management</span>
+                    <span class="code-title">Buffer Allocation & I/O</span>
                 </div>
-                <pre><code>// Initialize GPU manager
-se init_gpu_manager() -> GPUManager {
-    gbiyanju {
-        ayanmo gpu_devices = Ogbe.list_gpu_devices();
-        
-        ayanmo mut devices = Vec::new();
-        fun device_info ninu gpu_devices {
-            devices.push(GPUDevice {
-                id: device_info.id,
-                name: device_info.name,
-                memory_total: device_info.memory_total,
-                memory_used: device_info.memory_used,
-                utilization: 0.0,
-                temperature: 0.0,
-                power_usage: 0.0
-            });
-        }
-        
-        Irosu.fo("GPU manager initialized with " + Obara.to_str(devices.length()) + " devices");
-        
-        GPUManager {
-            devices: devices,
-            compute_units: init_compute_units(),
-            memory_manager: GPUMemoryManager::new()
-        }
-    } gba (error) {
-        Irosu.kigbe("Failed to initialize GPU manager: " + error.message);
-        GPUManager::empty()
-    }
+                <pre><code>// buffer.ifa - Memory buffer management
+
+ese process_buffer(size) {
+    ayanmo buf = CPU.alloc_buffer(size);
+    Irosu.fo("Allocated buffer of size: " + size);
+
+    CPU.write_buffer(buf, "sample data");
+    ayanmo result = CPU.read_buffer(buf);
+    Irosu.fo("Buffer contents: " + result);
+
+    padap? result;
 }
 
-// Monitor GPU performance
-se monitor_gpu_performance(gpu_manager: GPUManager) -> GPUManager {
-    ayanmo mut updated_manager = gpu_manager;
-    
-    fun device ninu updated_manager.devices.iter_mut() {
-        ayanmo metrics = Ogbe.get_gpu_metrics(device.id);
-        
-        device.utilization = metrics.utilization;
-        device.temperature = metrics.temperature;
-        device.power_usage = metrics.power_usage;
-        device.memory_used = metrics.memory_used;
-        
-        // Check for thermal throttling
-        if device.temperature > 85.0 {
-            Irosu.kigbe("GPU " + Obara.to_str(device.id) + " overheating: " + Obara.format(device.temperature, 1) + "°C");
-            apply_gpu_thermal_protection(device);
-        }
-    }
-    
-    updated_manager
+ese parallel_buffer_process(sizes) {
+    padap? CPU.par_map(sizes, "square");
 }
 
-// Execute GPU compute task
-se execute_gpu_compute_task(gpu_manager: GPUManager, task: ComputeTask) -> ComputeResult {
-    gbiyanju {
-        // Find available GPU device
-        ayanmo device = find_available_gpu(gpu_manager);
-        
-        // Allocate GPU memory
-        ayanmo memory_allocation = gpu_manager.memory_manager.allocate(device, task.memory_requirements);
-        
-        // Load compute shader
-        ayanmo shader = gpu_manager.shader_manager.load_compute_shader(task.shader_path);
-        
-        // Execute compute task
-        ayanmo result = Ogbe.execute_compute_shader(device, shader, task.parameters, memory_allocation);
-        
-        // Clean up memory
-        gpu_manager.memory_manager.deallocate(memory_allocation);
-        
-        Irosu.fo("GPU compute task completed on device " + Obara.to_str(device.id));
-        
-        result
-    } gba (error) {
-        Irosu.kigbe("GPU compute task failed: " + error.message);
-        ComputeResult::error(error.message)
-    }
-}</code></pre>
+// Usage
+ayanmo data = process_buffer(1024);
+Irosu.fo("Buffer processing complete");
+
+ayanmo sizes = [64, 128, 256, 512];
+ayanmo results = parallel_buffer_process(sizes);
+Irosu.fo("Parallel buffer results: " + results);</code></pre>
             </div>
         </div>
-        <div class="step">
-            <h2>Storage Management</h2>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">Storage Operations</span>
-                </div>
-                <pre><code>// Initialize storage manager
-se init_storage_manager() -> StorageManager {
-    gbiyanju {
-        ayanmo volumes = Ogbe.list_storage_volumes();
-        ayanmo filesystems = Ogbe.list_filesystems();
-        
-        Irosu.fo("Storage manager initialized:");
-        Irosu.fo("  Volumes: " + Obara.to_str(volumes.length()));
-        Irosu.fo("  Filesystems: " + Obara.to_str(filesystems.length()));
-        
-        StorageManager {
-            volumes: volumes,
-            filesystems: filesystems,
-            io_monitor: IOMonitor::new()
-        }
-    } gba (error) {
-        Irosu.kigbe("Failed to initialize storage manager: " + error.message);
-        StorageManager::empty()
-    }
-}
 
-// Monitor storage performance
-se monitor_storage_performance(storage_manager: StorageManager) -> StorageManager {
-    ayanmo mut updated_manager = storage_manager;
-    
-    fun volume ninu updated_manager.volumes.iter_mut() {
-        ayanmo metrics = Ogbe.get_volume_metrics(volume.id);
-        
-        volume.read_throughput = metrics.read_throughput;
-        volume.write_throughput = metrics.write_throughput;
-        volume.iops = metrics.iops;
-        volume.latency = metrics.latency;
-        volume.utilization = metrics.utilization;
-        
-        // Check for storage bottlenecks
-        if volume.utilization > 90.0 {
-            Irosu.kigbe("Storage volume " + volume.name + " nearly full: " + Obara.format(volume.utilization, 1) + "%");
-        }
-        
-        if volume.latency > 100.0 {
-            Irosu.kigbe("High latency on volume " + volume.name + ": " + Obara.format(volume.latency, 1) + "ms");
-        }
-    }
-    
-    updated_manager
-}
-
-// Optimize storage performance
-se optimize_storage_performance(storage_manager: StorageManager) {
-    fun volume ninu storage_manager.volumes {
-        if volume.utilization > 80.0 {
-            // Run cleanup operations
-            run_storage_cleanup(volume);
-            
-            // Defragment if needed
-            if volume.fragmentation > 30.0 {
-                defragment_volume(volume);
-            }
-        }
-        
-        // Optimize I/O scheduler
-        optimize_io_scheduler(volume);
-    }
-    
-    Irosu.fo("Storage optimization completed");
-}
-
-// Run storage cleanup
-se run_storage_cleanup(volume: StorageVolume) {
-    Irosu.fo("Running cleanup on volume: " + volume.name);
-    
-    // Remove temporary files
-    Ogbe.cleanup_temp_files(volume);
-    
-    // Compress old files
-    Ogbe.compress_old_files(volume);
-    
-    // Remove duplicate files
-    Ogbe.remove_duplicates(volume);
-    
-    Irosu.fo("Cleanup completed for volume: " + volume.name);
-}</code></pre>
-            </div>
-        </div>
-        <div class="step">
-            <h2>Kernel Interface</h2>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">Kernel Operations</span>
-                </div>
-                <pre><code>// Initialize kernel interface
-se init_kernel_interface() -> KernelInterface {
-    gbiyanju {
-        ayanmo kernel_info = Ogbe.get_kernel_info();
-        
-        Irosu.fo("Kernel interface initialized:");
-        Irosu.fo("  Version: " + kernel_info.version);
-        Irosu.fo("  Architecture: " + kernel_info.architecture);
-        Irosu.fo("  Uptime: " + format_uptime(kernel_info.uptime));
-        
-        KernelInterface {
-            version: kernel_info.version,
-            architecture: kernel_info.architecture,
-            syscall_interface: SyscallInterface::new(),
-            module_manager: KernelModuleManager::new()
-        }
-    } gba (error) {
-        Irosu.kigbe("Failed to initialize kernel interface: " + error.message);
-        KernelInterface::empty()
-    }
-}
-
-// Monitor kernel performance
-se monitor_kernel_performance(kernel_interface: KernelInterface) -> KernelMetrics {
-    ayanmo metrics = KernelMetrics {
-        syscall_count: kernel_interface.syscall_interface.get_call_count(),
-        context_switches: Ogbe.get_context_switches(),
-        interrupts: Ogbe.get_interrupt_count(),
-        memory_pressure: Ogbe.get_memory_pressure(),
-        process_count: Ogbe.get_process_count(),
-        thread_count: Ogbe.get_thread_count()
-    };
-    
-    // Log significant metrics
-    if metrics.memory_pressure > 80.0 {
-        Irosu.kigbe("High memory pressure: " + Obara.format(metrics.memory_pressure, 1) + "%");
-    }
-    
-    if metrics.interrupts > 10000 {
-        Irosu.fo("High interrupt rate: " + Obara.to_str(metrics.interrupts));
-    }
-    
-    metrics
-}
-
-// Load kernel module
-se load_kernel_module(kernel_interface: KernelInterface, module_path: Str) -> Bool {
-    gbiyanju {
-        Irosu.fo("Loading kernel module: " + module_path);
-        
-        // Validate module
-        if !validate_kernel_module(module_path) {
-            Irosu.kigbe("Module validation failed: " + module_path);
-            return eke;
-        }
-        
-        // Load module
-        kernel_interface.module_manager.load(module_path);
-        
-        Irosu.fo("Kernel module loaded successfully: " + module_path);
-        otito
-    } gba (error) {
-        Irosu.kigbe("Failed to load kernel module: " + error.message);
-        eke
-    }
-}</code></pre>
-            </div>
-        </div>
         <div class="step">
             <h2>Best Practices</h2>
             <ul>
-                <li><strong>Resource Monitoring:</strong> Continuously monitor all infrastructure components</li>
-                <li><strong>Thermal Management:</strong> Prevent overheating with proper thermal protection</li>
-                <li><strong>Memory Management:</strong> Efficiently allocate and deallocate resources</li>
-                <li><strong>Performance Optimization:</strong> Regularly optimize based on usage patterns</li>
+                <li><strong>Parallel Operations:</strong> Use <code>par_map</code> and <code>par_reduce</code> for CPU-bound tasks</li>
+                <li><strong>Memory Management:</strong> Allocate buffers with <code>alloc_buffer</code> and clean up after use</li>
+                <li><strong>System Monitoring:</strong> Check available memory before large allocations with <code>Sys.mem_available()</code></li>
+                <li><strong>Thread Count:</strong> Use <code>CPU.threads()</code> to tune parallelism</li>
             </ul>
         </div>
+
         <footer>
-            <p><a href="index.html">Use Cases Documentation</a></p>
+            <p><a href="domains.html">All Domain Use Cases</a></p>
         </footer>
-    </div>
+    </div></div>
     <script src="../../js/common.js"></script>
 </body>
+
 </html>

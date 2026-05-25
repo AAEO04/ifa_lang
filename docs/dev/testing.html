@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Testing — Ifá-Lang Dev Docs</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 1rem 0; }
+        .field-table th { text-align: left; color: var(--green); border-bottom: 1px solid var(--border); padding: 0.4rem 0.6rem; }
+        .field-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .field-table td:first-child { font-weight: 500; }
+    </style>
+</head>
+
+<body>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">testing.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Testing</h1>
+            <p class="subtitle">Test structure, conformance, benchmarks — source-verified</p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified.</strong> Extracted from actual test files in
+            each crate's <code>tests/</code> directory, <code>Cargo.toml</code>
+            dev-dependencies, and CI workflow files.
+        </div>
+
+        <h2 class="section-header">1. Conformance Tests (ifa-cli)</h2>
+
+        <p><code>crates/ifa-cli/tests/conformance_tier1.rs</code> (126 lines).</p>
+
+        <p>Tests run the <code>ifa</code> binary against <code>.ifa</code> source
+        files that contain a <code># expect: &lt;output&gt;</code> comment.
+        Three engine modes:</p>
+
+        <table class="field-table">
+            <tr><th>Mode</th><th>Command</th><th>What it tests</th></tr>
+            <tr><td><code>ast</code></td><td><code>ifa run &lt;file&gt;</code></td><td>Tree-walking interpreter path</td></tr>
+            <tr><td><code>vm</code></td><td><code>ifa bytecode + ifa runb</code></td><td>Bytecode compiler + VM path</td></tr>
+            <tr><td><code>build</code></td><td><code>ifa build</code></td><td>Transpiler → native binary path</td></tr>
+        </table>
+
+        <p>Test discovery: walks a directory of <code>.ifa</code> files, reads the
+        <code># expect:</code> header, runs the given engine, checks stdout matches.</p>
+
+        <h2 class="section-header">2. VM Tests (ifa-vm)</h2>
+
+        <p><code>crates/ifa-vm/tests/</code> — the most extensive test suite:</p>
+
+        <table class="field-table">
+            <tr><th>File</th><th>What it tests</th></tr>
+            <tr><td><code>conformance_vm_tests.rs</code></td><td>VM-specific conformance tests</td></tr>
+            <tr><td><code>closure_tests.rs</code></td><td>Closure capture and invocation</td></tr>
+            <tr><td><code>tailcall_tests.rs</code></td><td>Tail call optimization (TailCall opcode)</td></tr>
+            <tr><td><code>safety_tests.rs</code></td><td>Stack/frame limit enforcement, sandboxing</td></tr>
+            <tr><td><code>async_tests.rs</code></td><td>Async task spawning, await, yield</td></tr>
+            <tr><td><code>okanran_tests.rs</code></td><td>Error recovery (Shield of Ọkànràn)</td></tr>
+            <tr><td><code>handler_tests.rs</code></td><td>Odù domain handler dispatch</td></tr>
+            <tr><td><code>proptest_tests.rs</code></td><td>Property-based tests (via proptest dev-dep)</td></tr>
+        </table>
+
+        <h2 class="section-header">3. Other Crate Tests</h2>
+
+        <table class="field-table">
+            <tr><th>Crate</th><th>Test files</th><th>What they test</th></tr>
+            <tr><td><code>ifa-babalawo</code></td><td><code>tests/type_tests.rs</code>, <code>tests/wisdom_tests.rs</code></td><td>Static analysis, type inference, proverb messages</td></tr>
+            <tr><td><code>ifa-embedded</code></td><td><code>tests/cross_runtime.rs</code>, <code>semantic_parity.rs</code>, <code>yield_tests.rs</code>, <code>mmio_tests.rs</code>, <code>embedded_ptr_tests.rs</code></td><td>Embedded VM, no_std runtime parity</td></tr>
+            <tr><td><code>ifa-sandbox</code></td><td><code>tests/security_tests.rs</code>, <code>tests/capability_tests.rs</code></td><td>Capability enforcement, resource limits</td></tr>
+            <tr><td><code>ifa-std</code></td><td><code>tests/crypto_tests.rs</code></td><td>Crypto domain (Irete)</td></tr>
+            <tr><td><code>ifa-bytecode</code></td><td><code>tests/stack_effects.rs</code></td><td>Opcode stack effect correctness</td></tr>
+        </table>
+
+        <h2 class="section-header">4. Property-Based Tests</h2>
+
+        <p><code>proptest</code> is a dev-dependency of <code>ifa-vm</code>
+        (<code>Cargo.toml:75</code>). The property tests in
+        <code>tests/proptest_tests.rs</code> generate random bytecode sequences
+        and verify that the VM handles them without crashing (no panics,
+        no undefined behavior).</p>
+
+        <h2 class="section-header">5. Benchmarks</h2>
+
+        <p><code>crates/ifa-vm/benches/opcode_dispatch.rs</code> — Criterion benchmarks.</p>
+
+        <table class="field-table">
+            <tr><th>Benchmark</th><th>What it measures</th><th>Operations</th></tr>
+            <tr><td><code>bench_arithmetic</code></td><td>1000 sequences of <code>PushInt, PushInt, Add, Pop</code></td><td>~4000 opcodes including VM setup</td></tr>
+            <tr><td><code>bench_dispatch</code></td><td>1000 sequences of <code>PushNull, Pop</code></td><td>Pure dispatch overhead</td></tr>
+        </table>
+
+        <p><strong>Not benchmarked yet:</strong> function calls, closures, collection ops,
+        string operations, async/task overhead, Odu domain dispatch, sandbox overhead.</p>
+
+        <p>Run: <code>cargo bench -p ifa-vm</code></p>
+
+        <h2 class="section-header">6. CI Test Execution</h2>
+
+        <p>From <code>.github/workflows/ci.yml</code>:</p>
+        <ul>
+            <li><code>cargo fmt --check</code> — formatting</li>
+            <li><code>cargo clippy --all-targets -- -D warnings</code> — linting</li>
+            <li><code>cargo test --all-targets</code> — all tests including doc-tests</li>
+            <li><code>cargo test --doc</code> — doc-tests only</li>
+        </ul>
+
+        <footer>
+            <p><a href="index.html">← Back to Development Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

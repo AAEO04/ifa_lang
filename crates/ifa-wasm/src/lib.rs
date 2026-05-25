@@ -3,9 +3,11 @@
 //! WebAssembly bindings for the Ifá-Lang playground.
 //! Bridges the browser to the core Rust runtime.
 
-use ifa_core::interpreter::Interpreter;
-use ifa_core::parser::parse;
+use ifa_vm::Compiler;
+use ifa_vm::IfaVM;
+use ifa_types::bytecode::OponSize;
 use wasm_bindgen::prelude::*;
+use ifa_parser::parse;
 
 // =============================================================================
 // INTERPRETER WASM EXPORTS
@@ -18,36 +20,23 @@ pub async fn run_code(source: String) -> String {
     let promise = js_sys::Promise::resolve(&JsValue::undefined());
     let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
 
-    // Initialize interpreter
-    let mut interpreter = Interpreter::new();
-
-    // Register Standard Library System Handler (WASM-compatible mode)
-    interpreter.register_handler(Box::new(ifa_std::handlers::sys::SysHandler::new()));
-
     // Parse source code
     match parse(&source) {
         Ok(program) => {
-            // Execute program
-            match interpreter.execute(&program) {
-                Ok(_) => {
-                    // Get text output
-                    let mut output = interpreter.get_output().join("\n");
-
-                    // Check if canvas has content (non-blank)
-                    let canvas_output = interpreter.get_canvas();
-                    if !canvas_output.chars().all(|c| c == ' ' || c == '\n') {
-                        if !output.is_empty() {
-                            output.push_str("\n\n");
+            let compiler = Compiler::new("wasm");
+            match compiler.compile(&program) {
+                Ok(bytecode) => {
+                    let mut vm = IfaVM::new();
+                    match vm.execute(&bytecode) {
+                        Ok(value) => {
+                            // Currently, standard output is printed to the console directly
+                            // Returning the evaluated value or a generic success message
+                            format!("Success: {}", value)
                         }
-                        output.push_str("═══ Canvas Output ═══\n");
-                        output.push_str(&canvas_output);
+                        Err(e) => format!("Runtime Error: {}", e),
                     }
-
-                    output
                 }
-                Err(e) => {
-                    format!("Runtime Error: {}", e)
-                }
+                Err(e) => format!("Compile Error: {}", e),
             }
         }
         Err(e) => {

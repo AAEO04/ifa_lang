@@ -4,122 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Babalawo Linter - Ifá-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            padding: 3rem 0;
-            border-bottom: 2px solid var(--accent);
-            margin-bottom: 2rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--gold), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-        }
-
-        th,
-        td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid var(--bg-card);
-        }
-
-        th {
-            color: var(--gold);
-        }
-
-        .api-card {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-left: 3px solid var(--accent);
-        }
-
-        .api-card h4 {
-            color: var(--gold);
-            margin: 0 0 0.5rem;
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+        <link rel="stylesheet" href="../js/common.css">
+    <title>Babalawo Linter - Ifï¿½-Lang</title>
 </head>
 
 
@@ -132,14 +18,15 @@
     </div>
 </div>
 <div class="container">
-    <header>
+    
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">babalawo.ifa</span></div><div class="terminal-body"><header>
         <h1>?? Babalawo</h1>
-        <p style="color: var(--text-dim);">Static Analysis & Linting for Ifá-Lang</p>
+        <p style="color: var(--text-dim);">Static Analysis & Linting for Ifï¿½-Lang</p>
     </header>
 
-    <p>The <strong>Babalawo</strong> (Yoruba: "Father of Secrets") is Ifá-Lang's compile-time analyzer. It checks
+    <p>The <strong>Babalawo</strong> (Yoruba: "Father of Secrets") is Ifï¿½-Lang's compile-time analyzer. It checks
         your code for errors, style issues, and potential bugs before runtime, providing wisdom-based suggestions
-        drawn from Ifá divination traditions.</p>
+        drawn from Ifï¿½ divination traditions.</p>
 
     <h2>Quick Start</h2>
     <pre><code># Run linter on a file
@@ -222,11 +109,11 @@ fun diag ninu baba.diagnostics {
         </tr>
     </table>
 
-    <h2>Taboo System (Èèw?`)</h2>
+    <h2>Taboo System (ï¿½ï¿½w?`)</h2>
     <p>Define forbidden patterns to enforce architectural boundaries:</p>
     <pre><code>// In your .ifa config or code header:
-èèw?` "ui" ? "database"      // UI cannot import database directly
-èèw?` "model" ? "controller" // Models cannot depend on controllers
+ï¿½ï¿½w?` "ui" ? "database"      // UI cannot import database directly
+ï¿½ï¿½w?` "model" ? "controller" // Models cannot depend on controllers
 
 // Babalawo will error if these patterns are violated</code></pre>
 
@@ -244,7 +131,7 @@ fun v ninu violations {
 }</code></pre>
     </div>
 
-    <h2>Ìwà Engine (Resource Lifecycle)</h2>
+    <h2>ï¿½wï¿½ Engine (Resource Lifecycle)</h2>
     <p>Tracks resource acquisition and release to prevent leaks:</p>
     <pre><code>// IwaEngine monitors:
 // - File handles (Odi.open)
@@ -257,18 +144,18 @@ fun v ninu violations {
 // 2. Closed but never opened
 // 3. Used after close</code></pre>
 
-    <h2>Odù Wisdom</h2>
-    <p>Babalawo maps error types to the 16 Odù domains, providing culturally-rooted error messages:</p>
+    <h2>Odï¿½ Wisdom</h2>
+    <p>Babalawo maps error types to the 16 Odï¿½ domains, providing culturally-rooted error messages:</p>
 
     <table>
         <tr>
             <th>Error Type</th>
-            <th>Odù</th>
+            <th>Odï¿½</th>
             <th>Proverb</th>
         </tr>
         <tr>
             <td>Uninitialized variable</td>
-            <td>Ogbè (The Light)</td>
+            <td>Ogbï¿½ (The Light)</td>
             <td>"A journey of a thousand miles begins with a single step."</td>
         </tr>
         <tr>
@@ -291,7 +178,7 @@ fun v ninu violations {
     <h2>Editor Integration</h2>
 
     <h3>VS Code</h3>
-    <pre><code>// Install the Ifá-Lang extension
+    <pre><code>// Install the Ifï¿½-Lang extension
 // Babalawo runs automatically on save
 
 // .vscode/settings.json
@@ -321,10 +208,9 @@ for diag in baba.diagnostics() {
 }</code></pre>
 
     <footer class="doc-footer">
-        <p><a href="../tools/cli.html">CLI Reference</a> · <a href="../api/api.html">API Reference</a></p>
+        <p><a href="../tools/cli.html">CLI Reference</a> ï¿½ <a href="../api/api.html">API Reference</a></p>
         <p><a href="../index.html">? Documentation Home</a></p>
-    </footer>
-</div>
+    </footer></div></div>
 <script src="../js/nav.js"></script>
 <script src="../js/common.js"></script>
 </body>

@@ -1,7 +1,7 @@
 //! # Domain Operation Traits
 //!
 //! Traits that define the interface for Odù domain operations.
-//! These traits can be implemented by ifa-std and called from ifa-core.
+//! These traits can be implemented by ifa-std and called from ifa-vm.
 
 use crate::error::IfaResult;
 use crate::value_union::IfaValue;

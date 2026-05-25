@@ -46,11 +46,11 @@ The runtime specification defines the canonical 16 Odù domains with their binar
 
 **Note:** The runtime specification ratifies the protocol-oriented design where these 16 domains act as protocols rather than class hierarchies.
 
-### B. `ifa-core` uses “GPC” for interpreter scoping, not Odù
+### B. `ifa-interpreter` uses “GPC” for interpreter scoping, not Odù
 
 Files:
-- `crates/ifa-core/src/interpreter/mod.rs`
-- `crates/ifa-core/src/interpreter/environment.rs`
+- `crates/ifa-interpreter/src/interpreter/mod.rs`
+- `crates/ifa-interpreter/src/interpreter/environment.rs`
 
 Here **GPC = Grandparent→Parent→Child scope chain** for lexical variable resolution, implemented as:
 

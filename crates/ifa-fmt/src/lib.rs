@@ -3,7 +3,9 @@
 //! An opinionated code formatter for Ifá-Lang.
 //! Uses a Token Stream approach to preserve comments.
 
-use ifa_core::lexer::{Token, tokenize};
+#![forbid(unsafe_code)]
+
+use ifa_parser::{Token, tokenize};
 
 /// Formatting configuration
 #[derive(Debug, Clone)]
@@ -57,10 +59,17 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
                 is_start_of_line = true;
             }
             Token::Comment(_c) => {
+                if !is_start_of_line && !formatted.ends_with(' ') {
+                    formatted.push(' ');
+                }
                 formatted.push_str(original_text);
             }
             Token::LBrace => {
-                formatted.push_str(" {");
+                if formatted.ends_with(' ') {
+                    formatted.push('{');
+                } else {
+                    formatted.push_str(" {");
+                }
                 indent_level += 1;
                 if let Some(next) = iter.peek() {
                     if !matches!(next.value, Token::Newline) {
@@ -91,7 +100,7 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
             Token::Semicolon => {
                 formatted.push(';');
                 if let Some(next) = iter.peek() {
-                    if !matches!(next.value, Token::Newline) {
+                    if !matches!(next.value, Token::Newline | Token::Comment(_)) {
                         formatted.push('\n');
                         is_start_of_line = true;
                     }
@@ -107,6 +116,11 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
             Token::Assign => {
                 formatted.push_str(" = ");
             }
+            Token::PlusEq => formatted.push_str(" += "),
+            Token::MinusEq => formatted.push_str(" -= "),
+            Token::MulEq => formatted.push_str(" *= "),
+            Token::DivEq => formatted.push_str(" /= "),
+            Token::ModEq => formatted.push_str(" %= "),
             Token::EqEq => formatted.push_str(" == "),
             Token::NotEq => formatted.push_str(" != "),
             Token::Lt => formatted.push_str(" < "),

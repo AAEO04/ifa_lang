@@ -4,81 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Osa Use Cases - Parallel Processing Examples</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Osa Use Cases - Concurrency Examples</title>
 </head>
 
-
-    <!-- Breadcrumbs -->
+<body>
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list">
@@ -87,205 +17,101 @@
         </div>
     </div>
     <div class="container">
-        <h1>? Osa: Parallel Processing</h1>
-        <p>High-performance concurrent data processing.</p>
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">osa-examples.ifa</span></div><div class="terminal-body">
+        <h1>Osa: Concurrent Processing</h1>
+        <p>Spawn concurrent tasks, sleep, and wait for all to complete.</p>
 
-        <h2>Use Case 1: Batch Image Resizing</h2>
-        <pre><code>// batch_resize.ifa - Parallel image processing
+        <h2>Use Case 1: Concurrent Downloads</h2>
+        <pre><code>// downloads.ifa - Simulate parallel downloads
 
-ise resize_image(path, width, height) {
-    ayanmo img = Fidio.load_image(path);
-    ayanmo resized = Fidio.resize(img, width, height);
-    
-    ayanmo filename = Ika.split(path, "/");
-    ayanmo name = Ogunda.last(filename);
-    ayanmo output = "thumbnails/" + name;
-    
-    Fidio.save_image(resized, output);
-    padap? output;
+ese download_file(name, time_ms) {
+    Irosu.fo("Starting: " + name);
+    Osa.sun(time_ms);
+    Irosu.fo("Finished: " + name);
+    pada name + " complete";
 }
 
-ise batch_resize(input_dir, width, height) {
-    ayanmo files = Odi.list(input_dir);
-    ayanmo images = [];
-    
-    // Filter image files
-    fun file ninu files {
-        ti (Ika.ends_with(file, ".jpg") || Ika.ends_with(file, ".png")) {
-            ayanmo images = Ogunda.push(images, input_dir + "/" + file);
-        }
+// Spawn concurrent tasks
+ayanmo t1 = Osa.ise({ -> download_file("image.png", 800) });
+ayanmo t2 = Osa.ise({ -> download_file("data.json", 500) });
+ayanmo t3 = Osa.ise({ -> download_file("styles.css", 300) });
+
+// Wait for all to finish
+Irosu.fo("Waiting for downloads...");
+ayanmo results = Osa.gbogbo([t1, t2, t3]);
+Irosu.fo("All done: " + results);</code></pre>
+
+        <h2>Use Case 2: Parallel Workers</h2>
+        <pre><code>// workers.ifa - Spawn worker tasks
+
+ese worker(id, items) {
+    fun item ninu items {
+        Irosu.fo("Worker " + id + " processing: " + item);
+        Osa.sun(200 + Owonrin.pese(300));
     }
-    
-    Irosu.fo("Processing " + Ogunda.len(images) + " images in parallel...");
-    
-    // Process in parallel
-    ayanmo start = Iwori.now_ms();
-    ayanmo results = Osa.map(images, |path| {
-        resize_image(path, width, height)
-    });
-    ayanmo elapsed = Iwori.now_ms() - start;
-    
-    Irosu.fo("? Completed in " + elapsed + "ms");
-    Irosu.fo("Processed " + Ogunda.len(results) + " images");
+    pada "Worker " + id + " done";
 }
 
-// Create output directory
-Odi.mkdir("thumbnails");
-batch_resize("./photos", 200, 200);</code></pre>
+// Spawn workers
+ayanmo w1 = Osa.ise({ -> worker(1, ["A", "B", "C"]) });
+ayanmo w2 = Osa.ise({ -> worker(2, ["D", "E", "F"]) });
+ayanmo w3 = Osa.ise({ -> worker(3, ["G", "H", "I"]) });
 
-        <h2>Use Case 2: Log Analysis Pipeline</h2>
-        <pre><code>// log_analysis.ifa - Parallel log file analysis
-
-ise parse_log_line(line) {
-    // Format: [timestamp] level message
-    ayanmo parts = Ika.split(line, " ");
-    ti (Ogunda.len(parts) < 3) {
-        padap? nil;
-    }
-    
-    padap? {
-        "timestamp": Ogunda.get(parts, 0),
-        "level": Ogunda.get(parts, 1),
-        "message": Ika.join(Ogunda.slice(parts, 2, Ogunda.len(parts)), " ")
-    };
-}
-
-ise analyze_logs(log_files) {
-    // Read all files in parallel
-    ayanmo all_lines = Osa.flat_map(log_files, |file| {
-        ayanmo content = Odi.read(file);
-        padap? Ika.split(content, "\n");
-    });
-    
-    // Parse lines in parallel
-    ayanmo entries = Osa.filter_map(all_lines, parse_log_line);
-    
-    // Count by level in parallel
-    ayanmo error_count = Osa.count(entries, |e| e["level"] == "ERROR");
-    ayanmo warn_count = Osa.count(entries, |e| e["level"] == "WARN");
-    ayanmo info_count = Osa.count(entries, |e| e["level"] == "INFO");
-    
-    // Extract error messages
-    ayanmo errors = Osa.filter(entries, |e| e["level"] == "ERROR");
-    
-    padap? {
-        "total": Ogunda.len(entries),
-        "errors": error_count,
-        "warnings": warn_count,
-        "info": info_count,
-        "error_messages": Osa.map(errors, |e| e["message"])
-    };
-}
-
-// Usage
-ayanmo files = ["app.log", "server.log", "worker.log"];
-ayanmo stats = analyze_logs(files);
-
-Irosu.fo("?? Log Analysis Results");
-Irosu.fo("Total entries: " + stats["total"]);
-Irosu.fo("Errors: " + stats["errors"]);
-Irosu.fo("Warnings: " + stats["warnings"]);
-Irosu.fo("Info: " + stats["info"]);</code></pre>
-
-        <h2>Use Case 3: Data Aggregation</h2>
-        <pre><code>// aggregate.ifa - Parallel data aggregation
-
-ayanmo sales_data = [
-    {"region": "North", "product": "A", "amount": 1500},
-    {"region": "South", "product": "B", "amount": 2300},
-    {"region": "North", "product": "B", "amount": 1800},
-    {"region": "East", "product": "A", "amount": 950},
-    {"region": "West", "product": "C", "amount": 3200},
-    {"region": "North", "product": "C", "amount": 2100},
-    {"region": "South", "product": "A", "amount": 1750},
-    {"region": "East", "product": "B", "amount": 1400}
-];
-
-// Parallel aggregations
-ayanmo total = Osa.sum(Osa.map(sales_data, |s| s["amount"]));
-ayanmo avg = total / Ogunda.len(sales_data);
-ayanmo max_sale = Osa.max(Osa.map(sales_data, |s| s["amount"]));
-ayanmo min_sale = Osa.min(Osa.map(sales_data, |s| s["amount"]));
-
-// Group by region (parallel reduce)
-ise group_by_region(data) {
-    ayanmo regions = {};
-    
-    fun sale ninu data {
-        ayanmo region = sale["region"];
-        ti (regions[region] == nil) {
-            regions[region] = 0;
-        }
-        regions[region] = regions[region] + sale["amount"];
-    }
-    
-    padap? regions;
-}
-
-ayanmo by_region = group_by_region(sales_data);
-
-Irosu.fo("?? Sales Summary");
-Irosu.fo("----------------");
-Irosu.fo("Total: $" + total);
-Irosu.fo("Average: $" + avg);
-Irosu.fo("Max: $" + max_sale);
-Irosu.fo("Min: $" + min_sale);
-Irosu.fo("\nBy Region:");
-fun region key(by_region) {
-    Irosu.fo("  " + region + ": $" + by_region[region]);
+Irosu.fo("All workers started...");
+ayanmo results = Osa.gbogbo([w1, w2, w3]);
+fun r ninu results {
+    Irosu.fo(r);
 }</code></pre>
 
-        <h2>Use Case 4: Parallel Web Scraping</h2>
-        <pre><code>// scraper.ifa - Fetch multiple URLs concurrently
+        <h2>Use Case 3: Actor Model</h2>
+        <pre><code>// actors.ifa - Isolated actor communication
 
-ise fetch_page(url) {
-    ayanmo start = Iwori.now_ms();
-    ayanmo response = Otura.get(url);
-    ayanmo elapsed = Iwori.now_ms() - start;
-    
-    padap? {
-        "url": url,
-        "status": response["status"],
-        "size": Ika.len(response["body"]),
-        "time_ms": elapsed
-    };
+// Spawn an actor that receives messages
+ayanmo counter = Osa.egbe({ msg ->
+    ti (msg["type"] == "increment") {
+        pada {"ok": otito, "message": "counted"};
+    } bibẹkọ ti (msg["type"] == "get") {
+        pada {"ok": otito, "value": "ok"};
+    } bibẹkọ {
+        pada {"ok": iro, "error": "unknown"};
+    }
+});
+
+// Send messages to the actor
+ayanmo r1 = Osa.ran(counter, {"type": "increment"});
+if (r1["ok"]) {
+    Irosu.fo("Incremented: " + r1["message"]);
 }
 
-ise scrape_urls(urls) {
-    Irosu.fo("Fetching " + Ogunda.len(urls) + " URLs in parallel...");
-    
-    ayanmo start = Iwori.now_ms();
-    ayanmo results = Osa.map(urls, fetch_page);
-    ayanmo total_time = Iwori.now_ms() - start;
-    
-    // Calculate stats
-    ayanmo successful = Osa.filter(results, |r| r["status"] == 200);
-    ayanmo total_size = Osa.sum(Osa.map(results, |r| r["size"]));
-    ayanmo avg_time = Osa.sum(Osa.map(results, |r| r["time_ms"])) / Ogunda.len(results);
-    
-    Irosu.fo("\n?? Scraping Results");
-    Irosu.fo("-------------------");
-    Irosu.fo("Total time: " + total_time + "ms");
-    Irosu.fo("Successful: " + Ogunda.len(successful) + "/" + Ogunda.len(urls));
-    Irosu.fo("Total data: " + (total_size / 1024) + " KB");
-    Irosu.fo("Avg response: " + avg_time + "ms");
-    
-    padap? results;
+ayanmo r2 = Osa.ran(counter, {"type": "unknown"});
+Irosu.fo("Unknown msg: " + r2["error"]);</code></pre>
+
+        <h2>Use Case 4: Race Condition Demo</h2>
+        <pre><code>// race.ifa - Demonstrate concurrent tasks
+
+ese task(name, delay_ms) {
+    Osa.sun(delay_ms);
+    Irosu.fo(name + " finished after " + delay_ms + "ms");
+    pada name;
 }
 
-// Usage
-ayanmo urls = [
-    "https://api.example.com/users",
-    "https://api.example.com/products",
-    "https://api.example.com/orders",
-    "https://api.example.com/inventory",
-    "https://api.example.com/reports"
-];
+// Start tasks with different delays
+ayanmo fast = Osa.ise({ -> task("Fast", 300) });
+ayanmo medium = Osa.ise({ -> task("Medium", 600) });
+ayanmo slow = Osa.ise({ -> task("Slow", 900) });
 
-scrape_urls(urls);</code></pre>
+Irosu.fo("All tasks spawned, waiting...");
+
+// Wait for specific task
+ayanmo fast_result = Osa.gbogbo([fast]);
+Irosu.fo("Fastest result: " + fast_result);
+
+// Wait for all
+ayanmo all_results = Osa.gbogbo([fast, medium, slow]);
+Irosu.fo("All results: " + all_results);</code></pre>
 
         <footer class="doc-footer">
-            <p><a href="domains.html">? All Domain Use Cases</a></p>
+            <p><a href="domains.html">All Domain Use Cases</a></p>
             <p><a href="../../index.html">Documentation Home</a></p>
         </footer>
     </div>
@@ -294,4 +120,3 @@ scrape_urls(urls);</code></pre>
 </body>
 
 </html>
-

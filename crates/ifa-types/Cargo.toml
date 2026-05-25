@@ -1,6 +1,6 @@
 [package]
 name = "ifa-types"
-version = "0.2.0"
+version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -12,7 +12,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # Core definitions
-ifa-bytecode = { path = "../ifa-bytecode", version = "0.1" }
+ifa-bytecode = { path = "../ifa-bytecode" }
 
 # Error handling
 thiserror = { workspace = true, optional = true }

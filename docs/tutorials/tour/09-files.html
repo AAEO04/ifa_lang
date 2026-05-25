@@ -4,155 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lesson 9: File I/O - Tour of If�</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-            --warning: #f59e0b;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .lesson-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--accent);
-        }
-
-        .lesson-num {
-            background: var(--accent);
-            color: white;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        .warning {
-            background: rgba(245, 158, 11, 0.1);
-            border: 1px solid var(--warning);
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        .warning-title {
-            color: var(--warning);
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-
-        table {
-            width: 100%;
-            background: var(--bg-card);
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 1rem 0;
-        }
-
-        th {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.75rem;
-            text-align: left;
-            color: var(--gold);
-        }
-
-        td {
-            padding: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--accent);
-        }
-
-        .nav-btn {
-            background: var(--bg-card);
-            color: var(--gold);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            border: 1px solid var(--accent);
-        }
-
-        .nav-btn:hover {
-            background: var(--accent);
-            color: white;
-        }
-
-        .nav-btn.primary {
-            background: var(--accent);
-            color: white;
-        }
-
-        a {
-            color: var(--gold);
-        }
-    </style>
+    <title>Lesson 9: Files - Tour of Ifá</title>
+    <link rel="stylesheet" href="../../../js/common.css">
+    <script src="../../../js/nav.js" defer></script>
+    <script src="../../../js/common.js" defer></script>
+    
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
     <!-- Breadcrumbs -->
     <div class="breadcrumbs">
@@ -163,160 +23,80 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">09-files.ifa</span></div><div class="terminal-body">
         <div class="lesson-header">
             <div class="lesson-num">9</div>
             <div>
-                <h1>File I/O</h1>
+                <h1>Files</h1>
                 <p style="color: var(--text-dim); margin: 0;">Reading and writing files with Odi domain</p>
             </div>
         </div>
 
-        <div class="warning">
-            <div class="warning-title">?? Not Available in Playground</div>
-            <p style="margin: 0;">File operations require filesystem access and won't work in the browser playground.
-                Run these examples locally with <code>ifa run</code>.</p>
+        <div class="info-box"
+            style="border: 1px solid #facc15; background: rgba(250, 204, 21, 0.1); padding: 1rem; border-radius: 8px;">
+            <div class="info-box-title" style="color: #facc15; font-weight: bold; margin-bottom: 0.5rem;">Feature Gate
+            </div>
+            <p style="margin: 0;">
+                Odi (the Odù of boundaries) governs filesystem operations and requires the
+                <code>backend</code> feature flag in your <code>Ifa.toml</code>.
+            </p>
         </div>
-
-        <h2>Odi Methods</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Method</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><code>read(path)</code></td>
-                    <td>Read file contents as string</td>
-                </tr>
-                <tr>
-                    <td><code>write(path, data)</code></td>
-                    <td>Write string to file (overwrites)</td>
-                </tr>
-                <tr>
-                    <td><code>append(path, data)</code></td>
-                    <td>Append to file</td>
-                </tr>
-                <tr>
-                    <td><code>exists(path)</code></td>
-                    <td>Check if file exists</td>
-                </tr>
-                <tr>
-                    <td><code>delete(path)</code></td>
-                    <td>Delete a file</td>
-                </tr>
-                <tr>
-                    <td><code>list(dir)</code></td>
-                    <td>List directory contents</td>
-                </tr>
-                <tr>
-                    <td><code>mkdir(path)</code></td>
-                    <td>Create directory</td>
-                </tr>
-            </tbody>
-        </table>
 
         <h2>Reading Files</h2>
-        <pre><code>// Read entire file as string
-ayanmo content = Odi.read("config.txt");
-Irosu.fo(content);
-
-// Read and process line by line
-ayanmo content = Odi.read("data.txt");
-ayanmo lines = Ika.split(content, "\n");
-
-fun line ninu lines {
-    Irosu.fo("Line: " + line);
-}</code></pre>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Reading a File</span>
+            </div>
+            <pre class="code-yoruba"><code>// Read entire file as string
+ayanmo content = Odi.ka("hello.txt");
+Irosu.fo(content);</code></pre>
+        </div>
 
         <h2>Writing Files</h2>
-        <pre><code>// Write text to file (creates or overwrites)
-Odi.write("output.txt", "Hello, If�!");
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Writing a File</span>
+            </div>
+            <pre class="code-yoruba"><code>// Write string to file (overwrites)
+Odi.kọ("output.txt", "Hello, Ifá-Lang!");</code></pre>
+        </div>
 
-// Write multiple lines
-ayanmo lines = ["Line 1", "Line 2", "Line 3"];
-ayanmo content = Ika.join(lines, "\n");
-Odi.write("multiline.txt", content);
-
-// Append to existing file
-Odi.append("log.txt", "New log entry\n");</code></pre>
+        <h2>Appending to Files</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Appending</span>
+            </div>
+            <pre class="code-yoruba"><code>// Append to file
+Odi.fikun("log.txt", "New log entry");</code></pre>
+        </div>
 
         <h2>Checking Files</h2>
-        <pre><code>// Check before reading
-ti (Odi.exists("config.txt")) {
-    ayanmo config = Odi.read("config.txt");
-    Irosu.fo("Config loaded");
-} bib?k? {
-    Irosu.fo("Config file not found, using defaults");
-}</code></pre>
-
-        <h2>Directory Operations</h2>
-        <pre><code>// Create directory
-Odi.mkdir("output");
-
-// List directory contents
-ayanmo files = Odi.list(".");
-fun file ninu files {
-    Irosu.fo("Found: " + file);
-}
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">File Checks</span>
+            </div>
+            <pre class="code-yoruba"><code>// Check if file exists
+ayanmo exists = Odi.wà("data.txt");  // otito or iro
 
 // Delete file
-ti (Odi.exists("temp.txt")) {
-    Odi.delete("temp.txt");
-}</code></pre>
+Odi.pa("temp.txt");</code></pre>
+        </div>
 
-        <h2>Practical Example: Config File</h2>
-        <pre><code>// config.txt format:
-// key=value
-// key2=value2
-
-ise load_config(path) {
-    ayanmo config = {};
-    
-    ti (Odi.exists(path)) {
-        ayanmo content = Odi.read(path);
-        ayanmo lines = Ika.split(content, "\n");
-        
-        fun line ninu lines {
-            ti (Ika.contains(line, "=")) {
-                ayanmo parts = Ika.split(line, "=");
-                ayanmo key = Ogunda.get(parts, 0);
-                ayanmo value = Ogunda.get(parts, 1);
-                // Store in config map
-                Irosu.fo(key + " = " + value);
-            }
-        }
-    }
-    
-    padap? config;
-}
-
-load_config("app.config");</code></pre>
-
-        <h2>Error Handling with Files</h2>
-        <pre><code>// Safe file reading
-ise safe_read(path) {
-    ti (!Odi.exists(path)) {
-        Irosu.kigbe("File not found: " + path);
-        padap? nil;
-    }
-    padap? Odi.read(path);
-}
-
-ayanmo data = safe_read("data.txt");
-ti (data != nil) {
-    Irosu.fo("Read " + Ika.len(data) + " characters");
-}</code></pre>
+        <h2>What You Learned</h2>
+        <ul style="margin-left: 2rem; color: var(--text-dim);">
+            <li>Reading: <code>Odi.ka()</code></li>
+            <li>Writing: <code>Odi.kọ()</code></li>
+            <li>Appending: <code>Odi.fikun()</code></li>
+            <li>Existence: <code>Odi.wà()</code></li>
+            <li>Deletion: <code>Odi.pa()</code></li>
+            <li>Requires <code>backend</code> feature flag</li>
+        </ul>
 
         <div class="nav-buttons">
-            <a href="08-strings.html" class="nav-btn">? Previous: Strings</a>
-            <a href="10-errors.html" class="nav-btn primary">Next: Error Handling ?</a>
+            <a href="08-strings.html" class="nav-btn">Previous: Strings</a>
+            <a href="10-errors.html" class="nav-btn primary">Next: Errors</a>
         </div>
     </div>
-        <script src="../../../js/nav.js"></script>
-    <script src="../../../js/common.js"></script>
 </body>
 
 </html>
-

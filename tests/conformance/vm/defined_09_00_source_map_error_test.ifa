@@ -1,0 +1,4 @@
+# expect: [at tests/conformance/vm/defined_09_00_source_map_error_test.ifa:4]
+ayanmo x = 10;
+ayanmo y = 0;
+ayanmo z = x / y;

@@ -11,11 +11,13 @@ name = "ifa"
 path = "src/main.rs"
 
 [dependencies]
-ifa-core = { path = "../ifa-core", features = ["std", "sysinfo", "parallel", "gpu"] }
+ifa-vm = { path = "../ifa-vm", features = ["std", "sysinfo", "parallel", "gpu", "compiler"] }
+ifa-parser = { path = "../ifa-parser" }
 ifa-std = { path = "../ifa-std", features = ["iot", "kernel", "sysinfo", "gpu", "parallel", "persistence"] }
 ifa-babalawo = { path = "../ifa-babalawo" }
 ifa-fmt = { path = "../ifa-fmt" }
 ifa-sandbox = { path = "../ifa-sandbox" }
+ifa-types = { path = "../ifa-types", features = ["vm"] }
 
 # CLI
 clap.workspace = true
@@ -39,7 +41,7 @@ chrono.workspace = true
 
 # Self Update
 self_update = "0.39"
-uuid = { version = "1.0", features = ["v4"] }
+uuid = { workspace = true }
 reqwest = { workspace = true, features = ["blocking", "json"] }
 flate2 = "1.0"
 tar = "0.4"

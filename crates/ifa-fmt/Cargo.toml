@@ -8,4 +8,4 @@ repository.workspace = true
 description = "Opinionated Code Formatter for Ifá-Lang"
 
 [dependencies]
-ifa-core = { path = "../ifa-core" }
+ifa-parser = { path = "../ifa-parser" }

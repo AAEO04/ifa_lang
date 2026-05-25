@@ -8,7 +8,7 @@
 use chrono::Local;
 use eyre::{Result, WrapErr, eyre};
 use flate2::read::GzDecoder;
-use ifa_sandbox::{OmniBox, SandboxConfig, SecurityProfile};
+
 use reqwest::blocking::Client;
 use ring::digest::{Context, SHA256};
 use serde::{Deserialize, Serialize};
@@ -519,10 +519,10 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
 
             let source = std::fs::read_to_string(&src_file).wrap_err("Failed to read main.ifa")?;
             println!("   📝 Parsing Ifá source...");
-            let program = ifa_core::parse(&source).map_err(|e| eyre!("Parse error: {}", e))?;
+            let program = ifa_vm::parse(&source).map_err(|e| eyre!("Parse error: {}", e))?;
 
             println!("   🔄 Transpiling to Rust...");
-            let rust_code = ifa_core::transpile_to_rust(&program);
+            let rust_code = ifa_vm::transpile_to_rust(&program);
 
             // Create temp build dir
             let temp_dir = self.project_root.join("target/build_tmp");
@@ -534,7 +534,7 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
             fs::write(temp_dir.join("src/main.rs"), &rust_code)?;
 
             let core_path = std::env::current_dir()?
-                .join("crates/ifa-core")
+                .join("crates/ifa-vm")
                 .display()
                 .to_string()
                 .replace("\\", "/");
@@ -557,7 +557,7 @@ version = "{}"
 edition = "2021"
 
 [dependencies]
-ifa-core = {{ path = "{}" }}
+ifa-vm = {{ path = "{}" }}
 ifa-std = {{ path = "{}", features = [{}] }}
 
 [profile.release]
@@ -703,33 +703,7 @@ opt-level = 3
             lockfile.packages.len()
         );
 
-        // AOT compile any WASM sources
-        let config = SandboxConfig::new(SecurityProfile::Standard);
-        let omnibox = OmniBox::new(config).wrap_err("Failed to init compiler")?;
 
-        for pkg in &resolved {
-            let wasm_candidate = lib_dir
-                .join(format!("{}-{}", pkg.name, pkg.version))
-                .join(format!("{}.wasm", pkg.name));
-
-            if wasm_candidate.exists() {
-                let wasm_bytes =
-                    fs::read(&wasm_candidate).wrap_err("Failed to read Wasm source")?;
-                let artifact = omnibox.compile_artifact(&wasm_bytes)?;
-                let target_path = cache_dir.join(format!("{}.cwasm", &pkg.checksum[7..15]));
-                self.atomic_write(&target_path, &artifact)?;
-                self.audit_log(
-                    "FETCH",
-                    &format!("Compiled artifact for {} v{}", pkg.name, pkg.version),
-                )?;
-                println!(
-                    "     ✓ {} v{} compiled ({})",
-                    pkg.name,
-                    pkg.version,
-                    &pkg.checksum[7..15]
-                );
-            }
-        }
 
         println!("✨  Ready to run.");
         Ok(())
@@ -1258,16 +1232,22 @@ opt-level = 3
             if !status.success() {
                 return Err(eyre!("Execution failed with status: {}", status));
             }
-        } else {
-            // Fallback to interpreted run if no binary
+            // Fallback to VM run if no binary
             let src_file = self.project_root.join("src/main.ifa");
             if src_file.exists() {
                 println!("⚡ Running interpreted: src/main.ifa");
                 let source = fs::read_to_string(&src_file)?;
-                let program = ifa_core::parse(&source).map_err(|e| eyre!("Parse error: {}", e))?;
-                let mut interp = ifa_core::Interpreter::with_file(&src_file);
-                interp
-                    .execute(&program)
+                let program = ifa_vm::parse(&source).map_err(|e| eyre!("Parse error: {}", e))?;
+                let compiler = ifa_vm::Compiler::new(&src_file.display().to_string());
+                let bytecode = compiler
+                    .compile(&program)
+                    .map_err(|e| eyre!("Compilation error: {}", e))?;
+                let mut registry = ifa_std::vm_registry::StdRegistry::new();
+                let mut caps = ifa_sandbox::CapabilitySet::new();
+                caps.grant(ifa_sandbox::Ofun::Stdio);
+                registry.set_capabilities(caps);
+                let mut vm = ifa_vm::IfaVM::new().with_registry(Box::new(registry));
+                vm.execute(&bytecode)
                     .map_err(|e| eyre!("Runtime error: {}", e))?;
             } else {
                 return Err(eyre!("No binary or source found to run"));
@@ -1295,16 +1275,29 @@ opt-level = 3
             if name.ends_with("_test.ifa") || name.starts_with("test_") && name.ends_with(".ifa") {
                 print!("  {} ... ", name);
                 let source = fs::read_to_string(&path)?;
-                match ifa_core::parse(&source) {
+                match ifa_vm::parse(&source) {
                     Ok(program) => {
-                        let mut interp = ifa_core::Interpreter::with_file(&path);
-                        match interp.execute(&program) {
-                            Ok(_) => {
-                                println!("ok");
-                                passed += 1;
+                        let compiler = ifa_vm::Compiler::new(&name);
+                        match compiler.compile(&program) {
+                            Ok(bytecode) => {
+                                let mut registry = ifa_std::vm_registry::StdRegistry::new();
+                                let mut caps = ifa_sandbox::CapabilitySet::new();
+                                caps.grant(ifa_sandbox::Ofun::Stdio);
+                                registry.set_capabilities(caps);
+                                let mut vm = ifa_vm::IfaVM::new().with_registry(Box::new(registry));
+                                match vm.execute(&bytecode) {
+                                    Ok(_) => {
+                                        println!("ok");
+                                        passed += 1;
+                                    }
+                                    Err(e) => {
+                                        println!("FAIL: {}", e);
+                                        failed += 1;
+                                    }
+                                }
                             }
                             Err(e) => {
-                                println!("FAIL: {}", e);
+                                println!("FAIL (compile): {}", e);
                                 failed += 1;
                             }
                         }

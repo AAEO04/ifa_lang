@@ -1,5 +1,5 @@
 use ifa_babalawo::*;
-use ifa_core::parser::parse;
+use ifa_parser::parse;
 
 fn check(src: &str) -> Babalawo {
     let program = parse(src).expect("Failed to parse source");

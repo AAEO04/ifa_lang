@@ -4,7 +4,7 @@
 
 #[cfg(feature = "gpu")]
 fn main() {
-    use ifa_std::infra::gpu::GpuContext;
+    use ifa_infra::gpu::GpuContext;
     use std::time::Instant;
     use wgpu::util::DeviceExt;
 

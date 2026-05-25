@@ -11,7 +11,11 @@ Ifá-Lang is a modular, tiered programming language ecosystem based on Yoruba co
 - **ifa-types**: Shared type system and data structures
 
 ### Layer 2: Core Runtime Layer  
-- **ifa-core**: VM engine, compiler, interpreter, memory management
+- **ifa-vm**: Stack-based bytecode VM with opon (managed heap), ebo (scoped epochs), ajose (reactive signals), and iwa_pele (graceful error handling)
+- **ifa-parser**: Lexer (logos) + PEG parser (pest) → AST
+- **ifa-compiler**: AST → bytecode compilation  
+- **ifa-transpiler**: AST → Rust source for native binary builds
+- **ifa-interpreter**: *(archived)* Tree-walking interpreter — execution logic superseded by ifa-vm
 
 ### Layer 3: Standard Library Layer
 - **ifa-std**: 16 Odù domains + specialized stacks + infrastructure
@@ -70,36 +74,51 @@ Ifá-Lang is a modular, tiered programming language ecosystem based on Yoruba co
 
 ### Core Runtime Layer
 
-#### `ifa-core` (Virtual Machine Engine)
-**Purpose**: Main runtime, compiler, and execution engine
+The core runtime is split across several focused crates rather than a monolithic `ifa-core`:
 
-**Core Subsystems**:
+#### `ifa-parser` (Lexer & Parser)
+**Purpose**: Tokenize and parse `.ifa` source into an AST
 
-**Compiler Pipeline**:
-- `lexer.rs` - Tokenization with logos
-- `parser.rs` - PEG parsing with pest
-- `compiler.rs` - AST to bytecode compilation
-- `transpiler/` - AST to Rust source for native builds
+**Core Components**:
+- `lexer.rs` - Tokenization with logos (Yoruba + English keyword aliases)
+- `grammar.pest` - Complete PEG grammar (348 lines, 18 statement rules)
+- `parser.rs` - AST construction from pest parse tree
 
-**Execution Engine**:
-- `vm.rs` - Stack-based virtual machine (34KB)
-- `interpreter/` - Tree-walking interpreter with 19 domain handlers
-- `vm_ikin.rs` - Ikin optimization module
-- `vm_iroke.rs` - Iroke optimization module
+**Dependencies**: logos, pest, ifa-types (for AST definitions)
 
-**Memory Management**:
-- `opon.rs` - "Calabash" managed heap with Rc/RefCell patterns
-- `ebo.rs` - Ẹbọ resource lifecycle (RAII)
-- `ajose.rs` - Àjọṣe reactive relationships (19KB)
+#### `ifa-compiler` (AST → Bytecode)
+**Purpose**: Compile AST into `.ifab` bytecode
 
-**Language Support**:
-- `ast.rs` - Abstract syntax tree definitions
-- `grammar.pest` - Complete grammar specification
-- `native.rs` - Native function bindings
+**Core Components**:
+- `compiler.rs` - AST to bytecode compilation, supports EpochBegin/EpochEnd
+- `lib.rs` - FunctionContext with deferred block support for `defer {}`
 
-**Error Handling**:
-- `error.rs` - Comprehensive error types
-- `iwa_pele.rs` - Ìwà Pẹ̀lẹ́ graceful error handling
+**Dependencies**: ifa-types, ifa-bytecode
+
+#### `ifa-transpiler` (AST → Rust)
+**Purpose**: Transpile AST into Rust source for native binary builds (`ifa build`)
+
+**Dependencies**: ifa-types
+
+#### `ifa-vm` (Execution Engine)
+**Purpose**: Stack-based bytecode interpreter
+
+**Core Components**:
+- `vm.rs` - Stack-based virtual machine (3204 lines, opcode dispatch loop)
+- `opon.rs` - "Calabash" managed heap with `EboEpoch` for scoped allocation
+- `ebo.rs` - Rust `defer!()` macro + `Ebo`/`EboScope` RAII guards
+- `ajose.rs` - Àjọṣe reactive relationships: Signal, Computed, effect (619 lines)
+- `iwa_pele.rs` - Ìwà Pẹ̀lẹ́ graceful error handling with Yoruba proverbs (276 lines)
+- `error.rs` - IfaError / IfaResult types
+- `native.rs` - `OduRegistry` trait + native function bindings
+- `actor.rs` - Actor table for concurrent execution
+- `oracle.rs` - Runtime oracle for diagnostics
+- `module_resolver.rs` - Module resolution for multi-file programs
+- `vm_ikin.rs` - Ikin static analysis optimization module
+- `vm_iroke.rs` - Iroke execution optimization module
+- `ast.rs` - Bytecode AST extensions (re-exports ifa-types AST)
+- `bytecode.rs` - Bytecode deserialization and format handling
+- `value.rs` - VM-specific value helpers
 
 **Features**: `native`, `parallel`, `sysinfo`, `network`, `audio`, `gpu`, `persistence`
 
@@ -130,27 +149,17 @@ Ifá-Lang is a modular, tiered programming language ecosystem based on Yoruba co
 - `ose.rs` (1010) - Graphics, UI, ratatui (`game` feature)
 - `ofun.rs` (0101) - Permissions, capabilities, reflection
 
-**Specialized Stacks**:
-- `stacks/crypto.rs` - SHA, HMAC, Argon2, Base64, SecureRng (15KB)
-- `stacks/backend.rs` - HTTP, Request/Response, ORM (6KB)
-- `stacks/frontend.rs` - XSS-safe HTML, Element builder (12KB)
-- `stacks/gamedev.rs` - Vec2, AABB, ECS, Animation (22KB)
-- `stacks/ml.rs` - Tensor operations, activations, matmul (24KB)
-- `stacks/iot.rs` - GPIO, Serial, I2C/SPI protocols (16KB)
-- `stacks/fusion.rs` - Fullstack IPC runtime (3KB)
+**Hardware Domains** (`hardware/`):
+- `cpu.rs` - CPU info, parallel dispatch via rayon
+- `gpu.rs` - WGPU compute: init, pipeline dispatch, buffer alloc/read/write, sync (`gpu` feature)
+- `storage.rs` - Key-value persistence via StorageWorker
+- `sys.rs` - System info, memory statistics
 
-**Infrastructure Layer**:
-- `infra/cpu.rs` - Parallel iterators, task graphs, rayon (15KB)
-- `infra/gpu.rs` - WGPU compute, memory pools (28KB)
-- `infra/storage.rs` - OduStore key-value database (15KB)
-- `infra/kernel.rs` - System info, memory statistics
-- `infra/shaders.rs` - Pre-built WGSL compute shaders (9KB)
-- `infra/runtime.rs` - Runtime management and coordination
+**Other Modules**:
+- `opele.rs` - Ọpẹlẹ divination chain: append-only tamper-evident log, 256 Odu pattern generation
+- `ffi.rs` - Polyglot FFI: JavaScript (boa_engine), Python (pyo3), native C (libffi) (`native_ffi` feature)
 
-**Foreign Function Interface**:
-- `ffi.rs` - Polyglot support: JavaScript (boa_engine), Python (pyo3), native C (libffi) (44KB)
-
-**Features**: `backend`, `frontend`, `game`, `iot`, `crypto`, `ml`, `fusion`, `parallel`, `gpu`, `persistence`, `kernel`, `audio`, `js`, `python`, `native_ffi`, `wasm`
+**Features**: `backend`, `game`, `crypto`, `gpu`, `parallel`, `persistence`, `audio`, `native_ffi`, `python`, `js`, `wasm`
 
 ---
 
@@ -281,11 +290,11 @@ Ifá-Lang is a modular, tiered programming language ecosystem based on Yoruba co
 Ifá-Lang uses a split-type architecture balancing performance with scalability.
 
 #### `IfaValue` (The Hut 🛖)
-- **Use Case**: VM inner loop and interpreter operations
-- **Semantics**: Thread-local, non-Send
-- **Reference Counting**: `Rc<RefCell<T>>`
-- **Performance**: Extremely fast, no atomic overhead
-- **Limitation**: Cannot be passed between threads
+- **Use Case**: VM inner loop, bytecode ops, and standard library
+- **Semantics**: Thread-safe, Send + Sync (uses `Arc` internally)
+- **Reference Counting**: `Arc<T>` for heap variants (List, Map); `CompactString` for Str
+- **Performance**: Fast atomic reference counting, inline primitive variants
+- **Variants**: `Null`, `Bool`, `Int(i64)`, `Float(f64)`, `Str`, `List`, `Map`, `Fn`, `Closure`, `Future`, `Actor`
 
 #### `IfaShared` (The Village 🏘️)
 - **Use Case**: Global registry, worker threads, messaging
@@ -321,9 +330,9 @@ Bytecode (.ifab)
 
 ### 2. Execution Paths
 **Bytecode** can be executed by:
-- `ifa-core` VM (CLI/Server) - Full feature set
-- `ifa-embedded` VM (Embedded) - Minimal subset
-- `ifa-wasm` VM (Browser) - WASM-compatible subset
+- `ifa-vm` (CLI/Server) - Full feature set
+- `ifa-embedded` (Embedded) - Minimal subset
+- `ifa-wasm` (Browser) - WASM-compatible subset
 
 ### 3. Native Compilation
 ```
@@ -388,7 +397,7 @@ Native Binary
 - **Iroke**: Advanced execution optimizations
 - **Parallel Processing**: Rayon-based parallel operations
 - **GPU Acceleration**: WGPU compute shader integration
-- **Memory Efficiency**: Rc/RefCell patterns for fast local operations
+- **Memory Efficiency**: Arc-based shared ownership with inline primitive variants
 
 ### Benchmarking
 - **Criterion**: Performance benchmarking suite

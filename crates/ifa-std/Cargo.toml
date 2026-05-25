@@ -15,7 +15,8 @@ path = "src/lib.rs"
 ifa-types = { path = "../ifa-types", features = ["dashmap"] }
 
 ifa-sandbox = { path = "../ifa-sandbox", optional = true }
-ifa-core = { path = "../ifa-core", default-features = false }
+ifa-vm = { path = "../ifa-vm", default-features = false }
+ifa-infra = { path = "../ifa-infra", optional = true }
 
 # Error handling
 thiserror.workspace = true
@@ -78,11 +79,10 @@ boa_engine = { version = "0.19", optional = true }
 pyo3 = { version = "0.27", features = ["auto-initialize"], optional = true }
 libc = { version = "0.2", optional = true }
 
-# Kernel / System info
-sysinfo = { version = "0.30", optional = true }
-
 # Audio (Ìrosù)
 rodio = { version = "0.17", optional = true }
+wgpu = { workspace = true, optional = true }
+bytemuck = { workspace = true, optional = true }
 
 
 [dev-dependencies]
@@ -91,23 +91,6 @@ pollster = "0.3"
 
 [dependencies.heapless]
 version = "0.8"
-optional = true
-
-[dependencies.rayon]
-version = "1.8"
-optional = true
-
-[dependencies.wgpu]
-version = "0.19"
-optional = true
-
-[dependencies.bytemuck]
-version = "1.14"
-features = ["derive"]
-optional = true
-
-[dependencies.pollster]
-version = "0.3"
 optional = true
 
 [dependencies.bincode]
@@ -137,14 +120,14 @@ fullstack = ["fusion"] # Alias
 
 
 # Infrastructure Features
-parallel = ["rayon", "ifa-core/parallel"]
-gpu = ["wgpu", "bytemuck"]
-gpu_native = ["gpu", "tokio", "pollster"]
-persistence = ["bincode", "tokio/fs", "tokio/io-util"]
+parallel = ["ifa-vm/parallel", "ifa-infra/parallel"]
+gpu = ["ifa-infra/gpu", "dep:wgpu", "dep:bytemuck"]
+gpu_native = ["gpu", "tokio", "ifa-infra/gpu_native"]
+persistence = ["tokio/fs", "tokio/io-util", "ifa-infra/persistence"]
 profiling = []
 # Kernel / System info
-kernel = ["dep:sysinfo"]
-sysinfo = ["dep:sysinfo"]
+kernel = ["ifa-infra/kernel"]
+sysinfo = ["ifa-infra/sysinfo"]
 
 audio = ["dep:rodio"]
 html = ["dep:tl"]
@@ -164,4 +147,6 @@ wasm = [
 
 # Aliases
 rsa_math = ["ndarray", "rand"]
+wgpu = ["dep:wgpu"]
+bytemuck = ["dep:bytemuck"]
 

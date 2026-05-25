@@ -34,8 +34,9 @@ pub struct LintError {
     pub file: String,
     pub line: usize,
     pub column: usize,
-    pub span: Option<ifa_core::ast::Span>,
+    pub span: Option<ifa_types::ast::Span>,
     pub context: Option<String>,
+    pub notes: Vec<String>,
 }
 
 impl LintError {
@@ -48,16 +49,22 @@ impl LintError {
             column,
             span: None,
             context: None,
+            notes: Vec::new(),
         }
     }
 
-    pub fn with_span(mut self, span: ifa_core::ast::Span) -> Self {
+    pub fn with_span(mut self, span: ifa_types::ast::Span) -> Self {
         self.span = Some(span);
         self
     }
 
     pub fn with_context(mut self, ctx: &str) -> Self {
         self.context = Some(ctx.to_string());
+        self
+    }
+
+    pub fn with_note(mut self, note: &str) -> Self {
+        self.notes.push(note.to_string());
         self
     }
 }
@@ -100,7 +107,7 @@ impl Babalawo {
         code: &str,
         msg: &str,
         file: &str,
-        span: ifa_core::ast::Span,
+        span: ifa_types::ast::Span,
     ) {
         let odu_key = ERROR_TO_ODU.get(code).copied().unwrap_or("OKANRAN");
 
@@ -275,6 +282,126 @@ impl Babalawo {
                 )
             })
             .collect()
+    }
+
+    /// Format with source-code snippets, carets, and ANSI colors.
+    /// Pass the original source text to render the offending lines.
+    pub fn format_with_source(&self, source: &str) -> String {
+        let source_lines: Vec<&str> = source.lines().collect();
+        let mut output = String::new();
+
+        if self.diagnostics.is_empty() {
+            return "\x1b[1mNo issues found. Àṣẹ!\x1b[0m\n".to_string();
+        }
+
+        output.push_str("\x1b[1mbabalawo:\x1b[0m\n\n");
+        let reset = "\x1b[0m";
+
+        for diag in &self.diagnostics {
+            let odu_name = ODU_WISDOM
+                .get(diag.odu.as_str())
+                .map(|w| w.name)
+                .unwrap_or("Ọ̀kànràn");
+
+            let color = match diag.severity {
+                Severity::Error => "\x1b[31m",
+                Severity::Warning => "\x1b[33m",
+                _ => "\x1b[36m",
+            };
+
+            // Severity + code
+            output.push_str(&format!(
+                "{}{}[{}]{} {}:{}:{}\n",
+                color, diag.severity, odu_name, reset,
+                diag.error.file, diag.error.line, diag.error.column,
+            ));
+
+            // Source annotation
+            let line_i = diag.error.line.max(1) - 1;
+            if line_i < source_lines.len() {
+                // Location arrow
+                output.push_str(&format!(
+                    " {} {}:{}:{}\n",
+                    "\x1b[36m-->\x1b[0m",
+                    diag.error.file,
+                    diag.error.line,
+                    diag.error.column
+                ));
+                output.push_str("   \x1b[36m|\x1b[0m\n");
+
+                // Context lines: show line before, error line, line after
+                let context_start = if line_i > 0 { line_i - 1 } else { line_i };
+                let context_end = (line_i + 2).min(source_lines.len());
+
+                // Calculate line number width for alignment
+                let line_width = (context_end + 1).to_string().len();
+
+                for i in context_start..context_end {
+                    let is_error_line = i == line_i;
+                    let lineno = i + 1;
+                    let marker = if is_error_line {
+                        format!("\x1b[{}m >\x1b[0m", if diag.severity == Severity::Error { "31" } else { "33" })
+                    } else {
+                        "   ".to_string()
+                    };
+                    let gutter = format!("{:>width$}", lineno, width = line_width);
+                    output.push_str(&format!(
+                        "{}{} {} {}\n",
+                        marker,
+                        "\x1b[36m|\x1b[0m",
+                        gutter,
+                        source_lines[i]
+                    ));
+
+                    // Caret line
+                    if is_error_line {
+                        let col = diag.error.column.max(1).min(source_lines[i].len().saturating_add(1));
+                        let padding = " ".repeat(gutter.len().saturating_add(col).saturating_add(1));
+                        let caret = format!(
+                            "{}{}{}^{}{} {}",
+                            "  ",
+                            "\x1b[36m|\x1b[0m",
+                            padding,
+                            color,
+                            reset,
+                            diag.error.message
+                        );
+                        output.push_str(&format!("{}\n", caret));
+                    }
+                }
+                output.push_str(&format!("   \x1b[36m|\x1b[0m\n"));
+            }
+
+            // Notes
+            for note in &diag.error.notes {
+                output.push_str(&format!("    {} {}: {}\n", "\x1b[36m=\x1b[0m", "\x1b[1mnote\x1b[0m", note));
+            }
+
+            // Wisdom
+            if (self.verbose || diag.severity == Severity::Error)
+                && let Some(wisdom) = &diag.wisdom
+            {
+                output.push_str(&format!("    {} {}: {}\n", "\x1b[36m=\x1b[0m", "\x1b[1mọ̀rọ̀\x1b[0m", wisdom));
+            }
+
+            output.push('\n');
+        }
+
+        // Summary
+        let errors = self.error_count();
+        let warnings = self.warning_count();
+        let summary_color = if errors > 0 { "\x1b[31m" } else { "\x1b[32m" };
+        output.push_str(&format!(
+            "{}{} error{}, {} warning{}.{} Àṣẹ!\n",
+            summary_color,
+            errors,
+            if errors == 1 { "" } else { "s" },
+            warnings,
+            if warnings == 1 { "" } else { "s" },
+            reset,
+        ));
+
+        output
     }
 }
 

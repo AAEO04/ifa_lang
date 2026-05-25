@@ -168,6 +168,15 @@ pub enum OpCode {
     TailCall = 0x57,
     /// Await a future (unwrap async value)
     Await = 0x58,
+    /// E6: Statically resolved domain and method CallOdu (followed by 1-byte domain id, 2-byte method id, 1-byte arg count)
+    CallOduFast = 0x5B,
+    /// H4: Execute a parallel map/for over an iterable using a closure
+    ParallelFor = 0x5C,
+    /// Begin an Ẹbọ memory epoch (pops name from stack)
+    /// All allocations within the epoch are released on EpochEnd
+    EpochBegin = 0x5D,
+    /// End the current Ẹbọ memory epoch — releases all allocations
+    EpochEnd = 0x5E,
 
     // === Type Operations (0x60-0x6F) ===
     /// Convert to Integer
@@ -307,6 +316,10 @@ impl OpCode {
             0x56 => Some(OpCode::Yield),
             0x57 => Some(OpCode::TailCall),
             0x58 => Some(OpCode::Await),
+            0x5B => Some(OpCode::CallOduFast),
+            0x5C => Some(OpCode::ParallelFor),
+            0x5D => Some(OpCode::EpochBegin),
+            0x5E => Some(OpCode::EpochEnd),
 
             0x60 => Some(OpCode::ToInt),
             0x61 => Some(OpCode::ToFloat),
@@ -449,6 +462,10 @@ impl OpCode {
             OpCode::FinallyBegin => "finally_begin",
             OpCode::FinallyEnd => "finally_end",
             OpCode::PropagateError => "propagate_error",
+            OpCode::CallOduFast => "call_odu_fast",
+            OpCode::ParallelFor => "parallel_for",
+            OpCode::EpochBegin => "epoch_begin",
+            OpCode::EpochEnd => "epoch_end",
         }
     }
 
@@ -510,7 +527,10 @@ impl OpCode {
             | OpCode::PropagateError
             | OpCode::Input
             | OpCode::Yield
-            | OpCode::Await => Some(0),
+            | OpCode::Await
+            | OpCode::ParallelFor
+            | OpCode::EpochBegin
+            | OpCode::EpochEnd => Some(0),
 
             // Fixed length operands
             OpCode::Push
@@ -533,7 +553,7 @@ impl OpCode {
             | OpCode::GetField
             | OpCode::SetField => Some(2),
             OpCode::CallMethod => Some(3),
-            OpCode::CallOdu => Some(4),
+            OpCode::CallOdu | OpCode::CallOduFast => Some(4),
             OpCode::PushFn => Some(8),
 
             // Variable length operands
@@ -595,11 +615,10 @@ impl OpCode {
             // Control flow
             OpCode::Jump => Some((0, 0)),
             OpCode::JumpIfTrue | OpCode::JumpIfFalse => Some((1, 0)),
-            OpCode::Call | OpCode::TailCall | OpCode::CallMethod | OpCode::CallOdu => Some((0, 0)), // Dynamic return
+            OpCode::Call | OpCode::TailCall | OpCode::CallMethod | OpCode::CallOdu => Some((0, 0)),
             OpCode::Return | OpCode::Halt => Some((0, 0)),
-            OpCode::Yield => Some((1, 0)), // duration is read from stack
-            OpCode::Await => Some((1, 1)), // [future] -> [value]
-
+            OpCode::Yield => Some((1, 0)),
+            OpCode::Await => Some((1, 1)),
             // Type conversions
             OpCode::ToInt | OpCode::ToFloat | OpCode::ToString | OpCode::ToBool => Some((1, 1)),
 
@@ -625,6 +644,11 @@ impl OpCode {
             OpCode::FinallyBegin => Some((0, 0)), // Registers finally IP in recovery frame
             OpCode::FinallyEnd => Some((0, 0)), // Resume continuation; no net stack effect
             OpCode::PropagateError => None,   // [val] -> [val] on success, unwind on error
+            OpCode::CallOduFast => Some((0, 0)),
+            // ParallelFor pops iterable and closure, pushes list of results
+            OpCode::ParallelFor => Some((2, 1)),
+            OpCode::EpochBegin => Some((1, 0)), // Pops name from stack
+            OpCode::EpochEnd => Some((0, 0)),
         }
     }
 

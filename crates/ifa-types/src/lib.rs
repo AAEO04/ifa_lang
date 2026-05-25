@@ -1,7 +1,7 @@
 //! # ifa-types - Shared Types for Ifá-Lang
 //!
 //! This crate provides the shared type system used across all Ifá-Lang runtimes:
-//! - Interpreter (ifa-core)
+//! - Interpreter (ifa-vm)
 //! - Native compilation (ifa-std)
 //! - Bytecode VM (ifa-vm)
 //! - Transpiler output
@@ -11,7 +11,7 @@
 //! - [`IfaValue`] - Dynamic value container
 //! - [`IfaError`] / [`IfaResult`] - Error handling
 //! - [`OduDomain`] - The 16 Odù domains + infrastructure/stacks
-
+#![forbid(unsafe_code)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "alloc")]
@@ -19,8 +19,14 @@ extern crate alloc;
 
 // Unused imports from std/alloc removed (re-exports handling types internally)
 
+pub mod binary_ops;
+pub mod compact_str;
 pub mod domain;
+pub mod methods;
+pub mod odu_metadata;
 pub mod error;
+pub mod nan_box;
+pub mod registry;
 pub mod shared;
 pub mod token;
 pub mod traits;
@@ -36,9 +42,12 @@ pub mod bytecode;
 // Re-exports for convenience
 pub use domain::OduDomain;
 pub use error::{IfaError, IfaResult, SpannedError, format_error};
+pub use nan_box::{BoxedPrimitive, NanBox, NanBoxError};
+pub use registry::{ResourceRegistry, set_current_actor_id, get_current_actor_id};
 pub use shared::IfaShared;
 pub use token::ResourceToken;
 pub use traits::*;
+pub use compact_str::CompactString;
 // pub use value::IfaValue; // Old Enum
 pub use value_union::IfaValue; // New Tagged Union
 
@@ -55,3 +64,8 @@ pub use bytecode::Bytecode;
 mod opcode_ext {
     // OpCode Display impl is now in ifa-bytecode directly
 }
+
+#[cfg(feature = "std")]
+pub mod capability;
+#[cfg(feature = "std")]
+pub use capability::{Ofun, CapabilitySet, CapabilityViolation};

@@ -12,6 +12,8 @@
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::os::raw::c_void;
+use std::path::{Path, PathBuf};
+use std::ptr::NonNull;
 
 /// FFI Error type
 #[derive(Debug)]
@@ -147,7 +149,7 @@ pub struct FfiSignature {
 /// Bound function ready to call
 pub struct BoundFunction {
     pub name: String,
-    pub ptr: *mut c_void,
+    pub ptr: NonNull<c_void>,
     pub sig: FfiSignature,
 }
 
@@ -280,6 +282,10 @@ pub struct FfiConfig {
     pub env_vars: HashMap<String, String>,
     /// Maximum execution time for bridge calls (seconds)
     pub timeout_sec: u64,
+    /// Allow native shared-library loading for this bridge.
+    pub allow_native_libs: bool,
+    /// Canonical roots a native library must remain under.
+    pub allowed_lib_roots: Vec<PathBuf>,
 }
 
 /// The FFI Bridge - main interface for foreign calls
@@ -359,6 +365,11 @@ impl IfaFfi {
                 Ok(())
             }
             "rust" | "c" | "native" => {
+                if !config.allow_native_libs {
+                    return Err(FfiError::SecurityViolation(
+                        "Native shared-library loading is disabled for this bridge".into(),
+                    ));
+                }
                 println!("[FFI] Summoning Native bridge...");
                 Ok(())
             }
@@ -404,11 +415,29 @@ impl IfaFfi {
         });
 
         // Security validation
-        let validated_path = self.validate_library_path(&lib_path)?;
+        let native_config = self
+            .bridge_configs
+            .get("native")
+            .or_else(|| self.bridge_configs.get("rust"))
+            .or_else(|| self.bridge_configs.get("c"))
+            .cloned()
+            .unwrap_or_default();
+
+        if !native_config.allow_native_libs {
+            return Err(FfiError::SecurityViolation(
+                "Native shared-library loading is disabled. Call itumo(\"native\", config) with allow_native_libs = true first."
+                    .into(),
+            ));
+        }
+
+        let validated_path =
+            self.validate_library_path(&lib_path, &native_config.allowed_lib_roots)?;
         if let Some(expected_sha256) = expected_sha256 {
             self.verify_library_hash(&validated_path, expected_sha256)?;
         }
 
+        // SAFETY: The path has been canonicalized, checked against allowed roots, and the
+        // optional hash verification has already completed before loading the shared object.
         unsafe {
             let lib = libloading::Library::new(&validated_path)
                 .map_err(|e| FfiError::LibraryNotFound(format!("{}: {}", lib_path, e)))?;
@@ -418,9 +447,7 @@ impl IfaFfi {
     }
 
     /// Validate library path for security
-    fn validate_library_path(&self, path: &str) -> FfiResult<std::path::PathBuf> {
-        use std::path::PathBuf;
-
+    fn validate_library_path(&self, path: &str, allowed_roots: &[PathBuf]) -> FfiResult<PathBuf> {
         let path_buf = PathBuf::from(path);
 
         // 1. Check for basic traversal attempts in the input string
@@ -445,17 +472,31 @@ impl IfaFfi {
             FfiError::LibraryNotFound(format!("Failed to resolve library path '{}': {}", path, e))
         })?;
 
-        // 4. Double-check: the canonical path must match what we expect.
-        //    If canonicalize changed more than just making it absolute, something is wrong
-        //    (e.g. a symlink in a parent directory component).
-        let abs_path = std::env::current_dir()
-            .map(|cwd| cwd.join(&path_buf))
-            .unwrap_or_else(|_| path_buf.clone());
-        if canonical_path != abs_path && canonical_path != path_buf {
-            // canonicalize resolved something unexpected — likely a symlink in a parent dir
+        if allowed_roots.is_empty() {
             return Err(FfiError::SecurityViolation(format!(
-                "Library path resolves unexpectedly: '{}' -> '{}'. Possible symlink in path.",
-                path,
+                "No allowed native library roots configured for '{}'",
+                path
+            )));
+        }
+
+        let mut rooted = false;
+        for root in allowed_roots {
+            let root_canonical = root.canonicalize().map_err(|e| {
+                FfiError::SecurityViolation(format!(
+                    "Failed to resolve allowed native library root '{}': {}",
+                    root.display(),
+                    e
+                ))
+            })?;
+            if canonical_path.starts_with(&root_canonical) {
+                rooted = true;
+                break;
+            }
+        }
+
+        if !rooted {
+            return Err(FfiError::SecurityViolation(format!(
+                "Library path '{}' is outside the allowed native roots",
                 canonical_path.display()
             )));
         }
@@ -563,23 +604,38 @@ impl IfaFfi {
     }
 
     /// Bind a function (Native only)
-    pub fn bind(&mut self, lib: &str, func: &str, args: &[&str], ret: &str) -> FfiResult<()> {
+    pub(crate) fn bind(&mut self, lib: &str, func: &str, args: &[&str], ret: &str) -> FfiResult<()> {
         let backend = self
             .backends
             .get(lib)
             .ok_or_else(|| FfiError::LibraryNotFound(lib.to_string()))?;
 
         match backend {
-            Backend::Native(lib_handle) => unsafe {
-                let symbol: libloading::Symbol<unsafe extern "C" fn()> = lib_handle
-                    .get(func.as_bytes())
-                    .map_err(|_| FfiError::FunctionNotFound(func.to_string()))?;
+            Backend::Native(lib_handle) => {
+                // SAFETY: We only resolve the exported symbol address here and immediately
+                // store the resulting non-null function pointer for later invocation.
+                let ptr = unsafe {
+                    let symbol: libloading::Symbol<unsafe extern "C" fn()> = lib_handle
+                        .get(func.as_bytes())
+                        .map_err(|_| FfiError::FunctionNotFound(func.to_string()))?;
 
-                let ptr = *symbol.deref() as *const () as *mut c_void;
+                    let ptr = *symbol.deref() as *const () as *mut c_void;
+                    NonNull::new(ptr).ok_or_else(|| {
+                        FfiError::CallFailed(format!("Function '{}' resolved to a null pointer", func))
+                    })?
+                };
 
-                let arg_types: Vec<IfaType> =
-                    args.iter().filter_map(|s| IfaType::from_str(s)).collect();
-                let ret_type = IfaType::from_str(ret).unwrap_or(IfaType::Void);
+                let mut arg_types = Vec::with_capacity(args.len());
+                for arg in args {
+                    let ty = IfaType::from_str(arg).ok_or_else(|| {
+                        FfiError::TypeMismatch(format!("Unknown FFI arg type: {}", arg))
+                    })?;
+                    arg_types.push(ty);
+                }
+                
+                let ret_type = IfaType::from_str(ret).ok_or_else(|| {
+                    FfiError::TypeMismatch(format!("Unknown FFI return type: {}", ret))
+                })?;
 
                 let key = format!("{}.{}", lib, func);
                 self.functions.insert(
@@ -593,7 +649,7 @@ impl IfaFfi {
                         },
                     },
                 );
-            },
+            }
             #[allow(unreachable_patterns)]
             _ => {
                 return Err(FfiError::CallFailed(
@@ -643,10 +699,13 @@ impl IfaFfi {
                     js_args.push(self.ffi_to_js(arg, context));
                 }
 
-                let result = context
-                    .eval(boa_engine::Source::from_bytes(
-                        format!("{}(...args)", func).as_bytes(),
-                    ))
+                let global = context.global_object();
+                let func_val = global.get(func, context)
+                    .map_err(|e| FfiError::FunctionNotFound(format!("JS function '{}' not found: {}", func, e)))?;
+                let func_obj = func_val.as_object()
+                    .ok_or_else(|| FfiError::FunctionNotFound(format!("JS value '{}' is not a function", func)))?;
+
+                let result = func_obj.call(&boa_engine::JsValue::undefined(), &js_args, context)
                     .map_err(|e| FfiError::CallFailed(format!("JS Call failed: {}", e)))?;
 
                 Ok(self.js_to_ffi(result))
@@ -711,15 +770,7 @@ impl IfaFfi {
         use libffi::high::{Arg, call};
         use libffi::low::CodePtr;
 
-        // Verify argument count
-        if args.len() != bound.sig.arg_types.len() {
-            return Err(FfiError::TypeMismatch(format!(
-                "{}: expected {} args, got {}",
-                bound.name,
-                bound.sig.arg_types.len(),
-                args.len()
-            )));
-        }
+        self.validate_ffi_args(bound, args)?;
 
         // Build argument list for libffi
         // We need to hold the actual values in memory
@@ -780,8 +831,11 @@ impl IfaFfi {
         }
 
         // Make the call based on return type
-        let code_ptr = CodePtr::from_ptr(bound.ptr as *const _);
+        let code_ptr = CodePtr::from_ptr(bound.ptr.as_ptr().cast());
 
+        // SAFETY: The pointer was resolved from a loaded library, the arguments have
+        // been validated and stored in stable locals above, and the return type is
+        // handled explicitly by match arm.
         unsafe {
             match bound.sig.ret_type {
                 IfaType::Void => {
@@ -825,12 +879,40 @@ impl IfaFfi {
                     } else {
                         let c_str = std::ffi::CStr::from_ptr(result);
                         let owned = c_str.to_string_lossy().into_owned();
-                        libc::free(result.cast());
                         Ok(FfiValue::Str(owned))
                     }
                 }
             }
         }
+    }
+
+    pub fn validate_ffi_args(&self, bound: &BoundFunction, args: &[FfiValue]) -> FfiResult<()> {
+        if args.len() != bound.sig.arg_types.len() {
+            return Err(FfiError::TypeMismatch(format!(
+                "{}: expected {} args, got {}",
+                bound.name,
+                bound.sig.arg_types.len(),
+                args.len()
+            )));
+        }
+
+        for (i, (val, expected_type)) in args.iter().zip(bound.sig.arg_types.iter()).enumerate() {
+            match (val, expected_type) {
+                (FfiValue::I32(_), IfaType::I32)
+                | (FfiValue::I64(_), IfaType::I64)
+                | (FfiValue::I32(_), IfaType::I64)
+                | (FfiValue::F64(_), IfaType::F64)
+                | (FfiValue::Str(_), IfaType::Str | IfaType::OwnedStr) => {}
+                _ => {
+                    return Err(FfiError::TypeMismatch(format!(
+                        "Arg {}: cannot convert {:?} to {:?}",
+                        i, val, expected_type
+                    )));
+                }
+            }
+        }
+
+        Ok(())
     }
 
     // Helpers for type conversion
@@ -922,28 +1004,20 @@ fn py_to_ffi_value(val: &pyo3::Bound<'_, pyo3::PyAny>) -> FfiValue {
 // =============================================================================
 
 /// Secure FFI with whitelist
+/// Secure FFI with whitelist
 pub struct SecureFfi {
     inner: IfaFfi,
     whitelist: HashSet<String>,
-    blocked_symbols: HashSet<String>,
+    allowed_symbols: HashSet<String>,
     sanctified_hashes: HashMap<String, String>,
 }
 
 impl SecureFfi {
     pub fn new() -> Self {
-        let mut blocked = HashSet::new();
-        // Block dangerous symbols
-        blocked.insert("system".to_string());
-        blocked.insert("exec".to_string());
-        blocked.insert("execve".to_string());
-        blocked.insert("fork".to_string());
-        blocked.insert("popen".to_string());
-        blocked.insert("dlopen".to_string()); // Prevent nested loading
-
         SecureFfi {
             inner: IfaFfi::new(),
             whitelist: HashSet::new(),
-            blocked_symbols: blocked,
+            allowed_symbols: HashSet::new(),
             sanctified_hashes: HashMap::new(),
         }
     }
@@ -951,6 +1025,11 @@ impl SecureFfi {
     /// Add library to whitelist
     pub fn allow(&mut self, lib: &str) {
         self.whitelist.insert(lib.to_string());
+    }
+
+    /// Add symbol to allowlist
+    pub fn allow_symbol(&mut self, func: &str) {
+        self.allowed_symbols.insert(func.to_string());
     }
 
     /// Add library to whitelist with a pinned SHA-256 digest.
@@ -972,11 +1051,11 @@ impl SecureFfi {
         self.inner.load_native_verified(name, path, expected_hash)
     }
 
-    /// Bind function (blocks dangerous symbols)
+    /// Bind function (only allowed symbols)
     pub fn bind(&mut self, lib: &str, func: &str, args: &[&str], ret: &str) -> FfiResult<()> {
-        if self.blocked_symbols.contains(func) {
+        if !self.allowed_symbols.contains(func) {
             return Err(FfiError::SecurityViolation(format!(
-                "Symbol '{}' is blocked for security reasons",
+                "Symbol '{}' is not in the allowed symbols list",
                 func
             )));
         }
@@ -1544,6 +1623,7 @@ pub fn create_stdlib_api() -> IfaApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ptr::NonNull;
 
     #[test]
     fn test_type_mapping() {
@@ -1628,5 +1708,62 @@ mod tests {
             .call("ika.gigun", &[FfiValue::Str("hello".to_string())])
             .unwrap();
         assert_eq!(result.as_i32(), Some(5));
+    }
+
+    #[test]
+    fn test_validate_ffi_args_accepts_matching_signature() {
+        let ffi = IfaFfi::new();
+        let bound = BoundFunction {
+            name: "add".to_string(),
+            ptr: NonNull::dangling(),
+            sig: FfiSignature {
+                arg_types: vec![IfaType::I32, IfaType::I64, IfaType::Str],
+                ret_type: IfaType::I32,
+            },
+        };
+
+        let args = vec![
+            FfiValue::I32(1),
+            FfiValue::I64(2),
+            FfiValue::Str("ok".to_string()),
+        ];
+
+        assert!(ffi.validate_ffi_args(&bound, &args).is_ok());
+    }
+
+    #[test]
+    fn test_validate_library_path_stays_within_allowed_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("libs");
+        std::fs::create_dir_all(&root).unwrap();
+
+        let lib_path = root.join("libsafe.so");
+        std::fs::write(&lib_path, b"placeholder").unwrap();
+
+        let ffi = IfaFfi::new();
+        let validated = ffi
+            .validate_library_path(lib_path.to_str().unwrap(), &[root.clone()])
+            .unwrap();
+
+        assert_eq!(validated, lib_path.canonicalize().unwrap());
+    }
+
+    #[test]
+    fn test_validate_library_path_rejects_outside_allowed_root() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("allowed");
+        let outside = tmp.path().join("other");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+
+        let lib_path = outside.join("libunsafe.so");
+        std::fs::write(&lib_path, b"placeholder").unwrap();
+
+        let ffi = IfaFfi::new();
+        let err = ffi
+            .validate_library_path(lib_path.to_str().unwrap(), &[root.clone()])
+            .expect_err("path outside allowed root should be rejected");
+
+        assert!(matches!(err, FfiError::SecurityViolation(_)));
     }
 }

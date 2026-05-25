@@ -8,6 +8,7 @@ edition.workspace = true
 wasmtime = "40.0.3"
 wasmtime-wasi = "40.0.3"
 wat = "1.0"
+ifa-types = { path = "../ifa-types", features = ["std"] }
 
 # Error handling
 eyre.workspace = true
@@ -16,6 +17,7 @@ thiserror.workspace = true
 # Serialization
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+sysinfo.workspace = true
 
 [dev-dependencies]
 tempfile = "3.0"

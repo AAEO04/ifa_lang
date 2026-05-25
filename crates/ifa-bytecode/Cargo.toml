@@ -1,9 +1,9 @@
 [package]
 name = "ifa-bytecode"
-version = "0.1.0"
-edition = "2021"
-description = "Ifa VM bytecode definitions - the binary interface contract"
-license = "MIT OR Apache-2.0"
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+license.workspace = true
 
 [dependencies]
 # Optional serde usage for ifa-types compatibility. 

@@ -8,75 +8,7 @@
     <link rel="stylesheet" href="../../../js/common.css">
     <script src="../../../js/nav.js" defer></script>
     <script src="../../../js/common.js" defer></script>
-    <style>
-        .lesson-num {
-            background: var(--accent);
-            color: white;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .lesson-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--accent);
-        }
-
-        .alias-box {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-            display: flex;
-            gap: 2rem;
-            border: 1px solid var(--accent);
-        }
-
-        .alias-box .yoruba {
-            color: var(--gold);
-        }
-
-        .alias-box .english {
-            color: var(--text-dim);
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--accent);
-        }
-
-        .nav-btn {
-            background: var(--bg-card);
-            color: var(--gold);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            border: 1px solid var(--accent);
-            transition: all 0.2s;
-        }
-
-        .nav-btn:hover {
-            background: var(--accent);
-            color: white;
-        }
-
-        .nav-btn.primary {
-            background: var(--accent);
-            color: white;
-        }
-    </style>
+    
 </head>
 
 <body>
@@ -91,47 +23,45 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">05-functions.ifa</span></div><div class="terminal-body">
         <div class="lesson-header">
             <div class="lesson-num">5</div>
             <div>
                 <h1>Functions</h1>
-                <p style="color: var(--text-dim); margin: 0;">Reusable code blocks</p>
+                <p style="color: var(--text-dim); margin: 0;">Defining and calling functions</p>
             </div>
         </div>
 
-        <h2>Defining Functions</h2>
-        <div class="alias-box">
-            <div class="yoruba"><strong>Yoruba:</strong> ise (function), padapọ (return)</div>
-            <div class="english"><strong>English:</strong> fn, return</div>
-        </div>
+        <h2>Defining Functions (isọdálẹ)</h2>
+        <p>Use <code>isọdálẹ</code> (Yoruba: "definition") or <code>fn</code> to define functions:</p>
 
         <div class="code-example">
             <div class="code-header">
-                <span class="code-title">Defining Functions</span>
+                <span class="code-title">Function Definition</span>
                 <div class="lang-toggle">
                     <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
                     <button class="toggle-english" onclick="setLang('english')">English</button>
                 </div>
             </div>
-            <pre class="code-yoruba"><code>// Define a function
-ise greet(name) {
-    Irosu.fo("Kaabo, " + name + "!");
+            <pre class="code-yoruba"><code>isọdálẹ greet(name) {
+    Irosu.fo("Hello, " + name + "!");
 }
 
-// Call the function
-greet("Ifá");     // Output: Kaabo, Ifá!
-greet("Orunmila"); // Output: Kaabo, Orunmila!</code></pre>
-            <pre class="code-english"><code>// Define a function
-fn greet(name) {
-    Fmt.println("Hello, " + name + "!");
+// Calling a function
+greet("Ifá");
+greet("Ọba");</code></pre>
+            <pre class="code-english"><code>fn greet(name) {
+    Irosu.println("Hello, " + name + "!");
 }
 
-// Call the function
-greet("Ifá");     // Output: Hello, Ifá!
-greet("Orunmila"); // Output: Hello, Orunmila!</code></pre>
+// Calling a function
+greet("Ifá");
+greet("Ọba");</code></pre>
         </div>
 
         <h2>Return Values</h2>
+        <p>Functions return the last expression by default:</p>
+
         <div class="code-example">
             <div class="code-header">
                 <span class="code-title">Return Values</span>
@@ -140,196 +70,152 @@ greet("Orunmila"); // Output: Hello, Orunmila!</code></pre>
                     <button class="toggle-english" onclick="setLang('english')">English</button>
                 </div>
             </div>
-            <pre class="code-yoruba"><code>ise add(a, b) {
-    padapọ a + b;
+            <pre class="code-yoruba"><code>isọdálẹ add(a, b) {
+    a + b
 }
 
-ayanmo result = add(5, 3);
-Irosu.fo("Sum: " + result);  // Sum: 8
+isọdálẹ square(x) {
+    x * x
+}
 
-// Chain function calls
-Irosu.fo(add(add(1, 2), add(3, 4)));  // 10</code></pre>
+ayanmo sum = add(5, 3);     // 8
+ayanmo sq = square(4);      // 16
+Irosu.fo("Sum: " + sum);     // Sum: 8
+Irosu.fo("Squared: " + sq); // Squared: 16</code></pre>
             <pre class="code-english"><code>fn add(a, b) {
-    return a + b;
+    a + b
 }
 
-let result = add(5, 3);
-Fmt.println("Sum: " + result);  // Sum: 8
+fn square(x) {
+    x * x
+}
 
-// Chain function calls
-Fmt.println(add(add(1, 2), add(3, 4)));  // 10</code></pre>
+let sum = add(5, 3);     // 8
+let sq = square(4);      // 16
+Irosu.println("Sum: " + sum);     // Sum: 8
+Irosu.println("Squared: " + sq); // Squared: 16</code></pre>
         </div>
 
-        <h2>Multiple Parameters</h2>
+        <h2>Anonymous Functions (Closures)</h2>
+        <p>Use the Yoruba arrow <code>{ args -> body }</code> syntax:</p>
+
         <div class="code-example">
             <div class="code-header">
-                <span class="code-title">Parameters</span>
+                <span class="code-title">Anonymous Functions</span>
                 <div class="lang-toggle">
                     <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
                     <button class="toggle-english" onclick="setLang('english')">English</button>
                 </div>
             </div>
-            <pre class="code-yoruba"><code>ise calculate_area(width, height) {
-    padapọ width * height;
+            <pre class="code-yoruba"><code>// Anonymous function assigned to a variable
+ayanmo double = { x -> x * 2 };
+
+Irosu.fo(double(5));  // 10
+
+// Passing a closure to a function
+isọdẹlẹ apply(fn, value) {
+    fn(value)
 }
 
-ayanmo area = calculate_area(10, 5);
-Irosu.fo("Area: " + area);  // Area: 50</code></pre>
-            <pre class="code-english"><code>fn calculate_area(width, height) {
-    return width * height;
+ayanmo result = apply({ x -> x + 1 }, 10);
+Irosu.fo(result);  // 11</code></pre>
+            <pre class="code-english"><code>// Anonymous function assigned to a variable
+let double = { x -> x * 2 };
+
+Irosu.println(double(5));  // 10
+
+// Passing a closure to a function
+fn apply(fn, value) {
+    fn(value)
 }
 
-let area = calculate_area(10, 5);
-Fmt.println("Area: " + area);  // Area: 50</code></pre>
+let result = apply({ x -> x + 1 }, 10);
+Irosu.println(result);  // 11</code></pre>
         </div>
 
-        <h2>Functions with No Return</h2>
+        <div class="info-box"
+            style="border: 1px solid #facc15; background: rgba(250, 204, 21, 0.1); padding: 1rem; border-radius: 8px;">
+            <div class="info-box-title" style="color: #facc15; font-weight: bold; margin-bottom: 0.5rem;">Syntax Note
+            </div>
+            <p style="margin: 0;">Ifá-Lang uses <code>{ args -> body }</code> for closures. The <code>-></code> arrow
+                separates parameters from the function body.</p>
+        </div>
+
+        <h2>Closures Capturing Variables</h2>
         <div class="code-example">
             <div class="code-header">
-                <span class="code-title">Void Functions</span>
+                <span class="code-title">Capturing Variables</span>
                 <div class="lang-toggle">
                     <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
                     <button class="toggle-english" onclick="setLang('english')">English</button>
                 </div>
             </div>
-            <pre class="code-yoruba"><code>ise log_message(level, msg) {
-    Irosu.fo("[" + level + "] " + msg);
-}
+            <pre class="code-yoruba"><code>ayanmo multiplier = 3;
+ayanmo triple = { x -> x * multiplier };
 
-log_message("INFO", "Program started");
-log_message("WARN", "Low memory");
-log_message("ERROR", "Connection failed");</code></pre>
-            <pre class="code-english"><code>fn log_message(level, msg) {
-    Fmt.println("[" + level + "] " + msg);
-}
+Irosu.fo(triple(5));  // 15</code></pre>
+            <pre class="code-english"><code>let multiplier = 3;
+let triple = { x -> x * multiplier };
 
-log_message("INFO", "Program started");
-log_message("WARN", "Low memory");
-log_message("ERROR", "Connection failed");</code></pre>
+Irosu.println(triple(5));  // 15</code></pre>
         </div>
 
-        <h2>Recursive Functions</h2>
+        <h2>Default Parameter Values</h2>
         <div class="code-example">
             <div class="code-header">
-                <span class="code-title">Recursion</span>
+                <span class="code-title">Default Parameters</span>
                 <div class="lang-toggle">
                     <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
                     <button class="toggle-english" onclick="setLang('english')">English</button>
                 </div>
             </div>
-            <pre class="code-yoruba"><code>// Factorial: n! = n * (n-1) * ... * 1
-ise factorial(n) {
-    ti (n <= 1) {
-        padapọ 1;
-    }
-    padapọ n * factorial(n - 1);
+            <pre class="code-yoruba"><code>isọdẹlẹ greet(name, greeting = "Hello") {
+    Irosu.fo(greeting + ", " + name + "!")
 }
 
-Irosu.fo(factorial(5));  // 120 (5*4*3*2*1)
-Irosu.fo(factorial(10)); // 3628800</code></pre>
-            <pre class="code-english"><code>// Factorial: n! = n * (n-1) * ... * 1
-fn factorial(n) {
-    if (n <= 1) {
-        return 1;
-    }
-    return n * factorial(n - 1);
+greet("Ifá");               // Hello, Ifá!
+greet("Ọba", "Ẹ kú àbọ̀");  // Ẹ kú àbọ̀, Ọba!</code></pre>
+            <pre class="code-english"><code>fn greet(name, greeting = "Hello") {
+    Irosu.println(greeting + ", " + name + "!")
 }
 
-Fmt.println(factorial(5));  // 120
-Fmt.println(factorial(10)); // 3628800</code></pre>
+greet("Ifá");               // Hello, Ifá!
+greet("Ọba", "Welcome");    // Welcome, Ọba!</code></pre>
         </div>
 
-        <h2>Functions as First-Class Values</h2>
+        <h2>Named Arguments</h2>
         <div class="code-example">
             <div class="code-header">
-                <span class="code-title">First-Class Functions</span>
+                <span class="code-title">Named Arguments</span>
                 <div class="lang-toggle">
                     <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
                     <button class="toggle-english" onclick="setLang('english')">English</button>
                 </div>
             </div>
-            <pre class="code-yoruba"><code>// Store function in variable
-ayanmo operation = ise(a, b) {
-    padapọ a + b;
-};
-
-Irosu.fo(operation(3, 4));  // 7
-
-// Pass function as argument
-ise apply_twice(fn, x) {
-    padapọ fn(fn(x));
+            <pre class="code-yoruba"><code>isọdẹlẹ create_user(name, age, active = otito) {
+    Irosu.fo(name + " is " + age + " active:" + active)
 }
 
-ise double(n) {
-    padapọ n * 2;
+create_user(active: iro, name: "Ifá", age: 1000);</code></pre>
+            <pre class="code-english"><code>fn create_user(name, age, active = true) {
+    Irosu.println(name + " is " + age + " active:" + active)
 }
 
-Irosu.fo(apply_twice(double, 5));  // 20 (5→10→20)</code></pre>
-            <pre class="code-english"><code>// Store function in variable
-let operation = fn(a, b) {
-    return a + b;
-};
-
-Fmt.println(operation(3, 4));  // 7
-
-// Pass function as argument
-fn apply_twice(func, x) {
-    return func(func(x));
-}
-
-fn double_num(n) {
-    return n * 2;
-}
-
-Fmt.println(apply_twice(double_num, 5));  // 20</code></pre>
-        </div>
-
-        <h2>Practical Example: Temperature Converter</h2>
-        <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Converter</span>
-                <div class="lang-toggle">
-                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
-                    <button class="toggle-english" onclick="setLang('english')">English</button>
-                </div>
-            </div>
-            <pre class="code-yoruba"><code>ise celsius_to_fahrenheit(c) {
-    padapọ (c * 9 / 5) + 32;
-}
-
-ise fahrenheit_to_celsius(f) {
-    padapọ (f - 32) * 5 / 9;
-}
-
-Irosu.fo("0°C = " + celsius_to_fahrenheit(0) + "°F");
-Irosu.fo("100°C = " + celsius_to_fahrenheit(100) + "°F");
-Irosu.fo("32°F = " + fahrenheit_to_celsius(32) + "°C");
-Irosu.fo("212°F = " + fahrenheit_to_celsius(212) + "°C");</code></pre>
-            <pre class="code-english"><code>fn celsius_to_fahrenheit(c) {
-    return (c * 9 / 5) + 32;
-}
-
-fn fahrenheit_to_celsius(f) {
-    return (f - 32) * 5 / 9;
-}
-
-Fmt.println("0C = " + celsius_to_fahrenheit(0) + "F");
-Fmt.println("100C = " + celsius_to_fahrenheit(100) + "F");
-Fmt.println("32F = " + fahrenheit_to_celsius(32) + "C");
-Fmt.println("212F = " + fahrenheit_to_celsius(212) + "C");</code></pre>
+create_user(active: false, name: "Ifá", age: 1000);</code></pre>
         </div>
 
         <h2>What You Learned</h2>
         <ul style="margin-left: 2rem; color: var(--text-dim);">
-            <li>Define functions with <code>ise</code>/<code>fn</code></li>
-            <li>Return values with <code>padapọ</code>/<code>return</code></li>
-            <li>Multiple parameters and recursive functions</li>
-            <li>Functions as first-class values</li>
+            <li>Defining functions with <code>isọdẹlẹ</code>/<code>fn</code></li>
+            <li>Implicit returns (last expression)</li>
+            <li>Closures with <code>{ args -> body }</code> syntax</li>
+            <li>Default parameter values</li>
+            <li>Named arguments</li>
         </ul>
 
         <div class="nav-buttons">
-            <a href="04-control-flow.html" class="nav-btn">← Previous: Control Flow</a>
-            <a href="06-domains.html" class="nav-btn primary">Next: Domains →</a>
+            <a href="04-control-flow.html" class="nav-btn">Previous: Control Flow</a>
+            <a href="06-domains.html" class="nav-btn primary">Next: Domains</a>
         </div>
     </div>
 </body>

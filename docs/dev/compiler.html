@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Compiler — Ifá-Lang Dev Docs</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 1rem 0; }
+        .field-table th { text-align: left; color: var(--green); border-bottom: 1px solid var(--border); padding: 0.4rem 0.6rem; }
+        .field-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .field-table td:first-child { color: var(--amber); font-weight: 500; }
+        .field-table td:nth-child(3) { color: var(--dim); font-size: 0.75rem; }
+    </style>
+</head>
+
+<body>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">compiler.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Compiler</h1>
+            <p class="subtitle">AST → bytecode pipeline — source-verified from <code>crates/ifa-compiler/src/lib.rs</code></p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified.</strong> Single-file compiler at
+            <code>crates/ifa-compiler/src/lib.rs</code> (1672 lines). No submodules.
+            Depends on <code>ifa-types</code>, <code>ifa-parser</code>, <code>ifa-bytecode</code>.
+        </div>
+
+        <h2 class="section-header">1. Compiler Struct</h2>
+
+        <p><code>Compiler</code> (<code>lib.rs:21</code>):</p>
+
+        <table class="field-table">
+            <tr><th>Field</th><th>Type</th><th>Purpose</th></tr>
+            <tr><td><code>bytecode</code></td><td><code>Bytecode</code></td><td>Output buffer — code Vec, strings Vec, constants Vec</td></tr>
+            <tr><td><code>functions</code></td><td><code>Vec&lt;FunctionContext&gt;</code></td><td>Stack of function scopes (locals, upvalues per function)</td></tr>
+            <tr><td><code>constants</code></td><td><code>HashMap&lt;String, Expression&gt;</code></td><td>Compile-time <code>const</code> declarations (name → AST)</td></tr>
+            <tr><td><code>string_index</code></td><td><code>HashMap&lt;String, u16&gt;</code></td><td>String dedup for the bytecode string table</td></tr>
+        </table>
+
+        <p><code>FunctionContext</code> (<code>lib.rs:42</code>):</p>
+        <table class="field-table">
+            <tr><th>Field</th><th>Purpose</th></tr>
+            <tr><td><code>locals</code></td><td>Vec of scope-level HashMaps (name → stack slot index)</td></tr>
+            <tr><td><code>const_locals</code></td><td>Set of names declared as <code>const</code> within this function</td></tr>
+            <tr><td><code>scope_depth</code></td><td>Current block scope nesting depth</td></tr>
+            <tr><td><code>upvalues</code></td><td>Captured variables from enclosing scopes (name, index, is_local flag)</td></tr>
+        </table>
+
+        <h2 class="section-header">2. Entry Points</h2>
+
+        <p><strong><code>Compiler::compile(program)</code></strong> (<code>lib.rs:97</code>):</p>
+        <div class="code-block">
+<pre>pub fn compile(mut self, program: &Program) -> IfaResult&lt;Bytecode&gt; {
+    for stmt in &program.statements {
+        self.compile_statement(stmt)?;
+    }
+    self.emit(OpCode::Halt);
+    self.bytecode.exports = collect_exports(program);
+    Ok(self.bytecode)
+}</pre></div>
+
+        <p><strong><code>compile(source)</code></strong> (<code>lib.rs:1615</code>):
+        convenience function that parses + compiles a source string in one call.</p>
+
+        <h2 class="section-header">3. Code Generation Pattern</h2>
+
+        <p><code>compile_statement()</code> (<code>lib.rs:230</code>) dispatches on
+        <code>Statement</code> variants via match. <code>compile_expression()</code>
+        (<code>lib.rs:1183</code>) does the same for <code>Expression</code> variants.</p>
+
+        <p>Emitting opcodes and operands:</p>
+        <table class="field-table">
+            <tr><th>Method</th><th>Line</th><th>What it emits</th></tr>
+            <tr><td><code>emit(op)</code></td><td>106</td><td>Single opcode byte</td></tr>
+            <tr><td><code>emit_byte(b)</code></td><td>110</td><td>Raw byte operand</td></tr>
+            <tr><td><code>emit_i64(v)</code></td><td>114</td><td>8-byte little-endian i64</td></tr>
+            <tr><td><code>emit_u32(v)</code></td><td>118</td><td>4-byte little-endian u32 (jump offsets)</td></tr>
+            <tr><td><code>emit_f64(v)</code></td><td>122</td><td>8-byte little-endian f64</td></tr>
+            <tr><td><code>emit_string(s)</code></td><td>126</td><td>2-byte u16 index into string pool (deduped)</td></tr>
+        </table>
+
+        <h2 class="section-header">4. Optimizations (Current)</h2>
+
+        <p>The compiler has <strong>no general optimization passes</strong> — no constant
+        folding, dead code elimination, or peephole optimization. Three targeted
+        optimizations exist:</p>
+
+        <h3>4a. Tail Call Optimization</h3>
+        <p><code>lib.rs:592-617</code>. When a <code>return</code> statement wraps
+        a direct function call (<code>return f(x)</code>), the compiler emits:</p>
+        <div class="code-block">
+<pre>LoadGlobal/Local/Upvalue &lt;func&gt;  // push function
+[compile args...]                 // push arguments
+TailCall &lt;arg_count&gt;             // VM reuses current frame
+// Instead of: Call + Return      // which would push+pop a frame</pre></div>
+
+        <h3>4b. Constant Inlining</h3>
+        <p><code>lib.rs:1213-1216</code>. When an <code>Identifier</code> expression
+        matches a <code>const</code> declaration, the compiler inlines the original
+        expression AST at the use site (macro-like substitution, not compile-time evaluation):</p>
+        <div class="code-block">
+<pre>Expression::Identifier(name) => {
+    if let Some(expr) = self.constants.get(name).cloned() {
+        self.compile_expression(&expr)?;  // inline the const's AST
+        return Ok(());
+    }
+    // else: resolve as local/upvalue/global
+}</pre></div>
+
+        <h3>4c. Static Odu Method Resolution (CallOduFast)</h3>
+        <p><code>lib.rs:1571-1587</code>. When a domain method call has both a
+        statically-known domain and method name, the compiler resolves them to
+        integer IDs via <code>resolve_method_id()</code> and emits
+        <code>CallOduFast</code> instead of <code>CallOdu</code>:</p>
+        <div class="code-block">
+<pre>// CallOdu:  string-based, runtime HashMap lookup
+CallOdu &lt;domain_id:u8&gt; &lt;method_name:string_idx:u16&gt; &lt;arg_count:u8&gt;
+
+// CallOduFast: integer-based, direct dispatch (zero string overhead)
+CallOduFast &lt;domain_id:u8&gt; &lt;method_id_hi:u8&gt; &lt;method_id_lo:u8&gt; &lt;arg_count:u8&gt;
+// method_id encoding: high byte = domain_id, low byte = method index within domain</pre></div>
+
+        <p>The method ID mapping is maintained in <code>ifa-types/src/methods.rs</code>
+        (217 lines). <code>CallOduFast</code> is handled by the VM via
+        <code>OduRegistry::call_fast()</code> (<code>native.rs:63</code>).</p>
+
+        <h2 class="section-header">5. String Deduplication</h2>
+
+        <p><code>lib.rs:126-137</code>. Every unique string literal is emitted exactly
+        once into the bytecode string pool. <code>string_index: HashMap&lt;String, u16&gt;</code>
+        maps content to index. Subsequent uses of the same string reuse the existing index.</p>
+
+        <div class="code-block">
+<pre>fn emit_string(&mut self, s: &str) {
+    let idx = if let Some(&existing) = self.string_index.get(s) {
+        existing                          // reuse existing index
+    } else {
+        let idx = self.bytecode.strings.len() as u16;
+        self.bytecode.strings.push(s.to_string());
+        self.string_index.insert(s.to_string(), idx);
+        idx
+    };
+    self.emit_byte((idx & 0xff) as u8);   // little-endian u16
+    self.emit_byte((idx >> 8) as u8);
+}</pre></div>
+
+        <h2 class="section-header">6. Import Compilation</h2>
+
+        <p><code>lib.rs:700-737</code>. Two modes:</p>
+        <ul>
+            <li><strong>Std imports</strong> (<code>is_std == true</code>): binds
+            <code>__odu_fn__:&lt;domain&gt;:&lt;method&gt;</code> markers for
+            the 16 fixed Odù domains. No <code>Import</code> opcode emitted.</li>
+            <li><strong>External imports</strong> (<code>is_std == false</code>):
+            emits <code>OpCode::Import</code> with the module path. With named imports,
+            emits <code>Dup + PushStr + GetIndex</code> to extract specific bindings
+            from the module object.</li>
+        </ul>
+
+        <footer>
+            <p><a href="index.html">← Back to Development Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

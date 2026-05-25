@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>CI/CD — Ifá-Lang Maintainer Docs</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 1rem 0; }
+        .field-table th { text-align: left; color: var(--green); border-bottom: 1px solid var(--border); padding: 0.4rem 0.6rem; }
+        .field-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .field-table td:first-child { font-weight: 500; }
+    </style>
+</head>
+
+<body>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">ci.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> CI/CD</h1>
+            <p class="subtitle">GitHub Actions workflows — source-verified</p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified.</strong> Extracted from
+            <code>.github/workflows/ci.yml</code> (102 lines),
+            <code>.github/workflows/release.yml</code> (153 lines),
+            <code>.github/workflows/update-docs-release-assets.yml</code> (113 lines).
+        </div>
+
+        <h2 class="section-header">1. CI Workflow (ci.yml)</h2>
+
+        <p>Runs on push to <code>main</code>/<code>develop</code>, on tags <code>v*</code>,
+        and on PRs to <code>main</code> (<code>ci.yml:3-8</code>). Three job groups:</p>
+
+        <h3>1a. Opon Check (Cross-Platform)</h3>
+        <p>Matrix: ubuntu/x86_64, macos/arm64, windows/x86_64
+        (<code>ci.yml:22-31</code>). Steps:</p>
+        <ol>
+            <li><code>cargo fmt --all -- --check</code> — formatting</li>
+            <li><code>cargo clippy --workspace --all-targets -- -D warnings</code> — linting (deny mode)</li>
+            <li><code>cargo build --workspace</code> — full workspace build</li>
+            <li><code>cargo test --workspace</code> — all tests</li>
+            <li><code>cargo test -p ifa-embedded --test cross_runtime</code> — embedded cross-runtime test</li>
+        </ol>
+
+        <h3>1b. Specialized Build Verification</h3>
+        <table class="field-table">
+            <tr><th>Job</th><th>Target</th><th>Command</th></tr>
+            <tr><td><code>aiye-embedded</code></td><td><code>thumbv7em-none-eabihf</code></td><td><code>cargo build -p ifa-embedded</code></td></tr>
+            <tr><td><code>aiye-wasm</code></td><td><code>wasm32-unknown-unknown</code></td><td><code>cargo build -p ifa-wasm</code></td></tr>
+        </table>
+
+        <h3>1c. Benchmark Sanity</h3>
+        <p><code>cargo bench --no-run</code> — verifies benchmarks compile without running them
+        (<code>ci.yml:93-102</code>).</p>
+
+        <h2 class="section-header">2. Release Workflow (release.yml)</h2>
+
+        <p>Triggered by <code>v*</code> tag push. See <a href="release-process.html">Release Process</a>
+        for full details. Key properties:</p>
+        <ul>
+            <li><code>fail-fast: false</code> — all platforms build even if one fails</li>
+            <li>Two binaries per platform: <code>ifa</code> + <code>ifa-installer-gui</code></li>
+            <li>GUI installer skipped on cross-compiled targets (ARM Linux)</li>
+            <li>Checksums generated with <code>sha256sum</code></li>
+            <li>Changelog auto-generated via <code>git log</code></li>
+        </ul>
+
+        <h2 class="section-header">3. Docs Deployment</h2>
+
+        <p><code>update-docs-release-assets.yml</code> handles documentation updates.</p>
+
+        <p><strong>Not yet covered by CI:</strong></p>
+        <ul>
+            <li><code>cargo test --doc</code> (doc-tests) — not included in current configuration</li>
+            <li>Benchmark result tracking / performance regression detection</li>
+            <li>crates.io publishing (manual)</li>
+            <li>docs.rs metadata for most crates (only ifa-bytecode has <code>all-features = true</code>)</li>
+        </ul>
+
+        <footer>
+            <p><a href="index.html">← Back to Maintainer Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

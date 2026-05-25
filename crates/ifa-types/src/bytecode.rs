@@ -8,7 +8,7 @@ use crate::error::{IfaError, IfaResult};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::{format, string::String, string::ToString, vec::Vec};
 #[cfg(feature = "std")]
 use std::io::{Cursor, Read, Write};
@@ -121,6 +121,15 @@ impl Bytecode {
         for (i, s) in strings.iter().enumerate() {
             index_map.insert(s.clone(), i as u16);
         }
+        for constant in &self.constants {
+            if let IfaValue::Str(s) = constant {
+                let string_value = s.to_string();
+                if !index_map.contains_key(&string_value) {
+                    strings.push(string_value.clone());
+                    index_map.insert(string_value, (strings.len() - 1) as u16);
+                }
+            }
+        }
         for name in &self.exports {
             if !index_map.contains_key(name) {
                 strings.push(name.clone());
@@ -165,6 +174,19 @@ impl Bytecode {
         output.extend_from_slice(&header.to_bytes());
         output.extend_from_slice(&self.code);
         output.extend_from_slice(&constant_bytes);
+
+        // Append source name & lines metadata
+        let source_bytes = self.source_name.as_bytes();
+        output.extend_from_slice(&(source_bytes.len() as u32).to_le_bytes());
+        output.extend_from_slice(source_bytes);
+
+        let line_count = self.lines.len() as u32;
+        output.extend_from_slice(&line_count.to_le_bytes());
+        for (offset, line) in &self.lines {
+            output.extend_from_slice(&(*offset as u32).to_le_bytes());
+            output.extend_from_slice(&line.to_le_bytes());
+        }
+
         output
     }
 
@@ -172,13 +194,29 @@ impl Bytecode {
     pub fn from_bytes(bytes: &[u8]) -> IfaResult<Self> {
         use ifa_bytecode::format::BytecodeHeader;
 
+        const MAX_BYTECODE_SIZE: usize = 64 * 1024 * 1024; // 64 MB limit
+        if bytes.len() > MAX_BYTECODE_SIZE {
+            return Err(IfaError::Custom(format!(
+                "Bytecode size exceeds limit of {} bytes",
+                MAX_BYTECODE_SIZE
+            )));
+        }
+
         let header = BytecodeHeader::from_bytes(bytes)
             .map_err(|_| IfaError::Custom("Invalid bytecode header".to_string()))?;
 
-        let instructions_start = 15;
-        let instructions_end = instructions_start + header.instruction_size as usize;
+        let instructions_start: usize = 15;
+        let instruction_size = header.instruction_size as usize;
+        let constant_size = header.constant_size as usize;
+
+        let instructions_end = instructions_start
+            .checked_add(instruction_size)
+            .ok_or_else(|| IfaError::Custom("Instruction size overflow".to_string()))?;
+
         let constants_start = instructions_end;
-        let constants_end = constants_start + header.constant_size as usize;
+        let constants_end = constants_start
+            .checked_add(constant_size)
+            .ok_or_else(|| IfaError::Custom("Constant size overflow".to_string()))?;
 
         if bytes.len() < constants_end {
             return Err(IfaError::Custom("Bytecode file too short".to_string()));
@@ -194,6 +232,10 @@ impl Bytecode {
             .map_err(|e| IfaError::Custom(format!("Failed to read string pool count: {}", e)))?;
         let string_count = u32::from_le_bytes(count_bytes) as usize;
 
+        if string_count > 65536 {
+            return Err(IfaError::Custom("String pool count exceeds limit".to_string()));
+        }
+
         let mut export_indices: Vec<u16> = Vec::new();
         if header.version >= 2 {
             let mut export_bytes = [0u8; 4];
@@ -201,11 +243,14 @@ impl Bytecode {
                 .read_exact(&mut export_bytes)
                 .map_err(|e| IfaError::Custom(format!("Failed to read export count: {}", e)))?;
             let export_count = u32::from_le_bytes(export_bytes) as usize;
+            if export_count > 65536 {
+                return Err(IfaError::Custom("Export count exceeds limit".to_string()));
+            }
             for _ in 0..export_count {
                 let mut idx_b = [0u8; 2];
                 constants_reader
                     .read_exact(&mut idx_b)
-                    .map_err(|e| IfaError::Custom(e.to_string()))?;
+                    .map_err(|e| IfaError::Custom(format!("{}", e)))?;
                 export_indices.push(u16::from_le_bytes(idx_b));
             }
         }
@@ -226,13 +271,16 @@ impl Bytecode {
             let mut len_b = [0u8; 4];
             constants_reader
                 .read_exact(&mut len_b)
-                .map_err(|e| IfaError::Custom(e.to_string()))?;
+                .map_err(|e| IfaError::Custom(format!("{}", e)))?;
             let str_len = u32::from_le_bytes(len_b) as usize;
+            if str_len > 1_048_576 {
+                return Err(IfaError::Custom("String in pool too large".to_string()));
+            }
             let mut str_bytes = vec![0u8; str_len];
             constants_reader
                 .read_exact(&mut str_bytes)
-                .map_err(|e| IfaError::Custom(e.to_string()))?;
-            let s = String::from_utf8(str_bytes).map_err(|e| IfaError::Custom(e.to_string()))?;
+                .map_err(|e| IfaError::Custom(format!("{}", e)))?;
+            let s = String::from_utf8(str_bytes).map_err(|e| IfaError::Custom(format!("{}", e)))?;
             strings.push(s);
         }
 
@@ -244,14 +292,61 @@ impl Bytecode {
             .filter_map(|i| strings.get(*i as usize).cloned())
             .collect();
 
+        let mut source_name = "unknown.ifab".to_string();
+        let mut lines = Vec::new();
+
+        if bytes.len() >= constants_end + 4 {
+            let mut offset = constants_end;
+            let source_len = u32::from_le_bytes([
+                bytes[offset],
+                bytes[offset + 1],
+                bytes[offset + 2],
+                bytes[offset + 3],
+            ]) as usize;
+            offset += 4;
+            if bytes.len() >= offset + source_len + 4 {
+                if let Ok(s) = String::from_utf8(bytes[offset..offset + source_len].to_vec()) {
+                    source_name = s;
+                }
+                offset += source_len;
+
+                let line_count = u32::from_le_bytes([
+                    bytes[offset],
+                    bytes[offset + 1],
+                    bytes[offset + 2],
+                    bytes[offset + 3],
+                ]) as usize;
+                offset += 4;
+
+                if bytes.len() >= offset + line_count * 8 {
+                    for _ in 0..line_count {
+                        let instr_off = u32::from_le_bytes([
+                            bytes[offset],
+                            bytes[offset + 1],
+                            bytes[offset + 2],
+                            bytes[offset + 3],
+                        ]) as usize;
+                        let line_num = u32::from_le_bytes([
+                            bytes[offset + 4],
+                            bytes[offset + 5],
+                            bytes[offset + 6],
+                            bytes[offset + 7],
+                        ]);
+                        lines.push((instr_off, line_num));
+                        offset += 8;
+                    }
+                }
+            }
+        }
+
         Ok(Self {
             code,
             constants,
             strings,
             exports,
             version: header.version,
-            source_name: "unknown.ifab".to_string(),
-            lines: Vec::new(),
+            source_name,
+            lines,
             entry_point: 0,
             opon_size: OponSize::from_u8(header.opon_size),
         })
@@ -297,6 +392,10 @@ impl Bytecode {
         // Or checking stream position?
 
         loop {
+            if constants.len() > 65536 {
+                return Err(IfaError::Custom("Constant pool size exceeds limit".to_string()));
+            }
+
             let mut tag = [0u8; 1];
             match reader.read_exact(&mut tag) {
                 Ok(_) => {}
@@ -333,6 +432,9 @@ impl Bytecode {
                         .read_exact(&mut len_b)
                         .map_err(|e| IfaError::Custom(e.to_string()))?;
                     let str_len = u32::from_le_bytes(len_b) as usize;
+                    if str_len > 1_048_576 {
+                        return Err(IfaError::Custom("String constant too large".to_string()));
+                    }
                     let mut str_bytes = vec![0u8; str_len];
                     reader
                         .read_exact(&mut str_bytes)

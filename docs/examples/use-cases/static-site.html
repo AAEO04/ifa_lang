@@ -12,51 +12,46 @@
     <div id="nav-placeholder"></div>
     <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">static-site.ifa</span></div><div class="terminal-body">
         <h1>Static Site Generator</h1>
-        <p>Build a static site generator using Ifa-Lang's file I/O and string processing.</p>
+        <p>Build a static site generator using Ifa-Lang's Odi file I/O, Ogunda list operations, and Ika string processing.</p>
 
         <h2>Overview</h2>
-        <p>This example demonstrates using <strong>Odi (Fs)</strong> for file operations and <strong>Ika (String)</strong> for template processing.</p>
+        <p>This example demonstrates using <strong>Odi</strong> for file operations, <strong>Ika</strong> for string/template processing, <strong>Ogunda</strong> for list mapping, and <strong>Irosu</strong> for build logging.</p>
 
         <h2>Domains Used</h2>
         <ul>
-            <li><strong>Odi / Fs</strong> - Read markdown files, write HTML output</li>
-            <li><strong>Ika / String</strong> - Template substitution, markdown parsing</li>
-            <li><strong>Ogunda / List</strong> - File lists, navigation</li>
-            <li><strong>Irosu / Fmt</strong> - Build logging</li>
+            <li><strong>Odi</strong> - Read markdown files, write HTML output</li>
+            <li><strong>Ika</strong> - String operations, HTML title/strip helpers</li>
+            <li><strong>Ogunda</strong> - Map over file list, filter templates</li>
+            <li><strong>Irosu</strong> - Build logging</li>
         </ul>
 
         <h2>Code Example</h2>
         <pre><code>// Static Site Generator
-ayanmo template = Odi.ka("template.html");
-ayanmo posts = Odi.akojopo("posts/*.md");
+fn build_site() {
+    ayanmo template = Odi.ka("template.html");
+    ayanmo files = ["posts/hello.md", "posts/world.md", "about.md"];
 
-fun post ninu posts {
-    ayanmo content = Odi.ka(post);
-    ayanmo html = markdown_to_html(content);
-    ayanmo output = Ika.ropo(template, "{{content}}", html);
-    
-    ayanmo filename = Ika.ropo(post, ".md", ".html");
-    Odi.ko("public/" + filename, output);
-    Irosu.fo("Built: " + filename);
-}
+    fn process_file(path) {
+        ayanmo content = Odi.ka(path);
+        ayanmo title = Ika.oruko_html(content);
+        ayanmo body = Ika.tumo_html(content);
+        ayanmo page = template + "\n" + "<h1>" + title + "</h1>\n" + body;
+        ayanmo out_name = path + ".html";
+        Odi.ko("public/" + out_name, page);
+        Irosu.fo("Built: " + out_name);
+    }
 
-Irosu.fo("Site generated!");</code></pre>
-
-        <h2>Template System</h2>
-        <pre><code>// Simple template engine
-ese markdown_to_html(text) {
-    ayanmo result = text;
-    
-    // Headers
-    result = Ika.ropo(result, "# ", "&lt;h1&gt;");
-    result = Ika.ropo(result, "## ", "&lt;h2&gt;");
-    
-    // Bold
-    result = Ika.ropo(result, "**", "&lt;strong&gt;");
-    
-    pada result;
+    Ogunda.maapu(files, process_file);
+    Irosu.fo("Site generated!");
 }</code></pre>
+
+        <h2>Output Layout</h2>
+        <pre><code>public/
+  posts/hello.md.html
+  posts/world.md.html
+  about.md.html</code></pre>
 
         <footer class="doc-footer">
             <p><a href="index.html">Back to Use Cases</a></p>

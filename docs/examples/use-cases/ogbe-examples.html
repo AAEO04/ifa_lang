@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ogbe Domain Examples - Ifá-Lang</title>
-    <meta name="description" content="Examples of Ogbe (1111) domain operations for system programming in Ifá-Lang">
+    <meta name="description" content="Examples of Ogbe (1111) domain operations for version queries in Ifá-Lang">
     <link rel="stylesheet" href="../../js/common.css">
     <script src="../../js/nav.js" defer></script>
 </head>
@@ -22,652 +22,78 @@
     </div>
 
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">ogbe-examples.ifa</span></div><div class="terminal-body">
         <header>
             <h1>Ogbe Domain Examples</h1>
-            <p class="subtitle">System Operations and Infrastructure (1111)</p>
+            <p class="subtitle">Version and System Foundation (1111)</p>
         </header>
 
         <div class="step">
             <h2>Overview</h2>
-            <p>Ogbe (1111) is the system domain representing creation, expansion, and system operations. It provides comprehensive system-level functionality including file operations, process management, hardware control, and system information.</p>
-            
+            <p>Ogbe (1111) is the foundational domain providing version queries for the runtime. It exposes a single method <code>bere</code> (or <code>version</code>) that returns the current Ifá-Lang version string.</p>
+
             <div class="domain-info">
                 <div class="domain-card">
                     <h3>Domain Characteristics</h3>
                     <ul>
                         <li><strong>Binary Pattern:</strong> 1111 (all ones - completeness)</li>
-                        <li><strong>Yoruba Meaning:</strong> "He who creates the path" or "The expander"</li>
-                        <li><strong>System Role:</strong> System operations and infrastructure</li>
+                        <li><strong>Yoruba Meaning:</strong> "He who creates the path"</li>
+                        <li><strong>System Role:</strong> Version and runtime identification</li>
                         <li><strong>Element:</strong> Fire/Air (creation and expansion)</li>
                     </ul>
                 </div>
-                
+
                 <div class="domain-card">
-                    <h3>Core Capabilities</h3>
+                    <h3>Available Methods</h3>
                     <ul>
-                        <li><strong>File System:</strong> File and directory operations</li>
-                        <li><strong>Process Management:</strong> Process creation and control</li>
-                        <li><strong>System Information:</strong> Hardware and OS details</li>
-                        <li><strong>Network Operations:</strong> Basic network functions</li>
-                        <li><strong>Hardware Control:</strong> GPIO and device management</li>
+                        <li><strong>bere</strong> | <strong>version</strong> — returns version string</li>
                     </ul>
                 </div>
             </div>
         </div>
 
         <div class="step">
-            <h2>File System Operations</h2>
-            
-            <h3>Basic File Operations</h3>
+            <h2>Version Query</h2>
+
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">File Reading and Writing</span>
+                    <span class="code-title">Getting the Runtime Version</span>
                 </div>
-                <pre><code>// Read file contents
-ese read_config_file(path: Str) -> Map<Str, Str> {
-    gbiyanju {
-        ayanmo content = Ogbe.file_read(path);
-        ayanmo lines = Ika.split(content, "\n");
-        ayanmo config = Map::<Str, Str>::new();
-        
-        fun line ninu lines {
-            if Ika.contains(line, "=") {
-                ayanmo parts = Ika.split(line, "=");
-                config.insert(Ika.trim(parts[0]), Ika.trim(parts[1]));
-            }
-        }
-        
-        pada config;
-    } gba (error) {
-        Irosu.kigbe("Error reading config: " + error.message);
-        pada Map::<Str, Str>::new();
-    }
-}
+                <pre><code>// Print the Ifá-Lang version
+ayanmo ver = Ogbe.bere();
+Irosu.fo("Ifá-Lang version: " + ver);
 
-// Write file with backup
-ese safe_write(path: Str, content: Str) -> Bool {
-    gbiyanju {
-        // Create backup
-        ayanmo backup_path = path + ".backup";
-        if Ogbe.file_exists(path) {
-            Ogbe.file_copy(path, backup_path);
-        }
-        
-        // Write new content
-        Ogbe.file_write(path, content);
-        
-        // Verify write
-        ayanmo written = Ogbe.file_read(path);
-        if written == content {
-            Irosu.fo("File written successfully: " + path);
+// Using the English alias
+ayanmo ver2 = Ogbe.version();
+Irosu.fo("Version (alt): " + ver2);</code></pre>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Version Check</h2>
+
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Version Validation</span>
+                </div>
+                <pre><code>// Check minimum version requirement
+ese check_min_version(min_version: Str) -> Bool {
+    ayanmo current = Ogbe.version();
+    Irosu.fo("Current: " + current + ", required: " + min_version);
+    // Simple prefix check
+    ti (Ika.len(current) >= Ika.len(min_version)) {
+        ayanmo prefix = Ika.ge(current, 0, Ika.len(min_version));
+        ti (prefix == min_version) {
+            Irosu.fo("Version requirement met");
             pada otito;
-        } else {
-            Irosu.kigbe("File verification failed for: " + path);
-            pada eke;
         }
-    } gba (error) {
-        Irosu.kigbe("Error writing file: " + error.message);
-        pada eke;
     }
-}</code></pre>
-            </div>
-
-            <h3>Directory Operations</h3>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">Directory Management</span>
-                </div>
-                <pre><code>// Create directory with parents
-ese create_directory_tree(path: Str) -> Bool {
-    gbiyanju {
-        ayanmo parts = Ika.split(path, "/");
-        ayanmo current = "";
-        
-        fun part ninu parts {
-            if part != "" {
-                current = current + "/" + part;
-                if !Ogbe.dir_exists(current) {
-                    Ogbe.dir_create(current);
-                    Irosu.fo("Created directory: " + current);
-                }
-            }
-        }
-        
-        pada otito;
-    } gba (error) {
-        Irosu.kigbe("Error creating directory: " + error.message);
-        pada eke;
-    }
+    Irosu.fo("Version requirement NOT met");
+    pada iro;
 }
 
-// Directory listing with filtering
-ese list_files_by_extension(dir: Str, extension: Str) -> Vec<Str> {
-    ayanmo files = Vec::<Str>::new();
-    
-    gbiyanju {
-        ayanmo entries = Ogbe.dir_list(dir);
-        
-        fun entry ninu entries {
-            ayanmo full_path = dir + "/" + entry;
-            if Ogbe.file_exists(full_path) {
-                ayanmo ext = Ika.substring(entry, Ika.length(entry) - Ika.length(extension));
-                if ext == extension {
-                    files.push(entry);
-                }
-            }
-        }
-    } gba (error) {
-        Irosu.kigbe("Error listing directory: " + error.message);
-    }
-    
-    pada files;
-}</code></pre>
+check_min_version("1.0");</code></pre>
             </div>
-        </div>
-
-        <div class="step">
-            <h2>Process Management</h2>
-            
-            <h3>Process Creation and Control</h3>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">Process Operations</span>
-                </div>
-                <pre><code>// Execute command with timeout
-ese execute_command(cmd: Str, timeout_ms: u32) -> Map<Str, Str> {
-    ayanmo result = Map::<Str, Str>::new();
-    
-    gbiyanju {
-        ayanmo start_time = Iwori.timestamp();
-        ayanmo process = Ogbe.process_start(cmd);
-        
-        // Wait for completion or timeout
-        while Ogbe.process_running(process) {
-            ayanmo elapsed = Iwori.timestamp() - start_time;
-            if elapsed > timeout_ms {
-                Ogbe.process_kill(process);
-                result.insert("status", "timeout");
-                result.insert("error", "Command timed out after " + timeout_ms + "ms");
-                pada result;
-            }
-            Iwori.sleep(10); // Sleep 10ms
-        }
-        
-        ayanmo exit_code = Ogbe.process_exit_code(process);
-        ayanmo stdout = Ogbe.process_stdout(process);
-        ayanmo stderr = Ogbe.process_stderr(process);
-        
-        result.insert("status", "completed");
-        result.insert("exit_code", Obara.to_str(exit_code));
-        result.insert("stdout", stdout);
-        result.insert("stderr", stderr);
-        result.insert("duration", Obara.to_str(Iwori.timestamp() - start_time));
-        
-    } gba (error) {
-        result.insert("status", "error");
-        result.insert("error", error.message);
-    }
-    
-    pada result;
-}
-
-// Process monitoring
-ese monitor_processes() -> Vec<Map<Str, Str>> {
-    ayanmo processes = Vec::<Map<Str, Str>>::new();
-    
-    gbiyanju {
-        ayanmo process_list = Ogbe.process_list();
-        
-        fun proc ninu process_list {
-            ayanmo info = Map::<Str, Str>::new();
-            info.insert("pid", Obara.to_str(proc.pid));
-            info.insert("name", proc.name);
-            info.insert("memory", Obara.to_str(proc.memory_mb) + "MB");
-            info.insert("cpu", Obara.to_str(proc.cpu_percent) + "%");
-            info.insert("status", proc.status);
-            processes.push(info);
-        }
-    } gba (error) {
-        Irosu.kigbe("Error monitoring processes: " + error.message);
-    }
-    
-    pada processes;
-}</code></pre>
-            </div>
-        </div>
-
-        <div class="step">
-            <h2>System Information</h2>
-            
-            <h3>Hardware and OS Details</h3>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">System Information Gathering</span>
-                </div>
-                <pre><code>// Get comprehensive system information
-ese get_system_info() -> Map<Str, Str> {
-    ayanmo info = Map::<Str, Str>::new();
-    
-    gbiyanju {
-        // Operating System
-        info.insert("os_name", Ogbe.os_name());
-        info.insert("os_version", Ogbe.os_version());
-        info.insert("os_arch", Ogbe.os_arch());
-        
-        // Hardware
-        info.insert("cpu_model", Ogbe.cpu_model());
-        info.insert("cpu_cores", Obara.to_str(Ogbe.cpu_cores()));
-        info.insert("cpu_frequency", Obara.to_str(Ogbe.cpu_frequency()) + "MHz");
-        
-        // Memory
-        ayanmo total_mem = Ogbe.memory_total();
-        ayanmo free_mem = Ogbe.memory_free();
-        ayanmo used_mem = total_mem - free_mem;
-        
-        info.insert("memory_total", Obara.format_bytes(total_mem));
-        info.insert("memory_used", Obara.format_bytes(used_mem));
-        info.insert("memory_free", Obara.format_bytes(free_mem));
-        info.insert("memory_usage", Obara.to_str((used_mem * 100) / total_mem) + "%");
-        
-        // Disk
-        ayanmo disk_info = Ogbe.disk_info("/");
-        info.insert("disk_total", Obara.format_bytes(disk_info.total));
-        info.insert("disk_used", Obara.format_bytes(disk_info.used));
-        info.insert("disk_free", Obara.format_bytes(disk_info.free));
-        info.insert("disk_usage", Obara.to_str((disk_info.used * 100) / disk_info.total) + "%");
-        
-        // Network
-        ayanmo network = Ogbe.network_interfaces();
-        info.insert("network_interfaces", Obara.to_str(network.length()));
-        
-        // Uptime
-        info.insert("uptime", Obara.format_duration(Ogbe.uptime()));
-        
-    } gba (error) {
-        Irosu.kigbe("Error getting system info: " + error.message);
-    }
-    
-    pada info;
-}
-
-// System health check
-ese health_check() -> Map<Str, Str> {
-    ayanmo health = Map::<Str, Str>::new();
-    
-    // Memory health
-    ayanmo mem_total = Ogbe.memory_total();
-    ayanmo mem_free = Ogbe.memory_free();
-    ayanmo mem_usage = ((mem_total - mem_free) * 100) / mem_total;
-    
-    if mem_usage > 90 {
-        health.insert("memory", "critical");
-    } else if mem_usage > 80 {
-        health.insert("memory", "warning");
-    } else {
-        health.insert("memory", "ok");
-    }
-    
-    // Disk health
-    ayanmo disk_info = Ogbe.disk_info("/");
-    ayanmo disk_usage = (disk_info.used * 100) / disk_info.total;
-    
-    if disk_usage > 95 {
-        health.insert("disk", "critical");
-    } else if disk_usage > 85 {
-        health.insert("disk", "warning");
-    } else {
-        health.insert("disk", "ok");
-    }
-    
-    // CPU health (simplified)
-    ayanmo cpu_usage = Ogbe.cpu_usage();
-    if cpu_usage > 90 {
-        health.insert("cpu", "critical");
-    } else if cpu_usage > 80 {
-        health.insert("cpu", "warning");
-    } else {
-        health.insert("cpu", "ok");
-    }
-    
-    // Overall health
-    ayanmo critical_count = 0;
-    ayanmo warning_count = 0;
-    
-    fun (key, status) ninu health {
-        if status == "critical" {
-            critical_count += 1;
-        } else if status == "warning" {
-            warning_count += 1;
-        }
-    }
-    
-    if critical_count > 0 {
-        health.insert("overall", "critical");
-    } else if warning_count > 0 {
-        health.insert("overall", "warning");
-    } else {
-        health.insert("overall", "ok");
-    }
-    
-    health.insert("timestamp", Obara.to_str(Iwori.timestamp()));
-    
-    pada health;
-}</code></pre>
-            </div>
-        </div>
-
-        <div class="step">
-            <h2>Network Operations</h2>
-            
-            <h3>Network Configuration and Monitoring</h3>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">Network Operations</span>
-                </div>
-                <pre><code>// Get network interface information
-ese get_network_info() -> Vec<Map<Str, Str>> {
-    ayanmo interfaces = Vec::<Map<Str, Str>>::new();
-    
-    gbiyanju {
-        ayanmo net_interfaces = Ogbe.network_interfaces();
-        
-        fun iface ninu net_interfaces {
-            ayanmo info = Map::<Str, Str>::new();
-            info.insert("name", iface.name);
-            info.insert("type", iface.type);
-            info.insert("status", iface.status);
-            info.insert("mac_address", iface.mac_address);
-            
-            // IP addresses
-            ayanmo ips = Vec::<Str>::new();
-            fun ip ninu iface.ip_addresses {
-                ips.push(ip);
-            }
-            info.insert("ip_addresses", Ika.join(ips, ", "));
-            
-            // Statistics
-            info.insert("bytes_sent", Obara.format_bytes(iface.stats.bytes_sent));
-            info.insert("bytes_received", Obara.format_bytes(iface.stats.bytes_received));
-            info.insert("packets_sent", Obara.to_str(iface.stats.packets_sent));
-            info.insert("packets_received", Obara.to_str(iface.stats.packets_received));
-            
-            interfaces.push(info);
-        }
-    } gba (error) {
-        Irosu.kigbe("Error getting network info: " + error.message);
-    }
-    
-    pada interfaces;
-}
-
-// Port scanning
-ese scan_ports(host: Str, ports: Vec<u16>) -> Vec<Map<Str, Str>> {
-    ayanmo results = Vec::<Map<Str, Str>>::new();
-    
-    fun port ninu ports {
-        ayanmo result = Map::<Str, Str>::new();
-        result.insert("port", Obara.to_str(port));
-        
-        gbiyanju {
-            ayanmo socket = Ogbe.tcp_connect(host, port, 1000); // 1s timeout
-            if socket {
-                result.insert("status", "open");
-                Ogbe.tcp_close(socket);
-            } else {
-                result.insert("status", "closed");
-            }
-        } gba (error) {
-            result.insert("status", "error");
-            result.insert("error", error.message);
-        }
-        
-        results.push(result);
-    }
-    
-    pada results;
-}</code></pre>
-            </div>
-        </div>
-
-        <div class="step">
-            <h2>Hardware Control</h2>
-            
-            <h3>GPIO and Device Management</h3>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">GPIO Control</span>
-                </div>
-                <pre><code>// LED control with GPIO
-ese led_blink(pin: u8, count: u32, delay_ms: u32) {
-    gbiyanju {
-        // Configure GPIO pin
-        Ogbe.gpio_config(pin, "output");
-        
-        Irosu.fo("Blinking LED on pin " + Obara.to_str(pin) + " for " + Obara.to_str(count) + " times");
-        
-        fun i ninu 0..count {
-            Ogbe.gpio_set(pin, otito);  // LED on
-            Iwori.sleep(delay_ms);
-            Ogbe.gpio_set(pin, eke);    // LED off
-            Iwori.sleep(delay_ms);
-        }
-        
-        Irosu.fo("LED blinking completed");
-        
-    } gba (error) {
-        Irosu.kigbe("Error controlling GPIO: " + error.message);
-    }
-}
-
-// Button reading with debouncing
-ese read_button(pin: u8, debounce_ms: u32) -> Bool {
-    gbiyanju {
-        // Configure GPIO pin
-        Ogbe.gpio_config(pin, "input");
-        Ogbe.gpio_set_pull(pin, "pullup");
-        
-        ayanmo last_state = Ogbe.gpio_read(pin);
-        ayanmo last_time = Iwori.timestamp();
-        
-        // Simple debouncing
-        while otito {
-            ayanmo current_state = Ogbe.gpio_read(pin);
-            ayanmo current_time = Iwori.timestamp();
-            
-            if current_state != last_state {
-                if (current_time - last_time) >= debounce_ms {
-                    // State changed and debounced
-                    if current_state == eke { // Button pressed (pullup -> low)
-                        pada otito;
-                    }
-                    last_state = current_state;
-                    last_time = current_time;
-                }
-            }
-            
-            Iwori.sleep(10); // Check every 10ms
-        }
-    } gba (error) {
-        Irosu.kigbe("Error reading button: " + error.message);
-        pada eke;
-    }
-}
-
-// Temperature sensor reading (I2C)
-ese read_temperature_sensor(i2c_bus: u8, device_addr: u8) -> Float {
-    gbiyanju {
-        // Initialize I2C
-        Ogbe.i2c_init(i2c_bus);
-        
-        // Write register pointer
-        Ogbe.i2c_write(device_addr, [0x00]); // Temperature register
-        
-        // Read temperature data (2 bytes)
-        ayanmo data = Ogbe.i2c_read(device_addr, 2);
-        
-        // Convert to temperature (simplified for LM75)
-        ayanmo raw_temp = (data[0] << 8) | data[1];
-        ayanmo temperature = raw_temp as Float / 256.0;
-        
-        pada temperature;
-        
-    } gba (error) {
-        Irosu.kigbe("Error reading temperature sensor: " + error.message);
-        pada 0.0;
-    }
-}</code></pre>
-            </div>
-        </div>
-
-        <div class="step">
-            <h2>Advanced Examples</h2>
-            
-            <h3>System Monitor Application</h3>
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">Complete System Monitor</span>
-                </div>
-                <pre><code>// System monitoring dashboard
-ese system_monitor_dashboard() {
-    Irosu.fo("=== Ifá-Lang System Monitor ===");
-    Irosu.fo("");
-    
-    // Get system information
-    ayanmo sys_info = get_system_info();
-    
-    Irosu.fo("System Information:");
-    Irosu.fo("  OS: " + sys_info.get("os_name") + " " + sys_info.get("os_version"));
-    Irosu.fo("  Architecture: " + sys_info.get("os_arch"));
-    Irosu.fo("  CPU: " + sys_info.get("cpu_model") + " (" + sys_info.get("cpu_cores") + " cores)");
-    Irosu.fo("  Uptime: " + sys_info.get("uptime"));
-    Irosu.fo("");
-    
-    // Memory usage
-    Irosu.fo("Memory Usage:");
-    Irosu.fo("  Total: " + sys_info.get("memory_total"));
-    Irosu.fo("  Used:  " + sys_info.get("memory_used") + " (" + sys_info.get("memory_usage") + ")");
-    Irosu.fo("  Free:  " + sys_info.get("memory_free"));
-    Irosu.fo("");
-    
-    // Disk usage
-    Irosu.fo("Disk Usage:");
-    Irosu.fo("  Total: " + sys_info.get("disk_total"));
-    Irosu.fo("  Used:  " + sys_info.get("disk_used") + " (" + sys_info.get("disk_usage") + ")");
-    Irosu.fo("  Free:  " + sys_info.get("disk_free"));
-    Irosu.fo("");
-    
-    // Network interfaces
-    ayanmo net_info = get_network_info();
-    Irosu.fo("Network Interfaces:");
-    fun iface ninu net_info {
-        Irosu.fo("  " + iface.get("name") + " (" + iface.get("status") + ")");
-        Irosu.fo("    Type: " + iface.get("type"));
-        Irosu.fo("    IP: " + iface.get("ip_addresses"));
-        Irosu.fo("    MAC: " + iface.get("mac_address"));
-        Irosu.fo("    Sent: " + iface.get("bytes_sent") + ", Received: " + iface.get("bytes_received"));
-    }
-    Irosu.fo("");
-    
-    // Health check
-    ayanmo health = health_check();
-    Irosu.fo("System Health:");
-    fun (component, status) ninu health {
-        if component != "timestamp" {
-            ayanmo status_symbol = if status == "ok" { "otito" } 
-                                else if status == "warning" { "warning" } 
-                                else { "CRITICAL" };
-            Irosu.fo("  " + component + ": " + status_symbol);
-        }
-    }
-    Irosu.fo("");
-    
-    // Top processes
-    Irosu.fo("Top Processes:");
-    ayanmo processes = monitor_processes();
-    processes.sort_by(|a, b| Obara.compare(b.get("memory"), a.get("memory")));
-    
-    fun i ninu 0..Obara.min(5, processes.length()) {
-        ayanmo proc = processes[i];
-        Irosu.fo("  " + proc.get("name") + " (PID: " + proc.get("pid") + ")");
-        Irosu.fo("    Memory: " + proc.get("memory") + ", CPU: " + proc.get("cpu"));
-    }
-}
-
-// Continuous monitoring
-ese continuous_monitoring(interval_seconds: u32) {
-    Irosu.fo("Starting continuous monitoring (interval: " + Obara.to_str(interval_seconds) + "s)");
-    Irosu.fo("Press Ctrl+C to stop");
-    
-    while otito {
-        // Clear screen (platform dependent)
-        Ogbe.clear_screen();
-        
-        // Show timestamp
-        Irosu.fo("System Monitor - " + Iwori.format_time(Iwori.timestamp()));
-        Irosu.fo("");
-        
-        // Quick health check
-        ayanmo health = health_check();
-        ayanmo overall = health.get("overall");
-        
-        if overall == "critical" {
-            Irosu.kigbe("SYSTEM IN CRITICAL STATE!");
-        } else if overall == "warning" {
-            Irosu.fo("System warnings detected");
-        } else {
-            Irosu.fo("System healthy");
-        }
-        
-        Irosu.fo("");
-        
-        // Key metrics
-        ayanmo sys_info = get_system_info();
-        Irosu.fo("CPU Usage: " + Ogbe.cpu_usage() + "%");
-        Irosu.fo("Memory Usage: " + sys_info.get("memory_usage"));
-        Irosu.fo("Disk Usage: " + sys_info.get("disk_usage"));
-        Irosu.fo("");
-        
-        // Wait for next interval
-        Iwori.sleep(interval_seconds * 1000);
-    }
-}</code></pre>
-            </div>
-        </div>
-
-        <div class="step">
-            <h2>Best Practices</h2>
-            
-            <h3>Error Handling</h3>
-            <ul>
-                <li>Always wrap system operations in gbiyanju/gba blocks</li>
-                <li>Provide meaningful error messages with context</li>
-                <li>Use Okanran domain for structured error handling</li>
-                <li>Implement graceful degradation for non-critical failures</li>
-            </ul>
-
-            <h3>Resource Management</h3>
-            <ul>
-                <li>Use   (sacrifice) blocks for resource cleanup</li>
-                <li>Close file handles and network connections properly</li>
-                <li>Monitor resource usage to prevent leaks</li>
-                <li>Implement timeout mechanisms for blocking operations</li>
-            </ul>
-
-            <h3>Security Considerations</h3>
-            <ul>
-                <li>Validate file paths to prevent directory traversal</li>
-                <li>Sanitize command arguments to prevent injection</li>
-                <li>Use proper permissions for file operations</li>
-                <li>Implement access controls for sensitive operations</li>
-            </ul>
-
-            <h3>Performance Optimization</h3>
-            <ul>
-                <li>Use asynchronous operations for I/O-bound tasks</li>
-                <li>Cache frequently accessed system information</li>
-                <li>Implement efficient data structures for large datasets</li>
-                <li>Profile and optimize hot paths in system operations</li>
-            </ul>
         </div>
 
         <footer>

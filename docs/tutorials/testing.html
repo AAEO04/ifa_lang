@@ -4,82 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Testing Tutorial - If·-Lang</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2.5rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        h3 {
-            color: var(--accent);
-            margin: 1.5rem 0 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        a {
-            color: var(--gold);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-dim);
-            border-top: 1px solid var(--accent);
-            margin-top: 3rem;
-        }
-    </style>
+        <link rel="stylesheet" href="../js/common.css">
+    <title>Testing Tutorial - If√°-Lang</title>
 </head>
 
 
@@ -92,36 +18,35 @@
         </div>
     </div>
     <div class="container">
-        <h1>?? Testing Tutorial</h1>
-        <p>Learn how to write effective tests for your If·-Lang programs.</p>
+        
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">testing.ifa</span></div><div class="terminal-body"><h1>Testing Tutorial</h1>
+        <p>Learn how to write effective tests for your If√°-Lang programs.</p>
 
-        <h2>Assertions with ?`w?`</h2>
-        <p>The <code>?`w?`</code> (or English alias <code>verify</code>) statement asserts conditions at runtime:</p>
+        <h2>Assertions with Okanran.beeni</h2>
+        <p>The <code>Okanran.beeni</code> (or English alias <code>assert</code>) method checks conditions at runtime:</p>
         <pre><code>// Basic assertions
-?`w?` 2 + 2 == 4              // Passes
-?`w?` Ika.len("hello") == 5   // Passes
+ayanmo result = Okanran.beeni(2 + 2 == 4, "Math works");
+Irosu.fo(result);  // Assertion passes
 
-// With custom message
-?`w?` user != nil, "User must exist"
+ayanmo result = Okanran.beeni(Ika.len("hello") == 5, "Length check");
 
 // English alias
-verify total > 0, "Total must be positive"</code></pre>
+ayanmo result = Okanran.beeni(total > 0, "Total must be positive");</code></pre>
 
         <h2>Test Functions</h2>
-        <p>Organize tests in functions with the <code>test_</code> prefix:</p>
+        <p>Organize tests in functions with descriptive names:</p>
         <pre><code>// test_math.ifa
 
-ise test_addition() {
-    ?`w?` 2 + 2 == 4;
-    ?`w?` -1 + 1 == 0;
-    ?`w?` 0.1 + 0.2 == 0.3;  // Note: float precision!
-    Irosu.fo("? test_addition passed");
+ese test_addition() {
+    ayanmo r1 = Okanran.beeni(2 + 2 == 4, "2+2=4");
+    ayanmo r2 = Okanran.beeni(-1 + 1 == 0, "-1+1=0");
+    Irosu.fo("test_addition passed");
 }
 
-ise test_subtraction() {
-    ?`w?` 5 - 3 == 2;
-    ?`w?` 0 - 1 == -1;
-    Irosu.fo("? test_subtraction passed");
+ese test_subtraction() {
+    ayanmo r1 = Okanran.beeni(5 - 3 == 2, "5-3=2");
+    ayanmo r2 = Okanran.beeni(0 - 1 == -1, "0-1=-1");
+    Irosu.fo("test_subtraction passed");
 }
 
 // Run all tests
@@ -141,25 +66,22 @@ ifa test --verbose tests/</code></pre>
 
         <h2>Testing Errors</h2>
         <p>Test that code properly handles errors:</p>
-        <pre><code>ise test_error_handling() {
-    // Test that division by zero returns error
-    ayanmo result = Okanran.try(|| {
-        padap? 10 / 0;
-    });
-    
-    ?`w?` Okanran.is_error(result), "Division by zero should error";
-    
+        <pre><code>ese test_error_handling() {
+    // Use Okanran.gbiyanju to catch errors
+    ayanmo result = Okanran.gbiyanju({
+        -> 10 / 0  // This would be a division error
+    }, ofifo);
+
     // Test error message
-    ayanmo msg = Okanran.message(result);
-    ?`w?` Ika.contains(msg, "division"), "Should mention division";
+    ayanmo is_err = Okanran.beeni(result == ofifo, "Division by zero should return default");
     
-    Irosu.fo("? test_error_handling passed");
+    Irosu.fo("test_error_handling passed");
 }</code></pre>
 
         <h2>Test Fixtures</h2>
         <p>Set up test data before tests:</p>
-        <pre><code>ise setup_test_data() {
-    padap? {
+        <pre><code>ese setup_test_data() {
+    padapo {
         "users": [
             {"id": 1, "name": "Alice"},
             {"id": 2, "name": "Bob"}
@@ -170,73 +92,48 @@ ifa test --verbose tests/</code></pre>
     };
 }
 
-ise test_user_lookup() {
+ese test_user_lookup() {
     ayanmo data = setup_test_data();
-    ayanmo user = Ogunda.find(data["users"], |u| u["id"] == 1);
+    ayanmo users = Ogunda.wa(data["users"], { u -> u["id"] == 1 });
     
-    ?`w?` user != nil;
-    ?`w?` user["name"] == "Alice";
+    ayanmo r1 = Okanran.beeni(users != ofifo, "User found");
+    Irosu.fo("test_user_lookup passed");
 }</code></pre>
 
         <h2>Testing File I/O</h2>
-        <pre><code>ise test_file_operations() {
+        <pre><code>ese test_file_operations() {
     ayanmo test_file = "test_output.txt";
     
     // Write
-    Odi.write(test_file, "Hello, World!");
-    ?`w?` Odi.exists(test_file);
+    Odi.ko(test_file, "Hello, World!");
+    ayanmo r1 = Okanran.beeni(Odi.wa(test_file), "File exists");
     
     // Read
-    ayanmo content = Odi.read(test_file);
-    ?`w?` content == "Hello, World!";
+    ayanmo content = Odi.ka(test_file);
+    ayanmo r2 = Okanran.beeni(content == "Hello, World!", "Content matches");
     
     // Cleanup
-    Odi.delete(test_file);
-    ?`w?` !Odi.exists(test_file);
+    Odi.pa_faili(test_file);
+    ayanmo r3 = Okanran.beeni(!Odi.wa(test_file), "File deleted");
     
-    Irosu.fo("? test_file_operations passed");
-}</code></pre>
-
-        <h2>Mocking Network Calls</h2>
-        <pre><code>// Create a mock HTTP client
-ayanmo mock_responses = {};
-
-ise mock_get(url) {
-    ti (mock_responses[url] != nil) {
-        padap? mock_responses[url];
-    }
-    padap? Okanran.error("Unmocked URL: " + url);
-}
-
-ise test_api_client() {
-    // Set up mock
-    mock_responses["https://api.example.com/users"] = {
-        "status": 200,
-        "body": "[{\"id\": 1}]"
-    };
-    
-    // Test with mock
-    ayanmo response = mock_get("https://api.example.com/users");
-    ?`w?` response["status"] == 200;
+    Irosu.fo("test_file_operations passed");
 }</code></pre>
 
         <h2>Best Practices</h2>
         <ul style="margin-left: 1.5rem;">
-            <li><strong>One assertion per concept</strong> ó Test one thing at a time</li>
-            <li><strong>Descriptive names</strong> ó <code>test_user_login_with_invalid_password_fails</code></li>
-            <li><strong>Cleanup after tests</strong> ó Delete test files, reset state</li>
-            <li><strong>Test edge cases</strong> ó Empty lists, nil values, large numbers</li>
-            <li><strong>Use Babalawo</strong> ó Catch issues before runtime</li>
+            <li><strong>One assertion per concept</strong> - Test one thing at a time</li>
+            <li><strong>Descriptive names</strong> - <code>test_user_login_with_invalid_password_fails</code></li>
+            <li><strong>Cleanup after tests</strong> - Delete test files, reset state</li>
+            <li><strong>Test edge cases</strong> - Empty lists, nil values, large numbers</li>
+            <li><strong>Use Babalawo</strong> - Catch issues before runtime</li>
         </ul>
 
         <footer class="doc-footer">
-            <p><a href="../index.html">? Tutorials</a> ∑ <a href="debugging.html">Debugging ?</a></p>
+            <p><a href="../index.html">Tutorials</a> - <a href="debugging.html">Debugging</a></p>
             <p><a href="../index.html">Documentation Home</a></p>
-        </footer>
-    </div>
-    <script src="../js/nav.js"></script>
+        </footer></div></div>
+<script src="../js/nav.js"></script>
     <script src="../js/common.js"></script>
 </body>
 
 </html>
-

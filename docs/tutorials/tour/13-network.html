@@ -4,155 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lesson 13: Networking - Tour of If·</title>
-    <style>
-        :root {
-            --bg-dark: #0f0f1a;
-            --bg-card: #1a1a2e;
-            --accent: #e94560;
-            --gold: #ffd700;
-            --text: #eaeaea;
-            --text-dim: #a0a0a0;
-            --warning: #f59e0b;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            line-height: 1.7;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .lesson-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--accent);
-        }
-
-        .lesson-num {
-            background: var(--accent);
-            color: white;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        h1 {
-            color: var(--gold);
-            font-size: 2rem;
-        }
-
-        h2 {
-            color: var(--gold);
-            margin: 2rem 0 1rem;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 0.5rem;
-        }
-
-        p {
-            margin: 1rem 0;
-        }
-
-        pre {
-            background: #0d1321;
-            border-radius: 8px;
-            padding: 1rem;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-
-        code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            color: var(--gold);
-        }
-
-        .warning {
-            background: rgba(245, 158, 11, 0.1);
-            border: 1px solid var(--warning);
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        .warning-title {
-            color: var(--warning);
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-        }
-
-        table {
-            width: 100%;
-            background: var(--bg-card);
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 1rem 0;
-        }
-
-        th {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.75rem;
-            text-align: left;
-            color: var(--gold);
-        }
-
-        td {
-            padding: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--accent);
-        }
-
-        .nav-btn {
-            background: var(--bg-card);
-            color: var(--gold);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            border: 1px solid var(--accent);
-        }
-
-        .nav-btn:hover {
-            background: var(--accent);
-            color: white;
-        }
-
-        .nav-btn.primary {
-            background: var(--accent);
-            color: white;
-        }
-
-        a {
-            color: var(--gold);
-        }
-    </style>
+    <title>Lesson 13: Network - Tour of If√°</title>
+    <link rel="stylesheet" href="../../../js/common.css">
+    <script src="../../../js/nav.js" defer></script>
+    <script src="../../../js/common.js" defer></script>
+    
 </head>
 
+<body>
+    <div id="nav-placeholder"></div>
 
     <!-- Breadcrumbs -->
     <div class="breadcrumbs">
@@ -163,166 +23,87 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">13-network.ifa</span></div><div class="terminal-body">
         <div class="lesson-header">
             <div class="lesson-num">13</div>
             <div>
-                <h1>Networking</h1>
+                <h1>Network</h1>
                 <p style="color: var(--text-dim); margin: 0;">HTTP requests with Otura domain</p>
             </div>
         </div>
 
-        <div class="warning">
-            <div class="warning-title">?? Not Available in Playground</div>
-            <p style="margin: 0;">Network operations require internet access and won't work in the browser playground.
-                Run these locally.</p>
+        <div class="info-box"
+            style="border: 1px solid #facc15; background: rgba(250, 204, 21, 0.1); padding: 1rem; border-radius: 8px;">
+            <div class="info-box-title" style="color: #facc15; font-weight: bold; margin-bottom: 0.5rem;">Feature Gate
+            </div>
+            <p style="margin: 0;">
+                Otura (the Od√π of communication) requires the <code>backend</code> feature flag in your
+                <code>Ifa.toml</code>. Network requests are asynchronous and use the <code>daro</code> (await) keyword.
+            </p>
         </div>
 
-        <h2>Otura Domain</h2>
-        <p><strong>Otura</strong> handles HTTP requests and network operations.</p>
+        <h2>HTTP GET (gba)</h2>
+        <p>Use <code>Otura.gba()</code> to make GET requests:</p>
 
-        <h2>HTTP Methods</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Method</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><code>get(url)</code></td>
-                    <td>HTTP GET request</td>
-                </tr>
-                <tr>
-                    <td><code>post(url, body)</code></td>
-                    <td>HTTP POST request</td>
-                </tr>
-                <tr>
-                    <td><code>put(url, body)</code></td>
-                    <td>HTTP PUT request</td>
-                </tr>
-                <tr>
-                    <td><code>delete(url)</code></td>
-                    <td>HTTP DELETE request</td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">GET Request</span>
+            </div>
+            <pre class="code-yoruba"><code>// Simple GET request
+ayanmo response = daro Otura.gba("https://api.example.com/data");
+Irosu.fo(response);</code></pre>
+        </div>
 
-        <h2>GET Request</h2>
-        <pre><code>// Simple GET request
-ayanmo response = Otura.get("https://api.example.com/data");
+        <h2>HTTP POST (ran)</h2>
+        <p>Use <code>Otura.ran()</code> to make POST requests:</p>
 
-Irosu.fo("Status: " + response["status"]);
-Irosu.fo("Body: " + response["body"]);</code></pre>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">POST Request</span>
+            </div>
+            <pre class="code-yoruba"><code>// POST with JSON body
+ayanmo body = "{\"name\": \"If√°\", \"type\": \"language\"}";
+ayanmo response = daro Otura.ran("https://api.example.com/submit", body);
+Irosu.fo(response);</code></pre>
+        </div>
 
-        <h2>POST Request with JSON</h2>
-        <pre><code>// Create JSON body
-ayanmo data = {
-    "name": "If·",
-    "type": "language"
-};
-
-ayanmo response = Otura.post(
-    "https://api.example.com/items",
-    data
-);
-
-ti (response["status"] == 201) {
-    Irosu.fo("Created successfully!");
-} bib?k? {
-    Irosu.kigbe("Failed: " + response["body"]);
-}</code></pre>
-
-        <h2>Handling Responses</h2>
-        <pre><code>ayanmo response = Otura.get("https://api.example.com/users");
-
-// Check status code
-ti (response["status"] >= 200 && response["status"] < 300) {
-    // Parse JSON body
-    ayanmo users = Ogbe.parse_json(response["body"]);
-    
-    fun user ninu users {
-        Irosu.fo("User: " + user["name"]);
-    }
-} bib?k? {
-    Irosu.kigbe("Request failed with status " + response["status"]);
-}</code></pre>
-
-        <h2>Custom Headers</h2>
-        <pre><code>// Set custom headers
-ayanmo headers = {
-    "Authorization": "Bearer my-token",
-    "Content-Type": "application/json"
-};
-
-ayanmo response = Otura.get(
-    "https://api.example.com/protected",
-    headers
-);
-
-Irosu.fo(response["body"]);</code></pre>
-
-        <h2>Error Handling</h2>
-        <pre><code>// Network requests can fail
-ayanmo result = Okanran.try(|| {
-    padap? Otura.get("https://unreachable.example.com");
-});
-
-ti (Okanran.is_error(result)) {
-    Irosu.kigbe("Network error: " + Okanran.message(result));
-} bib?k? {
-    Irosu.fo("Response: " + result["body"]);
-}</code></pre>
-
-        <h2>Practical Example: Fetch Weather</h2>
-        <pre><code>ise get_weather(city) {
-    ayanmo url = "https://api.weather.com/v1/current?city=" + city;
-    
-    ayanmo result = Okanran.try(|| {
-        padap? Otura.get(url);
-    });
-    
-    ti (Okanran.is_error(result)) {
-        padap? Okanran.error("Could not fetch weather");
-    }
-    
-    ti (result["status"] != 200) {
-        padap? Okanran.error("API returned " + result["status"]);
-    }
-    
-    padap? Ogbe.parse_json(result["body"]);
+        <h2>Working with JSON</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">API Client</span>
+            </div>
+            <pre class="code-yoruba"><code>is·ªçd·∫πl·∫π fetch_user(id) {
+    ayanmo url = "https://api.example.com/users/" + id;
+    ayanmo response = daro Otura.gba(url);
+    Irosu.fo("Response: " + response);
 }
 
-ayanmo weather = get_weather("Lagos");
-ti (!Okanran.is_error(weather)) {
-    Irosu.fo("Temperature: " + weather["temp"] + "∞C");
-    Irosu.fo("Conditions: " + weather["description"]);
-}</code></pre>
+fetch_user(42);</code></pre>
+        </div>
 
-        <h2>REST API Client</h2>
-        <pre><code>// Reusable API client
-ayanmo BASE_URL = "https://api.example.com";
+        <div class="info-box"
+            style="border: 1px solid #facc15; background: rgba(250, 204, 21, 0.1); padding: 1rem; border-radius: 8px;">
+            <div class="info-box-title" style="color: #facc15; font-weight: bold; margin-bottom: 0.5rem;">Note</div>
+            <p style="margin: 0;">
+                Otura currently supports <code>gba</code> (GET) and <code>ran</code> (POST) only.
+                PUT and DELETE are not yet implemented. All requests are async and require the
+                <code>daro</code> keyword.
+            </p>
+        </div>
 
-ise api_get(endpoint) {
-    padap? Otura.get(BASE_URL + endpoint);
-}
-
-ise api_post(endpoint, data) {
-    padap? Otura.post(BASE_URL + endpoint, data);
-}
-
-// Usage
-ayanmo users = api_get("/users");
-ayanmo new_user = api_post("/users", {"name": "AdÈ"});</code></pre>
+        <h2>What You Learned</h2>
+        <ul style="margin-left: 2rem; color: var(--text-dim);">
+            <li>HTTP GET: <code>Otura.gba()</code></li>
+            <li>HTTP POST: <code>Otura.ran()</code></li>
+            <li>Async requests with <code>daro</code> keyword</li>
+            <li>Requires <code>backend</code> feature flag</li>
+        </ul>
 
         <div class="nav-buttons">
-            <a href="12-crypto.html" class="nav-btn">? Previous: Crypto</a>
-            <a href="14-ebo.html" class="nav-btn primary">Next: Resource Management ?</a>
+            <a href="12-crypto.html" class="nav-btn">Previous: Crypto</a>
+            <a href="14-ebo.html" class="nav-btn primary">Next: Ebo</a>
         </div>
     </div>
-        <script src="../../../js/nav.js"></script>
-    <script src="../../../js/common.js"></script>
 </body>
 
 </html>
-

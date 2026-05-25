@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Type System - Ifá-Lang</title>
-    <meta name="description" content="ifa-types shared type system for Ifá-Lang runtime components">
+    <title>Type System - Ifa-Lang</title>
+    <meta name="description" content="ifa-types shared type system for Ifa-Lang runtime components">
     <link rel="stylesheet" href="../js/common.css">
     <script src="../js/nav.js" defer></script>
 </head>
@@ -22,6 +22,7 @@
     </div>
 
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">types-crate.ifa</span></div><div class="terminal-body">
         <header>
             <h1>Type System</h1>
             <p class="subtitle">ifa-types - Shared Foundation for All Runtimes</p>
@@ -29,12 +30,14 @@
 
         <div class="step">
             <h2>Overview</h2>
-            <p>The <code>ifa-types</code> crate provides the canonical shared type system used across all Ifá-Lang runtime components. It ensures type consistency between the interpreter, bytecode VM, transpiler, and standard library.</p>
+            <p>The <code>ifa-types</code> crate provides the canonical shared type system used across all Ifa-Lang runtime components. It ensures type consistency between the interpreter, bytecode VM, transpiler, and standard library. The crate is <code>no_std</code> compatible (requires <code>alloc</code> feature for heap types).</p>
 
             <blockquote>
-                "This is the ONE error type. ifa-core, ifa-std, ifa-cli all re-export it. If you need a different error shape, use a different type name - never another IfaError."<br>
+                "This is the ONE error type. ifa-vm, ifa-std, ifa-cli all re-export it. If you need a different error shape, use a different type name - never another IfaError."<br>
                 <small>Single source of truth principle enforced across all crates</small>
             </blockquote>
+
+            <p><strong>Key crate attributes:</strong> <code>#![forbid(unsafe_code)]</code>, <code>#![no_std]</code> (with <code>std</code> feature for full std support). NaN boxing is used for primitive value optimization on 64-bit platforms.</p>
         </div>
 
         <div class="step">
@@ -48,187 +51,232 @@
                 <pre><code>ifa-types/
     src/
         lib.rs           // Main exports and crate configuration
-        domain.rs        // OduDomain enum (16 Odù + infrastructure)
+        ast.rs           // AST nodes (vm feature)
+        binary_ops.rs    // Binary operator type checking (vm feature)
+        bytecode.rs      // Bytecode structures (vm feature)
+        capability.rs    // Capability security types (std feature)
+        compact_str.rs   // CompactString wrapper for string interning
+        domain.rs        // OduDomain enum (16 Odu + infrastructure + reserved)
         error.rs         // IfaError / IfaResult (canonical error types)
-        shared.rs        // IfaShared (runtime coordination)
+        methods.rs       // Stable method ID resolution
+        nan_box.rs       // NaN boxing for primitive values
+        odu_metadata.rs  // Domain method metadata
+        registry.rs      // ResourceRegistry (The Gatekeeper)
+        shared.rs        // IfaShared (thread-safe values)
         token.rs         // ResourceToken (resource management)
         traits.rs        // Core traits and protocols
         value.rs         // IfaValue (legacy enum - deprecated)
-        value_union.rs   // IfaValue (new tagged union - current)
-        ast.rs           // AST nodes (vm feature)
-        bytecode.rs      // Bytecode structures (vm feature)</code></pre>
+        value_union.rs   // IfaValue (current clean enum implementation)</code></pre>
             </div>
 
             <h3>Feature Flags</h3>
             <ul>
-                <li><strong>vm:</strong> Include AST and bytecode modules</li>
-                <li><strong>std:</strong> Enable standard library extensions</li>
-                <li><strong>alloc:</strong> Enable heap allocation support</li>
+                <li><strong>vm:</strong> Include AST, bytecode, binary_ops modules</li>
+                <li><strong>std:</strong> Enable standard library extensions (capability, registry, etc.)</li>
+                <li><strong>alloc:</strong> Enable heap allocation support for no_std</li>
+                <li><strong>serde:</strong> Enable serialization support</li>
+                <li><strong>dashmap:</strong> Use DashMap for concurrent IfaShared objects</li>
                 <li><strong>default:</strong> Core types only (no_std compatible)</li>
             </ul>
         </div>
 
         <div class="step">
-            <h2>OduDomain - The 16 Odù + Infrastructure</h2>
-            <p>The canonical domain enumeration includes the traditional 16 Odù plus pseudo-domains, infrastructure, and application stacks.</p>
+            <h2>OduDomain - The 16 Odu + Infrastructure</h2>
+            <p>The canonical domain enumeration includes the traditional 16 Odu plus infrastructure domains and reserved pseudo-domains.</p>
 
-            <h3>Core 16 Odù (Traditional)</h3>
+            <h3>Core 16 Odu (Traditional - IDs 0-15)</h3>
             <div class="domain-grid">
                 <div class="domain-item">
                     <span class="pattern">1111</span>
-                    <strong>Ogbe</strong> - System, CLI Args, Lifecycle
+                    <strong>Ogbe</strong> - System, version, lifecycle (ID 0)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0000</span>
-                    <strong>Oyeku</strong> - Exit, Sleep
+                    <strong>Oyeku</strong> - Exit, sleep (ID 1)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0110</span>
-                    <strong>Iwori</strong> - Time, DateTime
+                    <strong>Iwori</strong> - Time, timestamps (ID 2)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">1001</span>
-                    <strong>Odi</strong> - Files, Database
+                    <strong>Odi</strong> - File I/O (ID 3)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">1100</span>
-                    <strong>Irosu</strong> - Console I/O, Logging
+                    <strong>Irosu</strong> - Console I/O (ID 4)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0011</span>
-                    <strong>Owonrin</strong> - Random
+                    <strong>Owonrin</strong> - Random (ID 5)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">1000</span>
-                    <strong>Obara</strong> - Math (Add/Mul)
+                    <strong>Obara</strong> - Math (add/mul/pow/sqrt) (ID 6)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0001</span>
-                    <strong>Okanran</strong> - Errors, Assertions
+                    <strong>Okanran</strong> - Assertions, throw (ID 7)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">1110</span>
-                    <strong>Ogunda</strong> - Arrays, Collections
+                    <strong>Ogunda</strong> - Collections (ID 8)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0111</span>
-                    <strong>Osa</strong> - Concurrency
+                    <strong>Osa</strong> - Concurrency (ID 9)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0100</span>
-                    <strong>Ika</strong> - Strings
+                    <strong>Ika</strong> - Strings (ID 10)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0010</span>
-                    <strong>Oturupon</strong> - Math (Sub/Div)
+                    <strong>Oturupon</strong> - Math (sub/div) (ID 11)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">1011</span>
-                    <strong>Otura</strong> - Networking
+                    <strong>Otura</strong> - Networking (ID 12)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">1101</span>
-                    <strong>Irete</strong> - Crypto, Compression
+                    <strong>Irete</strong> - Crypto, compression (ID 13)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">1010</span>
-                    <strong>Ose</strong> - Graphics, UI
+                    <strong>Ose</strong> - Graphics/TUI (ID 14)
                 </div>
                 <div class="domain-item">
                     <span class="pattern">0101</span>
-                    <strong>Ofun</strong> - Permissions, Reflection
+                    <strong>Ofun</strong> - Meta, eval, debug (ID 15)
                 </div>
             </div>
 
-            <h3>Extended Domains</h3>
+            <h3>Infrastructure Domains</h3>
             <ul>
-                <li><strong>Coop:</strong> Àjõsé - FFI Bridge</li>
-                <li><strong>Opele:</strong> Divination/Compound Odù</li>
-                <li><strong>Infrastructure:</strong> Cpu, Gpu, Storage, Kernel, Shaders</li>
-                <li><strong>Stacks:</strong> Crypto, Backend, Frontend, Game, ML, IoT, Fusion</li>
+                <li><strong>Cpu (ID 18):</strong> Parallel computing via rayon</li>
+                <li><strong>Gpu (ID 19):</strong> GPU compute via wgpu</li>
+                <li><strong>Storage (ID 20):</strong> Key-value persistence</li>
+                <li><strong>Sys (ID 29):</strong> System/kernel/OS interface</li>
+            </ul>
+
+            <h3>Reserved Pseudo-Domains</h3>
+            <ul>
+                <li><strong>Coop (Ajose):</strong> FFI bridge mechanism (grammar/compiler layer, not VM dispatch)</li>
+                <li><strong>Opele:</strong> Compound Odu / combination divination (no concrete methods yet)</li>
             </ul>
         </div>
 
         <div class="step">
             <h2>IfaValue - Dynamic Type System</h2>
-            <p>The universal container for Ifá-Lang's dynamic typing. The implementation has evolved from an enum to a tagged union for better performance.</p>
+            <p>The universal container for Ifa-Lang's dynamic typing. Implemented as a regular Rust enum (not a hand-packed union) with 32-byte size on 64-bit systems.</p>
 
-            <h3>Current Implementation (Tagged Union)</h3>
-            <p>The <code>value_union.rs</code> module provides the new tagged union implementation:</p>
+            <h3>Current Implementation (value_union.rs)</h3>
             
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">IfaValue Types</span>
+                    <span class="code-title">IfaValue Variants</span>
                 </div>
-                <pre><code>// Current IfaValue (from value_union.rs)
+                <pre><code>// IfaValue is a regular Rust enum (32 bytes on 64-bit)
 pub enum IfaValue {
-    // Primitive types
+    // Primitives (Inline, No Alloc)
+    Null,
+    Bool(bool),
     Int(i64),
     Float(f64),
-    Str(Arc<str>),
-    Bool(bool),
-    
-    // Collection types
-    List(Vec<IfaValue>),
-    Map(HashMap<Arc<str>, IfaValue>),
-    
-    // Object types
-    Object(Rc<RefCell<HashMap<Arc<str>, IfaValue>>>), // "The Hut" - thread-local
-    
+
+    // Heap Objects (Ref-Counted via Arc)
+    Str(CompactString),              // CompactString wrapper
+    List(Arc&lt;Vec&lt;IfaValue&gt;&gt;),       // Immutable list
+    Map(Arc&lt;HashMap&lt;CompactString, IfaValue&gt;&gt;),  // Immutable map
+
     // Function types
-    Fn(IfaFn),        // Standard/Native functions
-    AstFn(Statement), // AST functions (vm feature)
-    BytecodeFn(Bytecode), // Bytecode functions (vm feature)
-    
-    // Resource types
-    Resource(ResourceToken), // Opaque handle
-    
-    // Special types
-    Ptr(*mut u8),     // Raw pointers (unsafe)
-    Ref(*const u8),   // Immutable references
-    
-    // Control flow
-    Return(Box<IfaValue>), // Return values
-    Null,             // Null value
+    Fn(Arc&lt;BytecodeFnData&gt;),        // Bytecode function
+
+    // Resource handle
+    Resource(Arc&lt;ResourceToken&gt;),   // Opaque resource token
+
+    // Result type (Okanran)
+    Result(Box&lt;ResultPayload&gt;),     // Ok(value) | Err(value)
+
+    // VM-only variants (feature = "vm")
+    #[cfg(feature = "vm")]
+    AstFn(Arc&lt;AstFnData&gt;),          // AST function (interpreter)
+    #[cfg(feature = "vm")]
+    Upvalue(UpvalueCell),            // Closure upvalue
+    #[cfg(feature = "vm")]
+    Closure(Arc&lt;ClosureData&gt;),       // Bytecode closure
+    #[cfg(feature = "vm")]
+    Future(FutureCell),              // Async future
+    #[cfg(feature = "vm")]
+    Actor { id: u64, handle: Arc&lt;dyn Any + Send + Sync&gt; },
+    #[cfg(feature = "vm")]
+    Return(Arc&lt;IfaValue&gt;),           // Return signal
+    #[cfg(feature = "vm")]
+    Break,                           // Loop break signal
+    #[cfg(feature = "vm")]
+    Continue,                        // Loop continue signal
 }</code></pre>
             </div>
 
+            <h3>Type Names</h3>
+            <table class="keyword-table">
+                <thead>
+                    <tr>
+                        <th>Type Name</th>
+                        <th>IfaValue Variant</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Null</td><td>IfaValue::Null</td><td>Null/void value</td></tr>
+                    <tr><td>Bool</td><td>IfaValue::Bool(bool)</td><td>Boolean</td></tr>
+                    <tr><td>Int</td><td>IfaValue::Int(i64)</td><td>64-bit signed integer</td></tr>
+                    <tr><td>Float</td><td>IfaValue::Float(f64)</td><td>64-bit float</td></tr>
+                    <tr><td>Str</td><td>IfaValue::Str(CompactString)</td><td>String (CompactString)</td></tr>
+                    <tr><td>List</td><td>IfaValue::List(Arc&lt;Vec&gt;)</td><td>Immutable list</td></tr>
+                    <tr><td>Map</td><td>IfaValue::Map(Arc&lt;HashMap&gt;)</td><td>Immutable map</td></tr>
+                    <tr><td>Fn</td><td>IfaValue::Fn(Arc&lt;BytecodeFnData&gt;)</td><td>Bytecode function</td></tr>
+                    <tr><td>Result</td><td>IfaValue::Result</td><td>Ok/Err result wrapper</td></tr>
+                    <tr><td>Resource</td><td>IfaValue::Resource</td><td>Opaque resource handle</td></tr>
+                </tbody>
+            </table>
+
             <h3>Performance Optimizations</h3>
             <ul>
-                <li><strong>Arc&lt;str&gt;:</strong> String interning and sharing</li>
-                <li><strong>"The Hut":</strong> Thread-local objects with zero atomic overhead</li>
-                <li><strong>Tagged Union:</strong> Efficient memory layout and dispatch</li>
-                <li><strong>Resource Tokens:</strong> Opaque handles for safe resource management</li>
+                <li><strong>CompactString:</strong> Small string optimization for string interning</li>
+                <li><strong>NaN Boxing:</strong> Primitives (Null, Bool, Int, Float) can be NaN-boxed for efficient inline representation</li>
+                <li><strong>Arc:</strong> Reference-counted sharing for heap types</li>
+                <li><strong>Small Int Pool:</strong> Integers 0-255 are cached (with <code>std</code> feature)</li>
             </ul>
 
-            <h3>Legacy Implementation</h3>
-            <p>The <code>value.rs</code> module contains the older enum implementation, now deprecated but kept for compatibility:</p>
+            <h3>Legacy Implementation (value.rs)</h3>
+            <p>The <code>value.rs</code> module contains the older enum implementation, now deprecated but kept for compatibility. It differs from the current implementation:</p>
             <ul>
-                <li><strong>Basic Types:</strong> Int, Float, Str, Bool</li>
-                <li><strong>Collections:</strong> List, Map, Object</li>
-                <li><strong>Functions:</strong> Fn only (no AST/Bytecode variants)</li>
-                <li><strong>Simpler:</strong> Fewer variants, less complexity</li>
+                <li>Uses <code>Arc&lt;str&gt;</code> instead of <code>CompactString</code></li>
+                <li>Has <code>Object(Arc&lt;Mutex&lt;HashMap&gt;&gt;)</code> variant (The Hut - thread-local object)</li>
+                <li>Has <code>Fn(IfaFn)</code> where <code>IfaFn = Arc&lt;dyn Fn(Vec&lt;IfaValue&gt;) -&gt; IfaValue + Send + Sync&gt;</code></li>
+                <li>No VM-specific variants</li>
             </ul>
         </div>
 
         <div class="step">
             <h2>IfaError - Canonical Error System</h2>
-            <p>The single authoritative error type used across all Ifá-Lang components. Embodies the Okanran (Errors) domain with Yoruba proverbs.</p>
+            <p>The single authoritative error type used across all Ifa-Lang components. Embodies the Okanran (Errors) domain with Yoruba proverbs.</p>
 
             <h3>Error Categories</h3>
             
             <h4>Math Errors (Obara / Oturupon) - ErrorCode 0x03XX</h4>
             <ul>
-                <li><strong>DivisionByZero:</strong> "Obara rejects: {context}"</li>
-                <li><strong>Overflow:</strong> Numeric overflow conditions</li>
-                <li><strong>Underflow:</strong> Numeric underflow conditions</li>
+                <li><strong>DivisionByZero:</strong> "Division by zero - Obara rejects: {context}"</li>
+                <li><strong>Overflow / Underflow:</strong> Numeric overflow/underflow</li>
             </ul>
 
             <h4>Type Errors - ErrorCode 0x02XX</h4>
             <ul>
                 <li><strong>ArityMismatch:</strong> Wrong number of arguments</li>
                 <li><strong>ArgumentError:</strong> Invalid argument values</li>
-                <li><strong>TypeMismatch:</strong> Expected vs actual type conflict</li>
+                <li><strong>TypeError:</strong> Expected vs actual type conflict</li>
                 <li><strong>ConversionError:</strong> Type conversion failures</li>
             </ul>
 
@@ -238,27 +286,35 @@ pub enum IfaValue {
                 <li><strong>KeyNotFound:</strong> Map key missing errors</li>
             </ul>
 
-            <h4>Runtime Errors - ErrorCode 0x04XX</h4>
+            <h4>I/O Errors (Odi / Irosu) - ErrorCode 0x04XX</h4>
             <ul>
-                <li><strong>RuntimeError:</strong> General runtime failures</li>
-                <li><strong>MemoryError:</strong> Memory allocation failures</li>
-                <li><strong>StackOverflow:</strong> Call stack exceeded</li>
+                <li><strong>FileNotFound / PermissionDenied / IoError</strong></li>
+                <li><strong>ConnectionFailed / Timeout / SsrfBlocked</strong></li>
+            </ul>
+
+            <h4>VM Errors - ErrorCode 0x00XX</h4>
+            <ul>
+                <li><strong>UnknownOpcode / StackUnderflow / StackOverflow</strong></li>
+                <li><strong>UndefinedVariable / UndefinedFunction</strong></li>
+                <li><strong>OponExhausted</strong> - Memory pool exhausted</li>
+                <li><strong>AsyncNotAvailable</strong></li>
+                <li><strong>Exit(i32)</strong> - Process exit signal</li>
             </ul>
 
             <h3>Error Integration</h3>
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">Error Usage</span>
+                    <span class="code-title">Error Usage (Rust-side)</span>
                 </div>
                 <pre><code>// Result type alias
-pub type IfaResult<T> = Result<T, IfaError>;
+pub type IfaResult&lt;T&gt; = Result&lt;T, IfaError&gt;;
 
 // Usage across all crates
 use ifa_types::{IfaError, IfaResult};
 
-fn divide(a: i64, b: i64) -> IfaResult<i64> {
+fn divide(a: i64, b: i64) -&gt; IfaResult&lt;i64&gt; {
     if b == 0 {
-        Err(IfaError::DivisionByZero("Cannot divide by zero".to_string()))
+        Err(IfaError::DivisionByZero("Cannot divide by zero".into()))
     } else {
         Ok(a / b)
     }
@@ -267,54 +323,100 @@ fn divide(a: i64, b: i64) -> IfaResult<i64> {
         </div>
 
         <div class="step">
+            <h2>IfaShared - The Village Data Store</h2>
+            <p>The thread-safe value type for inter-thread communication and global state. Uses <code>Arc&lt;RwLock&gt;</code> or <code>DashMap</code> for concurrent access.</p>
+
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">IfaShared Variants</span>
+                </div>
+                <pre><code>pub enum IfaShared {
+    Int(i64),
+    Float(f64),
+    Str(Arc&lt;str&gt;),
+    Bool(bool),
+    List(Vec&lt;IfaShared&gt;),         // Value-type list
+    Map(HashMap&lt;Arc&lt;str&gt;, IfaShared&gt;),  // Value-type map
+    Object(Arc&lt;DashMap&lt;Arc&lt;str&gt;, IfaShared&gt;&gt;),  // Concurrent map
+    Fn(IfaSharedFn),               // Thread-safe function
+    Resource(ResourceToken),
+    Null,
+}</code></pre>
+            </div>
+            <ul>
+                <li><strong>Freeze:</strong> Convert IfaValue to IfaShared for thread-safe sharing</li>
+                <li><strong>Thaw:</strong> Convert IfaShared back to local IfaValue</li>
+                <li><strong>Send + Sync:</strong> All variants are thread-safe</li>
+            </ul>
+        </div>
+
+        <div class="step">
             <h2>Resource Management</h2>
             
             <h3>ResourceToken</h3>
-            <p>Opaque handles for safe resource management across the runtime:</p>
-            
             <div class="code-example">
                 <div class="code-header">
                     <span class="code-title">Resource Tokens</span>
                 </div>
-                <pre><code>// Opaque resource handle
-pub struct ResourceToken {
-    id: u64,
-    domain: OduDomain,
-    // Internal fields only
-}
+                <pre><code>// Opaque resource handle (u64 wrapper)
+pub struct ResourceToken(pub u64);
 
-// Used in IfaValue::Resource(ResourceToken)
-// Links to global registry for lifecycle management</code></pre>
+// Used in IfaValue::Resource(Arc&lt;ResourceToken&gt;)
+// Links to global ResourceRegistry</code></pre>
             </div>
 
-            <h3>IfaShared</h3>
-            <p>Runtime coordination and shared state management:</p>
+            <h3>ResourceRegistry (Olubode - The Gatekeeper)</h3>
+            <p>Global registry storing system resources (files, sockets, DB connections) across threads. Users hold ResourceToken IDs while the actual resource lives in the registry.</p>
             <ul>
-                <li><strong>Global Registry:</strong> Resource tracking and cleanup</li>
-                <li><strong>Domain Coordination:</strong> Cross-domain operation support</li>
-                <li><strong>State Management:</strong> Runtime state synchronization</li>
+                <li><strong>Safe:</strong> Resources are stored as <code>Arc&lt;dyn Any + Send + Sync&gt;</code> for type-safe downcasting</li>
+                <li><strong>Owned:</strong> Each resource is associated with an owner actor ID</li>
+                <li><strong>Lifecycle:</strong> Registry is managed by the runtime, cleared on VM shutdown</li>
             </ul>
+        </div>
+
+        <div class="step">
+            <h2>Capability Security</h2>
+            <p>When the <code>std</code> feature is enabled, Ifa-Lang's capability security model is available:</p>
+
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Ofun Capabilities</span>
+                </div>
+                <pre><code>pub enum Ofun {
+    ReadFiles,
+    WriteFiles,
+    Network,
+    Execute,
+    Environment,
+    Time,
+    Random,
+    Stdio,
+    Bridge,
+}
+
+// CapabilitySet wraps a HashSet&lt;Ofun&gt;
+// Passed to interpreter/VM to gate access</code></pre>
+            </div>
         </div>
 
         <div class="step">
             <h2>Traits and Protocols</h2>
             
-            <h3>Core Traits</h3>
+            <h3>Core Traits (traits.rs)</h3>
             <ul>
-                <li><strong>Protocol Traits:</strong> Domain capability definitions</li>
-                <li><strong>Conversion Traits:</strong> Type coercion and casting</li>
-                <li><strong>Operator Traits:</strong> Arithmetic and logical operations</li>
-                <li><strong>Serialization Traits:</strong> Data persistence support</li>
+                <li><strong>CpuOps:</strong> Parallel computing operations (par_sum, par_map, configure)</li>
+                <li><strong>GpuOps:</strong> GPU compute operations</li>
+                <li><strong>StorageOps:</strong> Key-value storage</li>
+                <li><strong>BackendOps:</strong> HTTP server/request operations</li>
+                <li><strong>FrontendOps:</strong> HTML/CSS generation</li>
+                <li><strong>CryptoOps:</strong> SHA-256, SHA-512, Argon2</li>
+                <li><strong>MlOps:</strong> Tensor operations, matrix multiplication</li>
+                <li><strong>GameDevOps:</strong> 2D/3D vector operations</li>
+                <li><strong>IotOps:</strong> GPIO pin operations</li>
             </ul>
 
             <h3>Protocol-Oriented Design</h3>
-            <p>Support for the protocol-oriented architecture:</p>
-            <ul>
-                <li><strong>No Classes:</strong> Traits instead of inheritance</li>
-                <li><strong>Structural Typing:</strong> Capability-based type checking</li>
-                <li><strong>Domain Protocols:</strong> Odù-specific capabilities</li>
-                <li><strong>Composition:</strong> Trait composition for complex behaviors</li>
-            </ul>
+            <p>Traits define interfaces for Odu domain operations. These traits are implemented by <code>ifa-std</code> and called from <code>ifa-vm</code>.</p>
         </div>
 
         <div class="step">
@@ -323,74 +425,83 @@ pub struct ResourceToken {
 
             <h3>AST Module</h3>
             <ul>
-                <li><strong>Statement Enum:</strong> AST node definitions</li>
-                <li><strong>Expression Types:</strong> Expression AST nodes</li>
-                <li><strong>Parsing Support:</strong> Grammar integration</li>
+                <li><strong>Statement Enum:</strong> ~25 statement types including VarDecl, If, While, For, Match, Try, etc.</li>
+                <li><strong>Expression Types:</strong> Binary/unary ops, lambda, method calls, property access</li>
+                <li><strong>Type Hints:</strong> High-level (Int, Float, Str, Bool) and low-level (i8-u64, F32-F64, pointers)</li>
             </ul>
 
             <h3>Bytecode Module</h3>
             <ul>
-                <li><strong>Bytecode Struct:</strong> Instruction representation</li>
-                <li><strong>Opcode Integration:</strong> ifa-bytecode crate integration</li>
-                <li><strong>Serialization:</strong> Bytecode persistence</li>
+                <li><strong>Bytecode Struct:</strong> Instruction representation with constant pool</li>
+                <li><strong>OponSize:</strong> Memory pool sizing (Kekere, Arinrin, Nla, Ailopin)</li>
+                <li><strong>OpCode Integration:</strong> ifa-bytecode crate integration</li>
             </ul>
 
-            <h3>Feature-Gated Types</h3>
+            <h3>Binary Ops Module</h3>
+            <p>Type compatibility checking for binary operators: checks numeric types, string concatenation, etc.</p>
+        </div>
+
+        <div class="step">
+            <h2>NaN Boxing</h2>
+            <p>The <code>nan_box.rs</code> module provides a NaN-boxed primitive representation for Ifa values, enabling inline storage of Null, Bool, Int, and Float values within a 64-bit word using the NaN (Not-a-Number) space of IEEE 754 floats.</p>
+
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">VM-Specific Values</span>
+                    <span class="code-title">NaN Boxed Primitives</span>
                 </div>
-                <pre><code>// Only available with "vm" feature
-#[cfg(feature = "vm")]
-pub enum IfaValue {
-    // ... standard variants
-    
-    AstFn(Statement),      // AST function representation
-    BytecodeFn(Bytecode),   // Bytecode function representation
-}</code></pre>
+                <pre><code>pub enum BoxedPrimitive {
+    Null,
+    Bool(bool),
+    Int(i64),   // 47-bit signed integer
+    Float(f64),
+}
+
+// Convert IfaValue to/from NaN-boxed representation
+// Only primitives (Null, Bool, Int, Float) can be NaN-boxed</code></pre>
             </div>
+            <p><strong>Note:</strong> NaN boxing is used for fast paths in the VM. The maximum boxed integer range is &plusmn;(2^47 - 1). Values outside this range fall back to the IfaValue::Int(i64) variant.</p>
         </div>
 
         <div class="step">
             <h2>Serialization Support</h2>
             
             <h3>serde Integration</h3>
-            <p>Most types support serde serialization/deserialization:</p>
+            <p>Most types support serde serialization/deserialization when <code>serde</code> feature is enabled:</p>
             <ul>
-                <li><strong>OduDomain:</strong> Enum serialization</li>
-                <li><strong>IfaError:</strong> Error serialization</li>
-                <li><strong>IfaValue:</strong> Value serialization (with limitations)</li>
+                <li><strong>OduDomain:</strong> Full enum serialization</li>
+                <li><strong>IfaValue:</strong> Surrogate-based serialization (Null, Bool, Int, Float, Str, List only)</li>
+                <li><strong>IfaError:</strong> Serialization support</li>
             </ul>
 
             <h3>Serialization Limitations</h3>
             <ul>
-                <li><strong>Functions:</strong> Cannot serialize function pointers</li>
-                <li><strong>Objects:</strong> Thread-local objects skipped</li>
-                <li><strong>Resources:</strong> Opaque handles not serializable</li>
-                <li><strong>Pointers:</strong> Raw pointers not serializable</li>
+                <li><strong>Functions:</strong> Cannot serialize Fn, Closure, AstFn variants</li>
+                <li><strong>Upvalues:</strong> Not serializable</li>
+                <li><strong>Futures:</strong> Not serializable</li>
+                <li><strong>Actors:</strong> Not serializable</li>
+                <li><strong>Resources:</strong> Not serializable</li>
+                <li><strong>Return/Break/Continue:</strong> Internal signals, not serializable</li>
             </ul>
         </div>
 
         <div class="step">
             <h2>Usage Guidelines</h2>
             
-            <h3>Import Patterns</h3>
+            <h3>Import Patterns (Rust)</h3>
             <div class="code-example">
                 <div class="code-header">
-                    <span class="code-title">Recommended Imports</span>
+                    <span class="code-title">Recommended Imports for Rust Crates</span>
                 </div>
                 <pre><code>// Standard imports for most crates
 use ifa_types::{
     IfaValue, IfaError, IfaResult,
-    OduDomain, IfaShared, ResourceToken
+    OduDomain, IfaShared, ResourceToken,
+    CompactString,
 };
 
 // VM-specific imports
 #[cfg(feature = "vm")]
-use ifa_types::{Statement, Bytecode};
-
-// All traits (convenient)
-use ifa_types::traits::*;</code></pre>
+use ifa_types::{Statement, Bytecode};</code></pre>
             </div>
 
             <h3>Best Practices</h3>
@@ -399,40 +510,15 @@ use ifa_types::traits::*;</code></pre>
                 <li><strong>Error Handling:</strong> Use IfaResult for all fallible operations</li>
                 <li><strong>Domain Types:</strong> Use OduDomain for domain-specific operations</li>
                 <li><strong>Resource Safety:</strong> Use ResourceToken for managed resources</li>
+                <li><strong>Thread Safety:</strong> Use IfaShared::freeze() for cross-thread value sharing</li>
             </ul>
 
             <h3>Performance Considerations</h3>
             <ul>
-                <li><strong>Arc&lt;str&gt;:</strong> Prefer string internment for repeated values</li>
-                <li><strong>"The Hut":</strong> Use Object for thread-local data</li>
-                <li><strong>Tagged Union:</strong> More efficient than enum dispatch</li>
-                <li><strong>Feature Flags:</strong> Disable VM features when not needed</li>
-            </ul>
-        </div>
-
-        <div class="step">
-            <h2>Migration and Compatibility</h2>
-            
-            <h3>Legacy Support</h3>
-            <ul>
-                <li><strong>value.rs:</strong> Old enum implementation kept for compatibility</li>
-                <li><strong>value_union.rs:</strong> New tagged union (preferred)</li>
-                <li><strong>Re-exports:</strong> lib.rs exports the new implementation</li>
-            </ul>
-
-            <h3>Breaking Changes</h3>
-            <ul>
-                <li><strong>IfaValue:</strong> Switch from enum to tagged union</li>
-                <li><strong>Function Types:</strong> Added AST and bytecode variants</li>
-                <li><strong>Resource Management:</strong> Enhanced ResourceToken system</li>
-            </ul>
-
-            <h3>Future Directions</h3>
-            <ul>
-                <li><strong>256 Odù Types:</strong> Support for long-term type lattice</li>
-                <li><strong>Protocol Traits:</strong> Enhanced protocol system</li>
-                <li><strong>Performance:</strong> Further optimization of tagged union</li>
-                <li><strong>Serialization:</strong> Enhanced serde support</li>
+                <li><strong>CompactString:</strong> Prefer for string values - provides small string optimization</li>
+                <li><strong>NaN Boxing:</strong> Primitive VM operations use NaN-boxed fast path</li>
+                <li><strong>Arc Sharing:</strong> Lists and maps use Arc for zero-copy sharing</li>
+                <li><strong>Feature Flags:</strong> Disable VM features when not needed to reduce binary size</li>
             </ul>
         </div>
 

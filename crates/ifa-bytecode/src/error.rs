@@ -14,7 +14,7 @@ impl std::error::Error for InvalidOpCode {}
 /// Standard numeric error codes for Ifá-Lang runtimes.
 ///
 /// These codes allow for consistent error reporting across:
-/// - ifa-core (full runtime)
+/// - ifa-vm (full runtime)
 /// - ifa-embedded (no_std)
 /// - FFI boundaries
 ///

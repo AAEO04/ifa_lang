@@ -5,7 +5,7 @@
 
 use eyre::{Result, WrapErr};
 use ifa_babalawo::infer_capabilities;
-use ifa_core::parse;
+use ifa_vm::parse;
 use ifa_sandbox::{CapabilitySet, Ofun};
 use std::path::{Path, PathBuf};
 

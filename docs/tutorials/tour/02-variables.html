@@ -8,77 +8,7 @@
     <link rel="stylesheet" href="../../../js/common.css">
     <script src="../../../js/nav.js" defer></script>
     <script src="../../../js/common.js" defer></script>
-    <style>
-        .lesson-num {
-            background: var(--accent);
-            color: white;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .lesson-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--accent);
-        }
-
-        table {
-            width: 100%;
-            background: var(--bg-card);
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 1rem 0;
-        }
-
-        th {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.75rem;
-            text-align: left;
-            color: var(--gold);
-        }
-
-        td {
-            padding: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--accent);
-        }
-
-        .nav-btn {
-            background: var(--bg-card);
-            color: var(--gold);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            border: 1px solid var(--accent);
-            transition: all 0.2s;
-        }
-
-        .nav-btn:hover {
-            background: var(--accent);
-            color: white;
-        }
-
-        .nav-btn.primary {
-            background: var(--accent);
-            color: white;
-        }
-    </style>
+    
 </head>
 
 <body>
@@ -93,6 +23,7 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">02-variables.ifa</span></div><div class="terminal-body">
         <div class="lesson-header">
             <div class="lesson-num">2</div>
             <div>
@@ -124,10 +55,9 @@ let count = 42;</code></pre>
 
         <div class="info-box"
             style="border: 1px solid #4ade80; background: rgba(74, 222, 128, 0.1); padding: 1rem; border-radius: 8px;">
-            <div class="info-box-title" style="color: #4ade80; font-weight: bold; margin-bottom: 0.5rem;">💡 Why
-                "ayanmo"?</div>
+            <div class="info-box-title" style="color: #4ade80; font-weight: bold; margin-bottom: 0.5rem;">Why "ayanmo"?</div>
             <p style="margin: 0;">In Yoruba philosophy, <strong>ayanmọ́</strong> means "destiny" or "fate". When you
-                declare a variable, you're declaring its destiny — what it will hold.</p>
+                declare a variable, you're declaring its destiny -- what it will hold.</p>
         </div>
 
         <h2>Data Types</h2>
@@ -163,8 +93,8 @@ let count = 42;</code></pre>
                     <td>Ordered collection</td>
                 </tr>
                 <tr>
-                    <td><code>Nil</code></td>
-                    <td><code>nil</code></td>
+                    <td><code>Null</code></td>
+                    <td><code>ofifo</code></td>
                     <td>Absence of value</td>
                 </tr>
             </tbody>
@@ -217,7 +147,7 @@ let names = ["Ọba", "Adé", "Ifá"];</code></pre>
         </div>
 
         <h2>Type Checking</h2>
-        <p>Use <code>Ogbe.type()</code> (or <code>Sys.type()</code>) to check a value's type:</p>
+        <p>Use <code>Ofun.iru()</code> to check a value's type:</p>
 
         <div class="code-example">
             <div class="code-header">
@@ -228,23 +158,23 @@ let names = ["Ọba", "Adé", "Ifá"];</code></pre>
                 </div>
             </div>
             <pre class="code-yoruba"><code>ayanmo x = 42;
-ayanmo t = Ogbe.type(x);
-Irosu.fo(t);  // "number"
+ayanmo t = Ofun.iru(x);
+Irosu.fo(t);  // "Int"
 
 ayanmo s = "Hello";
-Irosu.fo(Ogbe.type(s));  // "string"
+Irosu.fo(Ofun.iru(s));  // "Str"
 
 ayanmo list = [1, 2, 3];
-Irosu.fo(Ogbe.type(list));  // "list"</code></pre>
+Irosu.fo(Ofun.iru(list));  // "List"</code></pre>
             <pre class="code-english"><code>let x = 42;
-let t = Sys.type(x);
-Fmt.println(t);  // "number"
+let t = Ofun.iru(x);
+Irosu.println(t);  // "Int"
 
 let s = "Hello";
-Fmt.println(Sys.type(s));  // "string"
+Irosu.println(Ofun.iru(s));  // "Str"
 
 let list = [1, 2, 3];
-Fmt.println(Sys.type(list));  // "list"</code></pre>
+Irosu.println(Ofun.iru(list));  // "List"</code></pre>
         </div>
 
         <h2>String Concatenation</h2>
@@ -266,47 +196,21 @@ Irosu.fo("Age: " + age);  // Numbers auto-convert</code></pre>
             <pre class="code-english"><code>let name = "Ifá";
 let age = 1000;
 
-Fmt.println("Name: " + name);
-Fmt.println("Age: " + age);  // Numbers auto-convert</code></pre>
-        </div>
-
-        <h2>Variable Reassignment</h2>
-        <p>Variables can be reassigned (shadowed) or modified:</p>
-
-        <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Reassignment</span>
-                <div class="lang-toggle">
-                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
-                    <button class="toggle-english" onclick="setLang('english')">English</button>
-                </div>
-            </div>
-            <pre class="code-yoruba"><code>ayanmo count = 0;
-Irosu.fo(count);  // 0
-
-ayanmo count = count + 1; // Shadowing (original pattern)
-Irosu.fo(count);  // 1
-
-// Or strictly speaking, mutable updates depend on scope, 
-// usually we use standard 'ayanmo' again for shadowing in examples.</code></pre>
-            <pre class="code-english"><code>let count = 0;
-Fmt.println(count);  // 0
-
-let count = count + 1; // Shadowing
-Fmt.println(count);  // 1</code></pre>
+Irosu.println("Name: " + name);
+Irosu.println("Age: " + age);  // Numbers auto-convert</code></pre>
         </div>
 
         <h2>What You Learned</h2>
         <ul style="margin-left: 2rem; color: var(--text-dim);">
             <li>Declaring variables with <code>ayanmo</code> or <code>let</code></li>
-            <li>The 5 basic types: Number, String, Boolean, List, Nil</li>
+            <li>The 5 basic types: Number, String, Boolean, List, Null</li>
             <li>String concatenation with <code>+</code></li>
-            <li>Type checking with <code>Ogbe.type()</code> / <code>Sys.type()</code></li>
+            <li>Type checking with <code>Ofun.iru()</code></li>
         </ul>
 
         <div class="nav-buttons">
-            <a href="01-hello.html" class="nav-btn">← Previous: Hello World</a>
-            <a href="03-operators.html" class="nav-btn primary">Next: Operators →</a>
+            <a href="01-hello.html" class="nav-btn">Previous: Hello World</a>
+            <a href="03-operators.html" class="nav-btn primary">Next: Operators</a>
         </div>
     </div>
 </body>

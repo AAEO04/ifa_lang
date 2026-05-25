@@ -1,4 +1,4 @@
-use ifa_core::{Bytecode, OpCode};
+use ifa_vm::{Bytecode, OpCode};
 use ifa_embedded::{EmbeddedConfig, EmbeddedOpCode, EmbeddedValue, EmbeddedVm, VmExit};
 
 /// Transpile standard 64-bit bytecode to 32-bit embedded bytecode

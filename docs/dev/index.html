@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Development Docs — Ifá-Lang</title>
+</head>
+
+<body>
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">dev.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Development Docs</h1>
+            <p class="subtitle">For contributors to the Ifá-Lang compiler, VM, and toolchain</p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified:</strong> Every page in this section was produced by reading
+            the crate source code. File paths and line numbers are cited throughout.
+            If the source changes, these pages may be stale.
+        </div>
+
+        <div class="nav-grid">
+            <a href="crate-map.html" class="nav-card">
+                <h3>📦 Crate Map</h3>
+                <p>All 18 workspace crates: dependencies, features, no_std status, public API surface.</p>
+            </a>
+            <a href="vm.html" class="nav-card">
+                <h3>⚡ VM Internals</h3>
+                <p>IfaVM execution model: dispatch, stack, fuel, async, tail calls, actors.</p>
+            </a>
+            <a href="compiler.html" class="nav-card">
+                <h3>📜 Compiler</h3>
+                <p>AST → bytecode pipeline: constant inlining, TCO, Odu method resolution, string pool.</p>
+            </a>
+            <a href="value-system.html" class="nav-card">
+                <h3>🔢 Value System</h3>
+                <p>IfaValue layout, NaN-boxing, CompactString SSO, small-int pool, Ikin.</p>
+            </a>
+            <a href="adding-a-domain.html" class="nav-card">
+                <h3>📦 Building External Packages</h3>
+                <p>Custom domains via iba import + oja package manager (the 16 Odù are fixed core).</p>
+            </a>
+            <a href="testing.html" class="nav-card">
+                <h3>🧪 Testing</h3>
+                <p>Conformance tests, VM tests, property-based tests, benchmarks, test structure.</p>
+            </a>
+        </div>
+
+        <footer>
+            <p><a href="../index.html">← Back to main docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

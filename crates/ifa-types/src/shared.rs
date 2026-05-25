@@ -9,13 +9,11 @@
 //! - No `RefCell` or `Rc`
 
 use crate::token::ResourceToken;
-use crate::value::IfaValue;
+use crate::IfaValue;
 use serde::{Deserialize, Serialize};
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "dashmap")]
 use dashmap::DashMap;
@@ -63,44 +61,41 @@ impl IfaShared {
         match self {
             IfaShared::Int(n) => IfaValue::Int(*n),
             IfaShared::Float(n) => IfaValue::Float(*n),
-            IfaShared::Str(s) => IfaValue::Str(s.clone()), // O(1) Atomic Clone
+            IfaShared::Str(s) => IfaValue::Str(crate::CompactString::new(s.as_ref())),
             IfaShared::Bool(b) => IfaValue::Bool(*b),
             IfaShared::Null => IfaValue::Null,
-            IfaShared::Resource(token) => IfaValue::Resource(*token),
+            IfaShared::Resource(token) => IfaValue::Resource(Arc::new(*token)),
             IfaShared::List(l) => {
                 let mut thawed_list = Vec::with_capacity(l.len());
                 for item in l {
                     thawed_list.push(item.thaw());
                 }
-                IfaValue::List(thawed_list)
+                IfaValue::List(Arc::new(thawed_list))
             }
             IfaShared::Map(m) => {
                 let mut thawed_map = HashMap::new();
                 for (k, v) in m {
-                    thawed_map.insert(k.clone(), v.thaw());
+                    thawed_map.insert(crate::CompactString::new(k.as_ref()), v.thaw());
                 }
-                IfaValue::Map(thawed_map)
+                IfaValue::Map(Arc::new(thawed_map))
             }
             IfaShared::Object(o) => {
-                // Snapshot the concurrent state into a local RefCell
+                let mut thawed_map = HashMap::new();
                 #[cfg(feature = "dashmap")]
                 {
-                    let mut map = HashMap::new();
                     for r in o.iter() {
-                        map.insert(r.key().clone(), r.value().thaw());
+                        thawed_map.insert(crate::CompactString::new(r.key().as_ref()), r.value().thaw());
                     }
-                    IfaValue::Object(Rc::new(RefCell::new(map)))
                 }
                 #[cfg(not(feature = "dashmap"))]
                 {
-                    let mut map = HashMap::new();
                     if let Ok(guard) = o.read() {
                         for (k, v) in guard.iter() {
-                            map.insert(k.clone(), v.thaw());
+                            thawed_map.insert(crate::CompactString::new(k.as_ref()), v.thaw());
                         }
                     }
-                    IfaValue::Object(Rc::new(RefCell::new(map)))
                 }
+                IfaValue::Map(Arc::new(thawed_map))
             }
             IfaShared::Fn(_) => IfaValue::Null, // Cannot thaw shared functions
         }

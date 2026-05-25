@@ -1,0 +1,11 @@
+[package]
+name = "ifa-transpiler"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Transpiler for Ifá-Lang"
+
+[dependencies]
+ifa-types = { path = "../ifa-types" }
+ifa-parser = { path = "../ifa-parser" }

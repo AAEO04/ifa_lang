@@ -110,7 +110,7 @@ The approved integration paths for future paradigms:
 
 #### 3. Metaprogramming / Macros (`Awo`) via Procedural Flattening
 - **Rule:** No Lisp-style runtime `eval()` that destroys predictability.
-- **Mechanism:** Macros execute strictly during the `ifa-core/parser.rs` transpilation phase. They generate primitive, flattened imperative AST nodes. The bytecode compiler emits raw instructions; the VM executes without observing the macro.
+- **Mechanism:** Macros execute strictly during the `ifa-parser/src/parser.rs` parsing phase. They generate primitive, flattened imperative AST nodes. The bytecode compiler emits raw instructions; the VM executes without observing the macro.
 
 #### 4. Declarative Logic (`Dáfá`) via State-Machine Lowering
 - **Rule:** No magical Prolog-unification engines embedded in the VM.
@@ -170,7 +170,7 @@ This version is being wrapped with a bias toward shipping the current core clean
 - Hierarchical verification beyond the current modular lint/static-analysis passes.
 
 Scope note:
-- Some foundations for these exist already in `ifa-babalawo`, `ifa-core`, and `#opon`, but they remain future design work rather than committed deliverables for this version.
+- Some foundations for these exist already in `ifa-babalawo`, `ifa-vm`, and `#opon`, but they remain future design work rather than committed deliverables for this version.
 - The only acceptable path for any of these features is the same zero-cost rule stated above: push complexity into compile-time analysis and lowering, not VM reflection or runtime dynamism.
 
 Release posture for the current version:

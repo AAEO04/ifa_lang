@@ -4,81 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lesson 8: String Operations - Tour of Ifá</title>
+    <title>Lesson 8: Strings - Tour of Ifá</title>
     <link rel="stylesheet" href="../../../js/common.css">
     <script src="../../../js/nav.js" defer></script>
     <script src="../../../js/common.js" defer></script>
-    <style>
-        .lesson-num {
-            background: var(--accent);
-            color: white;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-
-        .lesson-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--accent);
-        }
-
-        table {
-            width: 100%;
-            background: var(--bg-card);
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 1rem 0;
-        }
-
-        th {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.75rem;
-            text-align: left;
-            color: var(--gold);
-        }
-
-        td {
-            padding: 0.75rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--accent);
-        }
-
-        .nav-btn {
-            background: var(--bg-card);
-            color: var(--gold);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            border: 1px solid var(--accent);
-            transition: all 0.2s;
-        }
-
-        .nav-btn:hover {
-            background: var(--accent);
-            color: white;
-        }
-
-        .nav-btn.primary {
-            background: var(--accent);
-            color: white;
-        }
-    </style>
+    
 </head>
 
 <body>
@@ -93,137 +23,167 @@
         </div>
     </div>
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">08-strings.ifa</span></div><div class="terminal-body">
         <div class="lesson-header">
             <div class="lesson-num">8</div>
             <div>
-                <h1>String Operations</h1>
-                <p style="color: var(--text-dim); margin: 0;">Text manipulation with Ika / String domain</p>
+                <h1>Strings</h1>
+                <p style="color: var(--text-dim); margin: 0;">Text manipulation with Ika domain</p>
             </div>
         </div>
 
-        <h2>String Basics</h2>
-        <pre><code>// Create strings with double quotes
-ayanmo greeting = "Kaabo!";
-ayanmo name = "Orunmila";
+        <div class="info-box"
+            style="border: 1px solid #4ade80; background: rgba(74, 222, 128, 0.1); padding: 1rem; border-radius: 8px;">
+            <div class="info-box-title" style="color: #4ade80; font-weight: bold; margin-bottom: 0.5rem;">
+                Ika: The Odù of Language
+            </div>
+            <p style="margin: 0;">
+                In Yoruba tradition, ika is associated with speech and communication.
+                In Ifá-Lang, the Ika domain handles all string manipulation.
+            </p>
+        </div>
 
-// Unicode support (Yoruba diacritics)
-ayanmo yoruba = "Ọlọ́run ṣe ọdún";
+        <h2>Creating Strings</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">String Basics</span>
+                <div class="lang-toggle">
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                </div>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo greeting = "Hello, Ifá!";
+ayanmo empty = "";
+ayanmo multiline = "Line 1\nLine 2\nLine 3";
 
-// Concatenation with +
-ayanmo full = greeting + " " + name;
-Irosu.fo(full);  // "Kaabo! Orunmila"</code></pre>
+// String concatenation
+ayanmo first = "Ifá";
+ayanmo last = "Lang";
+ayanmo full = first + " " + last;</code></pre>
+            <pre class="code-english"><code>let greeting = "Hello, Ifá!";
+let empty = "";
+let multiline = "Line 1\nLine 2\nLine 3";
 
-        <h2>Ika / String Methods</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Method</th>
-                    <th>Description</th>
-                    <th>Example</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><code>len(s)</code></td>
-                    <td>String length</td>
-                    <td><code>Ika.len("hello")</code> → 5</td>
-                </tr>
-                <tr>
-                    <td><code>uppercase(s)</code></td>
-                    <td>To uppercase</td>
-                    <td><code>Ika.uppercase("hi")</code> → "HI"</td>
-                </tr>
-                <tr>
-                    <td><code>lowercase(s)</code></td>
-                    <td>To lowercase</td>
-                    <td><code>Ika.lowercase("HI")</code> → "hi"</td>
-                </tr>
-                <tr>
-                    <td><code>trim(s)</code></td>
-                    <td>Remove whitespace</td>
-                    <td><code>Ika.trim("  hi  ")</code> → "hi"</td>
-                </tr>
-                <tr>
-                    <td><code>split(s, delim)</code></td>
-                    <td>Split to list</td>
-                    <td><code>Ika.split("a,b,c", ",")</code> → ["a","b","c"]</td>
-                </tr>
-                <tr>
-                    <td><code>join(list, delim)</code></td>
-                    <td>Join list</td>
-                    <td><code>Ika.join(["a","b"], "-")</code> → "a-b"</td>
-                </tr>
-                <tr>
-                    <td><code>contains(s, sub)</code></td>
-                    <td>Check substring</td>
-                    <td><code>Ika.contains("hello", "ell")</code> → otito</td>
-                </tr>
-                <tr>
-                    <td><code>replace(s, old, new)</code></td>
-                    <td>Replace text</td>
-                    <td><code>Ika.replace("hello", "l", "L")</code> → "heLLo"</td>
-                </tr>
-            </tbody>
-        </table>
+// String concatenation
+let first = "Ifá";
+let last = "Lang";
+let full = first + " " + last;</code></pre>
+        </div>
 
-        <h2>Common Patterns</h2>
+        <h2>String Length</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Length</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo text = "Ifá-Lang";
+Irosu.fo(Ika.gun(text));  // 8 (length)
 
-        <h3>Parsing Input</h3>
-        <pre><code>ayanmo input = "  john, doe, 25  ";
+// Empty string
+Irosu.fo(Ika.gun(""));    // 0</code></pre>
+        </div>
 
-// Clean and split
-ayanmo cleaned = Ika.trim(input);
-ayanmo parts = Ika.split(cleaned, ", ");
+        <h2>Case Manipulation</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Case Methods</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo word = "Ifá-Lang";
 
-Irosu.fo("First: " + Ogunda.get(parts, 0));  // john
-Irosu.fo("Last: " + Ogunda.get(parts, 1));   // doe
-Irosu.fo("Age: " + Ogunda.get(parts, 2));    // 25</code></pre>
+Ika.nla(word);       // uppercase → "IFÁ-LANG"
+Ika.kekere(word);    // lowercase → "ifá-lang"</code></pre>
+        </div>
 
-        <h3>Building Strings</h3>
-        <pre><code>ayanmo words = ["Ifá", "is", "wisdom"];
-ayanmo sentence = Ika.join(words, " ");
-Irosu.fo(sentence);  // "Ifá is wisdom"
+        <h2>Substring and Trimming</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Substring & Trim</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo phrase = "  Hello, Ifá-Lang!  ";
 
-// With formatting
-ayanmo name = "Adé";
-ayanmo age = 30;
-ayanmo msg = "Name: " + name + ", Age: " + age;
-Irosu.fo(msg);  // "Name: Adé, Age: 30"</code></pre>
+// Extract substring (start, length)
+Ika.ge_lara(phrase, 8, 4);  // "Ifá" (from index 8, 4 chars)
 
-        <h3>Validation</h3>
-        <pre><code>ise is_email(s) {
-    padapọ Ika.contains(s, "@") && Ika.contains(s, ".");
-}
+// Trim whitespace
+Ika.ge(phrase);             // "Hello, Ifá-Lang!"</code></pre>
+        </div>
 
-Irosu.fo(is_email("test@example.com"));  // otito
-Irosu.fo(is_email("not-an-email"));      // iro</code></pre>
+        <h2>Checking Content</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Contains & Starts/Ends With</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo text = "Hello, Ifá-Lang!";
 
-        <h2>String Transformation Pipeline</h2>
-        <pre><code>ayanmo raw = "  HELLO, WORLD!  ";
+Ika.ni(text, "Ifá");          // contains → otito (true)
+Ika.ni(text, "Rust");         // contains → iro (false)
 
-// Chain operations
-ayanmo result = Ika.trim(raw);
-ayanmo result = Ika.lowercase(result);
-ayanmo result = Ika.replace(result, "!", "");
-ayanmo result = Ika.replace(result, ",", "");
+Ika.bẹrẹ(text, "Hello");      // starts with → otito
+Ika.parí(text, "!");          // ends with → otito</code></pre>
+        </div>
 
-Irosu.fo(result);  // "hello world"</code></pre>
+        <h2>Splitting and Joining</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Split & Join</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo csv = "apple,banana,cherry";
+ayanmo parts = Ika.pín(csv, ",");  // ["apple", "banana", "cherry"]
 
-        <h2>Practical Example: Slug Generator</h2>
-        <pre><code>ise slugify(title) {
-    ayanmo slug = Ika.lowercase(title);
-    ayanmo slug = Ika.replace(slug, " ", "-");
-    ayanmo slug = Ika.replace(slug, "'", "");
-    ayanmo slug = Ika.replace(slug, "!", "");
-    padapọ slug;
-}
+ayanmo joined = Ika.dapọ(parts, ", ");  // "apple, banana, cherry"</code></pre>
+        </div>
 
-Irosu.fo(slugify("Hello World!"));       // "hello-world"
-Irosu.fo(slugify("Ifá's Wisdom"));       // "ifás-wisdom"</code></pre>
+        <h2>Finding and Replacing</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Find & Replace</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo sentence = "Ifá-Lang is amazing";
+
+// Find index of substring
+Ika.wa(sentence, "Lang");     // find → 4 (index of match)
+
+// Replace all occurrences
+Ika.rọpo(sentence, "amazing", "powerful");  // "Ifá-Lang is powerful"</code></pre>
+        </div>
+
+        <h2>Character Access</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Character at Index</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo name = "Ifá";
+
+Ika.kọ(name, 0);    // char at index 0 → "I"
+Ika.kọ(name, 1);    // char at index 1 → "f"
+Ika.kọ(name, 2);    // char at index 2 → "á"</code></pre>
+        </div>
+
+        <div class="info-box"
+            style="border: 1px solid #facc15; background: rgba(250, 204, 21, 0.1); padding: 1rem; border-radius: 8px;">
+            <div class="info-box-title" style="color: #facc15; font-weight: bold; margin-bottom: 0.5rem;">
+                Unicode Aware
+            </div>
+            <p style="margin: 0;">
+                Ika methods work with Unicode characters, not bytes. Yoruba characters with diacritics
+                (<code>ẹ</code>, <code>ọ</code>, <code>ṣ</code>, etc.) are treated as single characters.
+            </p>
+        </div>
+
+        <h2>What You Learned</h2>
+        <ul style="margin-left: 2rem; color: var(--text-dim);">
+            <li>String basics: creation, concatenation</li>
+            <li><code>Ika.gun()</code> for length</li>
+            <li><code>Ika.nla/kekere</code> for case</li>
+            <li><code>Ika.ge_lara/ge</code> for substring & trim</li>
+            <li><code>Ika.ni/bẹrẹ/parí</code> for content checks</li>
+            <li><code>Ika.pín/dapọ</code> for split & join</li>
+            <li><code>Ika.wa/rọpo</code> for find & replace</li>
+            <li><code>Ika.kọ</code> for character access</li>
+        </ul>
 
         <div class="nav-buttons">
-            <a href="07-lists.html" class="nav-btn">← Previous: Lists</a>
-            <a href="09-files.html" class="nav-btn primary">Next: File I/O →</a>
+            <a href="07-lists.html" class="nav-btn">Previous: Lists</a>
+            <a href="09-files.html" class="nav-btn primary">Next: Files</a>
         </div>
     </div>
 </body>

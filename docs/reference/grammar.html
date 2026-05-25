@@ -22,14 +22,20 @@
     </div>
 
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">grammar.ifa</span></div><div class="terminal-body">
         <header>
             <h1>Grammar Reference</h1>
             <p class="subtitle">Complete Language Grammar Specification</p>
         </header>
 
+        <div class="note">
+            <strong>Source-verified.</strong> This page was extracted from
+            <code>crates/ifa-parser/src/grammar.pest</code> (348 lines).
+        </div>
+
         <div class="step">
             <h2>Overview</h2>
-            <p>Ifá-Lang uses a Pest grammar definition for parsing. The grammar supports bilingual keywords (Yoruba/English) and implements the full language specification including the 16 Odù domains.</p>
+            <p>Ifá-Lang uses a Pest PEG grammar definition for parsing. The grammar supports bilingual keywords (Yoruba and English) and implements the full language specification including the 16 Odu domains, expression precedence, and special constructs.</p>
         </div>
 
         <div class="step">
@@ -41,33 +47,7 @@
                     <div class="code-header">
                         <span class="code-title">Program Grammar</span>
                     </div>
-                    <pre><code>program = { SOI ~ statement* ~ EOI }
-
-// A program is zero or more statements
-statement = {
-    import_stmt
-    | from_import_stmt
-    | opon_stmt
-    | ebo_stmt
-    | ailewu_stmt
-    | var_decl
-    | const_stmt
-    | assignment_stmt
-    | odu_def
-    | ese_def
-    | if_stmt
-    | while_stmt
-    | for_stmt
-    | return_stmt
-    | taboo_stmt
-    | ewo_stmt
-    | instruction
-    | ase_stmt
-    | match_stmt
-    | try_stmt
-    | yield_stmt
-    | COMMENT
-}</code></pre>
+                    <pre><code>program = { SOI ~ statement* ~ EOI }</code></pre>
                 </div>
             </div>
         </div>
@@ -76,26 +56,67 @@ statement = {
             <h2>Statements</h2>
             
             <div class="grammar-section">
+                <h3>Statement List (in parsing order)</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Statement Grammar</span>
+                    </div>
+                    <pre><code>statement = {
+    import_stmt
+    | from_import_stmt
+    | instruction                // odu_call, method_call, function_call
+    | opon_stmt                  // Memory directive
+    | ebo_stmt                   // Offering / epoch region
+    | defer_stmt                 // Deferred cleanup
+    | ailewu_stmt                // Unsafe block
+    | var_decl                   // Variable declaration
+    | const_stmt                 // Constant declaration
+    | update_stmt                // +=, -=, *=, /=, %=
+    | assignment_stmt            // =
+    | odu_def                    // Class / struct definition
+    | ese_def                    // Function definition
+    | if_stmt                    // Conditional
+    | while_stmt                 // While loop
+    | for_stmt                   // For loop
+    | return_stmt                // Return
+    | break_stmt                 // Break
+    | continue_stmt              // Continue
+    | taboo_stmt                 // Domain taboo
+    | ewo_stmt                   // Assertion
+    | ase_stmt                   // End marker
+    | match_stmt                 // Pattern matching
+    | try_stmt                   // Try/catch/finally
+    | yield_stmt                 // Yield control
+    | COMMENT
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Imports</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Import Grammar</span>
+                    </div>
+                    <pre><code>import_stmt = { import_kw ~ module_path ~ ";" }
+from_import_stmt = { import_kw ~ "{" ~ ident ~ ("," ~ ident)* ~ "}" ~ from_kw ~ module_path ~ ";" }
+module_path = { ident ~ ("." ~ ident)* }
+
+import_kw = { "iba" | "ìbà" | "import" | "mu" }
+from_kw = { "lati" | "láti" | "from" }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
                 <h3>Variable Declarations</h3>
                 <div class="code-example">
                     <div class="code-header">
                         <span class="code-title">Variable Grammar</span>
                     </div>
-                    <pre><code>// Variable declaration
-var_decl = { public_mod? ~ var_kw ~ ident ~ type_hint? ~ "=" ~ expression ~ ";" }
-
-// Type hint
+                    <pre><code>var_decl = { public_mod? ~ var_kw ~ ident ~ type_hint? ~ "=" ~ expression ~ ";" }
 type_hint = { ":" ~ type_name }
 
-// Variable keywords
-var_kw = { "ayanmo" | "let" }
-
-// Public modifier
-public_mod = { "public" }
-
-// Examples:
-ayanmo x = 5;
-public let name: Str = "Alice";</code></pre>
+var_kw = { "ayanmo" | "ayanmọ" | "àyànmọ́" | "variable" | "let" | "var" }</code></pre>
                 </div>
             </div>
 
@@ -105,35 +126,31 @@ public let name: Str = "Alice";</code></pre>
                     <div class="code-header">
                         <span class="code-title">Constant Grammar</span>
                     </div>
-                    <pre><code>// Constant declaration
-const_stmt = { public_mod? ~ const_kw ~ ident ~ "=" ~ expression ~ ";" }
+                    <pre><code>const_stmt = { public_mod? ~ const_kw ~ ident ~ "=" ~ expression ~ ";" }
 
-// Constant keywords
-const_kw = { "const" | "loruko" | "ka" | "ayanfe" | "àyànfê" }
-
-// Examples:
-const PI = 3.14159;
-public loruko VERSION = "1.3.0";</code></pre>
+const_kw = { "const" | "loruko" | "ka" | "ayanfe" | "àyànfẹ́" }</code></pre>
                 </div>
             </div>
 
             <div class="grammar-section">
-                <h3>Assignments</h3>
+                <h3>Assignment and Update</h3>
                 <div class="code-example">
                     <div class="code-header">
                         <span class="code-title">Assignment Grammar</span>
                     </div>
-                    <pre><code>// Assignment statement
-assignment_stmt = { lvalue ~ "=" ~ expression ~ ";" }
+                    <pre><code>assignment_stmt = { lvalue ~ "=" ~ expression ~ ";" }
+update_stmt = { lvalue ~ update_op ~ expression ~ ";" }
 
-// Left-hand values
-lvalue = { deref_lvalue | index_lvalue | ident }
-deref_lvalue = { "*" ~ expression }        // *ptr
-index_lvalue = { ident ~ "[" ~ expression ~ "]" }  // arr[0]
+lvalue = { deref_lvalue | index_lvalue | property_access | ident }
+deref_lvalue = { "*" ~ expression }
+index_lvalue = { ident ~ "?."? ~ "[" ~ expression ~ "]" }
+
+update_op = { "+="  | "-=" | "*=" | "/=" | "%=" }
 
 // Examples:
 x = 10;
-*ptr = 20;
+x += 5;
+*p = 20;
 arr[0] = 30;</code></pre>
                 </div>
             </div>
@@ -148,48 +165,27 @@ arr[0] = 30;</code></pre>
                     <div class="code-header">
                         <span class="code-title">Function Grammar</span>
                     </div>
-                    <pre><code>// Function definition
-ese_def = { public_mod? ~ async_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ "{" ~ statement* ~ "}" }
-
-// Parameters
+                    <pre><code>ese_def = { public_mod? ~ async_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ "{" ~ statement* ~ "}" }
 params = { param ~ ("," ~ param)* }
 param = { ident ~ (":" ~ type_name)? }
 
-// Function keywords
-ese_kw = { "ese" | "fn" }
-async_mod = { "async" }
-
-// Examples:
-ese add(a, b) { pada a + b; }
-public async fetch(url: Str) { ... }
-fn greet(name: Str) -> Str { ... }</code></pre>
+ese_kw = { "ese" | "ẹsẹ" | "fn" | "function" | "def" }
+async_mod = { async_kw }
+async_kw = { "daro" | "async" }
+public_mod = { "gbangba" | "public" | "fi" | "export" }</code></pre>
                 </div>
             </div>
 
             <div class="grammar-section">
-                <h3>Odù Definitions</h3>
+                <h3>Odu Definitions (Classes)</h3>
                 <div class="code-example">
                     <div class="code-header">
-                        <span class="code-title">Odù Grammar</span>
+                        <span class="code-title">Odu Grammar</span>
                     </div>
-                    <pre><code>// Odù (class) definition
-odu_def = { public_mod? ~ odu_kw ~ ident ~ "{" ~ odu_body ~ "}" }
-
+                    <pre><code>odu_def = { public_mod? ~ odu_kw ~ ident ~ "{" ~ odu_body ~ "}" }
 odu_body = { (ese_def | var_decl)* }
 
-// Odù keyword
-odu_kw = { "odu" | "class" }
-
-// Examples:
-odu Server {
-    ayanmo host: Str;
-    ese start() { ... }
-}
-
-class Database {
-    let connection: Resource;
-    fn query(sql: Str) { ... }
-}</code></pre>
+odu_kw = { "odu" | "odù" | "class" }</code></pre>
                 </div>
             </div>
         </div>
@@ -198,131 +194,86 @@ class Database {
             <h2>Control Flow</h2>
             
             <div class="grammar-section">
-                <h3>If Statements</h3>
+                <h3>If / Else If / Else</h3>
                 <div class="code-example">
                     <div class="code-header">
                         <span class="code-title">If Grammar</span>
                     </div>
-                    <pre><code>// If statement
-if_stmt = { if_kw ~ expression ~ "{" ~ statement* ~ "}" ~ else_clause? }
+                    <pre><code>if_stmt = { if_kw ~ expression ~ "{" ~ statement* ~ "}" ~ else_clause? }
 
-// Else clause
-else_clause = { else_kw ~ "{" ~ statement* ~ "}" }
-
-// Keywords
-if_kw = { "bi" | "if" }
-else_kw = { "bi kosi" | "else" }
-
-// Examples:
-bi x > 0 {
-    Irosu.fo("Positive");
-} bi kosi {
-    Irosu.fo("Non-positive");
+else_clause = {
+    else_kw ~ if_kw ~ expression ~ "{" ~ statement* ~ "}" ~ else_clause?  // else if
+    | else_kw ~ "{" ~ statement* ~ "}"                                      // else
 }
 
-if condition {
-    // then block
-} else {
-    // else block
-}</code></pre>
+if_kw = { "ti" | "bí" | "if" }
+else_kw = { "bibẹkọ" | "else" }</code></pre>
                 </div>
             </div>
 
             <div class="grammar-section">
-                <h3>Loops</h3>
+                <h3>While Loop</h3>
                 <div class="code-example">
                     <div class="code-header">
-                        <span class="code-title">Loop Grammar</span>
+                        <span class="code-title">While Grammar</span>
                     </div>
-                    <pre><code>// While loop
-while_stmt = { while_kw ~ expression ~ "{" ~ statement* ~ "}" }
-
-// For loop
-for_stmt = { for_kw ~ ident ~ in_kw ~ expression ~ "{" ~ statement* ~ "}" }
-
-// Keywords
-while_kw = { "nigita" | "while" }
-for_kw = { "fun" | "for" }
-in_kw = { "ninu" | "in" }
-
-// Examples:
-nigita x < 10 {
-    x = x + 1;
-}
-
-fun i ninu 0..10 {
-    Irosu.fo(i);
-}
-
-while condition {
-    // loop body
-}
-
-for item in collection {
-    // loop body
-}</code></pre>
+                    <pre><code>while_stmt = { while_kw ~ expression ~ "{" ~ statement* ~ "}" }
+while_kw = { "nigba" | "while" }</code></pre>
                 </div>
             </div>
 
             <div class="grammar-section">
-                <h3>Match Statements</h3>
+                <h3>For Loop</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">For Grammar</span>
+                    </div>
+                    <pre><code>for_stmt = { for_kw ~ ident ~ in_kw ~ expression ~ "{" ~ statement* ~ "}" }
+for_kw = { "fun" | "for" }
+in_kw = { "ninu" | "in" }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Break and Continue</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Loop Control Grammar</span>
+                    </div>
+                    <pre><code>break_stmt = { break_kw ~ ";" }
+continue_stmt = { continue_kw ~ ";" }
+
+break_kw = { "da" | "break" }
+continue_kw = { "tesiwaju" | "bayan" | "continue" }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Return</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Return Grammar</span>
+                    </div>
+                    <pre><code>return_stmt = { return_kw ~ expression? ~ ";" }
+return_kw = { "pada" | "return" }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Match</h3>
                 <div class="code-example">
                     <div class="code-header">
                         <span class="code-title">Match Grammar</span>
                     </div>
-                    <pre><code>// Match statement
-match_stmt = { match_kw ~ "(" ~ expression ~ ")" ~ "{" ~ match_arm* ~ "}" }
+                    <pre><code>match_stmt = { match_kw ~ "(" ~ expression ~ ")" ~ "{" ~ match_arm* ~ "}" }
 
-// Match arms
 match_arm = { match_pattern ~ "=>" ~ (statement | ("{" ~ statement* ~ "}")) }
-
-// Patterns
 match_pattern = { range_pattern | literal_pattern | wildcard_pattern }
 range_pattern = { expression ~ ".." ~ expression }
 literal_pattern = { expression }
 wildcard_pattern = { "_" }
 
-// Keywords
-match_kw = { "match" }
-
-// Examples:
-match (x) {
-    0 => Irosu.fo("Zero"),
-    1..10 => Irosu.fo("Small"),
-    _ => Irosu.fo("Large")
-}</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="step">
-            <h2>Imports and Modules</h2>
-            
-            <div class="grammar-section">
-                <h3>Import Statements</h3>
-                <div class="code-example">
-                    <div class="code-header">
-                        <span class="code-title">Import Grammar</span>
-                    </div>
-                    <pre><code>// Import statement
-import_stmt = { import_kw ~ module_path ~ ";" }
-
-// Named import
-from_import_stmt = { import_kw ~ "{" ~ ident ~ ("," ~ ident)* ~ "}" ~ from_kw ~ module_path ~ ";" }
-
-// Module path
-module_path = { ident ~ ("." ~ ident)* }
-
-// Keywords
-import_kw = { "iba" | "import" }
-from_kw = { "lati" | "from" }
-
-// Examples:
-iba std.irosu;
-import std.utils;
-
-iba { fo, ka } from std.irosu;
-import { println, read } from std.irosu;</code></pre>
+match_kw = { "yàn" | "yán" | "match" }</code></pre>
                 </div>
             </div>
         </div>
@@ -331,146 +282,80 @@ import { println, read } from std.irosu;</code></pre>
             <h2>Error Handling</h2>
             
             <div class="grammar-section">
-                <h3>Try-Catch-Finally</h3>
+                <h3>Try / Catch / Finally</h3>
                 <div class="code-example">
                     <div class="code-header">
                         <span class="code-title">Try Grammar</span>
                     </div>
-                    <pre><code>// Try statement
-try_stmt = { try_kw ~ "{" ~ statement* ~ "}" ~ catch_clause ~ nipari_clause? }
-
-// Catch clause
+                    <pre><code>try_stmt = { try_kw ~ "{" ~ statement* ~ "}" ~ catch_clause ~ nipari_clause? }
 catch_clause = { catch_kw ~ "(" ~ ident ~ ")" ~ "{" ~ statement* ~ "}" }
-
-// Finally clause
 nipari_clause = { nipari_kw ~ "{" ~ statement* ~ "}" }
 
-// Keywords
 try_kw = { "gbiyanju" | "gbìyànjú" | "try" }
 catch_kw = { "gba" | "gbà" | "catch" }
-nipari_kw = { "nipari" | "nípàrí" | "finally" }
+nipari_kw = { "nipari" | "nípàrí" | "finally" }</code></pre>
+                </div>
+            </div>
 
-// Examples:
-gbiyanju {
-    risky_operation();
-} gba (error) {
-    Irosu.fo("Error: " + error.message);
-} nipari {
-    cleanup();
-}
+            <div class="grammar-section">
+                <h3>Assertions (Ewo)</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Assert Grammar</span>
+                    </div>
+                    <pre><code>ewo_stmt = { ewo_kw ~ expression ~ ("," ~ string)? ~ ";" }
+ewo_kw = { "ewo" | "ẹ̀wọ̀" | "assert" | "verify" }</code></pre>
+                </div>
+            </div>
+        </div>
 
-try {
-    // try block
-} catch (error) {
-    // catch block
-} finally {
-    // finally block
+        <div class="step">
+            <h2>Memory and Resources</h2>
+            
+            <div class="grammar-section">
+                <h3>Opon (Memory) Directives</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Opon Grammar</span>
+                    </div>
+                    <pre><code>opon_stmt = { opon_kw ~ ":"? ~ opon_size ~ ";"? }
+
+opon_kw = { "#opon" | "opon" | "#Opon" | "Opon" | "#mem" | "mem" }
+opon_size = {
+    "kekere" | "kẹ́kẹ́rẹ́" | "small" | "tiny" | "embedded"
+    | "arinrin" | "àrínrin" | "medium" | "standard" | "default"
+    | "nla" | "nlá" | "large" | "big"
+    | "ailopin" | "àìlópin" | "unlimited" | "dynamic" | "max"
 }</code></pre>
                 </div>
             </div>
 
             <div class="grammar-section">
-                <h3>Assertions</h3>
-                <div class="code-example">
-                    <div class="code-header">
-                        <span class="code-title">Assert Grammar</span>
-                    </div>
-                    <pre><code>// Assertion statement
-ewo_stmt = { ewo_kw ~ expression ~ ("," ~ string)? ~ ";" }
-
-// Keywords
-ewo_kw = { "ewo" | "ewo" | "assert" | "verify" }
-
-// Examples:
-ewo x >= 0, "x must be non-negative";
-ewo balance >= 0;
-
-assert x >= 0, "x must be non-negative";
-verify balance >= 0;</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="step">
-            <h2>Domain Calls</h2>
-            
-            <div class="grammar-section">
-                <h3>Odù Domain Instructions</h3>
-                <div class="code-example">
-                    <div class="code-header">
-                        <span class="code-title">Domain Grammar</span>
-                    </div>
-                    <pre><code>// Domain instruction
-instruction = { odu_call ~ ";" }
-
-// Odù call
-odu_call = { odu_name ~ "." ~ ident ~ "(" ~ arguments? ~ ")" }
-
-// Arguments
-arguments = { expression ~ ("," ~ expression)* }
-
-// Odù names (16 core domains)
-odu_name = {
-    "Ogbe" | "Oyeku" | "Iwori" | "Odi" | "Irosu" | "Owonrin"
-    | "Obara" | "Okanran" | "Ogunda" | "Osa" | "Ika" | "Oturupon"
-    | "Otura" | "Irete" | "Ose" | "Ofun"
-}
-
-// Examples:
-Irosu.fo("Hello, World!");
-Obara.fikun(10, 20);
-Irete.sha256("data");
-Ogbe.args();</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="step">
-            <h2>Memory Management</h2>
-            
-            <div class="grammar-section">
-                <h3>Opon Directives</h3>
-                <div class="code-example">
-                    <div class="code-header">
-                        <span class="code-title">Opon Grammar</span>
-                    </div>
-                    <pre><code>// Opon (memory) directive
-opon_stmt = { opon_kw ~ ":"? ~ opon_size ~ ";"? }
-
-// Opon keywords
-opon_kw = { "#opon" | "opon" | "#Opon" | "Opon" | "#mem" | "mem" }
-
-// Memory sizes
-opon_size = {
-    "kekere" | "kékéré" | "small" | "tiny" | "embedded"
-    | "arinrin" | "àrínrin" | "medium" | "standard" | "default"
-    | "nla" | "nlá" | "large" | "big"
-    | "ailopin" | "àìlópin" | "unlimited" | "dynamic" | "max"
-}
-
-// Examples:
-opon: kekere;
-#opon arinrin;
-mem: nla;
-#mem ailopin;</code></pre>
-                </div>
-            </div>
-
-            <div class="grammar-section">
-                <h3>Resource Management ( )</h3>
+                <h3>Ebo (Offering / Epoch Region)</h3>
                 <div class="code-example">
                     <div class="code-header">
                         <span class="code-title">Ebo Grammar</span>
                     </div>
-                    <pre><code>// Ebo (offering/initiation) statement
-ebo_stmt = { ebo_kw ~ expression ~ ";"? }
+                    <pre><code>ebo_stmt = { ebo_kw ~ expression ~ ("{" ~ statement* ~ "}")? ~ ";"? }
 
-// Ebo keywords
-ebo_kw = { "ebo" | "éb" | "sacrifice" }
+ebo_kw = { "ebo" | "ẹbọ" | "sacrifice" }
 
+// With body: creates a scoped memory epoch
+// Without body: single-statement resource offering
 // Examples:
-ebo "server_config.json";
-sacrifice file = Odi.open("data.txt");</code></pre>
+ebo "config.json";
+ebo "scope" { ... }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Defer (Cleanup)</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Defer Grammar</span>
+                    </div>
+                    <pre><code>defer_stmt = { defer_kw ~ "{" ~ statement* ~ "}" }
+defer_kw = { "defer" | "gbe" }</code></pre>
                 </div>
             </div>
         </div>
@@ -479,210 +364,257 @@ sacrifice file = Odi.open("data.txt");</code></pre>
             <h2>Special Constructs</h2>
             
             <div class="grammar-section">
-                <h3>Unsafe Code</h3>
+                <h3>Ailewu (Unsafe)</h3>
                 <div class="code-example">
                     <div class="code-header">
                         <span class="code-title">Unsafe Grammar</span>
                     </div>
-                    <pre><code>// Ailewu (unsafe) block
-ailewu_stmt = { ailewu_kw ~ "{" ~ statement* ~ "}" }
-
-// Keywords
-ailewu_kw = { "ailewu" | "àìléwu" | "unsafe" }
-
-// Examples:
-ailewu {
-    // Unsafe operations here
-    // Direct memory manipulation
-    // FFI calls
-}
-
-unsafe {
-    // Unsafe operations here
-}</code></pre>
+                    <pre><code>ailewu_stmt = { ailewu_kw ~ "{" ~ statement* ~ "}" }
+ailewu_kw = { "ailewu" | "àìléwu" | "unsafe" }</code></pre>
                 </div>
             </div>
 
             <div class="grammar-section">
-                <h3>Yield and Return</h3>
+                <h3>Yield</h3>
                 <div class="code-example">
                     <div class="code-header">
-                        <span class="code-title">Control Flow Grammar</span>
+                        <span class="code-title">Yield Grammar</span>
                     </div>
-                    <pre><code>// Return statement
-return_stmt = { return_kw ~ expression? ~ ";" }
-
-// Yield statement
-yield_stmt = { yield_kw ~ expression ~ ";" }
-
-// End statement
-ase_stmt = { ase_kw ~ ";"? }
-
-// Keywords
-return_kw = { "pada" | "return" }
-yield_kw = { "jowo" | "jwó" | "yield" }
-ase_kw = { "ase" | "end" }
-
-// Examples:
-pada result;
-return 42;
-
-jowo 1000;
-yield 1000;
-
-ase;
-end;</code></pre>
+                    <pre><code>yield_stmt = { yield_kw ~ expression ~ ";" }
+yield_kw = { "jowo" | "jọ̀wọ́" | "yield" }</code></pre>
                 </div>
             </div>
 
             <div class="grammar-section">
-                <h3>Taboo Declarations</h3>
+                <h3>Ase (End Marker)</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Ase Grammar</span>
+                    </div>
+                    <pre><code>ase_stmt = { ase_kw ~ ";"? }
+ase_kw = { "ase" | "àṣẹ" | "end" }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Taboo (Domain Restriction)</h3>
                 <div class="code-example">
                     <div class="code-header">
                         <span class="code-title">Taboo Grammar</span>
                     </div>
-                    <pre><code>// Taboo declaration
-taboo_stmt = { taboo_kw ~ ":" ~ odu_name ~ "->" ~ odu_name ~ ";" }
+                    <pre><code>taboo_stmt = { taboo_kw ~ ":" ~ odu_name ~ "->" ~ odu_name ~ ";" }
+taboo_kw = { "èèwọ̀" | "ewọ" | "taboo" }</code></pre>
+                </div>
+            </div>
 
-// Keywords
-taboo_kw = { "èèw" | "ew" | "taboo" }
-
-// Examples:
-èèw: Ose -> Odi;
-taboo: Otura -> Irete;</code></pre>
+            <div class="grammar-section">
+                <h3>Await</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Await Grammar</span>
+                    </div>
+                    <pre><code>await_expr = { await_kw ~ expression }
+await_kw = { "reti" | "await" }</code></pre>
                 </div>
             </div>
         </div>
 
         <div class="step">
-            <h2>Expressions</h2>
+            <h2>Expressions (Precedence, Low to High)</h2>
             
-            <div class="grammar-section">
-                <h3>Literals</h3>
-                <div class="code-example">
-                    <div class="code-header">
-                        <span class="code-title">Literal Grammar</span>
-                    </div>
-                    <pre><code>// Various literal types
-expression = { literal | ... }
-
-literal = {
-    int_literal
-    | float_literal
-    | string_literal
-    | char_literal
-    | boolean_literal
-    | list_literal
-    | map_literal
-}
-
-// Integer literals
-int_literal = { "-"? ~ ASCII_DIGIT+ }
-
-// Float literals
-float_literal = { "-"? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* }
-
-// String literals
-string_literal = { "\"" ~ (~"\"" ~ ANY)* ~ "\"" }
-
-// Boolean literals
-boolean_literal = { "otito" | "true" | "eke" | "false" }
-
-// Examples:
-42
--100
-3.14159
--2.5
-"Hello, World!"
-'c'
-otito / true
-eke / false</code></pre>
-                </div>
-            </div>
-
-            <div class="grammar-section">
-                <h3>Collections</h3>
-                <div class="code-example">
-                    <div class="code-header">
-                        <span class="code-title">Collection Grammar</span>
-                    </div>
-                    <pre><code>// List literal
-list_literal = { "[" ~ expression ~ ("," ~ expression)* ~ "]" }
-
-// Map literal
-map_literal = {
-    "{" ~ string_literal ~ ":" ~ expression ~ ("," ~ string_literal ~ ":" ~ expression)* ~ "}"
-}
-
-// Examples:
-[1, 2, 3, 4, 5]
-["hello", "world", 42, otito]
-
-{
-    "name": "Alice",
-    "age": 30,
-    "active": otito
-}</code></pre>
-                </div>
+            <h3>Precedence Chain</h3>
+            <div class="code-example">
+                <pre><code>expression = { null_coalesce_expr }
+null_coalesce_expr = { or_expr ~ (null_coalesce_op ~ or_expr)* }
+or_expr    = { and_expr ~ (or_op ~ and_expr)* }
+and_expr   = { not_expr ~ (and_op ~ not_expr)* }
+not_expr   = { comparison }
+comparison = { arith_expr ~ (comp_op ~ arith_expr)* }
+arith_expr = { term ~ ((add_op | sub_op) ~ term)* }
+term       = { factor ~ ((mul_op | div_op | mod_op) ~ factor)* }
+factor     = { unary_op* ~ atom ~ try_op? }</code></pre>
             </div>
 
             <div class="grammar-section">
                 <h3>Operators</h3>
                 <div class="code-example">
-                    <div class="code-header">
-                        <span class="code-title">Operator Grammar</span>
-                    </div>
-                    <pre><code>// Arithmetic operators (high precedence)
-expression = { term ~ (("+" | "-") ~ term)* }
-term = { factor ~ (("*" | "/" | "%") ~ factor)* }
+                    <pre><code>// Arithmetic
+add_op = { "+" }
+sub_op = { "-" }
+mul_op = { "*" }
+div_op = { "/" }
+mod_op = { "%" }
 
-// Comparison operators
-comparison = { expression ~ (("==" | "!=" | "<" | ">" | "<=" | ">=") ~ expression) }
+// Comparison
+comp_op = { "==" | "!=" | "<=" | ">=" | "<" | ">" }
 
-// Logical operators
-logical = { comparison ~ (("&&" | "||") ~ comparison)* }
+// Logical
+and_op = { "&&" | "ati" | "and" }
+or_op = { "||" | "tabi" | "or" }
+not_op = { "!" | "kii" | "not" }
 
-// Unary operators
-factor = { ("!" | "-") ~ primary }
+// Other
+null_coalesce_op = { "??" }
+unary_op = { "+" | "-" | "&" | "*" }
+chain_op = { "." | "?." }
+try_op = { "?" }</code></pre>
+                </div>
+            </div>
 
-// Examples:
-x + y * z
-a == b && c != d
-!condition
--value</code></pre>
+            <div class="grammar-section">
+                <h3>Atom (Expression Base)</h3>
+                <div class="code-example">
+                    <pre><code>atom = {
+    lambda_expr
+    | odu_call                      // Obara.fikun(10)
+    | method_call                   // obj.method(args)
+    | property_access               // obj.field
+    | function_call                 // func(args)
+    | index_access                  // arr[0] or arr?.[0]
+    | await_expr                    // reti expr
+    | list_literal                  // [1, 2, 3]
+    | map_literal                   // { "key": value }
+    | number                        // 42, 3.14, 0xFF, 0b101
+    | interpolated_string           // $"Hello {name}"
+    | string                        // "text" or 'text'
+    | boolean                       // true, false, otito, iro
+    | nil                           // null, nil, ofo
+    | ident                         // variable name
+    | "(" ~ expression ~ ")"        // grouping
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Literals</h3>
+                <div class="code-example">
+                    <pre><code>// Number (integer, float, hex, binary)
+number = {
+    ("0x" ~ (ASCII_HEX_DIGIT | "_")+)      // Hex
+    | ("0b" ~ (ASCII_BIN_DIGIT | "_")+)     // Binary
+    | (ASCII_DIGIT ~ (ASCII_DIGIT | "_")*   // Decimal/float
+        ~ ("." ~ ASCII_DIGIT ~ (ASCII_DIGIT | "_")*)?)
+}
+
+// String (double or single quotes)
+string = {
+    "\"" ~ ( (!("\"" | "\\") ~ ANY) | ("\\" ~ ANY) )* ~ "\""
+    | "'" ~ ( (!("'" | "\\") ~ ANY) | ("\\" ~ ANY) )* ~ "'"
+}
+
+// Interpolated string: $"Hello {name}"
+interpolated_string = { "$" ~ "\"" ~ (interp_part)* ~ "\"" }
+interp_text = { "\"" | "{" | "\\" ... }
+interp_expr = { "{" ~ expression ~ "}" }
+
+// Booleans
+boolean = { "true" | "false" | "otito" | "iro" }
+
+// Null
+nil = { "ofo" | "null" | "nil" }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Lambda Expression</h3>
+                <div class="code-example">
+                    <pre><code>lambda_expr = { ese_kw ~ "(" ~ params? ~ ")" ~ "{" ~ statement* ~ "}" }
+
+// Example: ese(x, y) { pada x + y; }
+// Equivalent to: fn(x, y) { return x + y; }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Calls and Property Access</h3>
+                <div class="code-example">
+                    <pre><code>// Domain call: Obara.fikun(10)
+odu_call = { odu_name ~ chain_op ~ ident ~ "(" ~ arguments? ~ ")" }
+
+// Method call: obj.method(args) or obj?.method(args)
+method_call = { ident ~ chain_op ~ ident ~ "(" ~ arguments? ~ ")" }
+
+// Function call: func(args)
+function_call = { ident ~ "(" ~ arguments? ~ ")" }
+
+// Property access: obj.field or obj?.field
+property_access = { ident ~ ( chain_op ~ ident )+ }
+
+// Index: arr[0] or arr?.[0]
+index_access = { ident ~ "?."? ~ "[" ~ expression ~ "]" }
+
+// Arguments
+arguments = { expression ~ ("," ~ expression)* }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Lists and Maps</h3>
+                <div class="code-example">
+                    <pre><code>// List: [1, 2, 3] or []
+list_literal = { "[" ~ (expression ~ ("," ~ expression)*)? ~ "]" }
+
+// Map: { "key": value }
+map_literal = { "{" ~ (map_entry ~ ("," ~ map_entry)*)? ~ "}" }
+map_entry = { (string | ident) ~ ":" ~ expression }</code></pre>
                 </div>
             </div>
         </div>
 
         <div class="step">
-            <h2>Type Names</h2>
+            <h2>Odu Domain Names</h2>
             
             <div class="grammar-section">
-                <h3>Supported Types</h3>
+                <h3>Domain Name List</h3>
+                <div class="code-example">
+                    <pre><code>odu_name = {
+    // 16 Core Odu
+    "Ogbe" | "Ogbè" |
+    "Oyeku" | "Ọ̀yẹ̀kú" |
+    "Iwori" | "Ìwòrì" |
+    "Odi" | "Òdí" |
+    "Irosu" | "Ìrosù" |
+    "Owonrin" | "Ọ̀wọ́nrín" |
+    "Obara" | "Ọ̀bàrà" |
+    "Okanran" | "Ọ̀kànràn" |
+    "Ogunda" | "Ògúndá" |
+    "Osa" | "Ọ̀sá" |
+    "Ika" | "Ìká" |
+    "Oturupon" | "Òtúúrúpọ̀n" |
+    "Otura" | "Òtúrá" |
+    "Irete" | "Ìrẹtẹ̀" |
+    "Ose" | "Ọ̀ṣẹ́" |
+    "Ofun" | "Òfún" |
+    // Reserved
+    "Coop" | "coop" | "Ajose" | "ajose" | "Àjọṣe" | "àjọṣe" |
+    "Opele" | "opele" | "Ọpẹlẹ" | "ọpẹlẹ" |
+    // Infrastructure
+    "Sys" | "Cpu" | "Gpu" | "Storage"
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>Types</h2>
+            
+            <div class="grammar-section">
+                <h3>Type Names</h3>
                 <div class="code-example">
                     <div class="code-header">
                         <span class="code-title">Type Grammar</span>
                     </div>
-                    <pre><code>// Type names in type hints
-type_name = {
-    // Basic types
+                    <pre><code>type_name = {
     "Int" | "Float" | "Str" | "Bool" | "List" | "Map" | "Any"
     | "int" | "float" | "str" | "bool" | "list" | "map" | "any"
-    
-    // Numeric types
     | "i8" | "i16" | "i32" | "i64"
     | "u8" | "u16" | "u32" | "u64"
     | "f32" | "f64"
-    
-    // Special types
     | "void"
 }
 
-// Examples:
-ayanmo x: Int = 42;
-ayanmo name: Str = "Alice";
-ayanmo items: List[Int] = [1, 2, 3];
-ayanmo data: Map[Str, Any] = {"key": "value"};</code></pre>
+// Used in type hints: ":" ~ type_name
+// Example: ayanmo x: Int = 42;</code></pre>
                 </div>
             </div>
         </div>
@@ -691,64 +623,37 @@ ayanmo data: Map[Str, Any] = {"key": "value"};</code></pre>
             <h2>Comments</h2>
             
             <div class="grammar-section">
-                <h3>Comment Grammar</h3>
+                <h3>Comment Syntax</h3>
                 <div class="code-example">
-                    <div class="code-header">
-                        <span class="code-title">Comment Grammar</span>
-                    </div>
-                    <pre><code>// Comment patterns
-COMMENT = {
-    // Single line comment
-    | "/*" ~ (!"*/" ~ ANY)* ~ "*/"  // Multi-line comment
+                    <pre><code>COMMENT = {
+    block_comment       // /* ... */
+    | doc_comment       // /// ...
+    | line_comment_slash  // ...
+    | line_comment_hash   // # ...
 }
 
-// Examples:
-// This is a single line comment
-
-/*
-   This is a
-   multi-line comment
-*/
-
-/// Documentation comment</code></pre>
+doc_comment = { "///" ~ (!NEWLINE ~ ANY)* }
+block_comment = { "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+line_comment_slash = { "//" ~ (!NEWLINE ~ ANY)* }
+line_comment_hash = { "#" ~ (!NEWLINE ~ ANY)* }</code></pre>
                 </div>
             </div>
         </div>
 
         <div class="step">
-            <h2>Grammar Implementation Notes</h2>
+            <h2>Terminals and Whitespace</h2>
             
-            <h3>Pest Features Used</h3>
-            <ul>
-                <li><strong>PEG Grammar:</strong> Parsing Expression Grammar for unambiguous parsing</li>
-                <li><strong>Unicode Support:</strong> Full Unicode support for Yoruba characters</li>
-                <li><strong>Error Recovery:</strong> Built-in error recovery for better error messages</li>
-                <li><strong>Whitespace Handling:</strong> Automatic whitespace skipping between tokens</li>
-            </ul>
+            <div class="grammar-section">
+                <h3>Identifier and Whitespace Rules</h3>
+                <div class="code-example">
+                    <pre><code>// Identifiers: Unicode-aware (supports Yoruba characters)
+ident = { (ASCII_ALPHA | "_" | '\u{0080}'..'\u{FFFF}')
+    ~ (ASCII_ALPHANUMERIC | "_" | '\u{0080}'..'\u{FFFF}')* }
 
-            <h3>Bilingual Support</h3>
-            <ul>
-                <li><strong>Yoruba Keywords:</strong> Full Yoruba keyword support with diacritics</li>
-                <li><strong>English Keywords:</strong> English alternatives for accessibility</li>
-                <li><strong>Mixed Usage:</strong> Can mix Yoruba and English in same program</li>
-                <li><strong>Cultural Integration:</strong> Keywords reflect Yoruba philosophical concepts</li>
-            </ul>
-
-            <h3>Odù Domain Integration</h3>
-            <ul>
-                <li><strong>16 Core Domains:</strong> All traditional Odù domains supported</li>
-                <li><strong>Method Calls:</strong> Domain.method() syntax for operations</li>
-                <li><strong>Built-in Access:</strong> No imports required for core domains</li>
-                <li><strong>Type Safety:</strong> Domain methods are type-checked</li>
-            </ul>
-
-            <h3>Performance Considerations</h3>
-            <ul>
-                <li><strong>Left Recursion:</strong> Avoided for better parsing performance</li>
-                <li><strong>Operator Precedence:</strong> Clear precedence rules for expressions</li>
-                <li><strong>Lookahead:</strong> Minimal lookahead for efficient parsing</li>
-                <li><strong>Error Messages:</strong> Contextual error messages for debugging</li>
-            </ul>
+// Whitespace (automatically skipped)
+WHITESPACE = { " " | "\t" | "\r" | "\n" }</code></pre>
+                </div>
+            </div>
         </div>
 
         <footer>

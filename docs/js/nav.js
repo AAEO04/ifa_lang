@@ -102,6 +102,26 @@
                 { href: 'tutorials/index.html', label: '📚 All Tutorials' },
                 { href: 'tutorials/tour/index.html', label: '🚶 Language Tour' }
             ]
+        },
+        {
+            label: '🔧 Development',
+            items: [
+                { href: 'dev/index.html', label: '🗺️ Dev Docs' },
+                { href: 'dev/crate-map.html', label: '📦 Crate Map' },
+                { href: 'dev/vm.html', label: '⚡ VM Internals' },
+                { href: 'dev/compiler.html', label: '📦 Compiler' },
+                { href: 'dev/value-system.html', label: '🔢 Value System' },
+                { href: 'dev/adding-a-domain.html', label: '📦 External Packages' },
+                { href: 'dev/testing.html', label: '🧪 Testing' }
+            ]
+        },
+        {
+            label: '🔐 Maintainers',
+            items: [
+                { href: 'maintainers/index.html', label: '📋 Maintainer Docs' },
+                { href: 'maintainers/release-process.html', label: '📤 Release Process' },
+                { href: 'maintainers/ci-cd.html', label: '⚙️ CI/CD' }
+            ]
         }
     ];
 

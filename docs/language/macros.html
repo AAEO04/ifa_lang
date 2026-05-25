@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Procedural Macros - Ifá-Lang</title>
-    <meta name="description" content="Procedural macros for Ifá-Lang's cultural safety features and reactive programming">
+    <title>Procedural Macros - Ifa-Lang</title>
+    <meta name="description" content="Procedural macros for Ifa-Lang's cultural safety features and reactive programming">
     <link rel="stylesheet" href="../js/common.css">
     <script src="../js/nav.js" defer></script>
 </head>
@@ -22,14 +22,19 @@
     </div>
 
     <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">macros.ifa</span></div><div class="terminal-body">
         <header>
             <h1>Procedural Macros</h1>
             <p class="subtitle">Cultural Safety Features & Reactive Programming</p>
         </header>
 
+        <div class="warning">
+            <p><strong>Important:</strong> These macros are Rust-side procedural macros defined in the <code>ifa-macros</code> crate. They operate on Rust structs/functions, not on Ifa-Lang source code. Ifa-Lang does not have a user-facing macro system in the grammar/parser. These macros are used when embedding Ifa-Lang in Rust or when extending the runtime via Rust.</p>
+        </div>
+
         <div class="step">
             <h2>Overview</h2>
-            <p>Ifá-Lang's procedural macros provide compile-time safety checks and code generation that embody Yoruba cultural principles. These macros ensure resource safety, balance checking, and reactive relationships in your code.</p>
+            <p>Ifa-Lang's procedural macros provide compile-time safety checks and code generation that embody Yoruba cultural principles. These macros ensure resource safety, balance checking, and reactive relationships in your Rust code that interfaces with the Ifa-Lang runtime.</p>
         </div>
 
         <div class="step">
@@ -70,24 +75,26 @@
 
         <div class="step">
             <h2>#[derive(Ebo)] - Resource Sacrifice</h2>
-            <p>Automatically implements <code>Drop</code> trait for RAII resource cleanup. The macro embodies the Yoruba concept of   (sacrifice/offering) where resources must be properly returned to the system.</p>
+            <p>Automatically implements <code>Drop</code> trait for RAII resource cleanup. The macro embodies the Yoruba concept of ebo (sacrifice/offering) where resources must be properly returned to the system.</p>
 
             <h3>Basic Usage</h3>
             <div class="code-example">
                 <div class="code-header">
                     <span class="code-title">Ebo Derive</span>
                 </div>
-                <pre><code>#[derive(Ebo)]
+                <pre><code>use ifa_macros::Ebo;
+
+#[derive(Ebo)]
 struct MyFile {
     handle: std::fs::File,
 }
 
 // Drop is auto-implemented:
-impl Drop for MyFile {
-    fn drop(&mut self) {
-        println!("[Ebo] Sacrificed: MyFile");
-    }
-}</code></pre>
+// impl Drop for MyFile {
+//     fn drop(&mut self) {
+//         println!("[Ebo] Sacrificed: MyFile");
+//     }
+// }</code></pre>
             </div>
 
             <h3>Custom Cleanup Method</h3>
@@ -95,35 +102,43 @@ impl Drop for MyFile {
                 <div class="code-header">
                     <span class="code-title">Custom Ebo</span>
                 </div>
-                <pre><code>#[derive(Ebo)]
+                <pre><code>use ifa_macros::Ebo;
+
+#[derive(Ebo)]
 #[ebo(cleanup = "close")]
 struct DatabaseConnection {
     pool: sql::Pool,
 }
 
-// Generates:
-impl Drop for DatabaseConnection {
-    fn drop(&mut self) {
-        println!("[Ebo] Sacrificing DatabaseConnection");
-        self.close();  // Calls custom cleanup method
+impl DatabaseConnection {
+    fn close(&mut self) {
+        self.pool.close();
     }
-}</code></pre>
+}
+
+// Generates:
+// impl Drop for DatabaseConnection {
+//     fn drop(&mut self) {
+//         println!("[Ebo] Sacrificing DatabaseConnection");
+//         self.close();
+//     }
+// }</code></pre>
             </div>
 
             <h3>Attribute Parameters</h3>
             <ul>
-                <li><strong>cleanup = "method"</strong> - Specify custom cleanup method name</li>
-                <li><strong>Default:</strong> Prints sacrifice message without cleanup</li>
+                <li><strong>cleanup = "method"</strong> - Specify custom cleanup method name (optional)</li>
+                <li><strong>Default:</strong> Prints sacrifice message without explicit cleanup call</li>
             </ul>
         </div>
 
         <div class="step">
             <h2>#[iwa_pele] - Gentle Balance</h2>
-            <p>Compile-time balance checking for paired operations. Ìwà Pélé (gentle character) ensures that resources opened in a scope are properly closed in the same scope, preventing resource leaks.</p>
+            <p>Compile-time balance checking for paired operations. Iwa Pele (gentle character) ensures that resources opened in a scope are properly closed in the same scope, preventing resource leaks.</p>
 
             <h3>Checked Operation Pairs</h3>
             <ul>
-                <li><strong>so / pa</strong> - socket open/close</li>
+                <li><strong>so / pa</strong> - open/close</li>
                 <li><strong>si / ti</strong> - file open/close</li>
                 <li><strong>mu / fi</strong> - acquire/release</li>
                 <li><strong>bere / da</strong> - start/stop</li>
@@ -134,20 +149,22 @@ impl Drop for DatabaseConnection {
                 <div class="code-header">
                     <span class="code-title">Balance Checking</span>
                 </div>
-                <pre><code>#[iwa_pele]
+                <pre><code>use ifa_macros::iwa_pele;
+
+#[iwa_pele]
 fn network_task() {
-    let conn = Otura.so("example.com", 80);  // open
+    let conn = open("example.com", 80);  // open (so)
     // ... work with connection
-    conn.pa();  // close - REQUIRED or compile error
+    close(conn);  // close (pa) - REQUIRED or compile error
 }
 
 // This would cause compile error:
-#[iwa_pele]
-fn bad_function() {
-    let file = Odi.si("data.txt");  // open file
-    // Missing: file.ti() - compile error!
-    // Ìwà Pélé violation: Block leaks resource
-}</code></pre>
+// #[iwa_pele]
+// fn bad_function() {
+//     let file = open_file("data.txt");  // open file (si)
+//     // Missing: close_file() - compile error!
+//     // Iwa Pele violation: Block leaks resource
+// }</code></pre>
             </div>
 
             <h3>Compile-Time Enforcement</h3>
@@ -162,21 +179,24 @@ fn bad_function() {
 
         <div class="step">
             <h2>ajose! - Reactive Binding</h2>
-            <p>Creates reactive bindings between values. Àjõsé (gathering/assembly) represents the reactive system where changes propagate through relationships automatically.</p>
+            <p>Creates reactive bindings between values. Ajose (gathering/assembly) represents the reactive system where changes propagate through relationships automatically.</p>
 
             <h3>Basic Reactive Binding</h3>
             <div class="code-example">
                 <div class="code-header">
                     <span class="code-title">Standard Binding</span>
                 </div>
-                <pre><code>let counter = RefCell::new(0);
+                <pre><code>use ifa_macros::ajose;
+use std::cell::RefCell;
+
+let counter = RefCell::new(0);
 let label = RefCell::new("0".to_string());
 
 // Create reactive binding
-ajose!(counter.borrow() => label.borrow_mut());
+ajose!(counter => label);
 
-// When counter changes, label updates automatically
-*counter.borrow_mut() = 42;  // label becomes "42"</code></pre>
+// When counter changes, sync to label
+*counter.borrow_mut() = 42;</code></pre>
             </div>
 
             <h3>Freeze Binding (Cross-thread)</h3>
@@ -184,11 +204,15 @@ ajose!(counter.borrow() => label.borrow_mut());
                 <div class="code-header">
                     <span class="code-title">Thread-Safe Binding</span>
                 </div>
-                <pre><code>let shared_data = Arc::new(Mutex::new(Vec::new()));
+                <pre><code>use ifa_macros::ajose;
+use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+
+let shared_data = Arc::new(Mutex::new(Vec::new()));
 let local_counter = RefCell::new(0);
 
 // Auto-freeze for cross-thread safety
-ajose!(local_counter.borrow() => #freeze shared_data.lock().unwrap());
+ajose!(local_counter => #freeze shared_data);
 
 // Creates frozen value safe for sharing across threads</code></pre>
             </div>
@@ -196,9 +220,9 @@ ajose!(local_counter.borrow() => #freeze shared_data.lock().unwrap());
             <h3>Generated Code</h3>
             <p>The macro generates subscription logic and initial synchronization:</p>
             <ul>
-                <li><strong>Subscription Creation:</strong> Callback for value changes</li>
+                <li><strong>Subscription Creation:</strong> Closure for value changes</li>
                 <li><strong>Initial Sync:</strong> Sets target to source value</li>
-                <li><strong>Freeze Logic:</strong> Optional thread-safe freezing</li>
+                <li><strong>Freeze Logic:</strong> Optional thread-safe freezing via <code>#freeze</code> modifier</li>
                 <li><strong>Debug Output:</strong> Binding creation logging</li>
             </ul>
         </div>
@@ -212,7 +236,9 @@ ajose!(local_counter.borrow() => #freeze shared_data.lock().unwrap());
                 <div class="code-header">
                     <span class="code-title">Ebo Block</span>
                 </div>
-                <pre><code>ebo_block! {
+                <pre><code>use ifa_macros::ebo_block;
+
+ebo_block! {
     let file = std::fs::File::open("data.txt")?;
     let conn = Database::connect("localhost")?;
     
@@ -247,24 +273,19 @@ ajose!(local_counter.borrow() => #freeze shared_data.lock().unwrap());
                 <div class="code-header">
                     <span class="code-title">Observable Struct</span>
                 </div>
-                <pre><code>#[derive(Observable)]
+                <pre><code>use ifa_macros::Observable;
+
+#[derive(Observable)]
 struct Counter {
     value: i32,
     name: String,
 }
 
 // Generated methods:
-impl Counter {
-    pub fn watch_value<F: Fn(&i32) + 'static>(&self, callback: F) {
-        println!("[Observable] Watching: Counter.value");
-        callback(&self.value);
-    }
-    
-    pub fn watch_name<F: Fn(&String) + 'static>(&self, callback: F) {
-        println!("[Observable] Watching: Counter.name");
-        callback(&self.name);
-    }
-}</code></pre>
+// impl Counter {
+//     pub fn watch_value<F: Fn(&i32) + 'static>(&self, callback: F) { ... }
+//     pub fn watch_name<F: Fn(&String) + 'static>(&self, callback: F) { ... }
+// }</code></pre>
             </div>
 
             <h3>Reactive Pattern</h3>
@@ -277,10 +298,6 @@ impl Counter {
 // Watch for changes
 counter.watch_value(|val| {
     println!("Value changed to: {}", val);
-});
-
-counter.watch_name(|name| {
-    println!("Name changed to: {}", name);
 });</code></pre>
             </div>
 
@@ -299,64 +316,25 @@ counter.watch_name(|name| {
             <h3>Cultural Safety</h3>
             <p>These macros embody Yoruba cultural principles:</p>
             <ul>
-                <li><strong>  (Sacrifice):</strong> Resources must be properly returned</li>
-                <li><strong>Ìwà Pélé (Gentle Character):</strong> Balance and harmony in operations</li>
-                <li><strong>Àjõsé (Gathering):</strong> Community of reactive relationships</li>
+                <li><strong>Ebo (Sacrifice):</strong> Resources must be properly returned</li>
+                <li><strong>Iwa Pele (Gentle Character):</strong> Balance and harmony in operations</li>
+                <li><strong>Ajose (Gathering):</strong> Community of reactive relationships</li>
                 <li><strong>Sacred Boundaries:</strong> Scoped resource management</li>
             </ul>
 
-            <h3>Protocol-Oriented Design</h3>
-            <p>Macros support the protocol-oriented architecture:</p>
-            <ul>
-                <li><strong>No Classes:</strong> Derive macros work with struct protocols</li>
-                <li><strong>Capability-Based:</strong> Resources implement cleanup protocols</li>
-                <li><strong>Structural Typing:</strong> Balance checking based on method names</li>
-                <li><strong>Reactive Protocols:</strong> Observable and binding capabilities</li>
-            </ul>
-
-            <h3>Three-Tier Runtime Support</h3>
-            <ul>
-                <li><strong>AST Interpreter:</strong> Macro expansion at compile time</li>
-                <li><strong>Bytecode VM:</strong> Zero-cost abstractions</li>
-                <li><strong>Transpiler:</strong> Generated code compatible with all targets</li>
-            </ul>
+            <h3>Note on Ifa-Lang Macro System</h3>
+            <p>These macros exist at the Rust level for developers embedding Ifa-Lang or building runtime components. Ifa-Lang itself does not have a user-facing macro/metaprogramming system in its grammar. A future version may introduce language-level macro support for code generation at the Ifa-Lang source level.</p>
         </div>
 
         <div class="step">
-            <h2>Best Practices</h2>
-            
-            <h3>Resource Management</h3>
-            <ul>
-                <li>Use <code>#[derive(Ebo)]</code> for all resource-holding structs</li>
-                <li>Apply <code>#[iwa_pele]</code> to functions with paired operations</li>
-                <li>Wrap critical sections with <code>ebo_block!</code></li>
-                <li>Specify custom cleanup methods when needed</li>
-            </ul>
-
-            <h3>Reactive Programming</h3>
-            <ul>
-                <li>Make data structures <code>#[derive(Observable)]</code> for UI updates</li>
-                <li>Use <code>ajose!</code> for cross-component data binding</li>
-                <li>Apply <code>#freeze</code> modifier for cross-thread bindings</li>
-                <li>Combine with async patterns for reactive I/O</li>
-            </ul>
-
-            <h3>Performance Considerations</h3>
-            <ul>
-                <li><strong>Zero Cost:</strong> <code>#[iwa_pele]</code> has no runtime overhead</li>
-                <li><strong>Compile Time:</strong> All checks happen during compilation</li>
-                <li><strong>Minimal Runtime:</strong> Other macros have minimal overhead</li>
-                <li><strong>Optimization Friendly:</strong> Generated code optimizes well</li>
-            </ul>
-        </div>
-
-        <div class="step">
-            <h2>Example: Complete Application</h2>
+            <h2>Example: Complete Rust Integration</h2>
             <div class="code-example">
                 <div class="code-header">
                     <span class="code-title">Integrated Macro Usage</span>
                 </div>
-                <pre><code>// Observable data structure
+                <pre><code>use ifa_macros::{Ebo, Observable, iwa_pele, ebo_block};
+
+// Observable data structure
 #[derive(Observable)]
 struct AppState {
     counter: i32,
@@ -372,7 +350,6 @@ struct DatabaseConnection {
 
 impl DatabaseConnection {
     fn disconnect(&mut self) {
-        // Custom cleanup logic
         self.pool.close();
     }
 }
@@ -380,20 +357,16 @@ impl DatabaseConnection {
 #[iwa_pele]
 fn main() {
     ebo_block! {
-        let conn = DatabaseConnection::new();
-        let state = AppState { counter: 0, status: "ready".to_string() };
-        
-        // Reactive binding
-        ajose!(state.counter => conn.query_count);
+        let conn = DatabaseConnection { pool: sql::Pool::new() };
+        let state = AppState { counter: 0, status: "ready".into() };
         
         // Watch for changes
         state.watch_status(|status| {
             println!("Status: {}", status);
         });
         
-        // Update state (triggers reactive updates)
         state.counter = 42;
-        state.status = "processing".to_string();
+        state.status = "processing".into();
         
         // conn automatically disconnected on block exit
     }
