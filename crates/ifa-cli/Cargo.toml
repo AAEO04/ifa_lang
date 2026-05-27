@@ -40,7 +40,7 @@ tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 chrono.workspace = true
 
 # Self Update
-self_update = { version = "0.39", default-features = false, features = ["reqwest", "rustls", "archive-tar", "archive-zip", "compression-flate2"] }
+self_update = { version = "0.39", default-features = false, features = ["rustls", "archive-tar", "archive-zip", "compression-flate2"] }
 uuid = { workspace = true }
 reqwest = { workspace = true, features = ["blocking", "json"] }
 flate2 = "1.0"

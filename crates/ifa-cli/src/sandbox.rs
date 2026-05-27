@@ -8,7 +8,9 @@
 
 #![allow(dead_code)]
 
-use eyre::{Result, WrapErr};
+use eyre::Result;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use eyre::WrapErr;
 use ifa_sandbox::{CapabilitySet, Ofun};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
