@@ -6,15 +6,14 @@
 use ifa_vm::IfaValue;
 use ifa_vm::error::{IfaError, IfaResult};
 use ifa_vm::native::{OduRegistry, VmContext};
-use std::sync::{OnceLock, Arc};
+use std::sync::{Arc, OnceLock};
 
 #[cfg(feature = "tui")]
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{Terminal, backend::CrosstermBackend};
 #[cfg(feature = "tui")]
 use std::io;
 #[cfg(feature = "tui")]
 use std::sync::Mutex;
-
 
 use crate::esu::Esu;
 #[cfg(feature = "crypto")]
@@ -591,9 +590,7 @@ impl StdRegistry {
     fn dispatch_ogbe(&self, method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
         let ogbe = crate::odu::ogbe::Ogbe::new(self.esu.world_state());
         match method {
-            "bere" | "version" => {
-                Ok(IfaValue::str("1.3.0"))
-            }
+            "bere" | "version" => Ok(IfaValue::str("1.3.0")),
             "args" | "àwọn_àríyànjú" => {
                 let args_vec = ogbe.awon_ohun();
                 Ok(IfaValue::List(std::sync::Arc::new(
@@ -615,9 +612,7 @@ impl StdRegistry {
                     Ok(IfaValue::Null)
                 }
             }
-            "bi" | "init" => {
-                Ok(IfaValue::null())
-            }
+            "bi" | "init" => Ok(IfaValue::null()),
             _ => Err(IfaError::Custom(format!(
                 "Ogbe: unknown method '{}'",
                 method
@@ -642,9 +637,7 @@ impl StdRegistry {
                 oyeku.duro(ms);
                 Ok(IfaValue::null())
             }
-            "gbale" | "gc" => {
-                Ok(IfaValue::null())
-            }
+            "gbale" | "gc" => Ok(IfaValue::null()),
             _ => Err(IfaError::Custom(format!(
                 "Oyeku: unknown method '{}'",
                 method
@@ -655,21 +648,15 @@ impl StdRegistry {
     fn dispatch_iwori(&self, method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
         let iwori = crate::odu::iwori::Iwori;
         match method {
-            "bayi" | "now" | "current" => {
-                Ok(IfaValue::str(iwori.isisinyi().to_rfc3339()))
-            }
-            "akoko" | "timestamp" => {
-                Ok(IfaValue::int(iwori.akoko()))
-            }
+            "bayi" | "now" | "current" => Ok(IfaValue::str(iwori.isisinyi().to_rfc3339())),
+            "akoko" | "timestamp" => Ok(IfaValue::int(iwori.akoko())),
             "yipo" | "iterate" => {
                 let start = args.first().and_then(as_int).unwrap_or(0);
                 let end = args.get(1).and_then(as_int).unwrap_or(0);
                 let list: Vec<IfaValue> = (start..=end).map(IfaValue::int).collect();
                 Ok(IfaValue::list(list))
             }
-            "pada" | "return" => {
-                Ok(args.first().cloned().unwrap_or(IfaValue::Null))
-            }
+            "pada" | "return" => Ok(args.first().cloned().unwrap_or(IfaValue::Null)),
             _ => Err(IfaError::Custom(format!(
                 "Iwori: unknown method '{}'",
                 method
@@ -742,17 +729,22 @@ impl StdRegistry {
         let to_bytes = |val: &IfaValue| -> Vec<u8> {
             match val {
                 IfaValue::Str(s) => s.as_bytes().to_vec(),
-                IfaValue::List(l) => l.iter().map(|v| match v {
-                    IfaValue::Int(i) => *i as u8,
-                    IfaValue::Float(f) => *f as u8,
-                    _ => 0,
-                }).collect(),
+                IfaValue::List(l) => l
+                    .iter()
+                    .map(|v| match v {
+                        IfaValue::Int(i) => *i as u8,
+                        IfaValue::Float(f) => *f as u8,
+                        _ => 0,
+                    })
+                    .collect(),
                 other => other.to_string().into_bytes(),
             }
         };
 
         let to_value = |bytes: Vec<u8>| -> IfaValue {
-            IfaValue::List(std::sync::Arc::new(bytes.into_iter().map(|b| IfaValue::int(b as i64)).collect()))
+            IfaValue::List(std::sync::Arc::new(
+                bytes.into_iter().map(|b| IfaValue::int(b as i64)).collect(),
+            ))
         };
 
         match method {
@@ -797,11 +789,14 @@ impl StdRegistry {
                 }
             }
             "random_bytes" => {
-                let count = args.first().and_then(|v| match v {
-                    IfaValue::Int(n) => Some(*n as usize),
-                    IfaValue::Float(f) => Some(*f as usize),
-                    _ => None,
-                }).unwrap_or(16);
+                let count = args
+                    .first()
+                    .and_then(|v| match v {
+                        IfaValue::Int(n) => Some(*n as usize),
+                        IfaValue::Float(f) => Some(*f as usize),
+                        _ => None,
+                    })
+                    .unwrap_or(16);
                 let bytes = self.irete().random_bytes(count)?;
                 Ok(IfaValue::str(self.irete().hex_encode(&bytes)?))
             }
@@ -830,7 +825,10 @@ impl StdRegistry {
             }
             "ed25519_generate" | "keypair" => {
                 let (priv_key, pub_key) = self.irete().ed25519_generate()?;
-                Ok(IfaValue::List(std::sync::Arc::new(vec![to_value(priv_key), to_value(pub_key)])))
+                Ok(IfaValue::List(std::sync::Arc::new(vec![
+                    to_value(priv_key),
+                    to_value(pub_key),
+                ])))
             }
             "ed25519_sign" | "sign" | "fi_o" => {
                 let priv_key = args.first().map(to_bytes).unwrap_or_default();
@@ -922,7 +920,9 @@ impl StdRegistry {
             "kigbe" | "error" => {
                 let text = args.first().map(|v| v.to_string()).unwrap_or_default();
                 self.irosu().kigbe(&text);
-                ctx.vm.opon.record("Ìrosù", "kígbe (screamed)", &IfaValue::str(&text));
+                ctx.vm
+                    .opon
+                    .record("Ìrosù", "kígbe (screamed)", &IfaValue::str(&text));
                 Ok(IfaValue::null())
             }
             _ => Err(IfaError::Custom(format!(
@@ -956,7 +956,6 @@ impl StdRegistry {
 }
 
 // Stateless dispatchers (no struct instance needed)
-
 
 fn as_int(val: &IfaValue) -> Option<i64> {
     match val {
@@ -996,10 +995,7 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
         },
         "ge" | "slice" => {
             let s = args.first().map(|v| v.to_string()).unwrap_or_default();
-            let start = args
-                .get(1)
-                .and_then(as_int)
-                .unwrap_or(0) as usize;
+            let start = args.get(1).and_then(as_int).unwrap_or(0) as usize;
             let end = args
                 .get(2)
                 .and_then(as_int)
@@ -1062,10 +1058,14 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
             let s = args.first().map(|v| v.to_string()).unwrap_or_default();
             let delim = args.get(1).map(|v| v.to_string()).unwrap_or_default();
             let parts = ika.pin(&s, &delim);
-            Ok(IfaValue::list(parts.into_iter().map(IfaValue::str).collect()))
+            Ok(IfaValue::list(
+                parts.into_iter().map(IfaValue::str).collect(),
+            ))
         }
         "dapo" | "join" => {
-            let list_val = args.first().ok_or_else(|| IfaError::ArgumentError("join expects (list, separator)".into()))?;
+            let list_val = args
+                .first()
+                .ok_or_else(|| IfaError::ArgumentError("join expects (list, separator)".into()))?;
             let sep = args.get(1).map(|v| v.to_string()).unwrap_or_default();
             let parts: Vec<String> = match list_val {
                 IfaValue::List(l) => l.iter().map(|v| v.to_string()).collect(),
@@ -1087,7 +1087,10 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
         "ge_lara" | "substring" => {
             let s = args.first().map(|v| v.to_string()).unwrap_or_default();
             let start = args.get(1).and_then(as_int).unwrap_or(0) as usize;
-            let end = args.get(2).and_then(as_int).unwrap_or(s.chars().count() as i64) as usize;
+            let end = args
+                .get(2)
+                .and_then(as_int)
+                .unwrap_or(s.chars().count() as i64) as usize;
             Ok(IfaValue::str(ika.ge_lara(&s, start, end)))
         }
         "tun" | "repeat" => {
@@ -1122,7 +1125,9 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
             let pattern = args.first().map(|v| v.to_string()).unwrap_or_default();
             let text = args.get(1).map(|v| v.to_string()).unwrap_or_default();
             let matches = ika.wa_gbogbo(&pattern, &text)?;
-            Ok(IfaValue::list(matches.into_iter().map(IfaValue::str).collect()))
+            Ok(IfaValue::list(
+                matches.into_iter().map(IfaValue::str).collect(),
+            ))
         }
         "ropo" | "regex_replace" => {
             let pattern = args.first().map(|v| v.to_string()).unwrap_or_default();
@@ -1131,7 +1136,9 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
             Ok(IfaValue::str(ika.ropo(&pattern, &text, &repl)?))
         }
         "yi_si_json" | "encode" | "to_json" => {
-            let val = args.first().ok_or_else(|| IfaError::ArgumentError("encode expects a value".into()))?;
+            let val = args
+                .first()
+                .ok_or_else(|| IfaError::ArgumentError("encode expects a value".into()))?;
             Ok(IfaValue::str(ika.yi_si_json(val)?))
         }
         "yi_pada_json" | "decode" | "from_json" => {
@@ -1147,7 +1154,9 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
             Ok(IfaValue::str(ika.titu_asiri_url(&s)?))
         }
         "yi_si_csv" | "to_csv" => {
-            let rows = args.first().ok_or_else(|| IfaError::ArgumentError("to_csv expects rows".into()))?;
+            let rows = args
+                .first()
+                .ok_or_else(|| IfaError::ArgumentError("to_csv expects rows".into()))?;
             Ok(IfaValue::str(ika.yi_si_csv(rows)?))
         }
         "yi_pada_csv" | "from_csv" => {
@@ -1158,17 +1167,25 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
         "rope_new" => {
             let s = args.first().map(|v| v.to_string()).unwrap_or_default();
             let rope = ika.rope_new(&s);
-            let token = ctx.resource_registry().register(RopeResource(std::sync::Mutex::new(rope)));
+            let token = ctx
+                .resource_registry()
+                .register(RopeResource(std::sync::Mutex::new(rope)));
             Ok(IfaValue::Resource(std::sync::Arc::new(token)))
         }
         "rope_insert" => {
             let token = match args.first() {
                 Some(IfaValue::Resource(r)) => **r,
-                _ => return Err(IfaError::ArgumentError("rope_insert expects a Rope resource".into())),
+                _ => {
+                    return Err(IfaError::ArgumentError(
+                        "rope_insert expects a Rope resource".into(),
+                    ));
+                }
             };
             let idx = args.get(1).and_then(as_int).unwrap_or(0) as usize;
             let text = args.get(2).map(|v| v.to_string()).unwrap_or_default();
-            let res = ctx.resource_registry().get::<RopeResource>(token)
+            let res = ctx
+                .resource_registry()
+                .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
             let mut rope = res.0.lock().unwrap();
             ika.rope_insert(&mut rope, idx, &text);
@@ -1177,11 +1194,17 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
         "rope_delete" => {
             let token = match args.first() {
                 Some(IfaValue::Resource(r)) => **r,
-                _ => return Err(IfaError::ArgumentError("rope_delete expects a Rope resource".into())),
+                _ => {
+                    return Err(IfaError::ArgumentError(
+                        "rope_delete expects a Rope resource".into(),
+                    ));
+                }
             };
             let start = args.get(1).and_then(as_int).unwrap_or(0) as usize;
             let end = args.get(2).and_then(as_int).unwrap_or(0) as usize;
-            let res = ctx.resource_registry().get::<RopeResource>(token)
+            let res = ctx
+                .resource_registry()
+                .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
             let mut rope = res.0.lock().unwrap();
             ika.rope_delete(&mut rope, start, end);
@@ -1190,11 +1213,17 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
         "rope_slice" => {
             let token = match args.first() {
                 Some(IfaValue::Resource(r)) => **r,
-                _ => return Err(IfaError::ArgumentError("rope_slice expects a Rope resource".into())),
+                _ => {
+                    return Err(IfaError::ArgumentError(
+                        "rope_slice expects a Rope resource".into(),
+                    ));
+                }
             };
             let start = args.get(1).and_then(as_int).unwrap_or(0) as usize;
             let end = args.get(2).and_then(as_int).unwrap_or(0) as usize;
-            let res = ctx.resource_registry().get::<RopeResource>(token)
+            let res = ctx
+                .resource_registry()
+                .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
             let rope = res.0.lock().unwrap();
             let slice = ika.rope_slice(&rope, start, end);
@@ -1203,9 +1232,15 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
         "rope_len" => {
             let token = match args.first() {
                 Some(IfaValue::Resource(r)) => **r,
-                _ => return Err(IfaError::ArgumentError("rope_len expects a Rope resource".into())),
+                _ => {
+                    return Err(IfaError::ArgumentError(
+                        "rope_len expects a Rope resource".into(),
+                    ));
+                }
             };
-            let res = ctx.resource_registry().get::<RopeResource>(token)
+            let res = ctx
+                .resource_registry()
+                .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
             let rope = res.0.lock().unwrap();
             let len = ika.rope_len(&rope);
@@ -1388,11 +1423,12 @@ fn dispatch_oturupon(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
             let res = oturupon.pin_odidi(a_int, b_int)?;
             Ok(IfaValue::int(res))
         }
-        "din_f" | "sub_float" => {
-            Ok(IfaValue::float(oturupon.din_f(a_num, b_num)))
-        }
+        "din_f" | "sub_float" => Ok(IfaValue::float(oturupon.din_f(a_num, b_num))),
         "pin_f" | "div_float" => {
-            let mode_str = args.get(2).map(|v| v.to_string().to_lowercase()).unwrap_or_else(|| "half_even".into());
+            let mode_str = args
+                .get(2)
+                .map(|v| v.to_string().to_lowercase())
+                .unwrap_or_else(|| "half_even".into());
             let mode = match mode_str.as_str() {
                 "truncate" => crate::odu::oturupon::RoundingMode::Truncate,
                 "floor" => crate::odu::oturupon::RoundingMode::Floor,
@@ -1441,9 +1477,7 @@ fn dispatch_owonrin(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
                     let r = if mn >= mx { mn } else { rng.gen_range(mn..=mx) };
                     Ok(IfaValue::int(r))
                 }
-                _ => {
-                    Ok(IfaValue::float(rng.r#gen::<f64>()))
-                }
+                _ => Ok(IfaValue::float(rng.r#gen::<f64>())),
             }
         }
         "yan_bool" | "random_bool" => {
@@ -1453,7 +1487,11 @@ fn dispatch_owonrin(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
         "yan_laarin" | "range" => {
             let min = args.first().map(extract_num).unwrap_or(0.0);
             let max = args.get(1).map(extract_num).unwrap_or(1.0);
-            let r = if min >= max { min } else { rng.gen_range(min..=max) };
+            let r = if min >= max {
+                min
+            } else {
+                rng.gen_range(min..=max)
+            };
             Ok(IfaValue::float(r))
         }
         "paaro" | "shuffle" => {
@@ -1503,7 +1541,10 @@ fn dispatch_okanran(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> I
         }
         "beeni" | "assert_true" => {
             let cond = args.first().map(|v| v.is_truthy()).unwrap_or(false);
-            let msg = args.get(1).map(|v| v.to_string()).unwrap_or_else(|| "Expected true".into());
+            let msg = args
+                .get(1)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "Expected true".into());
             okanran.beeni(cond, &msg)?;
             Ok(IfaValue::bool(true))
         }
@@ -1515,18 +1556,27 @@ fn dispatch_okanran(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> I
         }
         "beko" | "assert_false" => {
             let cond = args.first().map(|v| v.is_truthy()).unwrap_or(false);
-            let msg = args.get(1).map(|v| v.to_string()).unwrap_or_else(|| "Expected false".into());
+            let msg = args
+                .get(1)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "Expected false".into());
             okanran.beko(cond, &msg)?;
             Ok(IfaValue::bool(true))
         }
         "ko_si" | "assert_not_null" => {
             let val = args.first().unwrap_or(&IfaValue::Null);
-            let name = args.get(1).map(|v| v.to_string()).unwrap_or_else(|| "value".into());
+            let name = args
+                .get(1)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "value".into());
             okanran.ko_si(val, &name)?;
             Ok(IfaValue::bool(true))
         }
         "ku_bi" | "fatal" => {
-            let msg = args.first().map(|v| v.to_string()).unwrap_or_else(|| "fatal error".into());
+            let msg = args
+                .first()
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "fatal error".into());
             Err(IfaError::Custom(format!("[FATAL] {}", msg)))
         }
         "ko_le_de_bi" | "unreachable" => {
@@ -1544,7 +1594,10 @@ fn dispatch_okanran(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> I
             Ok(IfaValue::str(dummy_err.proverb()))
         }
         "gbiyanju" | "try_or" => {
-            let action = args.first().ok_or_else(|| IfaError::ArgumentError("try_or expects (fn, default)".into()))?.clone();
+            let action = args
+                .first()
+                .ok_or_else(|| IfaError::ArgumentError("try_or expects (fn, default)".into()))?
+                .clone();
             let default_val = args.get(1).cloned().unwrap_or(IfaValue::Null);
             match ctx.call_value(action, vec![]) {
                 Ok(res) => Ok(res),
@@ -1554,12 +1607,18 @@ fn dispatch_okanran(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> I
         }
         "wo" | "debug" => {
             let val = args.first().unwrap_or(&IfaValue::Null);
-            let label = args.get(1).map(|v| v.to_string()).unwrap_or_else(|| "value".into());
+            let label = args
+                .get(1)
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "value".into());
             okanran.wo(&label, val);
             Ok(val.clone())
         }
         "ku" | "panic" => {
-            let msg = args.first().map(|v| v.to_string()).unwrap_or_else(|| "panic".into());
+            let msg = args
+                .first()
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "panic".into());
             panic!("[Ọ̀kànràn] {}", msg);
         }
         "ko_le_de" | "unreachable_panic" => {
@@ -1586,12 +1645,14 @@ fn dispatch_ose(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
             "nu" | "clear" => {
                 if let Some(IfaValue::Resource(token_arc)) = args.first() {
                     let token = **token_arc;
-                    if let Some(terminal_mutex) = ctx
-                        .resource_registry()
-                        .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
+                    if let Some(terminal_mutex) =
+                        ctx.resource_registry()
+                            .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
                     {
                         let mut terminal = terminal_mutex.lock().unwrap();
-                        terminal.clear().map_err(|e| IfaError::Runtime(e.to_string()))?;
+                        terminal
+                            .clear()
+                            .map_err(|e| IfaError::Runtime(e.to_string()))?;
                     }
                 }
                 Ok(IfaValue::null())
@@ -1602,7 +1663,7 @@ fn dispatch_ose(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                 }
                 Ok(IfaValue::null())
             }
-            _ => crate::odu::ose::Ose::dispatch(method, args, ctx)
+            _ => crate::odu::ose::Ose::dispatch(method, args, ctx),
         }
     }
     #[cfg(not(feature = "tui"))]
@@ -1787,19 +1848,25 @@ impl StdRegistry {
             "ge" | "alloc" => {
                 let list = match args.first() {
                     Some(IfaValue::List(l)) => l,
-                    _ => return Err(IfaError::ArgumentError("ge (alloc/slice) expects a list".into())),
+                    _ => {
+                        return Err(IfaError::ArgumentError(
+                            "ge (alloc/slice) expects a list".into(),
+                        ));
+                    }
                 };
                 let start = args.get(1).and_then(as_int).unwrap_or(0) as usize;
                 let end = args.get(2).and_then(as_int).unwrap_or(list.len() as i64) as usize;
                 let sliced = ogunda.ge(list, start, end)?;
                 Ok(IfaValue::List(std::sync::Arc::new(sliced)))
             }
-            "da" | "create" | "seda" | "new_list" => {
-                Ok(IfaValue::List(std::sync::Arc::new(ogunda.seda::<IfaValue>())))
-            }
+            "da" | "create" | "seda" | "new_list" => Ok(IfaValue::List(std::sync::Arc::new(
+                ogunda.seda::<IfaValue>(),
+            ))),
             "seda_agbara" | "with_capacity" => {
                 let cap = args.first().and_then(as_int).unwrap_or(0) as usize;
-                Ok(IfaValue::List(std::sync::Arc::new(ogunda.seda_agbara::<IfaValue>(cap))))
+                Ok(IfaValue::List(std::sync::Arc::new(
+                    ogunda.seda_agbara::<IfaValue>(cap),
+                )))
             }
             "sofo" | "is_empty" => {
                 let list = match args.first() {
@@ -1811,7 +1878,11 @@ impl StdRegistry {
             "pada" | "reverse" => {
                 let list = match args.first() {
                     Some(IfaValue::List(l)) => l,
-                    _ => return Err(IfaError::ArgumentError("pada (reverse) expects a list".into())),
+                    _ => {
+                        return Err(IfaError::ArgumentError(
+                            "pada (reverse) expects a list".into(),
+                        ));
+                    }
                 };
                 Ok(IfaValue::List(std::sync::Arc::new(ogunda.pada(list))))
             }
@@ -1827,20 +1898,37 @@ impl StdRegistry {
             "dapo" | "concat" => {
                 let a = match args.first() {
                     Some(IfaValue::List(l)) => l,
-                    _ => return Err(IfaError::ArgumentError("dapo (concat) expects two lists".into())),
+                    _ => {
+                        return Err(IfaError::ArgumentError(
+                            "dapo (concat) expects two lists".into(),
+                        ));
+                    }
                 };
                 let b = match args.get(1) {
                     Some(IfaValue::List(l)) => l,
-                    _ => return Err(IfaError::ArgumentError("dapo (concat) expects two lists".into())),
+                    _ => {
+                        return Err(IfaError::ArgumentError(
+                            "dapo (concat) expects two lists".into(),
+                        ));
+                    }
                 };
                 Ok(IfaValue::List(std::sync::Arc::new(ogunda.dapo(a, b))))
             }
             "wa" | "find" => {
                 let list = match args.first() {
                     Some(IfaValue::List(l)) => l,
-                    _ => return Err(IfaError::ArgumentError("wa (find) expects (list, closure)".into())),
+                    _ => {
+                        return Err(IfaError::ArgumentError(
+                            "wa (find) expects (list, closure)".into(),
+                        ));
+                    }
                 };
-                let closure = args.get(1).ok_or_else(|| IfaError::ArgumentError("wa (find) expects (list, closure)".into()))?.clone();
+                let closure = args
+                    .get(1)
+                    .ok_or_else(|| {
+                        IfaError::ArgumentError("wa (find) expects (list, closure)".into())
+                    })?
+                    .clone();
                 for item in list.iter() {
                     let keep = ctx.call_value(closure.clone(), vec![item.clone()])?;
                     if keep.is_truthy() {
@@ -1852,9 +1940,18 @@ impl StdRegistry {
             "eyikeyi" | "any" => {
                 let list = match args.first() {
                     Some(IfaValue::List(l)) => l,
-                    _ => return Err(IfaError::ArgumentError("eyikeyi (any) expects (list, closure)".into())),
+                    _ => {
+                        return Err(IfaError::ArgumentError(
+                            "eyikeyi (any) expects (list, closure)".into(),
+                        ));
+                    }
                 };
-                let closure = args.get(1).ok_or_else(|| IfaError::ArgumentError("eyikeyi (any) expects (list, closure)".into()))?.clone();
+                let closure = args
+                    .get(1)
+                    .ok_or_else(|| {
+                        IfaError::ArgumentError("eyikeyi (any) expects (list, closure)".into())
+                    })?
+                    .clone();
                 for item in list.iter() {
                     let keep = ctx.call_value(closure.clone(), vec![item.clone()])?;
                     if keep.is_truthy() {
@@ -1866,9 +1963,18 @@ impl StdRegistry {
             "gbogbo" | "all" => {
                 let list = match args.first() {
                     Some(IfaValue::List(l)) => l,
-                    _ => return Err(IfaError::ArgumentError("gbogbo (all) expects (list, closure)".into())),
+                    _ => {
+                        return Err(IfaError::ArgumentError(
+                            "gbogbo (all) expects (list, closure)".into(),
+                        ));
+                    }
                 };
-                let closure = args.get(1).ok_or_else(|| IfaError::ArgumentError("gbogbo (all) expects (list, closure)".into()))?.clone();
+                let closure = args
+                    .get(1)
+                    .ok_or_else(|| {
+                        IfaError::ArgumentError("gbogbo (all) expects (list, closure)".into())
+                    })?
+                    .clone();
                 for item in list.iter() {
                     let keep = ctx.call_value(closure.clone(), vec![item.clone()])?;
                     if !keep.is_truthy() {
@@ -1878,28 +1984,37 @@ impl StdRegistry {
                 Ok(IfaValue::bool(true))
             }
             "awon_kokoro" | "keys" => {
-                let map = args.first().ok_or_else(|| IfaError::ArgumentError("keys expects a map".into()))?;
+                let map = args
+                    .first()
+                    .ok_or_else(|| IfaError::ArgumentError("keys expects a map".into()))?;
                 let keys = ogunda.awon_kokoro(map)?;
                 Ok(IfaValue::List(std::sync::Arc::new(
-                    keys.into_iter().map(IfaValue::str).collect()
+                    keys.into_iter().map(IfaValue::str).collect(),
                 )))
             }
             "awon_iye" | "values" => {
-                let map = args.first().ok_or_else(|| IfaError::ArgumentError("values expects a map".into()))?;
+                let map = args
+                    .first()
+                    .ok_or_else(|| IfaError::ArgumentError("values expects a map".into()))?;
                 let values = ogunda.awon_iye(map)?;
                 Ok(IfaValue::List(std::sync::Arc::new(values)))
             }
             "awon_nkan" | "items" => {
-                let map = args.first().ok_or_else(|| IfaError::ArgumentError("items expects a map".into()))?;
+                let map = args
+                    .first()
+                    .ok_or_else(|| IfaError::ArgumentError("items expects a map".into()))?;
                 let items = ogunda.awon_nkan(map)?;
-                let list_items: Vec<IfaValue> = items.into_iter()
+                let list_items: Vec<IfaValue> = items
+                    .into_iter()
                     .map(|pair| IfaValue::List(std::sync::Arc::new(pair)))
                     .collect();
                 Ok(IfaValue::List(std::sync::Arc::new(list_items)))
             }
             "yo" | "remove" => {
                 let key = args.get(1).map(|v| v.to_string()).unwrap_or_default();
-                let map = args.first_mut().ok_or_else(|| IfaError::ArgumentError("remove expects a map".into()))?;
+                let map = args
+                    .first_mut()
+                    .ok_or_else(|| IfaError::ArgumentError("remove expects a map".into()))?;
                 ogunda.yo(map, &key)
             }
             "sise" | "run" => {
@@ -1907,14 +2022,26 @@ impl StdRegistry {
                 let cmd_args_strs = if let Some(IfaValue::List(l)) = args.get(1) {
                     l.iter().map(|v| v.to_string()).collect::<Vec<_>>()
                 } else {
-                    args.iter().skip(1).map(|v| v.to_string()).collect::<Vec<_>>()
+                    args.iter()
+                        .skip(1)
+                        .map(|v| v.to_string())
+                        .collect::<Vec<_>>()
                 };
                 let cmd_args_ref: Vec<&str> = cmd_args_strs.iter().map(|s| s.as_str()).collect();
                 let output = ogunda.sise(&cmd, &cmd_args_ref)?;
                 let mut res_map = std::collections::HashMap::new();
-                res_map.insert("code".into(), IfaValue::int(output.status.code().unwrap_or(0) as i64));
-                res_map.insert("stdout".into(), IfaValue::str(String::from_utf8_lossy(&output.stdout).into_owned()));
-                res_map.insert("stderr".into(), IfaValue::str(String::from_utf8_lossy(&output.stderr).into_owned()));
+                res_map.insert(
+                    "code".into(),
+                    IfaValue::int(output.status.code().unwrap_or(0) as i64),
+                );
+                res_map.insert(
+                    "stdout".into(),
+                    IfaValue::str(String::from_utf8_lossy(&output.stdout).into_owned()),
+                );
+                res_map.insert(
+                    "stderr".into(),
+                    IfaValue::str(String::from_utf8_lossy(&output.stderr).into_owned()),
+                );
                 Ok(IfaValue::Map(res_map.into()))
             }
             "sise_ka" | "run_read" => {
@@ -1922,7 +2049,10 @@ impl StdRegistry {
                 let cmd_args_strs = if let Some(IfaValue::List(l)) = args.get(1) {
                     l.iter().map(|v| v.to_string()).collect::<Vec<_>>()
                 } else {
-                    args.iter().skip(1).map(|v| v.to_string()).collect::<Vec<_>>()
+                    args.iter()
+                        .skip(1)
+                        .map(|v| v.to_string())
+                        .collect::<Vec<_>>()
                 };
                 let cmd_args_ref: Vec<&str> = cmd_args_strs.iter().map(|s| s.as_str()).collect();
                 let stdout = ogunda.sise_ka(&cmd, &cmd_args_ref)?;
@@ -1933,7 +2063,10 @@ impl StdRegistry {
                 let cmd_args_strs = if let Some(IfaValue::List(l)) = args.get(1) {
                     l.iter().map(|v| v.to_string()).collect::<Vec<_>>()
                 } else {
-                    args.iter().skip(1).map(|v| v.to_string()).collect::<Vec<_>>()
+                    args.iter()
+                        .skip(1)
+                        .map(|v| v.to_string())
+                        .collect::<Vec<_>>()
                 };
                 let cmd_args_ref: Vec<&str> = cmd_args_strs.iter().map(|s| s.as_str()).collect();
                 let child_id = ogunda.bere(&cmd, &cmd_args_ref)?;
@@ -1966,7 +2099,10 @@ impl StdRegistry {
                 Ok(IfaValue::bool(ofun.le(&cap)))
             }
             "da" | "create" => {
-                let name = args.first().map(|v| v.to_string()).unwrap_or_else(|| "dummy_sandbox_resource".to_string());
+                let name = args
+                    .first()
+                    .map(|v| v.to_string())
+                    .unwrap_or_else(|| "dummy_sandbox_resource".to_string());
                 let token = ctx.resource_registry().register(name);
                 Ok(IfaValue::Resource(std::sync::Arc::new(token)))
             }
@@ -1975,7 +2111,9 @@ impl StdRegistry {
                     let closed = ctx.resource_registry().close(**token_arc);
                     Ok(IfaValue::bool(closed))
                 } else {
-                    Err(IfaError::ArgumentError("pa (delete) expects a Resource token".into()))
+                    Err(IfaError::ArgumentError(
+                        "pa (delete) expects a Resource token".into(),
+                    ))
                 }
             }
             "iru" | "type_of" | "typeof" => {
@@ -1984,20 +2122,36 @@ impl StdRegistry {
             }
             "laaye" | "is_alive" => {
                 if let Some(IfaValue::Resource(token_arc)) = args.first() {
-                    Ok(IfaValue::bool(ctx.resource_registry().contains(**token_arc)))
+                    Ok(IfaValue::bool(
+                        ctx.resource_registry().contains(**token_arc),
+                    ))
                 } else {
-                    Err(IfaError::ArgumentError("laaye (is_alive) expects a Resource token".into()))
+                    Err(IfaError::ArgumentError(
+                        "laaye (is_alive) expects a Resource token".into(),
+                    ))
                 }
             }
             "ju" | "drop" => {
                 let cap_str = args.first().map(|v| v.to_string()).unwrap_or_default();
                 match cap_str.as_str() {
-                    "read" | "ka" => self.esu.ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::ReadFiles { .. })),
-                    "write" | "ko" => self.esu.ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::WriteFiles { .. })),
-                    "network" | "nẹtiwọki" => self.esu.ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::Network { .. })),
-                    "spawn" | "bere" => self.esu.ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::Execute { .. })),
-                    "env" | "ayika" => self.esu.ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::Environment { .. })),
-                    "crypto" | "irete" => self.esu.ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::Crypto)),
+                    "read" | "ka" => self
+                        .esu
+                        .ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::ReadFiles { .. })),
+                    "write" | "ko" => self
+                        .esu
+                        .ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::WriteFiles { .. })),
+                    "network" | "nẹtiwọki" => self
+                        .esu
+                        .ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::Network { .. })),
+                    "spawn" | "bere" => self
+                        .esu
+                        .ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::Execute { .. })),
+                    "env" | "ayika" => self
+                        .esu
+                        .ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::Environment { .. })),
+                    "crypto" | "irete" => self
+                        .esu
+                        .ju_match(|c| matches!(c, crate::sandbox_shim::Ofun::Crypto)),
                     s if s.starts_with("bridge:") => {
                         let lang = s[7..].to_string();
                         self.esu.ju_match(move |c| {
@@ -2013,26 +2167,45 @@ impl StdRegistry {
                 Ok(IfaValue::Null)
             }
             "awon_agbara" | "capabilities" => {
-                let list: Vec<IfaValue> = ofun.awon_agbara().all().iter().map(|cap| {
-                    let s = match cap {
-                        crate::sandbox_shim::Ofun::ReadFiles { root } => format!("read:{}", root.display()),
-                        crate::sandbox_shim::Ofun::WriteFiles { root } => format!("write:{}", root.display()),
-                        crate::sandbox_shim::Ofun::Network { domains } => format!("network:{}", domains.join(",")),
-                        crate::sandbox_shim::Ofun::Execute { programs } => format!("execute:{}", programs.join(",")),
-                        crate::sandbox_shim::Ofun::Environment { keys } => format!("env:{}", keys.join(",")),
-                        crate::sandbox_shim::Ofun::Time => "time".to_string(),
-                        crate::sandbox_shim::Ofun::Random => "random".to_string(),
-                        crate::sandbox_shim::Ofun::Stdio => "stdio".to_string(),
-                        crate::sandbox_shim::Ofun::Crypto => "crypto".to_string(),
-                        crate::sandbox_shim::Ofun::Bridge { language } => format!("bridge:{}", language),
-                    };
-                    IfaValue::str(s)
-                }).collect();
+                let list: Vec<IfaValue> = ofun
+                    .awon_agbara()
+                    .all()
+                    .iter()
+                    .map(|cap| {
+                        let s = match cap {
+                            crate::sandbox_shim::Ofun::ReadFiles { root } => {
+                                format!("read:{}", root.display())
+                            }
+                            crate::sandbox_shim::Ofun::WriteFiles { root } => {
+                                format!("write:{}", root.display())
+                            }
+                            crate::sandbox_shim::Ofun::Network { domains } => {
+                                format!("network:{}", domains.join(","))
+                            }
+                            crate::sandbox_shim::Ofun::Execute { programs } => {
+                                format!("execute:{}", programs.join(","))
+                            }
+                            crate::sandbox_shim::Ofun::Environment { keys } => {
+                                format!("env:{}", keys.join(","))
+                            }
+                            crate::sandbox_shim::Ofun::Time => "time".to_string(),
+                            crate::sandbox_shim::Ofun::Random => "random".to_string(),
+                            crate::sandbox_shim::Ofun::Stdio => "stdio".to_string(),
+                            crate::sandbox_shim::Ofun::Crypto => "crypto".to_string(),
+                            crate::sandbox_shim::Ofun::Bridge { language } => {
+                                format!("bridge:{}", language)
+                            }
+                        };
+                        IfaValue::str(s)
+                    })
+                    .collect();
                 Ok(IfaValue::list(list))
             }
             "je" | "is_type" => {
                 if args.len() < 2 {
-                    return Err(IfaError::ArgumentError("is_type expects (value, type_name)".into()));
+                    return Err(IfaError::ArgumentError(
+                        "is_type expects (value, type_name)".into(),
+                    ));
                 }
                 let val = &args[0];
                 let expected_type = args[1].to_string();
@@ -2060,7 +2233,6 @@ impl StdRegistry {
         }
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // F1: Kernel / Sys (Domain 29)

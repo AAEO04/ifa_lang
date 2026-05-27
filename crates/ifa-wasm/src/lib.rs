@@ -64,19 +64,26 @@ pub fn run_code(source: String) -> RunResult {
                     caps.grant(ifa_types::capability::Ofun::Random);
                     caps.grant(ifa_types::capability::Ofun::Time);
                     caps.grant(ifa_types::capability::Ofun::Crypto);
-                    
+
                     let mut registry = ifa_std::vm_registry::StdRegistry::new();
                     registry.set_capabilities(caps);
                     let mut vm = IfaVM::new().with_registry(Box::new(registry));
                     match vm.execute(&bytecode) {
                         Ok(value) => {
                             let history = vm.opon.get_history();
-                            let events = serde_json::to_string(&history).unwrap_or_else(|_| "[]".to_string());
+                            let events = serde_json::to_string(&history)
+                                .unwrap_or_else(|_| "[]".to_string());
                             let mut printed = String::new();
                             for event in &history {
-                                if event.spirit == "Ìrosù" && (event.action == "fọ̀ (spoke)" || event.action == "fọ̀ (spoke_raw)" || event.action == "kígbe (screamed)") {
+                                if event.spirit == "Ìrosù"
+                                    && (event.action == "fọ̀ (spoke)"
+                                        || event.action == "fọ̀ (spoke_raw)"
+                                        || event.action == "kígbe (screamed)")
+                                {
                                     printed.push_str(&event.value);
-                                    if event.action == "fọ̀ (spoke)" || event.action == "kígbe (screamed)" {
+                                    if event.action == "fọ̀ (spoke)"
+                                        || event.action == "kígbe (screamed)"
+                                    {
                                         printed.push('\n');
                                     }
                                 }

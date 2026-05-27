@@ -207,9 +207,7 @@ fn conformance_vm_tailcall_emits_and_executes() {
 
     // Emission check
     assert!(
-        bytecode
-            .code
-            .contains(&(ifa_vm::OpCode::TailCall as u8)),
+        bytecode.code.contains(&(ifa_vm::OpCode::TailCall as u8)),
         "expected TailCall opcode byte to be present"
     );
 

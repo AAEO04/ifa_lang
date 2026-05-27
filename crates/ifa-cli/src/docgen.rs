@@ -4,10 +4,10 @@
 
 use chrono::Local;
 use color_eyre::eyre::Result;
-use std::fs;
-use std::path::{Path, PathBuf};
 use ifa_types::domain::OduDomain;
 use ifa_types::odu_metadata::all_odu_domains_with_methods;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 // User Documentation Structures
 #[derive(Debug, Clone, Default)]
@@ -839,8 +839,6 @@ pub fn generate_odu_page(odu: &OduInfo, methods: &[(String, String)]) -> String 
     )
 }
 
-
-
 /// Generate a page for a User Odù
 pub fn generate_user_odu_page(odu: &UserOdu) -> String {
     let mut methods_html = String::new();
@@ -1127,11 +1125,15 @@ pub fn generate_docs(input_path: &Path, output_dir: &Path) -> Result<()> {
         };
 
         let methods: Vec<(String, String)> = if let Some(d) = domain_enum {
-            all_methods.iter().find(|(dom, _)| *dom == d).map(|(_, m)| {
-                m.iter().map(|info| {
-                    (info.yoruba.to_string(), info.english.to_string())
-                }).collect()
-            }).unwrap_or_default()
+            all_methods
+                .iter()
+                .find(|(dom, _)| *dom == d)
+                .map(|(_, m)| {
+                    m.iter()
+                        .map(|info| (info.yoruba.to_string(), info.english.to_string()))
+                        .collect()
+                })
+                .unwrap_or_default()
         } else {
             vec![]
         };

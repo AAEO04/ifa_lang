@@ -1,4 +1,4 @@
-pub use crate::odu_metadata::{resolve_method_id, method_name_from_id};
+pub use crate::odu_metadata::{method_name_from_id, resolve_method_id};
 
 /// Stable method IDs for all built-in Odù domains.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

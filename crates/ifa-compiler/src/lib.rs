@@ -1799,7 +1799,6 @@ pub fn compile(source: &str) -> IfaResult<Bytecode> {
     compiler.compile(&program)
 }
 
-
 fn collect_exports(program: &Program) -> Vec<String> {
     let mut out = Vec::new();
     for stmt in &program.statements {
