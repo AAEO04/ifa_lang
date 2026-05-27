@@ -2071,25 +2071,21 @@ fn fold_expression(expr: &Expression) -> Expression {
                             Expression::Int(prod_int)
                         };
                     }
-                    (ifa_types::OduDomain::Ika, "gigun") | (ifa_types::OduDomain::Ika, "len") => {
-                        if folded_args.len() == 1 {
-                            if let Expression::String(s) = &folded_args[0] {
-                                return Expression::Int(s.chars().count() as i64);
-                            }
+                    (ifa_types::OduDomain::Ika, "gigun") | (ifa_types::OduDomain::Ika, "len")
+                        if folded_args.len() == 1 =>
+                    {
+                        if let Expression::String(s) = &folded_args[0] {
+                            return Expression::Int(s.chars().count() as i64);
                         }
                     }
-                    (ifa_types::OduDomain::Ika, "upper") => {
-                        if folded_args.len() == 1 {
-                            if let Expression::String(s) = &folded_args[0] {
-                                return Expression::String(s.to_uppercase());
-                            }
+                    (ifa_types::OduDomain::Ika, "upper") if folded_args.len() == 1 => {
+                        if let Expression::String(s) = &folded_args[0] {
+                            return Expression::String(s.to_uppercase());
                         }
                     }
-                    (ifa_types::OduDomain::Ika, "lower") => {
-                        if folded_args.len() == 1 {
-                            if let Expression::String(s) = &folded_args[0] {
-                                return Expression::String(s.to_lowercase());
-                            }
+                    (ifa_types::OduDomain::Ika, "lower") if folded_args.len() == 1 => {
+                        if let Expression::String(s) = &folded_args[0] {
+                            return Expression::String(s.to_lowercase());
                         }
                     }
                     _ => {}

@@ -269,20 +269,38 @@ mod tests {
 
     #[test]
     fn test_validate_path_traversal_rejected() {
-        let target = Path::new("C:\\install");
-        let malicious = Path::new("..\\..\\Windows\\System32\\evil.exe");
+        let target = if cfg!(windows) {
+            Path::new("C:\\install")
+        } else {
+            Path::new("/install")
+        };
+        let malicious_forward = Path::new("../../etc/passwd");
         assert!(matches!(
-            validate_archive_path(malicious, target),
+            validate_archive_path(malicious_forward, target),
             Err(ExtractionError::PathTraversal(_))
         ));
+
+        if cfg!(windows) {
+            let malicious_back = Path::new("..\\..\\Windows\\System32\\evil.exe");
+            assert!(matches!(
+                validate_archive_path(malicious_back, target),
+                Err(ExtractionError::PathTraversal(_))
+            ));
+        }
     }
 
     #[test]
     fn test_validate_safe_path_accepted() {
-        let target = Path::new("C:\\install");
-        let safe = Path::new("bin\\ifa.exe");
-        // This should not error on path validation
-        // (it may error on canonicalization if target doesn't exist)
+        let target = if cfg!(windows) {
+            Path::new("C:\\install")
+        } else {
+            Path::new("/install")
+        };
+        let safe = if cfg!(windows) {
+            Path::new("bin\\ifa.exe")
+        } else {
+            Path::new("bin/ifa")
+        };
         let result = validate_archive_path(safe, target);
         assert!(result.is_ok() || matches!(result, Err(ExtractionError::Io(_))));
     }
