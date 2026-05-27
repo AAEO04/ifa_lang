@@ -523,8 +523,12 @@ impl IfaValue {
                 .cloned()
                 .ok_or_else(|| IfaError::KeyNotFound(k.to_string())),
             (IfaValue::Object(o), IfaValue::Str(k)) => {
-                let map = o.lock().map_err(|e| IfaError::Runtime(format!("Object lock poisoned: {}", e)))?;
-                map.get(k).cloned().ok_or_else(|| IfaError::KeyNotFound(k.to_string()))
+                let map = o
+                    .lock()
+                    .map_err(|e| IfaError::Runtime(format!("Object lock poisoned: {}", e)))?;
+                map.get(k)
+                    .cloned()
+                    .ok_or_else(|| IfaError::KeyNotFound(k.to_string()))
             }
             _ => Err(IfaError::TypeError {
                 expected: "indexable type".to_string(),
@@ -677,7 +681,9 @@ impl IfaValue {
                             frozen.insert(k.clone(), v.freeze()?);
                         }
                     } else {
-                        return Err(IfaError::Runtime("Object lock is contended during freeze".into()));
+                        return Err(IfaError::Runtime(
+                            "Object lock is contended during freeze".into(),
+                        ));
                     }
                     Ok(IfaShared::Object(frozen))
                 }
@@ -685,9 +691,9 @@ impl IfaValue {
                 {
                     use std::sync::Arc;
                     let mut map = HashMap::new();
-                    let local_map = o
-                        .lock()
-                        .map_err(|e| IfaError::Runtime(format!("Object lock poisoned during freeze: {}", e)))?;
+                    let local_map = o.lock().map_err(|e| {
+                        IfaError::Runtime(format!("Object lock poisoned during freeze: {}", e))
+                    })?;
                     for (k, v) in local_map.iter() {
                         map.insert(k.clone(), v.freeze()?);
                     }

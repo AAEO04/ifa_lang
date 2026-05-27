@@ -4,10 +4,11 @@
 //!
 //! Safe file operations with sandboxed paths and rusqlite for SQLite.
 
-use crate::impl_odu_domain;
 use crate::esu::Esu;
+use crate::impl_odu_domain;
 use ifa_vm::error::{IfaError, IfaResult};
 use memmap2::MmapOptions;
+#[cfg(feature = "database")]
 use rusqlite::Connection;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
@@ -32,28 +33,44 @@ impl Odi {
     /// Check if read capability exists for path
     fn check_read(&self, path: &Path) -> IfaResult<PathBuf> {
         if path.is_symlink() {
-            return Err(IfaError::PermissionDenied(format!("Symlinks forbidden: {}", path.display())));
+            return Err(IfaError::PermissionDenied(format!(
+                "Symlinks forbidden: {}",
+                path.display()
+            )));
         }
-        let canonical = path.canonicalize().map_err(|e| IfaError::IoError(e.to_string()))?;
-        self.esu.enforce_crossroads(&Ofun::ReadFiles {
-            root: canonical.clone(),
-        }, &format!("Òdí::ka({})", canonical.display()))?;
+        let canonical = path
+            .canonicalize()
+            .map_err(|e| IfaError::IoError(e.to_string()))?;
+        self.esu.enforce_crossroads(
+            &Ofun::ReadFiles {
+                root: canonical.clone(),
+            },
+            &format!("Òdí::ka({})", canonical.display()),
+        )?;
         Ok(canonical)
     }
 
     /// Check if write capability exists for path
     fn check_write(&self, path: &Path) -> IfaResult<PathBuf> {
         if path.is_symlink() {
-            return Err(IfaError::PermissionDenied(format!("Symlinks forbidden: {}", path.display())));
+            return Err(IfaError::PermissionDenied(format!(
+                "Symlinks forbidden: {}",
+                path.display()
+            )));
         }
         // File might not exist, canonicalize parent
         let parent = path.parent().unwrap_or(Path::new(""));
-        let parent_canon = parent.canonicalize().unwrap_or_else(|_| parent.to_path_buf());
+        let parent_canon = parent
+            .canonicalize()
+            .unwrap_or_else(|_| parent.to_path_buf());
         let canonical = parent_canon.join(path.file_name().unwrap_or_default());
-        
-        self.esu.enforce_crossroads(&Ofun::WriteFiles {
-            root: canonical.clone(),
-        }, &format!("Òdí::kọ({})", canonical.display()))?;
+
+        self.esu.enforce_crossroads(
+            &Ofun::WriteFiles {
+                root: canonical.clone(),
+            },
+            &format!("Òdí::kọ({})", canonical.display()),
+        )?;
         Ok(canonical)
     }
 
@@ -125,9 +142,20 @@ impl Odi {
         // Checking existence requires read perm on parent or file
         let path_obj = Path::new(path);
         let parent = path_obj.parent().unwrap_or(Path::new(""));
-        let parent_canon = parent.canonicalize().unwrap_or_else(|_| parent.to_path_buf());
+        let parent_canon = parent
+            .canonicalize()
+            .unwrap_or_else(|_| parent.to_path_buf());
         let canonical = parent_canon.join(path_obj.file_name().unwrap_or_default());
-        if self.esu.enforce_crossroads(&Ofun::ReadFiles { root: canonical.clone() }, "Odi::wa").is_err() {
+        if self
+            .esu
+            .enforce_crossroads(
+                &Ofun::ReadFiles {
+                    root: canonical.clone(),
+                },
+                "Odi::wa",
+            )
+            .is_err()
+        {
             return false;
         }
         canonical.exists()
@@ -169,6 +197,7 @@ impl Odi {
     // =========================================================================
 
     /// Open SQLite database
+    #[cfg(feature = "database")]
     pub fn so_db(&self, path: &str) -> IfaResult<Connection> {
         let path = ifa_types::capability::canonicalize_safe(Path::new(path));
         // DB requires both read and write
@@ -178,6 +207,7 @@ impl Odi {
     }
 
     /// Open in-memory database
+    #[cfg(feature = "database")]
     pub fn so_db_iranti(&self) -> IfaResult<Connection> {
         // No perms needed for in-memory
         Connection::open_in_memory().map_err(|e| IfaError::Custom(format!("Database error: {}", e)))
@@ -186,18 +216,41 @@ impl Odi {
     // =========================================================================
     // Ergonomic Aliases
     // =========================================================================
-    
-    pub fn read(&self, path: &str) -> IfaResult<String> { self.ka(path) }
-    pub fn write(&self, path: &str, content: &str) -> IfaResult<()> { self.ko(path, content) }
-    pub fn append(&self, path: &str, content: &str) -> IfaResult<()> { self.fi(path, content) }
-    pub fn exists(&self, path: &str) -> bool { self.wa(path) }
-    pub fn remove(&self, path: &str) -> IfaResult<()> { self.pa_faili(path) }
-    pub fn delete(&self, path: &str) -> IfaResult<()> { self.pa_faili(path) }
-    pub fn mkdir(&self, path: &str) -> IfaResult<()> { self.seda_apoti(path) }
-    pub fn ls(&self, path: &str) -> IfaResult<Vec<String>> { self.akojo(path) }
-    pub fn list(&self, path: &str) -> IfaResult<Vec<String>> { self.akojo(path) }
-    pub fn size(&self, path: &str) -> IfaResult<u64> { self.iwon(path) }
-    pub fn open_db(&self, path: &str) -> IfaResult<Connection> { self.so_db(path) }
+
+    pub fn read(&self, path: &str) -> IfaResult<String> {
+        self.ka(path)
+    }
+    pub fn write(&self, path: &str, content: &str) -> IfaResult<()> {
+        self.ko(path, content)
+    }
+    pub fn append(&self, path: &str, content: &str) -> IfaResult<()> {
+        self.fi(path, content)
+    }
+    pub fn exists(&self, path: &str) -> bool {
+        self.wa(path)
+    }
+    pub fn remove(&self, path: &str) -> IfaResult<()> {
+        self.pa_faili(path)
+    }
+    pub fn delete(&self, path: &str) -> IfaResult<()> {
+        self.pa_faili(path)
+    }
+    pub fn mkdir(&self, path: &str) -> IfaResult<()> {
+        self.seda_apoti(path)
+    }
+    pub fn ls(&self, path: &str) -> IfaResult<Vec<String>> {
+        self.akojo(path)
+    }
+    pub fn list(&self, path: &str) -> IfaResult<Vec<String>> {
+        self.akojo(path)
+    }
+    pub fn size(&self, path: &str) -> IfaResult<u64> {
+        self.iwon(path)
+    }
+    #[cfg(feature = "database")]
+    pub fn open_db(&self, path: &str) -> IfaResult<Connection> {
+        self.so_db(path)
+    }
 }
 
 #[cfg(test)]

@@ -65,6 +65,23 @@ let mixed = [1, "hello", true, 3.14];
 let matrix = [[1, 2], [3, 4], [5, 6]];</code></pre>
         </div>
 
+        <h2>Direct Index Syntax</h2>
+        <p>Access elements directly with bracket notation:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Index Access</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo fruits = ["apple", "banana", "cherry"];
+
+ayanmo first = fruits[0];    // "apple"
+ayanmo last = fruits[2];     // "cherry"
+
+// Modify by index
+fruits[1] = "blueberry";
+Irosu.fo(fruits);  // ["apple", "blueberry", "cherry"]</code></pre>
+        </div>
+
         <h2>Accessing Elements: Ogbe</h2>
         <p>Use <code>Ogbe.ohun()</code> for access and <code>Ogbe.iye_ohun()</code> for length:</p>
 
@@ -93,24 +110,73 @@ Ogbe.ayika(fruits, "banana");  // otito (true)</code></pre>
             </div>
             <pre class="code-yoruba"><code>ayanmo stack = [1, 2, 3];
 
-Ogunda.fi(stack, 4);        // push → [1, 2, 3, 4]
-Ogunda.fi(stack, 5);        // push → [1, 2, 3, 4, 5]
+Ogunda.fi(stack, 4);        // push -> [1, 2, 3, 4]
+Ogunda.fi(stack, 5);        // push -> [1, 2, 3, 4, 5]
 
-ayanmo last = Ogunda.mu(stack);  // pop → 5, stack is [1, 2, 3, 4]
+ayanmo last = Ogunda.mu(stack);  // pop -> 5, stack is [1, 2, 3, 4]
 
-Ogunda.ge(stack, 1);        // get index 1 → 2
-Ogunda.wa(stack, 3);        // contains 3? → otito
-Ogunda.yo(stack, 0);        // remove at index 0 → stack is [2, 3, 4]</code></pre>
+Ogunda.ge(stack, 1);        // get index 1 -> 2
+Ogunda.wa(stack, 3);        // contains 3? -> otito
+Ogunda.yo(stack, 0);        // remove at index 0 -> stack is [2, 3, 4]</code></pre>
         </div>
 
-        <h2>Sorting: Ogunda.to</h2>
+        <h2>Sorting and Reversing: Ogunda</h2>
         <div class="code-example">
             <div class="code-header">
                 <span class="code-title">Sorting</span>
             </div>
             <pre class="code-yoruba"><code>ayanmo scores = [42, 7, 99, 13, 55];
 Ogunda.to(scores);
-Irosu.fo(scores);  // [7, 13, 42, 55, 99]</code></pre>
+Irosu.fo(scores);  // [7, 13, 42, 55, 99]
+
+// Reverse in place
+Ogunda.pada(scores);
+Irosu.fo(scores);  // [99, 55, 42, 13, 7]</code></pre>
+        </div>
+
+        <h2>Map, Filter, Any, All: Ogunda</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Functional Transforms</span>
+                <div class="lang-toggle">
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                </div>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo numbers = [1, 2, 3, 4, 5];
+
+// Map: transform each element
+ayanmo doubled = Ogunda.yi_pada(numbers, { x -> x * 2 });
+Irosu.fo(doubled);  // [2, 4, 6, 8, 10]
+
+// Filter: keep matching elements
+ayanmo evens = Ogunda.yan(numbers, { x -> x % 2 == 0 });
+Irosu.fo(evens);  // [2, 4]
+
+// Any: does any element match?
+ayanmo has_big = Ogunda.eyikeji(numbers, { x -> x > 4 });
+Irosu.fo(has_big);  // otito (true)
+
+// All: do all elements match?
+ayanmo all_small = Ogunda.gbogbo(numbers, { x -> x < 10 });
+Irosu.fo(all_small);  // otito (true)</code></pre>
+            <pre class="code-english"><code>let numbers = [1, 2, 3, 4, 5];
+
+// Map: transform each element
+let doubled = Ogunda.yi_pada(numbers, { x -> x * 2 });
+Irosu.println(doubled);  // [2, 4, 6, 8, 10]
+
+// Filter: keep matching elements
+let evens = Ogunda.yan(numbers, { x -> x % 2 == 0 });
+Irosu.println(evens);  // [2, 4]
+
+// Any: does any element match?
+let has_big = Ogunda.eyikeji(numbers, { x -> x > 4 });
+Irosu.println(has_big);  // true
+
+// All: do all elements match?
+let all_small = Ogunda.gbogbo(numbers, { x -> x < 10 });
+Irosu.println(all_small);  // true</code></pre>
         </div>
 
         <h2>Aggregation: Obara</h2>
@@ -122,9 +188,9 @@ Irosu.fo(scores);  // [7, 13, 42, 55, 99]</code></pre>
             </div>
             <pre class="code-yoruba"><code>ayanmo values = [10, 20, 30, 40, 50];
 
-Obara.apapo(values);         // sum → 150
-Obara.kere_julo(values);    // min → 10
-Obara.nla_julo(values);     // max → 50</code></pre>
+Obara.apapo(values);         // sum -> 150
+Obara.kere_julo(values);    // min -> 10
+Obara.nla_julo(values);     // max -> 50</code></pre>
         </div>
 
         <h2>Iterating Lists</h2>
@@ -144,7 +210,7 @@ fun city ninu cities {
 
 // Using index with range
 fun i ninu range(0, Ogbe.iye_ohun(cities)) {
-    Irosu.fo(i + ": " + Ogbe.ohun(cities, i));
+    Irosu.fo(i + ": " + cities[i]);
 }</code></pre>
             <pre class="code-english"><code>let cities = ["Ile-Ifẹ", "Ọyọ", "Abeokuta"];
 
@@ -154,18 +220,20 @@ for city in cities {
 
 // Using index with range
 for i in range(0, Ogbe.iye_ohun(cities)) {
-    Irosu.println(i + ": " + Ogbe.ohun(cities, i));
+    Irosu.println(i + ": " + cities[i]);
 }</code></pre>
         </div>
 
         <h2>What You Learned</h2>
         <ul style="margin-left: 2rem; color: var(--text-dim);">
             <li>Creating lists with <code>[]</code> syntax</li>
+            <li>Direct index access and assignment with <code>list[i]</code></li>
             <li>Access via <code>Ogbe.ohun()</code>, length via <code>Ogbe.iye_ohun()</code></li>
             <li>Mutation via <code>Ogunda.fi/mu/yo</code></li>
-            <li>Sorting via <code>Ogunda.to()</code></li>
+            <li>Sorting and reversing via <code>Ogunda.to/pada</code></li>
+            <li>Functional transforms: <code>Ogunda.yi_pada/yan/eyikeji/gbogbo</code></li>
             <li>Aggregation via <code>Obara.apapo/kere_julo/nla_julo</code></li>
-            <li>Iterating with <code>fun</code>/<code>for</code> loops</li>
+            <li>Iterating with <code>fun</code>/<code>for</code> loops and index access</li>
         </ul>
 
         <div class="nav-buttons">

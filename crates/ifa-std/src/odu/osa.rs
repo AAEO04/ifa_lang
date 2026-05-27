@@ -6,21 +6,21 @@
 
 use crate::impl_odu_domain;
 // Unused imports removed
-#[cfg(feature = "full")]
-use tokio::sync::{Mutex, RwLock, mpsc, oneshot};
-#[cfg(feature = "full")]
-use tokio::task::JoinHandle;
-#[cfg(feature = "full")]
-use std::time::Duration;
-#[cfg(feature = "full")]
+#[cfg(feature = "async_runtime")]
 use std::sync::Arc;
+#[cfg(feature = "async_runtime")]
+use std::time::Duration;
+#[cfg(feature = "async_runtime")]
+use tokio::sync::{Mutex, RwLock, mpsc, oneshot};
+#[cfg(feature = "async_runtime")]
+use tokio::task::JoinHandle;
 
 /// Ọ̀sá - The Runner (Concurrency)
 pub struct Osa;
 
 impl_odu_domain!(Osa, "Ọ̀sá", "0111", "The Runner - Concurrency");
 
-#[cfg(feature = "full")]
+#[cfg(feature = "async_runtime")]
 impl Osa {
     /// Spawn async task (sá)
     pub fn sa<F, T>(&self, future: F) -> JoinHandle<T>
@@ -72,7 +72,7 @@ impl Osa {
     }
 }
 
-#[cfg(not(feature = "full"))]
+#[cfg(not(feature = "async_runtime"))]
 impl Osa {
     /// Placeholder for minimal builds
     pub fn placeholder(&self) {
@@ -81,7 +81,7 @@ impl Osa {
 }
 
 #[cfg(test)]
-#[cfg(feature = "full")]
+#[cfg(feature = "async_runtime")]
 mod tests {
     use super::*;
 

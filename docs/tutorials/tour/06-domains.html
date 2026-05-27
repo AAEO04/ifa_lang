@@ -45,10 +45,12 @@
         </div>
 
         <h2>The 16 Domains</h2>
+        <p>Each domain can be referenced by its Yoruba name or its English alias in code.</p>
         <table>
             <thead>
                 <tr>
                     <th>Domain</th>
+                    <th>Alias</th>
                     <th>Purpose</th>
                     <th>Feature Gate</th>
                 </tr>
@@ -56,82 +58,98 @@
             <tbody>
                 <tr>
                     <td><code>Ogbe</code></td>
-                    <td>Collections, iteration, counting</td>
+                    <td>System</td>
+                    <td>CLI args, environment, OS info, home/cwd, lifecycle</td>
                     <td>Always</td>
                 </tr>
                 <tr>
                     <td><code>Oyeku</code></td>
-                    <td>Spirits, Ebo (rituals), transformations</td>
+                    <td>Exit</td>
+                    <td>Exit codes, sleep, halt, termination</td>
                     <td>Always</td>
                 </tr>
                 <tr>
                     <td><code>Iwori</code></td>
-                    <td>Creation, attributes, progress, range</td>
+                    <td>Time</td>
+                    <td>Date/time, timestamps, formatting, iteration (range)</td>
                     <td>Always</td>
                 </tr>
                 <tr>
                     <td><code>Odi</code></td>
-                    <td>File and filesystem operations</td>
-                    <td><code>backend</code></td>
+                    <td>File</td>
+                    <td>Read/write/append, mkdir, list, SQLite database</td>
+                    <td><code>database</code></td>
                 </tr>
                 <tr>
                     <td><code>Irosu</code></td>
-                    <td>Input/Output (print, error, logging)</td>
+                    <td>Log</td>
+                    <td>Print, error, input, color output, screen clear</td>
                     <td>Always</td>
                 </tr>
                 <tr>
                     <td><code>Owonrin</code></td>
-                    <td>Randomness, UUID, time</td>
+                    <td>Random</td>
+                    <td>Random int/float/bool, shuffle, choice, UUID</td>
                     <td>Always</td>
                 </tr>
                 <tr>
                     <td><code>Obara</code></td>
-                    <td>Aggregations: sum, min, max on lists</td>
+                    <td>Math</td>
+                    <td>Sum, add, multiply, pow, sqrt, min, max</td>
                     <td>Always</td>
                 </tr>
                 <tr>
                     <td><code>Okanran</code></td>
-                    <td>Error handling, assertions, exceptions</td>
+                    <td>Error</td>
+                    <td>Assertions, try/catch, throw, panic, proverbs</td>
                     <td>Always</td>
                 </tr>
                 <tr>
                     <td><code>Ogunda</code></td>
-                    <td>List/data structure operations</td>
+                    <td>Array</td>
+                    <td>List/array ops (push/pop/filter/map/sort), subprocess spawn</td>
                     <td>Always</td>
                 </tr>
                 <tr>
-                    <td><code>Osa</code></d>
-                    <td>Async operations, polling, timing</td>
-                    <td><code>backend</code></td>
+                    <td><code>Osa</code></td>
+                    <td>Flow</td>
+                    <td>Concurrency: async spawn, channels, actors, mutex, timeout</td>
+                    <td><code>async_runtime</code></td>
                 </tr>
                 <tr>
                     <td><code>Ika</code></td>
-                    <td>String manipulation</td>
+                    <td>String</td>
+                    <td>Length, case, split/join, find/replace, Unicode</td>
                     <td>Always</td>
                 </tr>
                 <tr>
                     <td><code>Oturupon</code></td>
-                    <td>Transformations, encoding, validation</td>
+                    <td>Reduce</td>
+                    <td>Subtract, divide, modulo, negate, reciprocal</td>
                     <td>Always</td>
                 </tr>
                 <tr>
                     <td><code>Otura</code></td>
-                    <td>Network: HTTP GET and POST</td>
-                    <td><code>backend</code></td>
+                    <td>Net</td>
+                    <td>HTTP GET and POST requests, networking</td>
+                    <td><code>network</code></td>
                 </tr>
                 <tr>
                     <td><code>Irete</code></td>
-                    <td>Cryptography: SHA256, HMAC, Base64</td>
+                    <td>Crypto</td>
+                    <td>SHA256, HMAC, Base64, compression</td>
                     <td><code>crypto</code></td>
                 </tr>
                 <tr>
                     <td><code>Ose</code></td>
-                    <td>Game development (TUI/rendering)</td>
-                    <td><code>game</code></td>
+                    <td>UI</td>
+                    <td>Terminal UI, layout, draw, color, key input</td>
+                    <td><code>tui</code></td>
                 </tr>
                 <tr>
                     <td><code>Ofun</code></td>
-                    <td>Meta-programming, reflection, type info</td>
+                    <td>Root</td>
+                    <td>Type info, capability checks, debug, permissions, reflection</td>
                     <td>Always</td>
                 </tr>
             </tbody>
@@ -143,92 +161,195 @@
             </div>
             <p style="margin: 0;">
                 Some domains require enabling feature flags in your <code>Ifa.toml</code>:
-                <code>backend</code> (Odi, Osa, Otura), <code>game</code> (Ose), <code>crypto</code> (Irete).
+                <code>database</code> (Odi), <code>async_runtime</code> (Osa), <code>network</code> (Otura),
+                <code>tui</code> (Ose), <code>crypto</code> (Irete).
                 All other domains are always available.
             </p>
         </div>
 
-        <h2>Using Irosu for Output</h2>
-        <p>Irosu (the Odù of light/proclamation) handles all input/output:</p>
+        <h2>Domain Quick Reference</h2>
 
+        <h3>Ogbe (System) — System & Collections</h3>
         <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Irosu Methods</span>
-            </div>
-            <pre class="code-yoruba"><code>Irosu.fo("Hello with newline");  // println
-Irosu.so("Inline text");         // print (no newline)
-Irosu.kigbe("Error!");           // eprintln (stderr)</code></pre>
+            <div class="code-header"><span class="code-title">Ogbe Methods</span></div>
+            <pre class="code-yoruba"><code>Ogbe.args();                 // CLI arguments
+Ogbe.env("PATH");            // environment variable
+Ogbe.cwd();                  // current working directory
+Ogbe.bi();                   // initialize environment
+Ogbe.bere();                 // version info
+Ogbe.awon_ohun(items);       // list all items
+Ogbe.ohun(items, 0);         // get item at index
+Ogbe.iye_ohun(items);        // count (length)
+Ogbe.ayika(items, val);      // contains?</code></pre>
         </div>
 
-        <h2>Using Ogbe for Collections</h2>
-        <p>Ogbe (the first Odù, source of existence) handles collection operations:</p>
-
+        <h3>Oyeku (Exit) — Exit, Sleep & Ebo</h3>
         <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Ogbe Methods</span>
-            </div>
-            <pre class="code-yoruba"><code>ayanmo items = [1, 2, 3, 4, 5];
-
-Ogbe.awon_ohun(items);     // list all items
-Ogbe.ohun(items, 2);       // get item at index
-Ogbe.iye_ohun(items);      // count items (length)
-Ogbe.ayika(items, 3);      // check if contains
-Ogbe.ile(items);            // first item
-Ogbe.oju_ona(items);       // last item</code></pre>
+            <div class="code-header"><span class="code-title">Oyeku Methods</span></div>
+            <pre class="code-yoruba"><code>Oyeku.jade(0);               // exit with code
+Oyeku.duro();                // stop/abort execution
+Oyeku.gbale();               // garbage collect / cleanup
+Oyeku.sun(1);                // sleep seconds
+Oyeku.sun_ms(500);           // sleep milliseconds
+Oyeku.ebo("name");           // create Ebo (see lesson 14)</code></pre>
         </div>
 
-        <h2>Using Ogunda for List Manipulation</h2>
-        <p>Ogunda (the Odù of structure) modifies lists:</p>
-
+        <h3>Iwori (Time) — Time & Range</h3>
         <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Ogunda Methods</span>
-            </div>
-            <pre class="code-yoruba"><code>ayanmo list = [1, 2, 3];
-
-Ogunda.fi(list, 4);         // push (append)
-Ogunda.mu(list);            // pop (remove last)
-Ogunda.ge(list, 1);         // get element at index
-Ogunda.wa(list, 3);         // check if contains
-Ogunda.yo(list, 1);         // remove at index
-Ogunda.to(list);            // sort the list</code></pre>
+            <div class="code-header"><span class="code-title">Iwori Methods</span></div>
+            <pre class="code-yoruba"><code>Iwori.bayi();                // current local DateTime
+Iwori.akoko();               // Unix timestamp
+Iwori.odun();                // current year
+Iwori.ojo_osu();             // current day
+Iwori.yipo();                // iterate / loop
+Iwori.pada();                // return from iteration
+range(0, 10);                // numeric range (see lesson 4)</code></pre>
         </div>
 
-        <h2>Using Obara for Aggregation</h2>
-        <p>Obara (the Odù of gathering) computes over lists:</p>
-
+        <h3>Odi (File) — File I/O</h3>
         <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Obara Methods</span>
-            </div>
-            <pre class="code-yoruba"><code>ayanmo numbers = [10, 20, 30, 40, 50];
-
-Obara.apapo(numbers);         // sum
-Obara.kere_julo(numbers);    // min
-Obara.nla_julo(numbers);     // max</code></pre>
+            <div class="code-header"><span class="code-title">Odi Methods</span></div>
+            <pre class="code-yoruba"><code>Odi.si("path");              // open file handle
+Odi.ka("path");              // read file
+Odi.ko("path", content);     // write file
+Odi.fikun("path", content);  // append file
+Odi.wa("path");              // file exists?
+Odi.pa();                    // close active file
+Odi.pa_iwe("path");          // delete file
+Odi.seda_apoti("dir");       // create directory
+Odi.akojo("dir");            // list directory</code></pre>
         </div>
 
-        <h2>Using Ofun for Reflection</h2>
-        <p>Ofun (the Odù of completion/wisdom) provides meta-programming:</p>
-
+        <h3>Irosu (Log) — Console I/O</h3>
         <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Ofun Methods</span>
-            </div>
-            <pre class="code-yoruba"><code>Ofun.iru(42);            // type of value: "Int"
-Ofun.iru("hello");       // "Str"
-Ofun.iru([1, 2, 3]);     // "List"
-Ofun.iru(greet);          // "Fn" (function reference)</code></pre>
+            <div class="code-header"><span class="code-title">Irosu Methods</span></div>
+            <pre class="code-yoruba"><code>Irosu.fo("text");            // println
+Irosu.so("text");            // print no newline
+Irosu.kigbe("err");          // stderr
+Irosu.gbo();                 // read input
+Irosu.mo();                  // clear screen</code></pre>
+        </div>
+
+        <h3>Owonrin (Random) — Randomness</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Owonrin Methods</span></div>
+            <pre class="code-yoruba"><code>Owonrin.pese(1, 100);        // random integer 1-100
+Owonrin.boya();              // random boolean
+Owonrin.yan(list);           // random choice
+Owonrin.paaro(list);          // shuffle in place
+Owonrin.uuid();              // generate UUID</code></pre>
+        </div>
+
+        <h3>Obara (Math) — Aggregation</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Obara Methods</span></div>
+            <pre class="code-yoruba"><code>Obara.apapo(list);           // sum
+Obara.kere_julo(list);       // min
+Obara.nla_julo(list);        // max</code></pre>
+        </div>
+
+        <h3>Okanran (Error) — Error Handling</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Okanran Methods</span></div>
+            <pre class="code-yoruba"><code>Okanran.beeni(cond, msg);    // assert true
+Okanran.sise(cond, msg);     // assert condition
+Okanran.dogba(a, b);         // assert equal
+Okanran.yato(a, b);          // assert not equal
+Okanran.ta("error");         // throw error
+Okanran.gbiyanju(fn, def);   // try with fallback
+Okanran.owe();               // random proverb</code></pre>
+        </div>
+
+        <h3>Ogunda (Array) — List & Map Operations</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Ogunda Methods</span></div>
+            <pre class="code-yoruba"><code>Ogunda.fi(list, val);        // push
+Ogunda.mu(list);             // pop
+Ogunda.to(list);             // sort
+Ogunda.pada(list);           // reverse
+Ogunda.yi_pada(list, fn);    // map
+Ogunda.yan(list, fn);        // filter
+Ogunda.eyikeyi(list, fn);    // any?
+Ogunda.gbogbo(list, fn);     // all?</code></pre>
+        </div>
+
+        <h3>Osa (Flow) — Concurrency</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Osa Methods</span></div>
+            <pre class="code-yoruba"><code>Osa.sa(task);                // spawn async
+Osa.egbe(handler);           // spawn actor
+Osa.ran(actor, msg);         // send to actor
+Osa.jeki();                  // yield to scheduler
+Osa.titipe();                // create mutex</code></pre>
+        </div>
+
+        <h3>Ika (String) — Strings</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Ika Methods</span></div>
+            <pre class="code-yoruba"><code>Ika.gun(s);                  // length
+Ika.nla(s);                  // uppercase
+Ika.kekere(s);               // lowercase
+Ika.ge_lara(s, start, end);  // substring
+Ika.ni(s, sub);              // contains
+Ika.pin(s, delim);           // split
+Ika.dapo(list, delim);       // join
+Ika.ropo(s, old, new);       // replace</code></pre>
+        </div>
+
+        <h3>Oturupon (Reduce) — Math (Sub/Div)</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Oturupon Methods</span></div>
+            <pre class="code-yoruba"><code>Oturupon.din(a, b);          // subtract
+Oturupon.pin(a, b);          // divide
+Oturupon.ku(a, b);           // modulo
+Oturupon.dake(x);            // negate
+Oturupon.idakeji(x);         // reciprocal</code></pre>
+        </div>
+
+        <h3>Otura (Net) — Networking</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Otura Methods</span></div>
+            <pre class="code-yoruba"><code>daro Otura.gba(url);         // HTTP GET
+daro Otura.ran(url, body);   // HTTP POST</code></pre>
+        </div>
+
+        <h3>Irete (Crypto) — Cryptography</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Irete Methods</span></div>
+            <pre class="code-yoruba"><code>Irete.sha256(data);          // SHA-256 hash
+Irete.sha256_hex(data);      // SHA-256 hex string
+Irete.hmac_hex(key, data);   // HMAC-SHA256
+Irete.base64_encode(data);   // Base64 encode
+Irete.base64_decode(data);   // Base64 decode</code></pre>
+        </div>
+
+        <h3>Ose (UI) — Graphics/UI</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Ose Methods</span></div>
+            <pre class="code-yoruba"><code>Ose.bere();                  // init terminal
+Ose.pari();                  // restore terminal
+Ose.ya(map);                 // draw
+Ose.gboran();                // listen for keys
+Ose.iwon();                  // terminal size</code></pre>
+        </div>
+
+        <h3>Ofun (Root) — Reflection</h3>
+        <div class="code-example">
+            <div class="code-header"><span class="code-title">Ofun Methods</span></div>
+            <pre class="code-yoruba"><code>Ofun.iru(value);             // type name
+Ofun.je(value, "Int");       // is type?
+Ofun.le("read");             // check capability
+Ofun.ju("write");            // drop capability
+Ofun.afiwe(value);           // debug string</code></pre>
         </div>
 
         <h2>What You Learned</h2>
         <ul style="margin-left: 2rem; color: var(--text-dim);">
             <li>The 16 Odù map directly to API domains</li>
-            <li>Always-available domains: Ogbe, Oyeku, Iwori, Irosu, Owonrin, Obara, Okanran, Ogunda, Ika, Oturupon,
-                Ofun</li>
-            <li>Feature-gated domains: Odi (<code>backend</code>), Osa (<code>backend</code>), Otura
-                (<code>backend</code>), Ose (<code>game</code>), Irete (<code>crypto</code>)</li>
-            <li>Real domain method names use Yoruba vocabulary</li>
+            <li>Each domain provides specific methods for its area of computation</li>
+            <li>Always-available domains and feature-gated domains</li>
+            <li>Each domain has a canonical English alias (System, Exit, Time, etc.) that you can use interchangeably with the Yoruba name in <code>use</code> imports</li>
+            <li>Each domain has its own dedicated lesson later in this tour</li>
         </ul>
 
         <div class="nav-buttons">

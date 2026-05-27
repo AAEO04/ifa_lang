@@ -103,15 +103,33 @@ impl Iwori {
     // Ergonomic Aliases
     // =========================================================================
 
-    pub fn now(&self) -> DateTime<Local> { self.isisinyi() }
-    pub fn timestamp(&self) -> i64 { self.akoko() }
-    pub fn format(&self, fmt: &str) -> String { self.ojo(fmt) }
-    pub fn year(&self) -> i32 { self.odun() }
-    pub fn month(&self) -> u32 { self.osu() }
-    pub fn day(&self) -> u32 { self.ojo_osu() }
-    pub fn hour(&self) -> u32 { self.wakati() }
-    pub fn minute(&self) -> u32 { self.iseju() }
-    pub fn second(&self) -> u32 { self.aaya() }
+    pub fn now(&self) -> DateTime<Local> {
+        self.isisinyi()
+    }
+    pub fn timestamp(&self) -> i64 {
+        self.akoko()
+    }
+    pub fn format(&self, fmt: &str) -> String {
+        self.ojo(fmt)
+    }
+    pub fn year(&self) -> i32 {
+        self.odun()
+    }
+    pub fn month(&self) -> u32 {
+        self.osu()
+    }
+    pub fn day(&self) -> u32 {
+        self.ojo_osu()
+    }
+    pub fn hour(&self) -> u32 {
+        self.wakati()
+    }
+    pub fn minute(&self) -> u32 {
+        self.iseju()
+    }
+    pub fn second(&self) -> u32 {
+        self.aaya()
+    }
 }
 
 // =============================================================================

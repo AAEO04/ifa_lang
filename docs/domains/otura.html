@@ -22,59 +22,54 @@
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/otura.rs</code>. Features SSRF protection (blocks localhost, private IPs, cloud metadata endpoints). Requires <code>full</code> feature for networking; <code>Network</code> capability for host access.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>. Requires <code>network</code> feature; <code>Network</code> capability.
         </div>
 
-        <h2>Security</h2>
+        <h2>HTTP</h2>
 
         <div class="method">
-            <h3>sayewo / check_host</h3>
-            <div class="sig">Otura.sayewo(host: Str) → Bool</div>
-            <p>Check if a host is allowed through SSRF protection + capability gate.</p>
-        </div>
-
-        <h2>HTTP (<code>full</code> feature)</h2>
-
-        <div class="method">
-            <h3>gba / http_get</h3>
+            <h3>gba / get / fetch</h3>
             <div class="sig">Otura.gba(url: Str) → Str</div>
             <p>HTTP GET request. Returns response body as string.</p>
             <pre><code>ayanmo body = Otura.gba("https://api.example.com/data");</code></pre>
         </div>
 
         <div class="method">
-            <h3>ran / http_post</h3>
+            <h3>ran / post</h3>
             <div class="sig">Otura.ran(url: Str, body: Str) → Str</div>
             <p>HTTP POST request with body. Returns response body.</p>
         </div>
 
-        <h2>TCP (<code>full</code> feature)</h2>
+        <h2>TCP</h2>
 
         <div class="method">
-            <h3>de / tcp_listen</h3>
+            <h3>de / listen</h3>
             <div class="sig">Otura.de(addr: Str) → TcpListener</div>
-            <p>Bind TCP listener to address. Requires wildcard <code>Network</code> capability.</p>
+            <p>Bind TCP listener to address.</p>
         </div>
 
         <div class="method">
-            <h3>soro / tcp_connect</h3>
+            <h3>soro / connect</h3>
             <div class="sig">Otura.soro(addr: Str) → TcpStream</div>
-            <p>Connect to TCP address. SSRF protected.</p>
+            <p>Connect to TCP address.</p>
         </div>
 
-        <h2>SSRF Protection</h2>
-        <p>The following hosts/ranges are always blocked:</p>
-        <ul>
-            <li><code>localhost</code>, <code>127.0.0.1</code>, <code>::1</code></li>
-            <li><code>0.0.0.0</code></li>
-            <li><code>169.254.169.254</code> (cloud metadata)</li>
-            <li><code>metadata.google.internal</code></li>
-            <li>All private IPv4 ranges (10.x, 172.16-31.x, 192.168.x)</li>
-            <li>Link-local addresses</li>
-        </ul>
+        <div class="method">
+            <h3>pa / close</h3>
+            <div class="sig">Otura.pa(stream: TcpStream)</div>
+            <p>Close a TCP connection.</p>
+        </div>
+
+        <h2>Security</h2>
+
+        <div class="method">
+            <h3>sayewo / ṣàyẹ̀wò / check_host</h3>
+            <div class="sig">Otura.sayewo(host: Str) → Bool</div>
+            <p>SSRF protection check. Returns false for private IPs, loopback, and blocked hosts.</p>
+        </div>
 
         <footer>
-            <p><a href="../index.html">← Back to Documentation</a> · <a href="../../crates/ifa-docs/std-library.html">Corrected API Reference</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
         </footer>
     </div></div>
     <script src="../js/nav.js"></script>

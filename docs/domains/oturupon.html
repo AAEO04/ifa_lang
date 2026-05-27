@@ -18,20 +18,50 @@
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">oturupon.ifa</span></div><div class="terminal-body">
         <header>
             <h1><span class="pattern">0010</span> Oturupon</h1>
-            <p style="color: var(--dim)">The Reducer — Subtraction &amp; Division</p>
+            <p style="color: var(--dim)">The Reducer — Subtraction & Division</p>
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/oturupon.rs</code>.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>.
         </div>
 
         <h2>Subtraction</h2>
 
         <div class="method">
-            <h3>din / sub</h3>
-            <div class="sig">Oturupon.din(a: Int, b: Int) → Int</div>
-            <p>Checked integer subtraction. Returns overflow error if result overflows i64.</p>
+            <h3>yokuro / sub / minus</h3>
+            <div class="sig">Oturupon.yokuro(a: Int, b: Int) → Int</div>
+            <p>Checked integer subtraction.</p>
         </div>
+
+        <h2>Division</h2>
+
+        <div class="method">
+            <h3>pipin / div / divide</h3>
+            <div class="sig">Oturupon.pipin(a: Int, b: Int) → Float</div>
+            <p>Integer division returning float. Errors on division by zero.</p>
+        </div>
+
+        <h2>Checked Arithmetic</h2>
+
+        <div class="method">
+            <h3>din / sub_checked</h3>
+            <div class="sig">Oturupon.din(a: Int, b: Int) → Int</div>
+            <p>Checked integer subtraction. Panics on overflow.</p>
+        </div>
+
+        <div class="method">
+            <h3>pin / div_checked</h3>
+            <div class="sig">Oturupon.pin(a: Int, b: Int) → Int</div>
+            <p>Checked integer division. Panics on zero or overflow.</p>
+        </div>
+
+        <div class="method">
+            <h3>pin_odidi / div_int</h3>
+            <div class="sig">Oturupon.pin_odidi(a: Int, b: Int) → Int</div>
+            <p>Integer division (truncated).</p>
+        </div>
+
+        <h2>Float Arithmetic</h2>
 
         <div class="method">
             <h3>din_f / sub_float</h3>
@@ -39,63 +69,46 @@
             <p>Float subtraction.</p>
         </div>
 
-        <h2>Division</h2>
-
-        <div class="method">
-            <h3>pin / div</h3>
-            <div class="sig">Oturupon.pin(a: Int, b: Int) → Float</div>
-            <p>Integer division returning float. Errors on division by zero.</p>
-        </div>
-
-        <div class="method">
-            <h3>pin_odidi / div_int</h3>
-            <div class="sig">Oturupon.pin_odidi(a: Int, b: Int) → Int</div>
-            <p>Integer division returning integer (truncated).</p>
-        </div>
-
         <div class="method">
             <h3>pin_f / div_float</h3>
-            <div class="sig">Oturupon.pin_f(a: Float, b: Float, mode: RoundingMode) → Float</div>
-            <p>Float division with rounding mode: <code>Truncate</code>, <code>Floor</code>, <code>Ceiling</code>, or <code>HalfEven</code> (banker's rounding).</p>
-            <pre><code>Oturupon.pin_f(7.0, 2.0, "Floor")  // 3.0</code></pre>
+            <div class="sig">Oturupon.pin_f(a: Float, b: Float) → Float</div>
+            <p>Float division.</p>
         </div>
 
-        <h2>Modulo</h2>
+        <h2>Remainder & Negation</h2>
 
         <div class="method">
-            <h3>ku / modulo</h3>
+            <h3>ku / rem_checked</h3>
             <div class="sig">Oturupon.ku(a: Int, b: Int) → Int</div>
-            <p>Remainder (<code>a % b</code>).</p>
+            <p>Checked integer remainder.</p>
         </div>
 
         <div class="method">
-            <h3>ku_euclidean / euclidean_mod</h3>
+            <h3>ku_euclidean / rem_euclidean</h3>
             <div class="sig">Oturupon.ku_euclidean(a: Int, b: Int) → Int</div>
-            <p>Euclidean modulo (always non-negative result).</p>
+            <p>Euclidean remainder (always non-negative).</p>
         </div>
 
-        <h2>Other</h2>
-
         <div class="method">
-            <h3>dake / negate</h3>
-            <div class="sig">Oturupon.dake(x: Int) → Int</div>
-            <p>Checked negation. Errors on i64::MIN.</p>
+            <h3>dake / neg_checked</h3>
+            <div class="sig">Oturupon.dake(a: Int) → Int</div>
+            <p>Checked integer negation.</p>
         </div>
 
         <div class="method">
             <h3>idakeji / reciprocal</h3>
-            <div class="sig">Oturupon.idakeji(x: Float) → Float</div>
-            <p>Reciprocal (1/x). Errors on zero.</p>
+            <div class="sig">Oturupon.idakeji(a: Int) → Float</div>
+            <p>Reciprocal (1/x).</p>
         </div>
 
         <div class="method">
-            <h3>iyoku / remaining</h3>
-            <div class="sig">Oturupon.iyoku(value: Int, max: Int) → Int</div>
-            <p>Difference from max (max - value).</p>
+            <h3>iyoku / diff</h3>
+            <div class="sig">Oturupon.iyoku(a: Int, b: Int) → Int</div>
+            <p>Absolute difference between two integers.</p>
         </div>
 
         <footer>
-            <p><a href="../index.html">← Back to Documentation</a> · <a href="../../crates/ifa-docs/std-library.html">Corrected API Reference</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
         </footer>
     </div></div>
     <script src="../js/nav.js"></script>

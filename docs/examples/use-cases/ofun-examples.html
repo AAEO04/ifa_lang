@@ -28,15 +28,15 @@
 ese eval_expression(expr) {
     ayanmo result = Ofun.le(expr);
     Irosu.fo("Eval: " + expr + " => " + result);
-    padap? result;
+    pada result;
 }
 
 ese safe_eval(expr) {
     ti (expr == ofifo || Ika.gigun(expr) == 0) {
         Irosu.kigbe("Empty expression");
-        padap? ofifo;
+        pada ofifo;
     }
-    padap? Ofun.le(expr);
+    pada Ofun.le(expr);
 }
 
 // Usage
@@ -49,13 +49,13 @@ ayanmo val = safe_eval("Irosu.fo('Hello from eval')");</code></pre>
 
 ese inspect(label, value) {
     Irosu.fo("=== " + label + " ===");
-    Ofun.dbg(value);
+    Ofun.afiwe(value);
     Irosu.fo("================");
 }
 
 ese debug_flow(step, context) {
-    Ofun.dbg("Step: " + step);
-    Ofun.dbg(context);
+    Ofun.afiwe("Step: " + step);
+    Ofun.afiwe(context);
 }
 
 // Usage

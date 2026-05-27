@@ -28,55 +28,33 @@
         <h2>Exit</h2>
 
         <div class="method">
-            <h3>ku / exit</h3>
-            <div class="sig">Oyeku.ku(code: Int) → !</div>
+            <h3>jade / exit</h3>
+            <div class="sig">Oyeku.jade(code: Int) → !</div>
             <p>Exit the program with the given exit code.</p>
-            <pre><code>Oyeku.ku(0);   // Success
-Oyeku.ku(1);   // Error</code></pre>
-        </div>
-
-        <div class="method">
-            <h3>ku_daadaa / exit_ok</h3>
-            <div class="sig">Oyeku.ku_daadaa() → !</div>
-            <p>Exit successfully with code 0.</p>
-            <pre><code>Oyeku.ku_daadaa();</code></pre>
-        </div>
-
-        <div class="method">
-            <h3>ku_buruku / exit_err</h3>
-            <div class="sig">Oyeku.ku_buruku() → !</div>
-            <p>Exit with error code 1.</p>
-            <pre><code>Oyeku.ku_buruku();</code></pre>
-        </div>
-
-        <div class="method">
-            <h3>da_duro / abort</h3>
-            <div class="sig">Oyeku.da_duro() → !</div>
-            <p>Abort immediately with no cleanup. Use only in unrecoverable situations.</p>
-            <pre><code>Oyeku.da_duro();</code></pre>
+            <pre><code>Oyeku.jade(0);   // Success
+Oyeku.jade(1);   // Error</code></pre>
         </div>
 
         <h2>Sleep</h2>
 
         <div class="method">
-            <h3>sun_ms / sleep_ms</h3>
-            <div class="sig">Oyeku.sun_ms(ms: Int)</div>
-            <p>Sleep for the given number of milliseconds (requires <code>Time</code> capability).</p>
-            <pre><code>Oyeku.sun_ms(1000);  // Wait 1 second</code></pre>
-        </div>
-
-        <div class="method">
             <h3>sun / sleep</h3>
-            <div class="sig">Oyeku.sun(seconds: Float)</div>
-            <p>Sleep for the given number of seconds (requires <code>Time</code> capability).</p>
-            <pre><code>Oyeku.sun(1.5);  // Wait 1.5 seconds</code></pre>
+            <div class="sig">Oyeku.sun(ms: Int)</div>
+            <p>Sleep for the given number of milliseconds (requires <code>Time</code> capability).</p>
+            <pre><code>Oyeku.sun(1000);  // Wait 1 second</code></pre>
         </div>
 
         <div class="method">
-            <h3>duro / wait</h3>
-            <div class="sig">Oyeku.duro(ms: Int)</div>
-            <p>Alias for <code>sun_ms</code>. Sleep for milliseconds.</p>
-            <pre><code>Oyeku.duro(500);</code></pre>
+            <h3>duro / stop</h3>
+            <div class="sig">Oyeku.duro()</div>
+            <p>Stop/pause execution.</p>
+            <pre><code>Oyeku.duro();</code></pre>
+        </div>
+
+        <div class="method">
+            <h3>gbale / gc</h3>
+            <div class="sig">Oyeku.gbale()</div>
+            <p>Run garbage collection.</p>
         </div>
 
         <footer>

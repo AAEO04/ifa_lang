@@ -22,10 +22,10 @@ extern crate alloc;
 pub mod binary_ops;
 pub mod compact_str;
 pub mod domain;
-pub mod methods;
-pub mod odu_metadata;
 pub mod error;
+pub mod methods;
 pub mod nan_box;
+pub mod odu_metadata;
 pub mod registry;
 pub mod shared;
 pub mod token;
@@ -33,25 +33,23 @@ pub mod traits;
 pub mod value;
 pub mod value_union; // Unified Type System (Internal)
 
-#[cfg(feature = "vm")]
 pub mod ast;
 
 #[cfg(feature = "vm")]
 pub mod bytecode;
 
 // Re-exports for convenience
+pub use compact_str::CompactString;
 pub use domain::OduDomain;
 pub use error::{IfaError, IfaResult, SpannedError, format_error};
 pub use nan_box::{BoxedPrimitive, NanBox, NanBoxError};
-pub use registry::{ResourceRegistry, set_current_actor_id, get_current_actor_id};
+pub use registry::{ResourceRegistry, get_current_actor_id, set_current_actor_id};
 pub use shared::IfaShared;
 pub use token::ResourceToken;
 pub use traits::*;
-pub use compact_str::CompactString;
 // pub use value::IfaValue; // Old Enum
 pub use value_union::IfaValue; // New Tagged Union
 
-#[cfg(feature = "vm")]
 pub use ast::Statement;
 
 // Re-export OpCode from the micro-crate
@@ -68,4 +66,4 @@ mod opcode_ext {
 #[cfg(feature = "std")]
 pub mod capability;
 #[cfg(feature = "std")]
-pub use capability::{Ofun, CapabilitySet, CapabilityViolation};
+pub use capability::{CapabilitySet, CapabilityViolation, Ofun};

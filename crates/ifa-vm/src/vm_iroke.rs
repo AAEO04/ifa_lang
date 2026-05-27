@@ -20,10 +20,12 @@ pub fn tap(vm: &mut IfaVM, bytecode: &Bytecode) -> IfaResult<OpCode> {
     if vm.ticks & 1023 == 0 {
         // Periodic tasks (GC, signals) will go here.
     }
-    
+
     if let Some(ref mut remaining) = vm.fuel {
         if *remaining == 0 {
-            return Err(IfaError::Runtime("Execution budget exhausted (fuel = 0)".into()));
+            return Err(IfaError::Runtime(
+                "Execution budget exhausted (fuel = 0)".into(),
+            ));
         }
         *remaining -= 1;
     }

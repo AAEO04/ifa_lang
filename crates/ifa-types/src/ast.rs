@@ -125,6 +125,9 @@ pub enum Statement {
     /// End statement: ase;
     Ase { span: Span },
 
+    /// Strict mode directive: abo;
+    Abo { span: Span },
+
     /// Taboo declaration: èèwọ̀: Ose -> Odi;
     Taboo {
         source: String, // Source domain (forbidden caller)
@@ -203,6 +206,10 @@ pub enum Statement {
     /// Continue to the next loop iteration: tesiwaju;
     /// Dual lexicon: tesiwaju; or bayan; or continue;
     Continue { span: Span },
+
+    /// Throw an exception: ta expr;
+    /// Dual lexicon: ta; or throw;
+    Throw { value: Expression, span: Span },
 }
 
 /// Match arm: pattern => body
@@ -439,9 +446,7 @@ pub enum Expression {
     Try(Box<Expression>),
 
     /// Interpolated string literal: $"Count: {x}"
-    InterpolatedString {
-        parts: Vec<InterpolatedPart>,
-    },
+    InterpolatedString { parts: Vec<InterpolatedPart> },
 
     /// Anonymous function (lambda): ese(params) { body }
     /// Captures enclosing scope as a closure.
@@ -546,6 +551,7 @@ impl Statement {
             | Statement::For { span, .. }
             | Statement::Return { span, .. }
             | Statement::Ase { span }
+            | Statement::Abo { span }
             | Statement::Taboo { span, .. }
             | Statement::Ewo { span, .. }
             | Statement::Opon { span, .. }
@@ -558,8 +564,8 @@ impl Statement {
             | Statement::Yield { span, .. }
             | Statement::Try { span, .. }
             | Statement::Break { span }
-            | Statement::Continue { span } => span,
+            | Statement::Continue { span }
+            | Statement::Throw { span, .. } => span,
         }
     }
 }
-

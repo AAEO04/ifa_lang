@@ -1,7 +1,7 @@
+use ifa_types::IfaValue;
 use ifa_vm::compiler::Compiler;
 use ifa_vm::parser::parse;
 use ifa_vm::vm::IfaVM;
-use ifa_types::IfaValue;
 
 #[test]
 fn test_gbiyanju_syntax_success() {

@@ -109,7 +109,7 @@
                         <pre><code>// Hash and store a password
 ese save_password(service: Str, password: Str) {
     ayanmo hash = Irete.sha256(password);
-    ayanmo encoded = Irete.base64(hash);
+    ayanmo encoded = Irete.base64_encode(hash);
     ayanmo record = service + ":" + encoded;
     Odi.ko("passwords.txt", record);
     Irosu.fo("Password saved for " + service);
@@ -120,7 +120,7 @@ ese check_password(service: Str, password: Str) -> Bool {
     ti (Odi.wa("passwords.txt")) {
         ayanmo data = Odi.ka("passwords.txt");
         ayanmo hash = Irete.sha256(password);
-        ayanmo encoded = Irete.base64(hash);
+        ayanmo encoded = Irete.base64_encode(hash);
         pada encoded == data;
     } bibẹkọ {
         pada iro;
@@ -132,20 +132,20 @@ ese check_password(service: Str, password: Str) -> Bool {
 
                 <div class="example-item">
                     <h3>Data Pipeline</h3>
-                    <p>Parallel data processing using CPU.par_map and CPU.par_reduce.</p>
+                    <p>Parallel data processing using Cpu.par_map and Cpu.par_reduce.</p>
                     <div class="code-preview">
                         <pre><code>// Parallel data pipeline
 ese process_numbers(data: []) {
     // Square all numbers in parallel
-    ayanmo squared = CPU.par_map(data, "square");
+    ayanmo squared = Cpu.par_map(data, "square");
     Irosu.fo("Squared: " + squared);
 
     // Sum in parallel
-    ayanmo total = CPU.par_reduce(data, "sum");
+    ayanmo total = Cpu.par_reduce(data, "sum");
     Irosu.fo("Sum: " + total);
 
     // Find max in parallel
-    ayanmo maximum = CPU.par_reduce(data, "max");
+    ayanmo maximum = Cpu.par_reduce(data, "max");
     Irosu.fo("Max: " + maximum);
 }
 

@@ -12,7 +12,8 @@ program = { SOI ~ statement* ~ EOI }
 statement = {
     import_stmt
     | from_import_stmt
-    | instruction
+    | abo_stmt
+    | ase_stmt
     | opon_stmt
     | ebo_stmt
     | defer_stmt
@@ -30,12 +31,13 @@ statement = {
     | return_stmt
     | break_stmt
     | continue_stmt
+    | throw_stmt
     | taboo_stmt
     | ewo_stmt
-    | ase_stmt
     | match_stmt
     | try_stmt
     | yield_stmt
+    | instruction
     | COMMENT
 }
 
@@ -90,7 +92,7 @@ deref_lvalue = { "*" ~ expression } // *ptr
 index_lvalue = { ident ~ "?."? ~ "[" ~ expression ~ "]" }
 
 // Instruction: Obara.fikun(10);
-instruction = { (odu_call | method_call | function_call) ~ ";" }
+instruction = { (odu_call | method_call | function_call | expression) ~ ";" }
 // Domain call: Obara.fikun(10) or Obara?.fikun(10)
 odu_call = { odu_name ~ chain_op ~ ident ~ "(" ~ arguments? ~ ")" }
 
@@ -136,6 +138,10 @@ ewo_kw = { "ewo" | "ẹ̀wọ̀" | "assert" | "verify" }
 // End: ase;
 ase_stmt = { ase_kw ~ ";"? }
 
+// Strict Mode: abo;
+abo_stmt = { abo_kw ~ ";"? }
+abo_kw = { "abo" | "abò" | "strict" }
+
 // Match statement
 match_stmt = { match_kw ~ "(" ~ expression ~ ")" ~ "{" ~ match_arm* ~ "}" }
 match_arm = { match_pattern ~ "=>" ~ (statement | ("{" ~ statement* ~ "}")) }
@@ -172,13 +178,18 @@ try_kw = _{ "gbiyanju" | "gbìyànjú" | "try" }
 catch_kw = _{ "gba" | "gbà" | "catch" }
 nipari_kw = _{ "nipari" | "nípàrí" | "finally" }
 
+// Throw: ta expression;
+throw_stmt = { throw_kw ~ expression ~ ";" }
+throw_kw = _{ "ta" | "tá" | "throw" }
+
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPRESSIONS
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Expression precedence (low to high):
 // null-coalesce > or > and > not > comparison > arith > term > factor > atom
-expression = { null_coalesce_expr }
+expression = { pipeline_expr }
+pipeline_expr = { null_coalesce_expr ~ ("|>" ~ null_coalesce_expr)* }
 null_coalesce_expr = { or_expr ~ (null_coalesce_op ~ or_expr)* }
 or_expr = { and_expr ~ (or_op ~ and_expr)* }
 and_expr = { not_expr ~ (and_op ~ not_expr)* }
@@ -186,7 +197,8 @@ not_expr = { comparison }
 
 comparison = { arith_expr ~ (comp_op ~ arith_expr)* }
 arith_expr = { term ~ ((add_op | sub_op) ~ term)* }
-term = { factor ~ ((mul_op | div_op | mod_op) ~ factor)* }
+term = { pow_expr ~ ((mul_op | div_op | mod_op) ~ pow_expr)* }
+pow_expr = { factor ~ (pow_op ~ factor)* }
 // Postfix `?` (error propagation, §12.3) binds tightly to its atom.
 factor = { unary_op* ~ atom ~ try_op? }
 try_op = { "?" }
@@ -253,6 +265,7 @@ sub_op = { "-" }
 mul_op = { "*" }
 div_op = { "/" }
 mod_op = { "%" }
+pow_op = { "**" }
 null_coalesce_op = { "??" }
 unary_op = { "+" | "-" | "&" | "*" }
 

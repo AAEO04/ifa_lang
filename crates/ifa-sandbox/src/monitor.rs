@@ -87,11 +87,7 @@ impl ResourceMonitor {
     pub fn peak_memory_usage(&self) -> usize {
         let current = self.memory_usage();
         let peak = self.peak_memory.get();
-        if current > peak {
-            current
-        } else {
-            peak
-        }
+        if current > peak { current } else { peak }
     }
 
     /// Update peak memory tracking

@@ -10,7 +10,7 @@
 //! - `mo` - Clear screen
 
 use crate::impl_odu_domain;
-#[cfg(feature = "crossterm")]
+#[cfg(feature = "tui")]
 use crossterm::{
     cursor, execute,
     style::{Color, Print, ResetColor, SetForegroundColor},
@@ -84,7 +84,7 @@ impl Irosu {
             return;
         }
 
-        #[cfg(feature = "crossterm")]
+        #[cfg(feature = "tui")]
         {
             let color_code = match color.to_lowercase().as_str() {
                 "red" | "pupa" => Color::Red,
@@ -107,7 +107,7 @@ impl Irosu {
             )
             .ok();
         }
-        #[cfg(not(feature = "crossterm"))]
+        #[cfg(not(feature = "tui"))]
         {
             println!("{}", text);
         }
@@ -119,7 +119,7 @@ impl Irosu {
             return;
         }
 
-        #[cfg(feature = "crossterm")]
+        #[cfg(feature = "tui")]
         {
             let mut stdout = io::stdout();
             execute!(
@@ -129,7 +129,7 @@ impl Irosu {
             )
             .ok();
         }
-        #[cfg(not(feature = "crossterm"))]
+        #[cfg(not(feature = "tui"))]
         {
             // Just print newlines for poor man's clear
             println!("\n\n\n\n\n");

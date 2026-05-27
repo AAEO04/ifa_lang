@@ -4,9 +4,10 @@
 
 use chrono::Local;
 use color_eyre::eyre::Result;
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use ifa_types::domain::OduDomain;
+use ifa_types::odu_metadata::all_odu_domains_with_methods;
 
 // User Documentation Structures
 #[derive(Debug, Clone, Default)]
@@ -506,38 +507,38 @@ pub fn generate_index_html(user_doc: &UserDoc) -> String {
             </a>
         </div>
 
-        <h2>Domain Stacks</h2>
-        <p style="color: var(--text-dim); margin-bottom: 1rem;">Pre-built libraries for common application domains:</p>
+        <h2>Capabilities</h2>
+        <p style="color: var(--text-dim); margin-bottom: 1rem;">Core runtime capabilities and domain groupings exposed by ifa-std:</p>
         <div class="odu-grid">
             <div class="odu-card">
-                <h3>Frontend</h3>
-                <p>HTML/CSS generation, components</p>
-                <p class="meaning">ifa-std/stacks/frontend</p>
+                <h3>HTML</h3>
+                <p>HTML parsing and document helpers</p>
+                <p class="meaning">feature: html</p>
             </div>
             <div class="odu-card">
-                <h3>Backend</h3>
-                <p>HTTP servers, routing, middleware</p>
-                <p class="meaning">ifa-std/stacks/backend</p>
+                <h3>Network</h3>
+                <p>HTTP and socket-oriented messaging via Otura</p>
+                <p class="meaning">feature: network</p>
             </div>
             <div class="odu-card">
                 <h3>Crypto</h3>
                 <p>Encryption, hashing, signatures</p>
-                <p class="meaning">ifa-std/stacks/crypto</p>
+                <p class="meaning">feature: crypto</p>
             </div>
             <div class="odu-card">
-                <h3>GameDev</h3>
-                <p>Sprites, physics, game loop</p>
-                <p class="meaning">ifa-std/stacks/gamedev</p>
+                <h3>Terminal UI</h3>
+                <p>Interactive terminal rendering and input</p>
+                <p class="meaning">feature: tui</p>
             </div>
             <div class="odu-card">
-                <h3>IoT</h3>
-                <p>Sensors, GPIO, embedded systems</p>
-                <p class="meaning">ifa-std/stacks/iot</p>
+                <h3>GPU</h3>
+                <p>WebGPU/WGPU compute buffers and pipelines</p>
+                <p class="meaning">feature: gpu</p>
             </div>
             <div class="odu-card">
-                <h3>ML</h3>
-                <p>Machine learning, neural networks</p>
-                <p class="meaning">ifa-std/stacks/ml</p>
+                <h3>Persistence</h3>
+                <p>Async storage and compaction helpers</p>
+                <p class="meaning">feature: persistence</p>
             </div>
         </div>
 
@@ -838,185 +839,7 @@ pub fn generate_odu_page(odu: &OduInfo, methods: &[(String, String)]) -> String 
     )
 }
 
-/// Standard library methods for each domain
-pub fn get_stdlib_methods() -> HashMap<&'static str, Vec<(&'static str, &'static str)>> {
-    let mut map = HashMap::new();
 
-    map.insert(
-        "ogbe",
-        vec![
-            ("bi", "Initialize system/environment"),
-            ("gba", "Get input from user/environment"),
-            ("env", "Get environment variable"),
-            ("args", "Get CLI arguments"),
-            ("platform", "Get current platform (windows/linux/macos)"),
-        ],
-    );
-
-    map.insert(
-        "oyeku",
-        vec![
-            ("ku", "Exit program with code"),
-            ("duro", "Stop execution gracefully"),
-            ("gbale", "Garbage collect / Clean up resources"),
-        ],
-    );
-
-    map.insert(
-        "iwori",
-        vec![
-            ("ago", "Get current time as formatted string"),
-            ("duro", "Sleep for specified milliseconds"),
-            ("now", "Get current timestamp"),
-            ("millis", "Get milliseconds since epoch"),
-        ],
-    );
-
-    map.insert(
-        "odi",
-        vec![
-            ("ka", "Read data from file"),
-            ("ka_mmap", "Memory map file for zero-copy access"),
-            ("ko", "Write data to file"),
-            ("fi", "Append data to file"),
-            ("si", "Open file handle"),
-            ("pa", "Close active file"),
-            ("wa", "Check if file exists"),
-            ("pa_iwe", "Delete file"),
-        ],
-    );
-
-    map.insert(
-        "irosu",
-        vec![
-            ("fo", "Print with newline"),
-            ("so", "Log with label prefix"),
-            ("kigbe", "Log error to stderr"),
-        ],
-    );
-
-    map.insert(
-        "owonrin",
-        vec![
-            ("bo", "Random integer from 0 to n"),
-            ("range", "Random integer in range [min, max]"),
-            ("paaro", "Shuffle list randomly"),
-        ],
-    );
-
-    map.insert(
-        "obara",
-        vec![
-            ("ro", "Add two numbers"),
-            ("fikun", "Increment value"),
-            ("isodipupo", "Multiply two numbers"),
-            ("kun", "Sum a list of numbers"),
-        ],
-    );
-
-    map.insert(
-        "okanran",
-        vec![
-            ("binu", "Raise error with message"),
-            ("je", "Handle/catch error"),
-        ],
-    );
-
-    map.insert(
-        "ogunda",
-        vec![
-            ("ge", "Create new array"),
-            ("fi", "Push element to array"),
-            ("mu", "Pop element from array"),
-            ("to", "Sort array"),
-            ("map", "Map function over array"),
-            ("filter", "Filter array with predicate"),
-            ("gigun", "Get array length"),
-        ],
-    );
-
-    map.insert(
-        "osa",
-        vec![
-            ("sa", "Spawn thread/async task"),
-            ("duro", "Wait for task completion"),
-            ("json_si", "Parse JSON string to object"),
-            ("json_lati", "Convert object to JSON string"),
-        ],
-    );
-
-    map.insert(
-        "ika",
-        vec![
-            ("so", "Concatenate strings"),
-            ("ge", "Slice string [start:end]"),
-            ("ka", "Get string length"),
-            ("split", "Split string by delimiter"),
-            ("upper", "Convert to uppercase"),
-            ("lower", "Convert to lowercase"),
-            ("trim", "Trim whitespace"),
-            ("contains", "Check if string contains substring"),
-            ("replace", "Replace substring"),
-        ],
-    );
-
-    map.insert(
-        "oturupon",
-        vec![
-            ("din", "Subtract two numbers"),
-            ("pin", "Divide two numbers"),
-            ("ku", "Modulo (remainder)"),
-        ],
-    );
-
-    map.insert(
-        "otura",
-        vec![
-            ("ran", "Send HTTP request"),
-            ("de", "Bind to network port"),
-            ("gba", "Receive network data"),
-            ("http_get", "HTTP GET request"),
-            ("http_post", "HTTP POST request"),
-        ],
-    );
-
-    map.insert(
-        "irete",
-        vec![
-            ("di", "Hash data (SHA256)"),
-            ("fun", "Compress data"),
-            ("tu", "Decompress data"),
-            ("base64_si", "Encode to base64"),
-            ("base64_lati", "Decode from base64"),
-            ("chacha20_encrypt", "Encrypt data using ChaCha20-Poly1305"),
-            ("chacha20_decrypt", "Decrypt data using ChaCha20-Poly1305"),
-            ("ed25519_generate", "Generate Ed25519 Keypair"),
-            ("ed25519_sign", "Sign data with Ed25519"),
-            ("ed25519_verify", "Verify Ed25519 Signature"),
-        ],
-    );
-
-    map.insert(
-        "ose",
-        vec![
-            ("ya", "Draw pixel/shape"),
-            ("han", "Render frame"),
-            ("html", "Generate HTML element"),
-            ("css", "Generate CSS styles"),
-        ],
-    );
-
-    map.insert(
-        "ofun",
-        vec![
-            ("ase", "Request elevated permissions"),
-            ("fun", "Grant permission"),
-            ("ka_iwe", "Read manifest/documentation"),
-        ],
-    );
-
-    map
-}
 
 /// Generate a page for a User Odù
 pub fn generate_user_odu_page(odu: &UserOdu) -> String {
@@ -1098,10 +921,8 @@ fn walk_dir(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
             let path = entry.path();
             if path.is_dir() {
                 walk_dir(&path, files)?;
-            } else if let Some(ext) = path.extension() {
-                if ext == "ifa" {
-                    files.push(path);
-                }
+            } else if path.extension().is_some_and(|ext| ext == "ifa") {
+                files.push(path);
             }
         }
     }
@@ -1117,8 +938,8 @@ fn parse_file(path: &Path, doc: &mut UserDoc) -> Result<()> {
     for line in content.lines() {
         let trimmed = line.trim();
 
-        if trimmed.starts_with("///") {
-            let doc_line = trimmed[3..].trim();
+        if let Some(stripped) = trimmed.strip_prefix("///") {
+            let doc_line = stripped.trim();
             if !current_docs.is_empty() {
                 current_docs.push(' '); // join lines with space
             }
@@ -1274,7 +1095,8 @@ pub fn generate_docs(input_path: &Path, output_dir: &Path) -> Result<()> {
     );
 
     // 3. Generate StdLib Pages
-    let stdlib = get_stdlib_methods();
+    let all_methods = all_odu_domains_with_methods();
+
     for odu in ODU_DOMAINS {
         let filename = format!("{}.html", odu.slug);
         let filepath = output_dir.join(&filename);
@@ -1284,14 +1106,35 @@ pub fn generate_docs(input_path: &Path, output_dir: &Path) -> Result<()> {
             // Let's overwrite for consistency if version changed
         }
 
-        let methods: Vec<(String, String)> = stdlib
-            .get(odu.slug)
-            .map(|m| {
-                m.iter()
-                    .map(|(n, d)| (n.to_string(), d.to_string()))
-                    .collect()
-            })
-            .unwrap_or_default();
+        let domain_enum = match odu.slug {
+            "ogbe" => Some(OduDomain::Ogbe),
+            "oyeku" => Some(OduDomain::Oyeku),
+            "iwori" => Some(OduDomain::Iwori),
+            "odi" => Some(OduDomain::Odi),
+            "irosu" => Some(OduDomain::Irosu),
+            "owonrin" => Some(OduDomain::Owonrin),
+            "obara" => Some(OduDomain::Obara),
+            "okanran" => Some(OduDomain::Okanran),
+            "ogunda" => Some(OduDomain::Ogunda),
+            "osa" => Some(OduDomain::Osa),
+            "ika" => Some(OduDomain::Ika),
+            "oturupon" => Some(OduDomain::Oturupon),
+            "otura" => Some(OduDomain::Otura),
+            "irete" => Some(OduDomain::Irete),
+            "ose" => Some(OduDomain::Ose),
+            "ofun" => Some(OduDomain::Ofun),
+            _ => None,
+        };
+
+        let methods: Vec<(String, String)> = if let Some(d) = domain_enum {
+            all_methods.iter().find(|(dom, _)| *dom == d).map(|(_, m)| {
+                m.iter().map(|info| {
+                    (info.yoruba.to_string(), info.english.to_string())
+                }).collect()
+            }).unwrap_or_default()
+        } else {
+            vec![]
+        };
 
         let page_html = generate_odu_page(odu, &methods);
         fs::write(&filepath, page_html)?;

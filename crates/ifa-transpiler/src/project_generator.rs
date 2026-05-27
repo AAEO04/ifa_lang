@@ -6,8 +6,8 @@
 //! - Cargo.toml with appropriate dependencies
 //! - src/main.rs with the transpiled code
 
-use ifa_types::ast::Program;
 use crate::transpiler::core::RustTranspiler;
+use ifa_types::ast::Program;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -43,6 +43,43 @@ pub fn generate_project(
 
     // Transpile the program
     let mut transpiler = RustTranspiler::new();
+    let rust_code = transpiler.transpile_program(program);
+
+    // Create project config from transpiler state
+    let config = ProjectConfig {
+        name: project_name.to_string(),
+        needs_tokio: transpiler.needs_tokio,
+        needs_reqwest: transpiler.needs_reqwest,
+        needs_rand: transpiler.needs_rand,
+    };
+
+    // Generate Cargo.toml
+    let cargo_toml = generate_cargo_toml(&config);
+    fs::write(output_dir.join("Cargo.toml"), cargo_toml)?;
+
+    // Write main.rs
+    fs::write(src_dir.join("main.rs"), rust_code)?;
+
+    // Generate .gitignore
+    let gitignore = "/target\nCargo.lock\n";
+    fs::write(output_dir.join(".gitignore"), gitignore)?;
+
+    Ok(config)
+}
+
+/// Generate a complete Cargo project from an Ifá program with type environment for optimization
+pub fn generate_project_with_types(
+    program: &Program,
+    project_name: &str,
+    output_dir: &Path,
+    type_env: std::collections::HashMap<String, ifa_types::ast::TypeHint>,
+) -> io::Result<ProjectConfig> {
+    // Create directory structure
+    let src_dir = output_dir.join("src");
+    fs::create_dir_all(&src_dir)?;
+
+    // Transpile the program
+    let mut transpiler = RustTranspiler::new().with_type_env(type_env);
     let rust_code = transpiler.transpile_program(program);
 
     // Create project config from transpiler state

@@ -9,7 +9,7 @@ setlocal enabledelayedexpansion
 
 echo.
 echo  ═══════════════════════════════════════════════════════════════════════
-echo       Ifá-Lang Installer v1.2.2
+echo       Ifá-Lang Installer v1.3.0
 echo       The Yoruba Programming Language
 echo  ═══════════════════════════════════════════════════════════════════════
 echo.

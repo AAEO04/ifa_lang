@@ -40,21 +40,37 @@ fn run_test_file(path: &Path, engine: &str) {
             // First compile to bytecode
             let bytecode_path = path.with_extension("ifab");
             let mut compile_cmd = Command::new(&bin);
-            compile_cmd.arg("bytecode").arg(path).arg("-o").arg(&bytecode_path);
+            compile_cmd
+                .arg("bytecode")
+                .arg(path)
+                .arg("-o")
+                .arg(&bytecode_path);
             let compile_output = compile_cmd.output().expect("Failed to compile to bytecode");
-            assert!(compile_output.status.success(), "Failed to compile bytecode for {}", path.display());
+            assert!(
+                compile_output.status.success(),
+                "Failed to compile bytecode for {}",
+                path.display()
+            );
 
             cmd.arg("runb").arg(&bytecode_path);
         }
         "build" => {
             // Transpile and build native binary
-            let exe_name = if cfg!(windows) { "test_bin.exe" } else { "test_bin" };
+            let exe_name = if cfg!(windows) {
+                "test_bin.exe"
+            } else {
+                "test_bin"
+            };
             let exe_path = path.parent().unwrap().join(exe_name);
-            
+
             let mut build_cmd = Command::new(&bin);
             build_cmd.arg("build").arg(path).arg("-o").arg(&exe_path);
             let build_output = build_cmd.output().expect("Failed to build native binary");
-            assert!(build_output.status.success(), "Failed to build native binary for {}", path.display());
+            assert!(
+                build_output.status.success(),
+                "Failed to build native binary for {}",
+                path.display()
+            );
 
             cmd = Command::new(&exe_path);
         }
@@ -79,7 +95,11 @@ fn run_test_file(path: &Path, engine: &str) {
     if engine == "vm" {
         let _ = fs::remove_file(path.with_extension("ifab"));
     } else if engine == "build" {
-        let exe_name = if cfg!(windows) { "test_bin.exe" } else { "test_bin" };
+        let exe_name = if cfg!(windows) {
+            "test_bin.exe"
+        } else {
+            "test_bin"
+        };
         let _ = fs::remove_file(path.parent().unwrap().join(exe_name));
     }
 }
@@ -92,7 +112,7 @@ fn discover_and_run(dir: &str, engines: Vec<&str>) {
             panic!("Could not find workspace root");
         }
     }
-    
+
     let base_path = base_path.join("tests").join("conformance").join(dir);
     if !base_path.exists() {
         return;

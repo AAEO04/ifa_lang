@@ -65,7 +65,7 @@ ayanmo ts = Iwori.akoko();
 Irosu.fo("Unix timestamp: " + ts);
 
 // Get current datetime
-ayanmo dt = Iwori.bayi();
+ayanmo dt = Iwori.isisinyi();
 Irosu.fo("Current datetime: " + dt);</code></pre>
             </div>
         </div>
@@ -77,11 +77,11 @@ Irosu.fo("Current datetime: " + dt);</code></pre>
                 <div class="code-header">
                     <span class="code-title">Measuring Elapsed Time</span>
                 </div>
-                <pre><code>// Measure elapsed time with Oyeku.sleep
+                <pre><code>// Measure elapsed time with Oyeku.sun
 ayanmo start = Iwori.timestamp();
 
 Irosu.fo("Waiting 1 second...");
-Oyeku.sleep(1000);
+Oyeku.sun(1000);
 
 ayanmo elapsed = Iwori.timestamp() - start;
 Irosu.fo("Elapsed: " + elapsed + "ms");</code></pre>
@@ -102,7 +102,7 @@ ese countdown(seconds) {
     nigba (Iwori.timestamp() < end) {
         ayanmo remaining = (end - Iwori.timestamp()) / 1000;
         Irosu.fo("T-minus " + remaining + "...");
-        Oyeku.sleep(1000);
+        Oyeku.sun(1000);
     }
 
     Irosu.fo("Done!");

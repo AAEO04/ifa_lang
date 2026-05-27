@@ -46,8 +46,8 @@ ese show_system_info() {
 }
 
 ese show_cpu_info() {
-    CPU.configure("info");
-    ayanmo threads = CPU.threads();
+    Cpu.configure("info");
+    ayanmo threads = Cpu.threads();
     Irosu.fo("CPU threads: " + threads);
 }
 
@@ -66,19 +66,19 @@ show_cpu_info();</code></pre>
                 <pre><code>// parallel.ifa - Parallel data processing
 
 ese square_all(numbers) {
-    padap? CPU.par_map(numbers, "square");
+    pada Cpu.par_map(numbers, "square");
 }
 
 ese double_all(numbers) {
-    padap? CPU.par_map(numbers, "double");
+    pada Cpu.par_map(numbers, "double");
 }
 
 ese sum_all(numbers) {
-    padap? CPU.par_reduce(numbers, "sum");
+    pada Cpu.par_reduce(numbers, "sum");
 }
 
 ese find_max(numbers) {
-    padap? CPU.par_reduce(numbers, "max");
+    pada Cpu.par_reduce(numbers, "max");
 }
 
 // Usage
@@ -104,18 +104,18 @@ Irosu.fo("Max: " + biggest);</code></pre>
                 <pre><code>// buffer.ifa - Memory buffer management
 
 ese process_buffer(size) {
-    ayanmo buf = CPU.alloc_buffer(size);
+    ayanmo buf = Cpu.alloc_buffer(size);
     Irosu.fo("Allocated buffer of size: " + size);
 
-    CPU.write_buffer(buf, "sample data");
-    ayanmo result = CPU.read_buffer(buf);
+    Cpu.write_buffer(buf, "sample data");
+    ayanmo result = Cpu.read_buffer(buf);
     Irosu.fo("Buffer contents: " + result);
 
-    padap? result;
+    pada result;
 }
 
 ese parallel_buffer_process(sizes) {
-    padap? CPU.par_map(sizes, "square");
+    pada Cpu.par_map(sizes, "square");
 }
 
 // Usage
@@ -134,7 +134,7 @@ Irosu.fo("Parallel buffer results: " + results);</code></pre>
                 <li><strong>Parallel Operations:</strong> Use <code>par_map</code> and <code>par_reduce</code> for CPU-bound tasks</li>
                 <li><strong>Memory Management:</strong> Allocate buffers with <code>alloc_buffer</code> and clean up after use</li>
                 <li><strong>System Monitoring:</strong> Check available memory before large allocations with <code>Sys.mem_available()</code></li>
-                <li><strong>Thread Count:</strong> Use <code>CPU.threads()</code> to tune parallelism</li>
+                <li><strong>Thread Count:</strong> Use <code>Cpu.threads()</code> to tune parallelism</li>
             </ul>
         </div>
 

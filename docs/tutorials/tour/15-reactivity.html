@@ -28,119 +28,138 @@
             <div class="lesson-num">15</div>
             <div>
                 <h1>Reactivity</h1>
-                <p style="color: var(--text-dim); margin: 0;">Reactive programming patterns</p>
+                <p style="color: var(--text-dim); margin: 0;">Signals, computed values, and effects</p>
             </div>
-        </div>
-
-        <div class="info-box"
-            style="border: 1px solid #facc15; background: rgba(250, 204, 21, 0.1); padding: 1rem; border-radius: 8px;">
-            <div class="info-box-title" style="color: #facc15; font-weight: bold; margin-bottom: 0.5rem;">Planned Feature
-            </div>
-            <p style="margin: 0;">
-                Ifá-Lang does not yet have a built-in reactive framework (a dedicated Àjọṣe reactivity
-                system is planned). For now, reactive patterns can be achieved using the Osa domain
-                (async polling) and standard Ifá-Lang constructs.
-            </p>
-        </div>
-
-        <h2>Polling with Osa</h2>
-        <p>Use <code>Osa.ṣe_atunṣe()</code> (interval) and <code>Osa.reti()</code> (delay) to create reactive polling
-            loops:</p>
-
-        <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Polling Pattern</span>
-            </div>
-            <pre class="code-yoruba"><code>// Poll a data source every 2 seconds
-isọdẹlẹ poll_data() {
-    ayanmo i = 0;
-    nigba (i < 5) {
-        ayanmo data = daro Osa.reti(2000);  // wait 2 seconds
-        Irosu.fo("Poll " + (i + 1) + ": checking for updates...");
-        ayanmo i = i + 1;
-    }
-    Irosu.fo("Done polling");
-}
-
-poll_data();</code></pre>
-        </div>
-
-        <h2>Interval-based Updates</h2>
-        <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Interval Pattern</span>
-            </div>
-            <pre class="code-yoruba"><code>// Check a file for changes
-isọdẹlẹ watch_file(path, interval_ms) {
-    ayanmo last_content = Odi.ka(path);
-    
-    fun i ninu range(0, 10) {
-        daro Osa.reti(interval_ms);
-        ayanmo current = Odi.ka(path);
-        
-        ti (current != last_content) {
-            Irosu.fo("File changed!");
-            ayanmo last_content = current;
-        }
-    }
-}</code></pre>
-        </div>
-
-        <h2>Event-driven with Osa</h2>
-        <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Async Event Loop</span>
-            </div>
-            <pre class="code-yoruba"><code>// Simulated async event loop
-isọdẹlẹ event_loop() {
-    ayanmo running = otito;
-    
-    nigba (running) {
-        ayanmo event = daro Osa.reti(1000);  // wait 1 second
-        
-        ti (event != ofifo) {
-            Irosu.fo("Processing event...");
-        }
-    }
-}</code></pre>
         </div>
 
         <div class="info-box"
             style="border: 1px solid #4ade80; background: rgba(74, 222, 128, 0.1); padding: 1rem; border-radius: 8px;">
             <div class="info-box-title" style="color: #4ade80; font-weight: bold; margin-bottom: 0.5rem;">
-                Osa: The Odù of Async
+                Àjọṣe: Reactive Relationships
             </div>
             <p style="margin: 0;">
-                Osa (the Odù of movement) handles asynchronous operations. It is feature-gated behind
-                <code>backend</code>. Key methods: <code>Osa.reti()</code> (delay/await),
-                <code>Osa.ṣe_atunṣe()</code> (interval).
+                Ifá-Lang includes a built-in reactive framework called <strong>Àjọṣe</strong> (Yoruba: "interaction").
+                It provides signals, computed values, and effects — similar to Solid.js or MobX.
+                Use it to create reactive data flows in your programs.
             </p>
         </div>
 
-        <div class="info-box"
-            style="border: 1px solid #8b5cf6; background: rgba(139, 92, 246, 0.1); padding: 1rem; border-radius: 8px;">
-            <div class="info-box-title" style="color: #8b5cf6; font-weight: bold; margin-bottom: 0.5rem;">
-                Àjọṣe (Planned)
+        <h2>Signals</h2>
+        <p>Create a reactive signal with an initial value:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Signal</span>
+                <div class="lang-toggle">
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                </div>
             </div>
+            <pre class="code-yoruba"><code>// Create a signal
+ayanmo count = Signal(0);
+
+// Read the current value
+Irosu.fo("Count: " + count.peek());
+
+// Update the signal
+count.update(5);
+Irosu.fo("Count: " + count.peek());  // 5</code></pre>
+            <pre class="code-english"><code>// Create a signal
+let count = Signal(0);
+
+// Read the current value
+Irosu.println("Count: " + count.peek());
+
+// Update the signal
+count.update(5);
+Irosu.println("Count: " + count.peek());  // 5</code></pre>
+        </div>
+
+        <h2>Computed Values</h2>
+        <p>Derive values from signals that update automatically:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Computed</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo count = Signal(10);
+ayanmo doubled = Computed({ -> count.peek() * 2 });
+
+Irosu.fo("Doubled: " + doubled.peek());  // 20
+
+count.update(25);
+Irosu.fo("Doubled: " + doubled.peek());  // 50</code></pre>
+        </div>
+
+        <h2>Effects</h2>
+        <p>Run side effects that re-run when their dependencies change:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Effect</span>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo name = Signal("Ifá");
+ayanmo age = Signal(1000);
+
+effect({
+    -> Irosu.fo(name.peek() + " is " + age.peek() + " years old")
+});
+
+// Changing a signal re-runs the effect
+name.update("Ọba");  // prints "Ọba is 1000 years old"</code></pre>
+        </div>
+
+        <h2>Ajose Bindings</h2>
+        <p>Use direct reactive bindings with the <code>ajose</code> keyword:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Ajose</span>
+                <div class="lang-toggle">
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                </div>
+            </div>
+            <pre class="code-yoruba"><code>ayanmo a = Signal(5);
+ayanmo b = Signal(3);
+
+// Reactive binding: c auto-updates when a or b change
+ayanmo c = Computed({ -> a.peek() + b.peek() });
+
+Irosu.fo("c = " + c.peek());  // 8
+a.update(10);
+Irosu.fo("c = " + c.peek());  // 13</code></pre>
+            <pre class="code-english"><code>let a = Signal(5);
+let b = Signal(3);
+
+// Reactive binding: c auto-updates when a or b change
+let c = Computed({ -> a.peek() + b.peek() });
+
+Irosu.println("c = " + c.peek());  // 8
+a.update(10);
+Irosu.println("c = " + c.peek());  // 13</code></pre>
+        </div>
+
+        <div class="info-box"
+            style="border: 1px solid #facc15; background: rgba(250, 204, 21, 0.1); padding: 1rem; border-radius: 8px;">
+            <div class="info-box-title" style="color: #facc15; font-weight: bold; margin-bottom: 0.5rem;">Reactive Domains</div>
             <p style="margin: 0;">
-                A dedicated reactive framework called <strong>Àjọṣe</strong> (Yoruba: "interaction") is planned.
-                It will provide signals, computed values, effects, and subscriptions -- similar to Solid.js or
-                MobX. Stay tuned for future releases.
+                For async patterns like polling, event loops, and file watching, combine Àjọṣe reactivity
+                with the Osa domain (async concurrency). See lesson 25 for the full Osa concurrency guide.
             </p>
         </div>
 
         <h2>What You Learned</h2>
         <ul style="margin-left: 2rem; color: var(--text-dim);">
-            <li>Reactivity is not yet built-in -- Àjọṣe is planned</li>
-            <li>Polling with <code>Osa.reti()</code> for timed updates</li>
-            <li>Async event loops with Osa domain</li>
-            <li>File watching as a reactive pattern</li>
-            <li>Osa requires <code>backend</code> feature flag</li>
+            <li>Creating signals with <code>Signal(value)</code></li>
+            <li>Computed values: <code>Computed({ -> expr })</code></li>
+            <li>Side effects: <code>effect({ -> ... })</code></li>
+            <li>Àjọṣe reactive bindings auto-update on dependency changes</li>
         </ul>
 
         <div class="nav-buttons">
             <a href="14-ebo.html" class="nav-btn">Previous: Ebo</a>
-            <a href="../../../index/" class="nav-btn primary">Back to Home</a>
+            <a href="16-maps.html" class="nav-btn primary">Next: Maps & Dictionaries</a>
         </div>
     </div>
 </body>

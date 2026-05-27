@@ -3,9 +3,6 @@
 //! This module intentionally exposes only a safe API. Bit layout knowledge
 //! stays here so the VM can migrate opcode handlers without open-coding masks.
 
-#[cfg(not(target_pointer_width = "64"))]
-compile_error!("Opon Ifa requires a 64-bit architecture for NaN boxing.");
-
 const QUIET_NAN_BITS: u64 = 0x7ff8_0000_0000_0000;
 const TAG_MASK: u64 = 0x0007_0000_0000_0000;
 const PAYLOAD_MASK: u64 = 0x0000_ffff_ffff_ffff;
@@ -42,6 +39,7 @@ pub enum NanBoxError {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct NanBox(u64);
 
+#[allow(clippy::should_implement_trait)]
 impl NanBox {
     #[inline(always)]
     pub const fn from_null() -> Self {
@@ -193,8 +191,12 @@ impl NanBox {
                 Some(NanBox::from_int(sum).unwrap_or_else(|_| NanBox::from_float(sum as f64)))
             }
             (BoxedPrimitive::Float(a), BoxedPrimitive::Float(b)) => Some(NanBox::from_float(a + b)),
-            (BoxedPrimitive::Int(a), BoxedPrimitive::Float(b)) => Some(NanBox::from_float(a as f64 + b)),
-            (BoxedPrimitive::Float(a), BoxedPrimitive::Int(b)) => Some(NanBox::from_float(a + b as f64)),
+            (BoxedPrimitive::Int(a), BoxedPrimitive::Float(b)) => {
+                Some(NanBox::from_float(a as f64 + b))
+            }
+            (BoxedPrimitive::Float(a), BoxedPrimitive::Int(b)) => {
+                Some(NanBox::from_float(a + b as f64))
+            }
             _ => None,
         }
     }
@@ -208,8 +210,12 @@ impl NanBox {
                 Some(NanBox::from_int(res).unwrap_or_else(|_| NanBox::from_float(res as f64)))
             }
             (BoxedPrimitive::Float(a), BoxedPrimitive::Float(b)) => Some(NanBox::from_float(a - b)),
-            (BoxedPrimitive::Int(a), BoxedPrimitive::Float(b)) => Some(NanBox::from_float(a as f64 - b)),
-            (BoxedPrimitive::Float(a), BoxedPrimitive::Int(b)) => Some(NanBox::from_float(a - b as f64)),
+            (BoxedPrimitive::Int(a), BoxedPrimitive::Float(b)) => {
+                Some(NanBox::from_float(a as f64 - b))
+            }
+            (BoxedPrimitive::Float(a), BoxedPrimitive::Int(b)) => {
+                Some(NanBox::from_float(a - b as f64))
+            }
             _ => None,
         }
     }
@@ -223,15 +229,21 @@ impl NanBox {
                 Some(NanBox::from_int(res).unwrap_or_else(|_| NanBox::from_float(res as f64)))
             }
             (BoxedPrimitive::Float(a), BoxedPrimitive::Float(b)) => Some(NanBox::from_float(a * b)),
-            (BoxedPrimitive::Int(a), BoxedPrimitive::Float(b)) => Some(NanBox::from_float(a as f64 * b)),
-            (BoxedPrimitive::Float(a), BoxedPrimitive::Int(b)) => Some(NanBox::from_float(a * b as f64)),
+            (BoxedPrimitive::Int(a), BoxedPrimitive::Float(b)) => {
+                Some(NanBox::from_float(a as f64 * b))
+            }
+            (BoxedPrimitive::Float(a), BoxedPrimitive::Int(b)) => {
+                Some(NanBox::from_float(a * b as f64))
+            }
             _ => None,
         }
     }
 
     pub fn div(self, other: Self) -> Result<NanBox, NanBoxError> {
         let pa = self.to_primitive().map_err(|_| NanBoxError::TypeMismatch)?;
-        let pb = other.to_primitive().map_err(|_| NanBoxError::TypeMismatch)?;
+        let pb = other
+            .to_primitive()
+            .map_err(|_| NanBoxError::TypeMismatch)?;
         match (pa, pb) {
             (BoxedPrimitive::Int(a), BoxedPrimitive::Int(b)) => {
                 if b == 0 {
@@ -242,8 +254,12 @@ impl NanBox {
                 NanBox::from_int(result).or_else(|_| Ok(NanBox::from_float(result as f64)))
             }
             (BoxedPrimitive::Float(a), BoxedPrimitive::Float(b)) => Ok(NanBox::from_float(a / b)),
-            (BoxedPrimitive::Int(a), BoxedPrimitive::Float(b)) => Ok(NanBox::from_float(a as f64 / b)),
-            (BoxedPrimitive::Float(a), BoxedPrimitive::Int(b)) => Ok(NanBox::from_float(a / b as f64)),
+            (BoxedPrimitive::Int(a), BoxedPrimitive::Float(b)) => {
+                Ok(NanBox::from_float(a as f64 / b))
+            }
+            (BoxedPrimitive::Float(a), BoxedPrimitive::Int(b)) => {
+                Ok(NanBox::from_float(a / b as f64))
+            }
             _ => Err(NanBoxError::TypeMismatch),
         }
     }
@@ -317,7 +333,10 @@ mod tests {
 
         for value in values {
             let boxed = NanBox::from_primitive(value).expect("boxing should succeed");
-            assert_eq!(boxed.to_primitive().expect("unboxing should succeed"), value);
+            assert_eq!(
+                boxed.to_primitive().expect("unboxing should succeed"),
+                value
+            );
         }
     }
 

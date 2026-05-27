@@ -84,7 +84,7 @@ impl Okanran {
     /// the catch handler — no lossy string coercion.
     pub fn ta(&self, message: &str) -> IfaResult<()> {
         Err(IfaError::UserError(Box::new(ifa_vm::IfaValue::Str(
-            ifa_types::CompactString::new(&message),
+            ifa_types::CompactString::new(message),
         ))))
     }
 

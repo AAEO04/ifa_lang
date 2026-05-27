@@ -1,5 +1,5 @@
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
-use ifa_vm::{Bytecode, IfaVM, IfaValue, OpCode};
+use ifa_vm::{Bytecode, IfaVM, OpCode};
 
 /// Benchmark arithmetic operations (Push + Add)
 fn bench_arithmetic(c: &mut Criterion) {

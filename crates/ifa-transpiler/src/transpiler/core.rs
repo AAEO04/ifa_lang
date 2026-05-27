@@ -24,6 +24,7 @@ pub struct RustTranspiler {
     pub(crate) std_named: std::collections::HashMap<String, OduDomain>,
     pub(crate) uses: Vec<String>,
     pub(crate) in_module: bool,
+    pub type_env: std::collections::HashMap<String, TypeHint>,
 }
 
 impl Default for RustTranspiler {
@@ -46,7 +47,13 @@ impl RustTranspiler {
             std_named: std::collections::HashMap::new(),
             uses: Vec::new(),
             in_module: false,
+            type_env: std::collections::HashMap::new(),
         }
+    }
+
+    pub fn with_type_env(mut self, env: std::collections::HashMap<String, TypeHint>) -> Self {
+        self.type_env = env;
+        self
     }
 
     /// Mangle identifiers that conflict with Rust keywords

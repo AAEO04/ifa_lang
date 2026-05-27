@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playground - Ifá-Lang</title>
+    <link rel="stylesheet" href="./js/common.css">
+    <script src="./js/nav.js" defer></script>
+    <script src="./js/common.js" defer></script>
+    <style>
+        /* Modern Premium Playground Layout Styles */
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #08080c;
+        }
+
+        #nav-placeholder {
+            flex-shrink: 0;
+        }
+
+        .playground-app {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: radial-gradient(circle at top right, rgba(74, 246, 38, 0.03), transparent 60%);
+        }
+
+        /* Control Panel Toolbar */
+        .playground-toolbar {
+            background: rgba(14, 14, 20, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            z-index: 10;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .toolbar-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--green);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-shadow: 0 0 10px rgba(74, 246, 38, 0.2);
+        }
+
+        .examples-select {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            outline: none;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .examples-select:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .examples-select option {
+            background: #121218;
+            color: var(--text);
+        }
+
+        .toolbar-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            padding: 0.45rem 0.9rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-family: inherit;
+        }
+
+        .toolbar-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .toolbar-btn.btn-run {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #10b981;
+            text-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.05);
+            font-weight: 700;
+        }
+
+        .toolbar-btn.btn-run:hover {
+            background: rgba(16, 185, 129, 0.25);
+            border-color: #10b981;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+
+        .toolbar-btn.btn-format {
+            background: rgba(245, 158, 11, 0.12);
+            border-color: rgba(245, 158, 11, 0.3);
+            color: var(--amber);
+        }
+
+        .toolbar-btn.btn-format:hover {
+            background: rgba(245, 158, 11, 0.22);
+            border-color: var(--amber);
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.15);
+        }
+
+        .toolbar-btn.btn-opele {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: rgba(139, 92, 246, 0.35);
+            color: #a78bfa;
+            border-style: dashed;
+        }
+
+        .toolbar-btn.btn-opele:hover {
+            background: rgba(139, 92, 246, 0.25);
+            border-color: #8b5cf6;
+            box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+            border-style: solid;
+        }
+
+        /* Language Sliding Toggle Switch */
+        .lang-toggle-container {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 30px;
+            padding: 2px;
+            position: relative;
+            cursor: pointer;
+            width: 120px;
+            height: 28px;
+            user-select: none;
+        }
+
+        .lang-toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 56px;
+            height: 22px;
+            background: rgba(245, 158, 11, 0.25);
+            border: 1px solid var(--amber);
+            border-radius: 20px;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+        }
+
+        .lang-toggle-container.english-active .lang-toggle-slider {
+            transform: translateX(58px);
+            background: rgba(74, 246, 38, 0.15);
+            border-color: var(--green);
+        }
+
+        .lang-label {
+            flex: 1;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--dim);
+            z-index: 2;
+            transition: color 0.2s ease;
+        }
+
+        .lang-toggle-container.yoruba-active .lang-label.label-yo,
+        .lang-toggle-container.english-active .lang-label.label-en {
+            color: var(--text);
+        }
+
+        /* Workspace Grid */
+        .playground-workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+        }
+
+        /* Editor Section */
+        .editor-section {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            background: #0b0b0f;
+            position: relative;
+        }
+
+        .section-header {
+            background: rgba(14, 14, 20, 0.6);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 0.5rem 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--dim);
+            user-select: none;
+        }
+
+        .editor-wrapper {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .line-numbers-col {
+            width: 3.2rem;
+            background: #09090c;
+            border-right: 1px solid rgba(255, 255, 255, 0.03);
+            padding: 0.8rem 0;
+            text-align: right;
+            color: rgba(255, 255, 255, 0.15);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            user-select: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .line-number-entry {
+            padding-right: 0.75rem;
+            height: 1.36rem; /* Match line height of textarea exactly */
+        }
+
+        .line-number-entry.active-line {
+            color: var(--green);
+            background: rgba(74, 246, 38, 0.04);
+            border-right: 2px solid var(--green);
+        }
+
+        .textarea-container {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: none;
+            color: #e2e8f0;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            padding: 0.8rem;
+            tab-size: 4;
+            overflow-y: auto;
+            overflow-x: auto;
+            white-space: pre;
+            caret-color: var(--green);
+        }
+
+        /* Output & Console Section */
+        .output-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #060608;
+        }
+
+        /* Tab Switchers */
+        .console-tabs {
+            display: flex;
+            background: rgba(14, 14, 20, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 0 1rem;
+            gap: 1rem;
+            user-select: none;
+        }
+
+        .console-tab-btn {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--dim);
+            padding: 0.75rem 0.5rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-family: inherit;
+        }
+
+        .console-tab-btn:hover {
+            color: var(--text);
+        }
+
+        .console-tab-btn.active {
+            color: var(--green);
+            border-bottom-color: var(--green);
+            text-shadow: 0 0 8px rgba(74, 246, 38, 0.15);
+        }
+
+        /* Output Views */
+        .console-tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.25rem;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        #output-view {
+            white-space: pre-wrap;
+            color: #d1d5db;
+        }
+
+        #output-view.error-text {
+            color: #f87171;
+        }
+
+        #output-view.stdout-text {
+            color: #34d399;
+        }
+
+        /* Flight Recorder / Spirit Logs Timeline */
+        .spirit-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .spirit-event-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 6px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .spirit-event-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--dim);
+        }
+
+        .spirit-event-card:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Colors for different spirits */
+        .spirit-event-card.spirit-irosu::before { background: var(--amber); }
+        .spirit-event-card.spirit-ogbe::before { background: #60a5fa; }
+        .spirit-event-card.spirit-obara::before { background: #f43f5e; }
+        .spirit-event-card.spirit-owonrin::before { background: #34d399; }
+        .spirit-event-card.spirit-iwori::before { background: #fb7185; }
+        .spirit-event-card.spirit-irete::before { background: #a78bfa; }
+        .spirit-event-card.spirit-mmio::before { background: #10b981; }
+
+        .spirit-event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+
+        .spirit-badge {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .spirit-irosu .spirit-badge { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+        .spirit-ogbe .spirit-badge { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+        .spirit-obara .spirit-badge { background: rgba(244, 63, 94, 0.15); color: #f43f5e; }
+        .spirit-owonrin .spirit-badge { background: rgba(52, 211, 153, 0.15); color: #34d399; }
+        .spirit-iwori .spirit-badge { background: rgba(251, 113, 133, 0.15); color: #fb7185; }
+        .spirit-irete .spirit-badge { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+
+        .spirit-action {
+            color: var(--dim);
+            font-weight: 500;
+        }
+
+        .spirit-value {
+            color: #f3f4f6;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            word-break: break-all;
+            margin-top: 2px;
+        }
+
+        .spirit-no-logs {
+            text-align: center;
+            color: var(--dim);
+            margin-top: 3rem;
+            font-size: 0.85rem;
+        }
+
+        /* Status Bar at bottom */
+        .status-bar {
+            background: #09090c;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 0.4rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--dim);
+            z-index: 10;
+            user-select: none;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #9ca3af;
+            display: inline-block;
+        }
+
+        .status-dot.status-ready { background: #3b82f6; box-shadow: 0 0 8px #3b82f6; }
+        .status-dot.status-running { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+        .status-dot.status-success { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        .status-dot.status-error { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+        .status-right {
+            display: flex;
+            gap: 1.25rem;
+        }
+
+        /* Divination Tray Modal (Opele Animation) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(4, 4, 6, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .opele-modal {
+            background: linear-gradient(135deg, #181824 0%, #0d0d14 100%);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.1);
+            width: 480px;
+            max-width: 90%;
+            border-radius: 12px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.active .opele-modal {
+            transform: scale(1);
+        }
+
+        .opele-title {
+            color: var(--amber);
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+        }
+
+        .opele-subtitle {
+            color: var(--dim);
+            font-size: 0.8rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        /* Divination Board Drawing */
+        .divination-tray {
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #3a220d 0%, #1e1106 100%);
+            border: 8px solid #5a3811;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 0 0 15px rgba(245, 158, 11, 0.15);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            padding: 1.5rem;
+            gap: 1.5rem;
+            justify-items: center;
+            align-items: center;
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .divination-tray::after {
+            content: 'Ọpọ́n Ifá';
+            position: absolute;
+            bottom: 8px;
+            font-size: 0.55rem;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.15);
+            text-transform: uppercase;
+        }
+
+        .opele-column {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        /* Opele Shell representation */
+        .opele-shell {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        /* Shell Closed (Face down) */
+        .opele-shell.closed {
+            border: 3px solid #3d2204;
+            background: radial-gradient(circle, #6b4010 0%, #291501 100%);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255,255,255,0.1);
+        }
+
+        /* Shell Open (Face up) */
+        .opele-shell.open {
+            border: 3px solid var(--gold);
+            background: radial-gradient(circle, #fff1b8 0%, #e2a106 100%);
+            box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3), inset 0 0 8px rgba(0,0,0,0.3);
+        }
+
+        .opele-shell.open::after {
+            content: '';
+            position: absolute;
+            top: 25%;
+            left: 25%;
+            width: 50%;
+            height: 50%;
+            border-radius: 50%;
+            border: 2px dotted rgba(0, 0, 0, 0.25);
+        }
+
+        /* Spin Animation */
+        @keyframes shake {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-2px, -2px) rotate(-5deg); }
+            20% { transform: translate(2px, 0px) rotate(5deg); }
+            30% { transform: translate(0px, 2px) rotate(0deg); }
+            40% { transform: translate(2px, 2px) rotate(3deg); }
+            50% { transform: translate(-2px, 1px) rotate(-3deg); }
+            60% { transform: translate(-1px, -1px) rotate(5deg); }
+            70% { transform: translate(2px, -2px) rotate(-5deg); }
+            80% { transform: translate(-2px, -1px) rotate(0deg); }
+            90% { transform: translate(1px, 2px) rotate(3deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+
+        .tray-spinning {
+            animation: shake 0.6s infinite ease-in-out;
+        }
+
+        /* Advice reading */
+        .opele-result-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            min-height: 80px;
+            text-align: center;
+        }
+
+        .opele-result-container.show {
+            opacity: 1;
+        }
+
+        .odu-sign-name {
+            color: var(--green);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 10px rgba(74, 246, 38, 0.2);
+        }
+
+        .odu-wisdom-text {
+            color: #e2e8f0;
+            font-style: italic;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            max-width: 90%;
+        }
+
+        .modal-close-btn {
+            margin-top: 1.5rem;
+            padding: 0.5rem 2rem;
+            background: transparent;
+            border: 1px solid var(--amber);
+            color: var(--amber);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        .modal-close-btn:hover {
+            background: var(--amber);
+            color: #0c0c0c;
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+
+        .toast-alert {
+            background: #121218;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-left: 4px solid var(--green);
+            color: var(--text);
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            pointer-events: auto;
+            animation: slideIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(120%); opacity: 0; }
+        }
+
+        /* Responsive Layout styles */
+        @media (max-width: 800px) {
+            body {
+                overflow-y: auto;
+                height: auto;
+            }
+            .playground-app {
+                height: calc(100vh - 60px);
+            }
+            .playground-workspace {
+                flex-direction: column;
+                overflow: visible;
+            }
+            .editor-section {
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                flex: 1.1;
+                overflow: visible;
+                height: 50%;
+            }
+            .output-section {
+                flex: 1;
+                overflow: visible;
+                height: 50%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
+
+    <div class="playground-app">
+        <!-- Control Panel Toolbar -->
+        <div class="playground-toolbar">
+            <div class="toolbar-group">
+                <span class="toolbar-title">🔮 Playground</span>
+                <select class="examples-select" onchange="loadExample(this.value)" aria-label="Load Example Code">
+                    <option value="" disabled selected>Select an Example...</option>
+                    <option value="hello">Hello World</option>
+                    <option value="math">Arithmetic & Math</option>
+                    <option value="strings">String Operations</option>
+                    <option value="lists">Lists & Collections</option>
+                </select>
+            </div>
+
+            <div class="toolbar-group">
+                <!-- Yoruba/English Sliding Toggle Switch -->
+                <div class="lang-toggle-container yoruba-active" id="lang-toggle" onclick="toggleEditorLang()" title="Toggle Yoruba / English syntax">
+                    <div class="lang-toggle-slider"></div>
+                    <span class="lang-label label-yo">Yorùbá</span>
+                    <span class="lang-label label-en">English</span>
+                </div>
+
+                <button class="toolbar-btn btn-opele" onclick="castOpele()" title="Cast the Opele chain for a wisdom reading">
+                    <span>📿</span> Cast Ọ̀pẹ̀lẹ̀
+                </button>
+                <button class="toolbar-btn btn-format" onclick="formatCode()" title="Format Ifá-Lang code (Ctrl+Shift+F)">
+                    <span>✨</span> Format
+                </button>
+                <button class="toolbar-btn btn-run" onclick="runCode()" title="Execute code (Ctrl+Enter)">
+                    <span>▶</span> Run Code
+                </button>
+                <button class="toolbar-btn" onclick="shareCode()" title="Copy shareable link to clipboard">
+                    <span>🔗</span> Share
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Workspace Panels -->
+        <div class="playground-workspace">
+            <!-- Left Panel: Editor -->
+            <div class="editor-section">
+                <div class="section-header">
+                    <span>source_code.ifa</span>
+                    <span style="font-size: 0.7rem; color: var(--dim)">Press Tab for indent | Ctrl+Enter to Run</span>
+                </div>
+                <div class="editor-wrapper">
+                    <!-- Line Numbers Sidebar -->
+                    <div class="line-numbers-col" id="line-numbers-col"></div>
+                    <!-- Editor Textarea -->
+                    <div class="textarea-container">
+                        <textarea id="code-editor" class="editor-textarea" spellcheck="false" autocomplete="off" aria-label="Ifá-Lang Code Editor">// Welcome to Ifá-Lang!
+// Write and execute Yoruba-inspired code in your browser.
+ayanmo oruko = "World";
+Irosu.fo("Hello, " + oruko + "!");
+
+ayanmo x = 10;
+ayanmo y = 20;
+Irosu.fo("Sum: " + (x + y));</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Output & Flight Recorder Logs -->
+            <div class="output-section">
+                <!-- Tabs header -->
+                <div class="console-tabs">
+                    <button class="console-tab-btn active" data-tab="console" onclick="switchTab('console')">
+                        <span>💻</span> Console Output
+                    </button>
+                    <button class="console-tab-btn" data-tab="spirit" onclick="switchTab('spirit')">
+                        <span>📜</span> Spirit Logs (Opon Recorder)
+                    </button>
+                    <button class="console-tab-btn" style="margin-left: auto;" onclick="clearOutput()" title="Clear Output Views">
+                        <span>🗑️</span> Clear
+                    </button>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="console-tab-content" id="output-view">Click Run to execute...</div>
+                <div class="console-tab-content" id="spirit-view" style="display: none;">
+                    <div class="spirit-no-logs">No flight recorder logs available. Run code that prints output or performs computations.</div>
+                </div>
+
+                <!-- Bottom Status Bar -->
+                <div class="status-bar">
+                    <div class="status-left">
+                        <span class="status-dot status-ready" id="status-dot"></span>
+                        <span id="status-text">Ready</span>
+                    </div>
+                    <div class="status-right">
+                        <span>Time: <strong id="run-time">0.0 ms</strong></span>
+                        <span>Core: <strong id="wasm-version">Loading WASM...</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Opele Divination Modal -->
+    <div class="modal-overlay" id="opele-modal-overlay">
+        <div class="opele-modal">
+            <div class="opele-title">Ọpọ́n Ifá Divination</div>
+            <div class="opele-subtitle">Casting the Ọ̀pẹ̀lẹ̀ oracle chain to reveal Odu signatures</div>
+            
+            <div class="divination-tray" id="divination-tray">
+                <div class="opele-column" id="opele-col-1">
+                    <div class="opele-shell closed"></div>
+                    <div class="opele-shell closed"></div>
+                    <div class="opele-shell closed"></div>
+                    <div class="opele-shell closed"></div>
+                </div>
+                <div class="opele-column" id="opele-col-2">
+                    <div class="opele-shell closed"></div>
+                    <div class="opele-shell closed"></div>
+                    <div class="opele-shell closed"></div>
+                    <div class="opele-shell closed"></div>
+                </div>
+            </div>
+            
+            <div class="opele-result-container" id="opele-result-container">
+                <div class="odu-sign-name" id="odu-sign-name">Revealing Odu...</div>
+                <div class="odu-wisdom-text" id="odu-wisdom-text">The oracle is interpreting your patterns.</div>
+            </div>
+            
+            <button class="modal-close-btn" onclick="closeOpeleModal()">Close Oracle</button>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script type="module">
+        import init, { run_code, format_code, get_version, cast_opele } from './assets/pkg/ifa_wasm.js';
+        let wasmReady = false;
+
+        async function initWasm() {
+            try {
+                // Initialize WASM core without parameters so it uses the URL context of the library file automatically.
+                await init();
+                wasmReady = true;
+                document.getElementById('wasm-version').textContent = get_version();
+                const statusDot = document.getElementById('status-dot');
+                statusDot.className = 'status-dot status-ready';
+            }
+            catch (e) {
+                document.getElementById('output-view').textContent = 'WASM load error: ' + e;
+                showToast('Failed to load WASM core runtime.', 'error');
+            }
+        }
+        initWasm();
+
+        // Bind compiler evaluation execution
+        window.runCode = function () {
+            if (!wasmReady) {
+                document.getElementById('output-view').textContent = 'WASM loading...';
+                return;
+            }
+            const code = document.getElementById('code-editor').value;
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            const runTimeEl = document.getElementById('run-time');
+            
+            statusDot.className = 'status-dot status-running';
+            statusText.textContent = 'Running...';
+            
+            const start = performance.now();
+            try {
+                const res = run_code(code);
+                const elapsed = (performance.now() - start).toFixed(1);
+                
+                if (res.success) {
+                    statusDot.className = 'status-dot status-success';
+                    statusText.textContent = 'Success';
+                    document.getElementById('output-view').textContent = res.output || '(no output)';
+                    document.getElementById('output-view').className = 'stdout-text';
+                    
+                    // Render Opon spirit events
+                    renderSpiritLogs(res.events);
+                } else {
+                    statusDot.className = 'status-dot status-error';
+                    statusText.textContent = 'Error';
+                    document.getElementById('output-view').textContent = res.error || 'Execution failed';
+                    document.getElementById('output-view').className = 'error-text';
+                    renderSpiritLogs('[]');
+                }
+                runTimeEl.textContent = `${elapsed} ms`;
+            }
+            catch (e) {
+                const elapsed = (performance.now() - start).toFixed(1);
+                statusDot.className = 'status-dot status-error';
+                statusText.textContent = 'Error';
+                document.getElementById('output-view').textContent = 'WASM Exec Error: ' + e;
+                document.getElementById('output-view').className = 'error-text';
+                runTimeEl.textContent = `${elapsed} ms`;
+                renderSpiritLogs('[]');
+            }
+        };
+
+        // Bind formatting execution
+        window.formatCode = function() {
+            if (!wasmReady) {
+                showToast('WASM not loaded yet', 'warning');
+                return;
+            }
+            const editor = document.getElementById('code-editor');
+            const originalCode = editor.value;
+            try {
+                const formatted = format_code(originalCode);
+                editor.value = formatted;
+                updateLineNumbers();
+                showToast('Code formatted successfully', 'success');
+            } catch (e) {
+                console.error('Formatting failed:', e);
+                showToast('Formatting error: ' + e, 'error');
+            }
+        };
+
+        // Bind Opele casting logic
+        const ODU_PATTERNS = {
+            'Ogbe': [1, 1, 1, 1],
+            'Oyeku': [0, 0, 0, 0],
+            'Iwori': [0, 1, 1, 0],
+            'Odi': [1, 0, 0, 1],
+            'Irosu': [1, 1, 0, 0],
+            'Owonrin': [0, 0, 1, 1],
+            'Obara': [1, 0, 0, 0],
+            'Okanran': [0, 0, 0, 1],
+            'Ogunda': [1, 1, 1, 0],
+            'Osa': [0, 1, 1, 1],
+            'Ika': [0, 1, 0, 0],
+            'Oturupon': [0, 0, 1, 0],
+            'Otura': [1, 0, 1, 1],
+            'Irete': [1, 1, 0, 1],
+            'Ose': [1, 0, 1, 0],
+            'Ofun': [0, 1, 0, 1]
+        };
+
+        const YORUBA_NAMES = {
+            'Ogbe': 'Ogbè',
+            'Oyeku': 'Òyèkú',
+            'Iwori': 'Ìwòrì',
+            'Odi': 'Òdí',
+            'Irosu': 'Ìròsú',
+            'Owonrin': 'Ọ̀wọ́nrín',
+            'Obara': 'Ọ̀bàrà',
+            'Okanran': 'Ọ̀kànràn',
+            'Ogunda': 'Ògúndá',
+            'Osa': 'Ọ̀sá',
+            'Ika': 'Ìká',
+            'Oturupon': 'Òtúúrúpọ̀n',
+            'Otura': 'Òtúrá',
+            'Irete': 'Ìrẹtẹ̀',
+            'Ose': 'Ọ̀ṣẹ́',
+            'Ofun': 'Òfún'
+        };
+
+        const WISDOM_MESSAGES = [
+            "A compile error today saves a runtime disaster tomorrow.",
+            "Avoid premature abstractions; build first, generalize never.",
+            "A clean codebase brings clarity of mind and swift executions.",
+            "Refactoring without testing is like sailing without a compass.",
+            "The stack is deep, but the mind must remain centered.",
+            "A simple function is a happy function.",
+            "Sleep on the problem; the compiler will wait.",
+            "Let the reactivity flow naturally; do not block the main thread.",
+            "Your loops will terminate, and your memory will remain clean.",
+            "In the dual syntax of Yoruba and English, seek the harmony of logic.",
+            "Do not optimize what you have not measured.",
+            "Code is crystallized intention. Every line is a commitment.",
+            "He who runs code without checking warnings is blind to his own future."
+        ];
+
+        window.castOpele = function() {
+            if (!wasmReady) {
+                showToast('WASM not loaded yet', 'warning');
+                return;
+            }
+            
+            // Show modal and start tray shake
+            const overlay = document.getElementById('opele-modal-overlay');
+            const tray = document.getElementById('divination-tray');
+            const resultContainer = document.getElementById('opele-result-container');
+            const nameEl = document.getElementById('odu-sign-name');
+            const wisdomEl = document.getElementById('odu-wisdom-text');
+            
+            overlay.classList.add('active');
+            tray.classList.add('tray-spinning');
+            resultContainer.classList.remove('show');
+            
+            // Randomize intermediate shell states during spin
+            let spinInterval = setInterval(() => {
+                document.querySelectorAll('.opele-shell').forEach(shell => {
+                    shell.className = `opele-shell ${Math.random() > 0.5 ? 'open' : 'closed'}`;
+                });
+            }, 80);
+            
+            setTimeout(() => {
+                clearInterval(spinInterval);
+                tray.classList.remove('tray-spinning');
+                
+                // Cast columns using Rust random names generator
+                const col1 = cast_opele();
+                const col2 = cast_opele();
+                
+                // Get patterns
+                const pat1 = ODU_PATTERNS[col1] || [0, 0, 0, 0];
+                const pat2 = ODU_PATTERNS[col2] || [0, 0, 0, 0];
+                
+                // Set final visual shells
+                const shellsCol1 = document.querySelectorAll('#opele-col-1 .opele-shell');
+                const shellsCol2 = document.querySelectorAll('#opele-col-2 .opele-shell');
+                
+                for (let i = 0; i < 4; i++) {
+                    shellsCol1[i].className = `opele-shell ${pat1[i] ? 'open' : 'closed'}`;
+                    shellsCol2[i].className = `opele-shell ${pat2[i] ? 'open' : 'closed'}`;
+                }
+                
+                // Compute full Odu name
+                let finalOduName = "";
+                if (col1 === col2) {
+                    if (col1 === "Ogbe") {
+                        finalOduName = "Èjì Ogbè";
+                    } else {
+                        finalOduName = `${YORUBA_NAMES[col1]} Méjì`;
+                    }
+                } else {
+                    finalOduName = `${YORUBA_NAMES[col1]}-${YORUBA_NAMES[col2]}`;
+                }
+                
+                // Pick advice
+                const advice = WISDOM_MESSAGES[Math.floor(Math.random() * WISDOM_MESSAGES.length)];
+                
+                nameEl.textContent = `Odu Sign: ${finalOduName}`;
+                wisdomEl.textContent = `"${advice}"`;
+                resultContainer.classList.add('show');
+                
+                // Add to editor as comment at top
+                const editor = document.getElementById('code-editor');
+                const currentCode = editor.value;
+                const comment = `// Oracle Cast: ${finalOduName}\n// Wisdom: "${advice}"\n\n`;
+                editor.value = comment + currentCode;
+                updateLineNumbers();
+                
+                // Print to output view
+                const outputView = document.getElementById('output-view');
+                const prevText = outputView.textContent.startsWith('Click Run') ? '' : outputView.textContent;
+                outputView.textContent = `[Oracle Divination Cast]\nOdu: ${finalOduName}\nWisdom: "${advice}"\n\n` + prevText;
+                showToast('Oracle has spoken! Wisdom added to editor.', 'success');
+                
+            }, 1000);
+        };
+
+        window.closeOpeleModal = function() {
+            document.getElementById('opele-modal-overlay').classList.remove('active');
+        };
+    </script>
+
+    <script>
+        // Core Editor Setup
+        const examples = {
+            hello: '// Hello World Example\nayanmo oruko = "World";\nIrosu.fo("Hello, " + oruko + "!");',
+            math: '// Isiro ati Math nipa lilo Obara\nayanmo a = 25;\nayanmo b = 7;\nIrosu.fo("Iye: " + (a + b));\nIrosu.fo("Eso: " + (a * b));\nIrosu.fo("Gbongbo a: " + Obara.gbongbo(a));',
+            strings: '// Awọn iṣẹ lori Okun nipa lilo Ika\nayanmo text = "Ifa-Lang";\nIrosu.fo("Gigun: " + Ika.gigun(text));\nIrosu.fo("Ge: " + Ika.ge(text, 0, 3));\nIrosu.fo("So: " + Ika.so(text, " is wisdom"));',
+            lists: '// Akojọ ati Arrays nipa lilo Ogunda\nayanmo nums = [1, 2, 3];\nIrosu.fo("Iwon: " + Ogunda.iwon(nums));\nOgunda.fi(nums, 4);\nIrosu.fo("Lẹhin fi: " + nums);\nayanmo x = Ogunda.mu(nums);\nIrosu.fo("Lẹhin mu: " + nums);'
+        };
+
+        function loadExample(name) {
+            if (examples[name]) {
+                document.getElementById('code-editor').value = examples[name];
+                updateLineNumbers();
+                showToast(`Loaded ${name} example code.`);
+            }
+        }
+
+        // Bilingual keyword toggling (Strict Alignment with registered domain methods)
+        let inYoruba = true;
+        const yToE = {
+            'ayanmo ': 'let ',
+            'Irosu.fo(': 'Fmt.println(',
+            'Irosu.so(': 'Fmt.print(',
+            'Ika.gigun(': 'String.len(',
+            'Ika.ge(': 'String.slice(',
+            'Ika.so(': 'String.concat(',
+            'Ogunda.iwon(': 'List.len(',
+            'Ogunda.fi(': 'List.push(',
+            'Ogunda.mu(': 'List.pop(',
+            'Obara.gbongbo(': 'Math.sqrt(',
+            'Obara.fikun(': 'Math.add(',
+            'Obara.isodipupo(': 'Math.mul(',
+            'Obara.agbara(': 'Math.pow('
+        };
+        const eToY = {};
+        for (const [y, e] of Object.entries(yToE)) { eToY[e] = y; }
+
+        function toggleEditorLang() {
+            const editor = document.getElementById('code-editor');
+            let code = editor.value;
+            const map = inYoruba ? yToE : eToY;
+            for (const [f, t] of Object.entries(map)) {
+                code = code.split(f).join(t);
+            }
+            editor.value = code;
+            inYoruba = !inYoruba;
+            
+            // Update toggle UI classes
+            const toggleContainer = document.getElementById('lang-toggle');
+            if (inYoruba) {
+                toggleContainer.classList.add('yoruba-active');
+                toggleContainer.classList.remove('english-active');
+            } else {
+                toggleContainer.classList.add('english-active');
+                toggleContainer.classList.remove('yoruba-active');
+            }
+            
+            showToast(`Keywords translated to ${inYoruba ? 'Yorùbá' : 'English'}`);
+            updateLineNumbers();
+        }
+
+        // Shared action commands
+        window.shareCode = function() {
+            const code = document.getElementById('code-editor').value;
+            try {
+                const encoded = btoa(unescape(encodeURIComponent(code)));
+                const shareUrl = `${window.location.origin}${window.location.pathname}?code=${encoded}`;
+                
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    showToast('Shareable link copied to clipboard!', 'success');
+                }).catch(err => {
+                    console.error('Clipboard copy failed:', err);
+                    showToast('Failed to copy link.', 'error');
+                });
+            } catch (e) {
+                console.error('Share failed:', e);
+                showToast('Failed to generate share link.', 'error');
+            }
+        };
+
+        window.clearOutput = function() {
+            document.getElementById('output-view').textContent = 'Console cleared. Click Run to execute...';
+            document.getElementById('output-view').className = '';
+            document.getElementById('spirit-view').innerHTML = '<div class="spirit-no-logs">No flight recorder logs available. Run code that prints output or performs computations.</div>';
+            showToast('Console cleared.');
+        };
+
+        // Tab selection logic
+        window.switchTab = function(tab) {
+            document.querySelectorAll('.console-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            document.getElementById('output-view').style.display = tab === 'console' ? 'block' : 'none';
+            document.getElementById('spirit-view').style.display = tab === 'spirit' ? 'block' : 'none';
+        };
+
+        // Render Spirit Events Flight Log Timeline
+        function renderSpiritLogs(eventsJson) {
+            const container = document.getElementById('spirit-view');
+            container.innerHTML = '';
+            
+            let events = [];
+            try {
+                events = JSON.parse(eventsJson || '[]');
+            } catch(e) {
+                console.error('Failed to parse spirit events:', e);
+            }
+            
+            if (events.length === 0) {
+                container.innerHTML = '<div class="spirit-no-logs">No flight recorder logs available. Run code that prints output or performs computations.</div>';
+                return;
+            }
+            
+            const timeline = document.createElement('div');
+            timeline.className = 'spirit-timeline';
+            
+            events.forEach(event => {
+                const cleanSpirit = event.spirit.trim();
+                const spiritClass = `spirit-${cleanSpirit.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+                const card = document.createElement('div');
+                card.className = `spirit-event-card ${spiritClass}`;
+                
+                card.innerHTML = `
+                    <div class="spirit-event-header">
+                        <span class="spirit-badge">${cleanSpirit}</span>
+                        <span class="spirit-action">${event.action}</span>
+                    </div>
+                    <div class="spirit-value">${escapeHtml(event.value)}</div>
+                `;
+                timeline.appendChild(card);
+            });
+            
+            container.appendChild(timeline);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Toast message display
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast-alert';
+            if (type === 'success') {
+                toast.style.borderLeftColor = 'var(--green)';
+            } else if (type === 'error') {
+                toast.style.borderLeftColor = 'var(--red)';
+            } else if (type === 'warning') {
+                toast.style.borderLeftColor = 'var(--amber)';
+            } else {
+                toast.style.borderLeftColor = '#8b5cf6'; // Violet for info
+            }
+            toast.innerHTML = `<span>💬</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Line Numbers Synchronized Scrolling & Actions
+        const editor = document.getElementById('code-editor');
+        const lineNums = document.getElementById('line-numbers-col');
+
+        editor.addEventListener('input', updateLineNumbers);
+        editor.addEventListener('scroll', () => {
+            lineNums.scrollTop = editor.scrollTop;
+        });
+
+        // Tab Insertion & Shortcuts
+        editor.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+                editor.selectionStart = editor.selectionEnd = start + 4;
+                updateLineNumbers();
+            }
+            // Ctrl+Enter or Cmd+Enter to Run
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runCode();
+            }
+            // Ctrl+Shift+F or Cmd+Shift+F to Format
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
+                e.preventDefault();
+                formatCode();
+            }
+        });
+
+        function updateLineNumbers() {
+            const lines = editor.value.split('\n');
+            const totalLines = Math.max(1, lines.length);
+            
+            // Build the line numbers HTML
+            let html = '';
+            for (let i = 1; i <= totalLines; i++) {
+                html += `<div class="line-number-entry" id="ln-${i}">${i}</div>`;
+            }
+            lineNums.innerHTML = html;
+            
+            // Also sync scroll in case the numbers element length changes
+            lineNums.scrollTop = editor.scrollTop;
+            highlightActiveLine();
+        }
+
+        function highlightActiveLine() {
+            const text = editor.value;
+            const selStart = editor.selectionStart;
+            const linesUpToCursor = text.substring(0, selStart).split('\n');
+            const activeLineIdx = linesUpToCursor.length;
+
+            document.querySelectorAll('.line-number-entry').forEach(el => {
+                el.classList.toggle('active-line', el.id === `ln-${activeLineIdx}`);
+            });
+        }
+
+        editor.addEventListener('click', highlightActiveLine);
+        editor.addEventListener('keyup', highlightActiveLine);
+
+        // Load code from URL parameter if present
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const codeParam = urlParams.get('code');
+            if (codeParam) {
+                try {
+                    const decoded = decodeURIComponent(escape(atob(codeParam)));
+                    document.getElementById('code-editor').value = decoded;
+                    // Detect language preference based on keywords in decoded code
+                    if (decoded.includes('let ') || decoded.includes('const ') || decoded.includes('Fmt.println') || decoded.includes('Fmt.print') || decoded.includes('String.len') || decoded.includes('List.len')) {
+                        inYoruba = false;
+                        const toggleContainer = document.getElementById('lang-toggle');
+                        toggleContainer.classList.add('english-active');
+                        toggleContainer.classList.remove('yoruba-active');
+                    } else {
+                        inYoruba = true;
+                        const toggleContainer = document.getElementById('lang-toggle');
+                        toggleContainer.classList.add('yoruba-active');
+                        toggleContainer.classList.remove('english-active');
+                    }
+                } catch (e) {
+                    console.error('Failed to decode code parameter:', e);
+                }
+            }
+            updateLineNumbers();
+        });
+    </script>
+</body>
+
+</html>

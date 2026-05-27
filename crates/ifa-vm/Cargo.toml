@@ -37,8 +37,6 @@ num_cpus = "1.16"
 # Sandbox is only for native builds (not WASM)
 ifa-sandbox = { path = "../ifa-sandbox", optional = true }
 
-tokio = { workspace = true, features = ["rt-multi-thread"] }
-
 # Error handling
 thiserror.workspace = true
 eyre.workspace = true
@@ -73,12 +71,15 @@ sysinfo = { workspace = true, optional = true }
 # GPU (optional, for GpuHandler data types)
 wgpu = { workspace = true, optional = true }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1", default-features = false, features = ["rt", "rt-multi-thread", "sync"] }
+
 [dev-dependencies]
 proptest = "1.4"
 criterion = { version = "0.5", features = ["html_reports"] }
 ifa-compiler = { path = "../ifa-compiler" }
 ifa-parser = { path = "../ifa-parser" }
-ifa-std = { path = "../ifa-std", features = ["full", "crypto"] }
+ifa-std = { path = "../ifa-std", features = ["network", "database", "tui", "async_runtime", "parallel", "gpu", "persistence", "html", "crypto"] }
 
 [[bench]]
 name = "opcode_dispatch"

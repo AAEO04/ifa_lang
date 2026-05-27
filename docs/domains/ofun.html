@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../js/common.css">
-    <title>Ofun - Reflection &amp; Permissions Domain</title>
+    <title>Ofun - Capabilities Domain</title>
 </head>
 
 <body>
@@ -17,68 +17,85 @@
     <div class="container">
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">ofun.ifa</span></div><div class="terminal-body">
         <header>
-            <h1><span class="pattern">0101</span> Ofun</h1>
-            <p style="color: var(--dim)">The Reflector — Permissions &amp; Reflection</p>
+            <h1><span class="pattern">0000</span> Ofun</h1>
+            <p style="color: var(--dim)">The Judge — Capabilities & Reflection</p>
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/ofun.rs</code>.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>.
         </div>
 
-        <h2>Permission Checking</h2>
+        <h2>Methods</h2>
 
         <div class="method">
             <h3>le / can</h3>
             <div class="sig">Ofun.le(cap: Str) → Bool</div>
-            <p>Check if a capability is granted. Supported capabilities:</p>
-            <pre><code>Ofun.le("read");          // Can read files
-Ofun.le("write");         // Can write files
-Ofun.le("network");       // Can access network
-Ofun.le("spawn");         // Can spawn processes
-Ofun.le("env");           // Can access environment
-Ofun.le("bridge:python"); // Can bridge to Python</code></pre>
+            <p>Check if a capability is granted.</p>
+            <pre><code>Ofun.le("write");  // true or false</code></pre>
         </div>
+
+        <div class="method">
+            <h3>da / create</h3>
+            <div class="sig">Ofun.da(name: Str) → Sandbox</div>
+            <p>Create a new sandbox with the given capabilities.</p>
+        </div>
+
+        <div class="method">
+            <h3>pa / delete</h3>
+            <div class="sig">Ofun.pa(name: Str)</div>
+            <p>Delete a sandbox.</p>
+        </div>
+
+        <div class="method">
+            <h3>iru / type_of / typeof</h3>
+            <div class="sig">Ofun.iru(value: Any) → Str</div>
+            <p>Get the type name of a value.</p>
+        </div>
+
+        <div class="method">
+            <h3>laaye / is_alive</h3>
+            <div class="sig">Ofun.laaye(name: Str) → Bool</div>
+            <p>Check if a sandbox is alive.</p>
+        </div>
+
+        <h2>Capability Management</h2>
 
         <div class="method">
             <h3>ju / drop</h3>
             <div class="sig">Ofun.ju(cap: Str)</div>
             <p>Drop (revoke) a capability. Can only remove, never add.</p>
-            <pre><code>Ofun.ju("write");  // Revoke write permission</code></pre>
+            <pre><code>Ofun.ju("write");  // revoke write access</code></pre>
         </div>
 
         <div class="method">
-            <h3>awon_agbara / get_capabilities</h3>
-            <div class="sig">Ofun.awon_agbara() → Capabilities</div>
-            <p>Get current capabilities struct.</p>
+            <h3>awon_agbara / capabilities</h3>
+            <div class="sig">Ofun.awon_agbara() → List</div>
+            <p>Get list of all currently granted capabilities.</p>
         </div>
 
         <h2>Reflection</h2>
 
         <div class="method">
-            <h3>iru / type_of</h3>
-            <div class="sig">Ofun.iru(value: Any) → Str</div>
-            <p>Get type name of a value: <code>Null</code>, <code>Bool</code>, <code>Int</code>, <code>Float</code>, <code>Str</code>, <code>List</code>, <code>Map</code>, <code>Function</code>, <code>Resource</code>.</p>
-        </div>
-
-        <div class="method">
-            <h3>je / is</h3>
+            <h3>je / is_type</h3>
             <div class="sig">Ofun.je(value: Any, type_name: Str) → Bool</div>
-            <p>Check if value is of specified type.</p>
+            <p>Check if a value is of a given type (case-insensitive).</p>
+            <pre><code>Ofun.je(42, "Int");     // true</code></pre>
         </div>
 
         <div class="method">
-            <h3>afiwe / debug</h3>
+            <h3>afiwe / debug / inspect</h3>
             <div class="sig">Ofun.afiwe(value: Any) → Str</div>
-            <p>Get debug string representation of value.</p>
+            <p>Get debug string representation of any value.</p>
         </div>
 
-        <h2>Capability Presets</h2>
-        <p><code>read_only()</code> — read + env only, no write/network/spawn</p>
-        <p><code>none()</code> — all capabilities revoked (fully sandboxed)</p>
-        <p><code>full()</code> — all capabilities including all bridge languages</p>
+        <div class="method">
+            <h3>dbg / debug_print</h3>
+            <div class="sig">Ofun.dbg(value: Any) → Any</div>
+            <p>Print debug representation and return the value.</p>
+        </div>
 
         <footer>
-            <p><a href="../index.html">← Back to Documentation</a> · <a href="../../crates/ifa-docs/std-library.html">Corrected API Reference</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
         </footer>
     </div></div>
     <script src="../js/nav.js"></script>

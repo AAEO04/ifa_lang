@@ -294,20 +294,20 @@ impl EmbeddedValue {
 #[repr(u8)]
 pub enum EmbeddedOpCode {
     /// Push null
-    PushNull = 0x00,
+    PushNull = 0x05,
     /// Push integer (followed by 4 bytes, little-endian)
-    PushInt = 0x01,
+    PushInt = 0x08,
     /// Push float (followed by 4 bytes, little-endian)
-    PushFloat = 0x02,
+    PushFloat = 0x09,
     /// Push true
-    PushTrue = 0x04,
+    PushTrue = 0x06,
     /// Push false
-    PushFalse = 0x05,
+    PushFalse = 0x07,
 
     /// Pop and discard
-    Pop = 0x10,
+    Pop = 0x02,
     /// Duplicate top
-    Dup = 0x11,
+    Dup = 0x03,
 
     /// Add
     Add = 0x20,
@@ -319,86 +319,85 @@ pub enum EmbeddedOpCode {
     Div = 0x23,
 
     /// Equal
-    Eq = 0x30,
+    Eq = 0x40,
     /// Less than
-    Lt = 0x32,
+    Lt = 0x42,
     /// Greater than
-    Gt = 0x34,
+    Gt = 0x44,
 
     /// Logical NOT
-    Not = 0x42,
+    Not = 0x33,
 
     /// Load local variable (followed by 1-byte index)
-    LoadLocal = 0x50,
+    LoadLocal = 0x18,
     /// Store local variable (followed by 1-byte index)
-    StoreLocal = 0x51,
+    StoreLocal = 0x19,
 
     /// Jump (followed by 2-byte offset, little-endian)
-    Jump = 0x60,
+    Jump = 0x50,
     /// Jump if false
-    JumpIfFalse = 0x61,
+    JumpIfFalse = 0x52,
 
     /// Halt execution
-    Halt = 0xFF,
+    Halt = 0x55,
 
     // ===================================
     // POINTER OPS (Address 0xA0 base)
     // ===================================
     /// Push Ref/Address (followed by 4 byte address/index)
-    /// In full Ifa, &x gets ref. Here we might just push raw pointers.
-    Ref = 0xA0,
-    /// Dereference (Read): Pop addr -> Push value
-    Deref = 0xA1,
-    /// Store Dereference (Write): Pop addr, Pop val -> Write val to address (32-bit)
-    StoreDeref = 0xA2,
+    Ref = 0x1C,
+    /// Dereference (Read): Pop addr -> Push value (32-bit load)
+    Deref = 0x12,
+    /// Store Dereference (Write): Pop addr, Pop val -> Write val to address (32-bit store)
+    StoreDeref = 0x16,
 
     // Sized pointer ops
     /// Store 8-bit value to address
-    Store8 = 0xA3,
+    Store8 = 0x14,
     /// Store 16-bit value to address
-    Store16 = 0xA4,
+    Store16 = 0x15,
     /// Read 8-bit value from address
-    Load8 = 0xA5,
+    Load8 = 0x10,
     /// Read 16-bit value from address
-    Load16 = 0xA6,
+    Load16 = 0x11,
 
     /// Yield execution (pause without resetting)
     /// Followed by 4 byte duration hint (u32 microseconds), or 0 for indefinite
-    Yield = 0xF0,
+    Yield = 0x56,
 }
 
 impl EmbeddedOpCode {
     /// Parse opcode from byte
     pub fn from_byte(byte: u8) -> EmbeddedResult<Self> {
         match byte {
-            0x00 => Ok(EmbeddedOpCode::PushNull),
-            0x01 => Ok(EmbeddedOpCode::PushInt),
-            0x02 => Ok(EmbeddedOpCode::PushFloat),
-            0x04 => Ok(EmbeddedOpCode::PushTrue),
-            0x05 => Ok(EmbeddedOpCode::PushFalse),
-            0x10 => Ok(EmbeddedOpCode::Pop),
-            0x11 => Ok(EmbeddedOpCode::Dup),
+            0x05 => Ok(EmbeddedOpCode::PushNull),
+            0x08 => Ok(EmbeddedOpCode::PushInt),
+            0x09 => Ok(EmbeddedOpCode::PushFloat),
+            0x06 => Ok(EmbeddedOpCode::PushTrue),
+            0x07 => Ok(EmbeddedOpCode::PushFalse),
+            0x02 => Ok(EmbeddedOpCode::Pop),
+            0x03 => Ok(EmbeddedOpCode::Dup),
             0x20 => Ok(EmbeddedOpCode::Add),
             0x21 => Ok(EmbeddedOpCode::Sub),
             0x22 => Ok(EmbeddedOpCode::Mul),
             0x23 => Ok(EmbeddedOpCode::Div),
-            0x30 => Ok(EmbeddedOpCode::Eq),
-            0x32 => Ok(EmbeddedOpCode::Lt),
-            0x34 => Ok(EmbeddedOpCode::Gt),
-            0x42 => Ok(EmbeddedOpCode::Not),
-            0x50 => Ok(EmbeddedOpCode::LoadLocal),
-            0x51 => Ok(EmbeddedOpCode::StoreLocal),
-            0x60 => Ok(EmbeddedOpCode::Jump),
-            0x61 => Ok(EmbeddedOpCode::JumpIfFalse),
-            0xFF => Ok(EmbeddedOpCode::Halt),
-            0xA0 => Ok(EmbeddedOpCode::Ref),
-            0xA1 => Ok(EmbeddedOpCode::Deref),
-            0xA2 => Ok(EmbeddedOpCode::StoreDeref),
-            0xA3 => Ok(EmbeddedOpCode::Store8),
-            0xA4 => Ok(EmbeddedOpCode::Store16),
-            0xA5 => Ok(EmbeddedOpCode::Load8),
-            0xA6 => Ok(EmbeddedOpCode::Load16),
-            0xF0 => Ok(EmbeddedOpCode::Yield),
+            0x40 => Ok(EmbeddedOpCode::Eq),
+            0x42 => Ok(EmbeddedOpCode::Lt),
+            0x44 => Ok(EmbeddedOpCode::Gt),
+            0x33 => Ok(EmbeddedOpCode::Not),
+            0x18 => Ok(EmbeddedOpCode::LoadLocal),
+            0x19 => Ok(EmbeddedOpCode::StoreLocal),
+            0x50 => Ok(EmbeddedOpCode::Jump),
+            0x52 => Ok(EmbeddedOpCode::JumpIfFalse),
+            0x55 => Ok(EmbeddedOpCode::Halt),
+            0x1C => Ok(EmbeddedOpCode::Ref),
+            0x12 => Ok(EmbeddedOpCode::Deref),
+            0x16 => Ok(EmbeddedOpCode::StoreDeref),
+            0x14 => Ok(EmbeddedOpCode::Store8),
+            0x15 => Ok(EmbeddedOpCode::Store16),
+            0x10 => Ok(EmbeddedOpCode::Load8),
+            0x11 => Ok(EmbeddedOpCode::Load16),
+            0x56 => Ok(EmbeddedOpCode::Yield),
             _ => Err(EmbeddedError::UnknownOpcode(byte)),
         }
     }
@@ -974,9 +973,12 @@ mod tests {
         let mut vm = EmbeddedVm::<256, 64>::default();
         // PushInt(42), Halt
         let bytecode = [
-            0x01, // PushInt
-            42, 0, 0, 0,    // 42 as i32 little-endian
-            0xFF, // Halt
+            EmbeddedOpCode::PushInt as u8,
+            42,
+            0,
+            0,
+            0,                          // 42 as i32 little-endian
+            EmbeddedOpCode::Halt as u8, // Halt
         ];
         let result = vm.start(&bytecode).unwrap();
         assert_eq!(result, VmExit::Halted(EmbeddedValue::Int(42)));
@@ -987,10 +989,18 @@ mod tests {
         let mut vm = EmbeddedVm::<256, 64>::default();
         // PushInt(10), PushInt(32), Add, Halt
         let bytecode = [
-            0x01, 10, 0, 0, 0, // PushInt(10)
-            0x01, 32, 0, 0, 0,    // PushInt(32)
-            0x20, // Add
-            0xFF, // Halt
+            EmbeddedOpCode::PushInt as u8,
+            10,
+            0,
+            0,
+            0, // PushInt(10)
+            EmbeddedOpCode::PushInt as u8,
+            32,
+            0,
+            0,
+            0,                          // PushInt(32)
+            EmbeddedOpCode::Add as u8,  // Add
+            EmbeddedOpCode::Halt as u8, // Halt
         ];
         let result = vm.start(&bytecode).unwrap();
         assert_eq!(result, VmExit::Halted(EmbeddedValue::Int(42)));
@@ -1001,9 +1011,17 @@ mod tests {
         let mut vm = EmbeddedVm::<256, 64>::default();
         // PushInt(10), PushInt(0), Div
         let bytecode = [
-            0x01, 10, 0, 0, 0, // PushInt(10)
-            0x01, 0, 0, 0, 0,    // PushInt(0)
-            0x23, // Div
+            EmbeddedOpCode::PushInt as u8,
+            10,
+            0,
+            0,
+            0, // PushInt(10)
+            EmbeddedOpCode::PushInt as u8,
+            0,
+            0,
+            0,
+            0,                         // PushInt(0)
+            EmbeddedOpCode::Div as u8, // Div
         ];
         let result = vm.start(&bytecode);
         assert!(matches!(result, Err(EmbeddedError::DivisionByZero)));
@@ -1014,10 +1032,18 @@ mod tests {
         let mut vm = EmbeddedVm::<256, 64>::default();
         // PushInt(5), PushInt(10), Lt, Halt -> true
         let bytecode = [
-            0x01, 5, 0, 0, 0, // PushInt(5)
-            0x01, 10, 0, 0, 0,    // PushInt(10)
-            0x32, // Lt
-            0xFF, // Halt
+            EmbeddedOpCode::PushInt as u8,
+            5,
+            0,
+            0,
+            0, // PushInt(5)
+            EmbeddedOpCode::PushInt as u8,
+            10,
+            0,
+            0,
+            0,                          // PushInt(10)
+            EmbeddedOpCode::Lt as u8,   // Lt
+            EmbeddedOpCode::Halt as u8, // Halt
         ];
         let result = vm.start(&bytecode).unwrap();
         assert_eq!(result, VmExit::Halted(EmbeddedValue::Bool(true)));
@@ -1028,11 +1054,21 @@ mod tests {
         let mut vm = EmbeddedVm::<256, 64>::default();
         // PushInt(100), StoreLocal(0), PushInt(0), LoadLocal(0), Halt
         let bytecode = [
-            0x01, 100, 0, 0, 0, // PushInt(100)
-            0x51, 0, // StoreLocal(0)
-            0x01, 0, 0, 0, 0, // PushInt(0)
-            0x50, 0,    // LoadLocal(0)
-            0xFF, // Halt
+            EmbeddedOpCode::PushInt as u8,
+            100,
+            0,
+            0,
+            0, // PushInt(100)
+            EmbeddedOpCode::StoreLocal as u8,
+            0, // StoreLocal(0)
+            EmbeddedOpCode::PushInt as u8,
+            0,
+            0,
+            0,
+            0, // PushInt(0)
+            EmbeddedOpCode::LoadLocal as u8,
+            0,                          // LoadLocal(0)
+            EmbeddedOpCode::Halt as u8, // Halt
         ];
         let result = vm.start(&bytecode).unwrap();
         assert_eq!(result, VmExit::Halted(EmbeddedValue::Int(100)));

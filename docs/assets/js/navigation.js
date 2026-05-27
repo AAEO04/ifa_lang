@@ -70,103 +70,104 @@ class NavigationComponent {
         const breadcrumbContainer = document.querySelector('.breadcrumb-list');
         if (!breadcrumbContainer) return;
 
-        const pathParts = this.getPathParts();
-        const breadcrumbs = this.buildBreadcrumbList(pathParts);
+        const rootPrefix = this.getRootPrefix();
+        const pathParts = this.getPathParts(rootPrefix);
+        const breadcrumbs = this.buildBreadcrumbList(pathParts, rootPrefix);
         
         breadcrumbContainer.innerHTML = breadcrumbs;
     }
 
-    getPathParts() {
-        const path = window.location.pathname;
-        // Remove leading/trailing slashes and split
-        const parts = path.replace(/^\/|\/$/g, '').split('/');
-        
-        // Filter out empty parts and handle docs root
-        return parts.filter(part => part && part !== 'docs');
+    /// Extract the relative prefix (e.g. "../../" or "../" or "") from the script tag src
+    getRootPrefix() {
+        const script = document.querySelector('script[src*="navigation.js"]') || document.querySelector('script[src*="nav.js"]');
+        if (script) {
+            const src = script.getAttribute('src');
+            const match = src.match(/^(\.\.\/)*\.\.\/?|^(\.\/)?/);
+            if (match) {
+                return match[0];
+            }
+        }
+        return '';
     }
 
-    buildBreadcrumbList(parts) {
-        let breadcrumbs = '<li><a href="../index.html">🏠 Home</a></li>';
-        let currentPath = '';
+    getPathParts(rootPrefix) {
+        const pathSegments = window.location.pathname.split('/').filter(s => s);
+        if (pathSegments.length === 0) return [];
+        
+        const depth = (rootPrefix.match(/\.\.\//g) || []).length;
+        const fileSegment = pathSegments[pathSegments.length - 1];
+        
+        // Take directory segments prior to the filename based on the depth
+        const dirSegments = pathSegments.slice(
+            Math.max(0, pathSegments.length - 1 - depth),
+            pathSegments.length - 1
+        );
+        
+        return [...dirSegments, fileSegment];
+    }
+
+    buildBreadcrumbList(parts, rootPrefix) {
+        let breadcrumbs = `<li><a href="${rootPrefix}index.html">🏠 Home</a></li>`;
+        let accumulatedPath = '';
         
         parts.forEach((part, index) => {
-            currentPath += (currentPath ? '/' : '') + part;
             const isLast = index === parts.length - 1;
             
+            if (part.toLowerCase() === 'index.html') {
+                return;
+            }
+            
+            accumulatedPath += (accumulatedPath ? '/' : '') + part;
+            
             if (isLast) {
-                // Current page - no link
-                const displayName = this.getDisplayName(part);
+                const displayName = this.getDisplayName(part, true);
                 breadcrumbs += `<li class="separator">›</li><li class="current">${displayName}</li>`;
             } else {
-                // Intermediate page - link
-                const displayName = this.getDisplayName(part);
-                const relativePath = this.getRelativePath(currentPath, parts.length);
-                breadcrumbs += `<li class="separator">›</li><li><a href="${relativePath}">${displayName}</a></li>`;
+                const displayName = this.getDisplayName(part, false);
+                const relativeLink = `${rootPrefix}${accumulatedPath}/index.html`;
+                breadcrumbs += `<li class="separator">›</li><li><a href="${relativeLink}">${displayName}</a></li>`;
             }
         });
         
         return breadcrumbs;
     }
 
-    getDisplayName(part) {
-        const displayNames = {
-            'getting-started': '🚀 Getting Started',
-            'language': '📖 Language',
-            'api': '📚 API',
-            'examples': '💡 Examples',
-            'deployment': '🚀 Deployment',
-            'tools': '🔧 Tools',
-            'community': '🌍 Community',
-            'infrastructure': '🏗️ Infrastructure',
-            'tutorials': '🎓 Tutorials',
-            'advanced': '🎓 Advanced',
-            'tour': '🚶 Tour',
-            'use-cases': '🔧 Use Cases',
-            'stacks': '📦 Stacks',
-            'domains': '🌐 Domains',
-            'reference': '📋 Reference',
-            'quickstart': '⚡ Quick Start',
-            'install': '🔧 Installation',
-            'installer': '🏗️ Installer',
-            'hello-world': '👋 Hello World',
-            'syntax': '📝 Syntax',
-            'types-crate': '🏗️ Types',
-            'macros': '⚙️ Macros',
-            'philosophy': '🔮 Philosophy',
-            'api-complete': '📖 Complete API',
-            'examples-gallery': '📚 Examples',
-            'showcase-life': '🌍 Life Simulation',
-            'playground': '🎮 Playground',
-            'deployment-guide': '📦 Deployment',
-            'oja-publishing': '📤 Publishing',
-            'cli': '⌨️ CLI',
-            'ide-integration': '🎨 IDE',
-            'sandbox': '🧪 Sandbox',
-            'community-hub': '👥 Community',
-            'contributing': '🤝 Contributing',
-            'changelog': '📋 Changelog',
-            'babalawo': '🧙‍♂️ Babalawo',
-            'infra': '🔧 Infrastructure',
-            'internals': '⚙️ Internals',
-            'debugging': '🐛 Debugging',
-            'ffi': '🔗 FFI',
-            'embedded': '🔌 Embedded'
-        };
-        
-        return displayNames[part] || part.charAt(0).toUpperCase() + part.slice(1).replace(/-/g, ' ');
-    }
-
-    getRelativePath(currentPath, totalParts) {
-        // Calculate relative path based on current depth
-        const depth = totalParts - currentPath.split('/').length;
-        let relativePath = '';
-        
-        for (let i = 0; i < depth; i++) {
-            relativePath += '../';
+    getDisplayName(part, isLast = false) {
+        if (isLast) {
+            // Attempt to get the actual page header or document title
+            const h1 = document.querySelector('h1');
+            if (h1 && h1.textContent.trim()) {
+                return h1.textContent.trim();
+            }
+            const title = document.title;
+            if (title) {
+                return title.split(' - ')[0].trim();
+            }
         }
-        
-        relativePath += currentPath + '/index.html';
-        return relativePath;
+
+        const categoryEmojis = {
+            'getting-started': '🚀',
+            'language': '📖',
+            'api': '📚',
+            'examples': '💡',
+            'deployment': '🚢',
+            'tools': '🔧',
+            'community': '🌍',
+            'infrastructure': '🏗️',
+            'tutorials': '🎓',
+            'advanced': '🧠',
+            'reference': '📋',
+            'embedded': '🔌',
+            'use-cases': '🔧'
+        };
+
+        const emoji = categoryEmojis[part.toLowerCase()] || '';
+        const formatted = part
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+        return emoji ? `${emoji} ${formatted}` : formatted;
     }
 }
 

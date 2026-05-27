@@ -3,12 +3,12 @@
 //! Static analysis checks for Ifá-Lang programs.
 //! Ported from legacy/src/linter.py and legacy/src/validator.py
 
+use crate::Severity;
 use crate::diagnose::Babalawo;
 use crate::iwa::IwaEngine;
-use crate::movement::{MoveTracker, MoveCheckResult, is_copy_eligible, move_args_from_odu_call};
+use crate::movement::{MoveCheckResult, MoveTracker, move_args_from_odu_call};
 use crate::taboo::TabooEnforcer;
 use ifa_types::ast::{Expression, Program, Statement, TypeHint, Visibility};
-use crate::Severity;
 use std::collections::{HashMap, HashSet};
 
 /// Context for linting - tracks state as we walk the AST
@@ -51,6 +51,8 @@ pub struct LintContext {
     pub in_parallel_body: bool,
     /// H4: Variables declared locally inside the parallel body
     pub parallel_locals: HashSet<String>,
+    /// Whether strict mode is active (abo; directive)
+    pub is_strict: bool,
 }
 
 impl Default for LintContext {
@@ -80,22 +82,31 @@ impl LintContext {
             move_tracker: MoveTracker::new(),
             in_parallel_body: false,
             parallel_locals: HashSet::new(),
+            is_strict: false,
         }
     }
 
     pub fn define_var(&mut self, name: &str, span: ifa_types::ast::Span, visibility: Visibility) {
         self.defined_vars.insert(name.to_string(), span);
         self.var_visibility.insert(name.to_string(), visibility);
-        self.var_domain.insert(name.to_string(), self.current_domain.clone());
+        self.var_domain
+            .insert(name.to_string(), self.current_domain.clone());
         self.move_tracker.declare(name);
     }
 
     /// Define a variable with a type hint
-    pub fn define_var_typed(&mut self, name: &str, type_hint: TypeHint, span: ifa_types::ast::Span, visibility: Visibility) {
+    pub fn define_var_typed(
+        &mut self,
+        name: &str,
+        type_hint: TypeHint,
+        span: ifa_types::ast::Span,
+        visibility: Visibility,
+    ) {
         self.defined_vars.insert(name.to_string(), span);
         self.var_types.insert(name.to_string(), type_hint);
         self.var_visibility.insert(name.to_string(), visibility);
-        self.var_domain.insert(name.to_string(), self.current_domain.clone());
+        self.var_domain
+            .insert(name.to_string(), self.current_domain.clone());
         self.move_tracker.declare(name);
     }
 
@@ -328,7 +339,11 @@ fn check_taboo_violations(ctx: &LintContext, baba: &mut Babalawo, file: &str) {
 fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
     match stmt {
         Statement::VarDecl {
-            name, type_hint, span, visibility, ..
+            name,
+            type_hint,
+            span,
+            visibility,
+            ..
         } => {
             if let Some(th) = type_hint {
                 ctx.define_var_typed(name, th.clone(), span.clone(), *visibility);
@@ -337,7 +352,10 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
             }
         }
         Statement::Const {
-            name, value: _, visibility, span,
+            name,
+            value: _,
+            visibility,
+            span,
         } => {
             ctx.define_var(name, span.clone(), *visibility);
         }
@@ -353,7 +371,12 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
             // Parameters are also definitions within the function (private by default)
             for param in params {
                 if let Some(th) = &param.type_hint {
-                    ctx.define_var_typed(&param.name, th.clone(), span.clone(), Visibility::Private); // Simplification: param uses Ese span
+                    ctx.define_var_typed(
+                        &param.name,
+                        th.clone(),
+                        span.clone(),
+                        Visibility::Private,
+                    ); // Simplification: param uses Ese span
                 } else {
                     ctx.define_var(&param.name, span.clone(), Visibility::Private);
                 }
@@ -362,13 +385,23 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
                 collect_definitions(s, ctx);
             }
         }
-        Statement::OduDef { name, body, span, visibility } => {
+        Statement::OduDef {
+            name,
+            body,
+            span,
+            visibility,
+        } => {
             ctx.define_var(name, span.clone(), *visibility);
             for s in body {
                 collect_definitions(s, ctx);
             }
         }
-        Statement::For { var, iterable: _, body, span } => {
+        Statement::For {
+            var,
+            iterable: _,
+            body,
+            span,
+        } => {
             ctx.define_var(var, span.clone(), Visibility::Private);
             for s in body {
                 collect_definitions(s, ctx);
@@ -400,6 +433,10 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
         // Opon directives — store for cross-check
         Statement::Opon { size, .. } => {
             ctx.opon_size = Some(size.clone());
+        }
+        // Strict mode directive
+        Statement::Abo { .. } => {
+            ctx.is_strict = true;
         }
         _ => {}
     }
@@ -497,7 +534,10 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                     if !ctx.is_accessible(visibility, target_domain) {
                         baba.error(
                             "VISIBILITY_VIOLATION",
-                            &format!("Èèwọ̀: Cannot access private variable '{}' from outside its domain", name),
+                            &format!(
+                                "Èèwọ̀: Cannot access private variable '{}' from outside its domain",
+                                name
+                            ),
                             file,
                             span.line,
                             span.column,
@@ -526,7 +566,11 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                 // Read-and-write: if name was moved, it is use-after-move!
                 if let Some(result) = ctx.move_tracker.check_use(name) {
                     match result {
-                        MoveCheckResult::UseAfterMove { moved_at_line, moved_at_col, .. } => {
+                        MoveCheckResult::UseAfterMove {
+                            moved_at_line,
+                            moved_at_col,
+                            ..
+                        } => {
                             baba.error(
                                 "USE_AFTER_MOVE",
                                 &format!(
@@ -538,7 +582,11 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                                 span.column,
                             );
                         }
-                        MoveCheckResult::MaybeUseAfterMove { moved_at_line, moved_at_col, .. } => {
+                        MoveCheckResult::MaybeUseAfterMove {
+                            moved_at_line,
+                            moved_at_col,
+                            ..
+                        } => {
                             baba.warning(
                                 "MAYBE_USE_AFTER_MOVE",
                                 &format!(
@@ -559,7 +607,10 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                     if !ctx.is_accessible(visibility, target_domain) {
                         baba.error(
                             "VISIBILITY_VIOLATION",
-                            &format!("Èèwọ̀: Cannot access private variable '{}' from outside its domain", name),
+                            &format!(
+                                "Èèwọ̀: Cannot access private variable '{}' from outside its domain",
+                                name
+                            ),
                             file,
                             span.line,
                             span.column,
@@ -578,6 +629,7 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
 
         Statement::Instruction { call, span } => {
             check_unsafe_ffi_call(call, baba, file, span);
+            check_escape_hazards(call, ctx, baba, file, span);
 
             // Check for division by zero
             if (call.method == "pin" || call.method == "div")
@@ -770,11 +822,19 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             }
         }
 
-        Statement::Ebo { offering: _offering, body: None, .. } => {
+        Statement::Ebo {
+            offering: _offering,
+            body: None,
+            ..
+        } => {
             // Ebo without body: semantic directive, no checks needed
         }
 
-        Statement::Ebo { offering: _offering, body: Some(body), span } => {
+        Statement::Ebo {
+            offering: _offering,
+            body: Some(body),
+            span,
+        } => {
             // Ebo with body: scoped memory epoch — warn if return/break/continue
             // could bypass epoch cleanup
             for stmt in body {
@@ -862,11 +922,15 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             check_expression(expr, ctx, baba, file, span);
         }
 
+        Statement::Throw { value, span } => {
+            check_expression(value, ctx, baba, file, span);
+        }
+
         _ => {}
     }
 }
 
-use ifa_types::ast::{Span, AssignTarget};
+use ifa_types::ast::{AssignTarget, Span};
 
 fn check_assign_target(
     target: &AssignTarget,
@@ -888,7 +952,10 @@ fn check_assign_target(
             } else if ctx.in_parallel_body && !ctx.parallel_locals.contains(name) {
                 baba.error(
                     "PARALLEL_MUTATION",
-                    &format!("Cannot mutate captured variable '{}' inside parallel body", name),
+                    &format!(
+                        "Cannot mutate captured variable '{}' inside parallel body",
+                        name
+                    ),
                     file,
                     span.line,
                     span.column,
@@ -908,7 +975,10 @@ fn check_assign_target(
             } else if ctx.in_parallel_body && !ctx.parallel_locals.contains(name) {
                 baba.error(
                     "PARALLEL_MUTATION",
-                    &format!("Cannot mutate captured variable '{}' inside parallel body", name),
+                    &format!(
+                        "Cannot mutate captured variable '{}' inside parallel body",
+                        name
+                    ),
                     file,
                     span.line,
                     span.column,
@@ -936,7 +1006,11 @@ fn check_expression(
             // H1: Check for use-after-move before any other checks.
             if let Some(result) = ctx.move_tracker.check_use(name) {
                 match result {
-                    MoveCheckResult::UseAfterMove { moved_at_line, moved_at_col, .. } => {
+                    MoveCheckResult::UseAfterMove {
+                        moved_at_line,
+                        moved_at_col,
+                        ..
+                    } => {
                         baba.error(
                             "USE_AFTER_MOVE",
                             &format!(
@@ -948,7 +1022,11 @@ fn check_expression(
                             span.column,
                         );
                     }
-                    MoveCheckResult::MaybeUseAfterMove { moved_at_line, moved_at_col, .. } => {
+                    MoveCheckResult::MaybeUseAfterMove {
+                        moved_at_line,
+                        moved_at_col,
+                        ..
+                    } => {
                         baba.warning(
                             "MAYBE_USE_AFTER_MOVE",
                             &format!(
@@ -965,13 +1043,30 @@ fn check_expression(
 
             // Check if variable is defined
             if !ctx.defined_vars.contains_key(name) && !is_builtin(name) {
-                baba.error(
-                    "UNDEFINED_VARIABLE",
-                    &format!("Variable '{}' used before declaration", name),
-                    file,
-                    span.line,
-                    span.column,
-                );
+                let mut best_suggestion = None;
+                let mut best_distance = usize::MAX;
+                for existing_name in ctx.defined_vars.keys() {
+                    let dist = levenshtein_distance(name, existing_name);
+                    if dist < best_distance {
+                        best_distance = dist;
+                        best_suggestion = Some(existing_name.as_str());
+                    }
+                }
+
+                let msg = if let Some(suggestion) = best_suggestion {
+                    if best_distance <= 3 && best_distance <= name.len() / 2 {
+                        format!(
+                            "Variable '{}' used before declaration. Did you mean '{}'?",
+                            name, suggestion
+                        )
+                    } else {
+                        format!("Variable '{}' used before declaration", name)
+                    }
+                } else {
+                    format!("Variable '{}' used before declaration", name)
+                };
+
+                baba.error("UNDEFINED_VARIABLE", &msg, file, span.line, span.column);
             } else if !is_builtin(name) {
                 // Check visibility
                 if let Some(visibility) = ctx.get_var_visibility(name) {
@@ -979,7 +1074,10 @@ fn check_expression(
                     if !ctx.is_accessible(visibility, target_domain) {
                         baba.error(
                             "VISIBILITY_VIOLATION",
-                            &format!("Èèwọ̀: Cannot access private symbol '{}' from outside its domain", name),
+                            &format!(
+                                "Èèwọ̀: Cannot access private symbol '{}' from outside its domain",
+                                name
+                            ),
                             file,
                             span.line,
                             span.column,
@@ -1038,6 +1136,7 @@ fn check_expression(
 
         Expression::OduCall(call) => {
             check_unsafe_ffi_call(call, baba, file, span);
+            check_escape_hazards(call, ctx, baba, file, span);
 
             // H1: Record actor-boundary moves (Osa domain calls move non-copy args).
             for (moved_name, line, col) in move_args_from_odu_call(call) {
@@ -1062,14 +1161,18 @@ fn check_expression(
             if ctx.in_parallel_body && call.domain.has_side_effects() {
                 baba.error(
                     "PARALLEL_SIDE_EFFECT",
-                    &format!("Cannot call side-effecting domain '{}' inside parallel body", call.domain.yoruba_name()),
+                    &format!(
+                        "Cannot call side-effecting domain '{}' inside parallel body",
+                        call.domain.yoruba_name()
+                    ),
                     file,
                     span.line,
                     span.column,
                 );
             }
 
-            let is_parallel_for = call.domain == ifa_types::OduDomain::Iwori && call.method == "yipo.ori";
+            let is_parallel_for =
+                call.domain == ifa_types::OduDomain::Iwori && call.method == "yipo.ori";
             if is_parallel_for {
                 ctx.in_parallel_body = true;
             }
@@ -1102,7 +1205,10 @@ fn check_expression(
                 if let TypeHint::RefMut(_) = var_type {
                     baba.error(
                         "MUTABLE_BORROW_ACROSS_DARO",
-                        &format!("Mutable borrow '{}' cannot be held across an await suspension point", var_name),
+                        &format!(
+                            "Mutable borrow '{}' cannot be held across an await suspension point",
+                            var_name
+                        ),
                         file,
                         span.line,
                         span.column,
@@ -1119,14 +1225,17 @@ fn check_expression(
 
         Expression::Call { name, args } => {
             ctx.use_var(name);
-            
+
             // Check visibility
             if let Some(visibility) = ctx.get_var_visibility(name) {
                 let target_domain = ctx.get_var_domain(name).as_ref().and_then(|d| d.as_ref());
                 if !ctx.is_accessible(visibility, target_domain) {
                     baba.error(
                         "VISIBILITY_VIOLATION",
-                        &format!("Èèwọ̀: Cannot call private function '{}' from outside its domain", name),
+                        &format!(
+                            "Èèwọ̀: Cannot call private function '{}' from outside its domain",
+                            name
+                        ),
                         file,
                         span.line,
                         span.column,
@@ -1168,10 +1277,14 @@ fn check_expression(
     }
 }
 
-fn check_unsafe_ffi_call(call: &ifa_types::ast::OduCall, baba: &mut Babalawo, file: &str, span: &Span) {
+fn check_unsafe_ffi_call(
+    call: &ifa_types::ast::OduCall,
+    baba: &mut Babalawo,
+    file: &str,
+    span: &Span,
+) {
     if call.domain == ifa_types::OduDomain::Coop
-        && (call.method.eq_ignore_ascii_case("itumo")
-            || call.method.eq_ignore_ascii_case("summon"))
+        && (call.method.eq_ignore_ascii_case("itumo") || call.method.eq_ignore_ascii_case("summon"))
     {
         baba.error(
             "TABOO_UNSAFE_FFI",
@@ -1180,6 +1293,47 @@ fn check_unsafe_ffi_call(call: &ifa_types::ast::OduCall, baba: &mut Babalawo, fi
             span.line,
             span.column,
         );
+    }
+}
+
+fn check_escape_hazards(
+    call: &ifa_types::ast::OduCall,
+    ctx: &LintContext,
+    baba: &mut Babalawo,
+    file: &str,
+    span: &Span,
+) {
+    let is_ffi = call.domain == ifa_types::OduDomain::Coop;
+    let is_spawn = call.domain == ifa_types::OduDomain::Ogunda
+        && (call.method == "run" || call.method == "bẹrẹ");
+    if is_ffi || is_spawn {
+        if ctx.is_strict {
+            if !ctx.in_ailewu {
+                baba.error(
+                    "UNAUTHORIZED_ESCAPE",
+                    &format!(
+                        "Unauthorized {} escape outside 'ailewu' block",
+                        if is_ffi { "FFI" } else { "Process spawn" }
+                    ),
+                    file,
+                    span.line,
+                    span.column,
+                );
+            }
+        } else {
+            if !ctx.in_ailewu {
+                baba.warning(
+                    "UNSAFE_ESCAPE_WARNING",
+                    &format!(
+                        "{} escape should be enclosed in 'ailewu' block",
+                        if is_ffi { "FFI" } else { "Process spawn" }
+                    ),
+                    file,
+                    span.line,
+                    span.column,
+                );
+            }
+        }
     }
 }
 
@@ -1331,6 +1485,35 @@ fn is_builtin(name: &str) -> bool {
     )
 }
 
+fn levenshtein_distance(s1: &str, s2: &str) -> usize {
+    let len1 = s1.chars().count();
+    let len2 = s2.chars().count();
+
+    let mut dp = vec![vec![0; len2 + 1]; len1 + 1];
+
+    for i in 0..=len1 {
+        dp[i][0] = i;
+    }
+    for j in 0..=len2 {
+        dp[0][j] = j;
+    }
+
+    for (i, c1) in s1.chars().enumerate() {
+        for (j, c2) in s2.chars().enumerate() {
+            if c1 == c2 {
+                dp[i + 1][j + 1] = dp[i][j];
+            } else {
+                dp[i + 1][j + 1] = std::cmp::min(
+                    dp[i][j] + 1,
+                    std::cmp::min(dp[i][j + 1] + 1, dp[i + 1][j] + 1),
+                );
+            }
+        }
+    }
+
+    dp[len1][len2]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1342,6 +1525,24 @@ mod tests {
         if let Ok(program) = parse(src) {
             let baba = check_program(&program, "test.ifa");
             assert!(baba.has_errors());
+        }
+    }
+
+    #[test]
+    fn test_undefined_variable_did_you_mean() {
+        let src = r#"
+            ayanmo my_special_variable = 42;
+            Irosu.fo(my_specal_variable);
+        "#;
+        if let Ok(program) = parse(src) {
+            let baba = check_program(&program, "test.ifa");
+            assert!(baba.has_errors());
+            let error_msg = &baba.diagnostics[0].error.message;
+            assert!(
+                error_msg.contains("Did you mean 'my_special_variable'?"),
+                "Expected suggestion in error message: {}",
+                error_msg
+            );
         }
     }
 
@@ -1365,8 +1566,15 @@ mod tests {
         "#;
         if let Ok(program) = parse(src) {
             let baba = check_program(&program, "test.ifa");
-            let has_await_error = baba.diagnostics.iter().any(|d| d.error.code == "AWAIT_OUTSIDE_ASYNC");
-            assert!(has_await_error, "Expected AWAIT_OUTSIDE_ASYNC error but got: {:?}", baba.diagnostics);
+            let has_await_error = baba
+                .diagnostics
+                .iter()
+                .any(|d| d.error.code == "AWAIT_OUTSIDE_ASYNC");
+            assert!(
+                has_await_error,
+                "Expected AWAIT_OUTSIDE_ASYNC error but got: {:?}",
+                baba.diagnostics
+            );
         }
     }
 
@@ -1381,8 +1589,14 @@ mod tests {
         "#;
         if let Ok(program) = parse(src) {
             let baba = check_program(&program, "test.ifa");
-            let has_await_error = baba.diagnostics.iter().any(|d| d.error.code == "AWAIT_OUTSIDE_ASYNC");
-            assert!(!has_await_error, "Unexpected AWAIT_OUTSIDE_ASYNC in async function");
+            let has_await_error = baba
+                .diagnostics
+                .iter()
+                .any(|d| d.error.code == "AWAIT_OUTSIDE_ASYNC");
+            assert!(
+                !has_await_error,
+                "Unexpected AWAIT_OUTSIDE_ASYNC in async function"
+            );
         }
     }
 
@@ -1399,8 +1613,15 @@ mod tests {
         "#;
         if let Ok(program) = parse(src) {
             let baba = check_program(&program, "test.ifa");
-            let has_warn = baba.diagnostics.iter().any(|d| d.error.code == "NON_ITERABLE");
-            assert!(has_warn, "Expected NON_ITERABLE warning but got: {:?}", baba.diagnostics);
+            let has_warn = baba
+                .diagnostics
+                .iter()
+                .any(|d| d.error.code == "NON_ITERABLE");
+            assert!(
+                has_warn,
+                "Expected NON_ITERABLE warning but got: {:?}",
+                baba.diagnostics
+            );
         }
     }
 
@@ -1417,7 +1638,10 @@ mod tests {
         "#;
         if let Ok(program) = parse(src) {
             let baba = check_program(&program, "test.ifa");
-            let has_warn = baba.diagnostics.iter().any(|d| d.error.code == "NON_ITERABLE");
+            let has_warn = baba
+                .diagnostics
+                .iter()
+                .any(|d| d.error.code == "NON_ITERABLE");
             assert!(!has_warn, "Unexpected NON_ITERABLE on a List variable");
         }
     }
@@ -1439,8 +1663,15 @@ mod tests {
         "#;
         if let Ok(program) = parse(src) {
             let baba = check_program(&program, "test.ifa");
-            let has_error = baba.diagnostics.iter().any(|d| d.error.code == "VISIBILITY_VIOLATION");
-            assert!(has_error, "Expected VISIBILITY_VIOLATION error but got: {:?}", baba.diagnostics);
+            let has_error = baba
+                .diagnostics
+                .iter()
+                .any(|d| d.error.code == "VISIBILITY_VIOLATION");
+            assert!(
+                has_error,
+                "Expected VISIBILITY_VIOLATION error but got: {:?}",
+                baba.diagnostics
+            );
         }
     }
 
@@ -1457,8 +1688,14 @@ mod tests {
         "#;
         if let Ok(program) = parse(src) {
             let baba = check_program(&program, "test.ifa");
-            let has_error = baba.diagnostics.iter().any(|d| d.error.code == "VISIBILITY_VIOLATION");
-            assert!(!has_error, "Unexpected VISIBILITY_VIOLATION on public member");
+            let has_error = baba
+                .diagnostics
+                .iter()
+                .any(|d| d.error.code == "VISIBILITY_VIOLATION");
+            assert!(
+                !has_error,
+                "Unexpected VISIBILITY_VIOLATION on public member"
+            );
         }
     }
 
@@ -1475,8 +1712,14 @@ mod tests {
         "#;
         if let Ok(program) = parse(src) {
             let baba = check_program(&program, "test.ifa");
-            let has_error = baba.diagnostics.iter().any(|d| d.error.code == "VISIBILITY_VIOLATION");
-            assert!(!has_error, "Unexpected VISIBILITY_VIOLATION on internal member access");
+            let has_error = baba
+                .diagnostics
+                .iter()
+                .any(|d| d.error.code == "VISIBILITY_VIOLATION");
+            assert!(
+                !has_error,
+                "Unexpected VISIBILITY_VIOLATION on internal member access"
+            );
         }
     }
 
@@ -1490,7 +1733,10 @@ mod tests {
         tracker.record_move("payload", 5, 3);
         let result = tracker.check_use("payload");
         assert!(
-            matches!(result, Some(crate::movement::MoveCheckResult::UseAfterMove { .. })),
+            matches!(
+                result,
+                Some(crate::movement::MoveCheckResult::UseAfterMove { .. })
+            ),
             "Expected USE_AFTER_MOVE for moved variable"
         );
     }
@@ -1506,7 +1752,10 @@ mod tests {
 
         let merged = crate::movement::MoveTracker::merge_branches(&then_t, &else_t);
         assert!(
-            matches!(merged.check_use("data"), Some(crate::movement::MoveCheckResult::MaybeUseAfterMove { .. })),
+            matches!(
+                merged.check_use("data"),
+                Some(crate::movement::MoveCheckResult::MaybeUseAfterMove { .. })
+            ),
             "Expected MAYBE_USE_AFTER_MOVE after divergent branch"
         );
     }

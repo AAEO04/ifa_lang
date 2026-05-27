@@ -60,6 +60,7 @@ fuzz_target!(|data: &[u8]| {
         sig: FfiSignature {
             arg_types,
             ret_type: IfaType::Void,
+            owned_str_free: None,
         },
     };
 

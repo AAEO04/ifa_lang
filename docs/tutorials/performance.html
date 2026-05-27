@@ -42,33 +42,33 @@ benchmark("Process data", {
 
         <h3>Parallel Map</h3>
         <pre><code>// Allocate a CPU buffer
-ayanmo buf = CPU.alloc_buffer(1000000);
-CPU.write_buffer(buf, [1.0, 2.0, 3.0, ...]);
+ayanmo buf = Cpu.alloc_buffer(1000000);
+Cpu.write_buffer(buf, [1.0, 2.0, 3.0, ...]);
 
 // Parallel map: square every element
-ayanmo result = CPU.par_map(buf, "square");
-ayanmo values = CPU.read_buffer(result);
+ayanmo result = Cpu.par_map(buf, "square");
+ayanmo values = Cpu.read_buffer(result);
 
 // Available par_map operations:
 // square, cube, double, inc, dec, neg, abs, sqrt</code></pre>
 
         <h3>Parallel Reduce</h3>
         <pre><code>// Allocate buffer with data
-ayanmo buf = CPU.alloc_buffer(1000000);
-CPU.write_buffer(buf, data);
+ayanmo buf = Cpu.alloc_buffer(1000000);
+Cpu.write_buffer(buf, data);
 
 // Parallel reduce operations:
-ayanmo total = CPU.par_reduce(buf, "sum");
-ayanmo min = CPU.par_reduce(buf, "min");
-ayanmo max = CPU.par_reduce(buf, "max");
-ayanmo product = CPU.par_reduce(buf, "product");</code></pre>
+ayanmo total = Cpu.par_reduce(buf, "sum");
+ayanmo min = Cpu.par_reduce(buf, "min");
+ayanmo max = Cpu.par_reduce(buf, "max");
+ayanmo product = Cpu.par_reduce(buf, "product");</code></pre>
 
         <h3>Thread Pool Configuration</h3>
         <pre><code>// Use all cores (default)
-CPU.configure(CPU.threads());
+Cpu.configure(Cpu.threads());
 
 // Or limit to specific count
-CPU.configure(4);  // Use 4 threads</code></pre>
+Cpu.configure(4);  // Use 4 threads</code></pre>
 
         <h2>GPU Acceleration</h2>
         <p>For heavy numerical work, use GPU compute (requires <code>gpu</code> feature):</p>

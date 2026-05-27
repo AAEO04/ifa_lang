@@ -25,16 +25,16 @@
         <h2>Use Case 1: Box Drawing</h2>
         <pre><code>// boxes.ifa - Draw styled terminal boxes
 
-Ose.bere();
+ayanmo tty = Ose.bere();
 
-Ose.apoti("Welcome to Ifa-Lang", 40);
-Ose.ipinro("Features");
-Ose.apoti("File I/O with Odi", 30);
-Ose.apoti("Networking with Otura", 30);
-Ose.apoti("Crypto with Irete", 30);
-Ose.ipinro("Getting Started");
-Ose.apoti("Run: ifa run file.ifa", 30);
-Ose.apoti("Check: ifa check file.ifa", 30);
+// Ose.ya(tty, {"type": "apoti", "title": "Welcome to Ifa-Lang"});
+// Ose.ya(tty, {"type": "ipinro", "text": "Features"});
+// Ose.ya(tty, {"type": "apoti", "title": "File I/O with Odi"});
+// Ose.ya(tty, {"type": "apoti", "title": "Networking with Otura"});
+// Ose.ya(tty, {"type": "apoti", "title": "Crypto with Irete"});
+// Ose.ya(tty, {"type": "ipinro", "text": "Getting Started"});
+// Ose.ya(tty, {"type": "apoti", "title": "Run: ifa run file.ifa"});
+// Ose.ya(tty, {"type": "apoti", "title": "Check: ifa check file.ifa"});
 
 Ose.pari();</code></pre>
 
@@ -62,12 +62,12 @@ Ose.pari();</code></pre>
         <h2>Use Case 3: Simple Draw</h2>
         <pre><code>// draw.ifa - Basic draw operations
 
-Ose.bere();
-Ose.ya("Starting draw...");
+ayanmo tty = Ose.bere();
+Ose.ya(tty, {"type": "ipinro", "text": "Starting draw..."});
 
-Ose.apoti("Header", 30);
-Ose.ya("Content area");
-Ose.ipinro("Status: OK");
+// Ose.ya(tty, {"type": "apoti", "title": "Header"});
+Ose.ya(tty, {"type": "ipinro", "text": "Content area"});
+// Ose.ya(tty, {"type": "ipinro", "text": "Status: OK"});
 
 Irosu.fo("Ose draw complete");
 

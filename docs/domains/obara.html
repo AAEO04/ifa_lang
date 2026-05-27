@@ -22,25 +22,25 @@
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/odu/obara.rs</code>.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>.
         </div>
 
         <h2>Basic Arithmetic</h2>
 
         <div class="method">
-            <h3>fikun / add</h3>
+            <h3>fikun / add / plus</h3>
             <div class="sig">Obara.fikun(a: Float, b: Float) → Float</div>
             <p>Add two numbers.</p>
         </div>
 
         <div class="method">
-            <h3>isodipupo / multiply</h3>
+            <h3>isodipupo / mul / times</h3>
             <div class="sig">Obara.isodipupo(a: Float, b: Float) → Float</div>
             <p>Multiply two numbers.</p>
         </div>
 
         <div class="method">
-            <h3>agbara / power</h3>
+            <h3>agbara / pow</h3>
             <div class="sig">Obara.agbara(base: Float, exp: Float) → Float</div>
             <p>Raise base to exponent power.</p>
         </div>
@@ -51,6 +51,8 @@
             <p>Square root.</p>
         </div>
 
+        <h2>Advanced Arithmetic</h2>
+
         <div class="method">
             <h3>abs</h3>
             <div class="sig">Obara.abs(x: Float) → Float</div>
@@ -58,44 +60,74 @@
         </div>
 
         <div class="method">
-            <h3>iyoku / modulo</h3>
-            <div class="sig">Obara.iyoku(a: Float, b: Float) → Float</div>
-            <p>Modulo (remainder) of <code>a % b</code>.</p>
+            <h3>apapo / sum</h3>
+            <div class="sig">Obara.apapo(list: List) → Float</div>
+            <p>Sum all values in a list.</p>
         </div>
-
-        <h2>Rounding</h2>
 
         <div class="method">
             <h3>ile / floor</h3>
-            <div class="sig">Obara.ile(x: Float) → Float</div>
-            <p>Round down to nearest integer.</p>
+            <div class="sig">Obara.ile(x: Float) → Int</div>
+            <p>Floor (round down).</p>
         </div>
 
         <div class="method">
             <h3>orule / ceil</h3>
-            <div class="sig">Obara.orule(x: Float) → Float</div>
-            <p>Round up to nearest integer.</p>
+            <div class="sig">Obara.orule(x: Float) → Int</div>
+            <p>Ceil (round up).</p>
         </div>
 
         <div class="method">
             <h3>yika / round</h3>
-            <div class="sig">Obara.yika(x: Float, decimals: Int) → Float</div>
-            <p>Round to specified decimal places.</p>
+            <div class="sig">Obara.yika(x: Float) → Int</div>
+            <p>Round to nearest integer.</p>
+        </div>
+
+        <div class="method">
+            <h3>iyoku / modulo / mod</h3>
+            <div class="sig">Obara.iyoku(a: Int, b: Int) → Int</div>
+            <p>Modulo (remainder) operation.</p>
         </div>
 
         <h2>Trigonometry</h2>
 
         <div class="method">
-            <h3>sin, cos, tan</h3>
-            <div class="sig">Obara.sin(x: Float) → Float<br>Obara.cos(x: Float) → Float<br>Obara.tan(x: Float) → Float</div>
+            <h3>sin</h3>
+            <div class="sig">Obara.sin(x: Float) → Float</div>
+            <p>Sine (radians).</p>
         </div>
 
         <div class="method">
-            <h3>asin, acos, atan</h3>
-            <div class="sig">Obara.asin(x: Float) → Float<br>Obara.acos(x: Float) → Float<br>Obara.atan(x: Float) → Float</div>
+            <h3>cos</h3>
+            <div class="sig">Obara.cos(x: Float) → Float</div>
+            <p>Cosine (radians).</p>
         </div>
 
-        <h2>Logarithms & Exponents</h2>
+        <div class="method">
+            <h3>tan</h3>
+            <div class="sig">Obara.tan(x: Float) → Float</div>
+            <p>Tangent (radians).</p>
+        </div>
+
+        <div class="method">
+            <h3>asin</h3>
+            <div class="sig">Obara.asin(x: Float) → Float</div>
+            <p>Arc sine.</p>
+        </div>
+
+        <div class="method">
+            <h3>acos</h3>
+            <div class="sig">Obara.acos(x: Float) → Float</div>
+            <p>Arc cosine.</p>
+        </div>
+
+        <div class="method">
+            <h3>atan</h3>
+            <div class="sig">Obara.atan(x: Float) → Float</div>
+            <p>Arc tangent.</p>
+        </div>
+
+        <h2>Advanced Math</h2>
 
         <div class="method">
             <h3>log / ln</h3>
@@ -115,30 +147,22 @@
             <p>Exponential (e^x).</p>
         </div>
 
-        <h2>Statistics</h2>
-
         <div class="method">
-            <h3>apapo / sum</h3>
-            <div class="sig">Obara.apapo(items: List(Float)) → Float</div>
-            <p>Sum of all items in list.</p>
-        </div>
-
-        <div class="method">
-            <h3>aropin / mean</h3>
-            <div class="sig">Obara.aropin(items: List(Float)) → Float</div>
-            <p>Arithmetic mean (average).</p>
+            <h3>aropin / mean / avg</h3>
+            <div class="sig">Obara.aropin(list: List) → Float</div>
+            <p>Mean (average) of values in a list.</p>
         </div>
 
         <div class="method">
             <h3>nla_julo / max</h3>
-            <div class="sig">Obara.nla_julo(items: List(Float)) → Float</div>
-            <p>Maximum value in list.</p>
+            <div class="sig">Obara.nla_julo(a: Float, b: Float) → Float</div>
+            <p>Maximum of two values.</p>
         </div>
 
         <div class="method">
             <h3>kere_julo / min</h3>
-            <div class="sig">Obara.kere_julo(items: List(Float)) → Float</div>
-            <p>Minimum value in list.</p>
+            <div class="sig">Obara.kere_julo(a: Float, b: Float) → Float</div>
+            <p>Minimum of two values.</p>
         </div>
 
         <h2>Constants</h2>
@@ -146,13 +170,13 @@
         <div class="method">
             <h3>pi</h3>
             <div class="sig">Obara.pi() → Float</div>
-            <p>Pi (3.14159...).</p>
+            <p>Pi constant (π).</p>
         </div>
 
         <div class="method">
             <h3>e</h3>
             <div class="sig">Obara.e() → Float</div>
-            <p>Euler's number (2.71828...).</p>
+            <p>Euler's number (e).</p>
         </div>
 
         <footer>

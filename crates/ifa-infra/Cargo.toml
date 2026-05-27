@@ -26,6 +26,10 @@ optional = true
 workspace = true
 optional = true
 
+[dependencies.futures-channel]
+version = "0.3"
+optional = true
+
 [dependencies.pollster]
 version = "0.3"
 optional = true
@@ -37,7 +41,7 @@ optional = true
 [features]
 default = ["parallel"]
 parallel = ["rayon"]
-gpu = ["wgpu", "bytemuck"]
+gpu = ["wgpu", "bytemuck", "futures-channel"]
 gpu_native = ["gpu", "tokio", "pollster"]
 persistence = ["bincode", "tokio/fs", "tokio/io-util"]
 kernel = ["sysinfo"]

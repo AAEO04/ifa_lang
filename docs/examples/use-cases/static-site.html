@@ -29,11 +29,11 @@
 
         <h2>Code Example</h2>
         <pre><code>// Static Site Generator
-fn build_site() {
+ese build_site() {
     ayanmo template = Odi.ka("template.html");
     ayanmo files = ["posts/hello.md", "posts/world.md", "about.md"];
 
-    fn process_file(path) {
+    ese process_file(path) {
         ayanmo content = Odi.ka(path);
         ayanmo title = Ika.oruko_html(content);
         ayanmo body = Ika.tumo_html(content);
@@ -43,7 +43,7 @@ fn build_site() {
         Irosu.fo("Built: " + out_name);
     }
 
-    Ogunda.maapu(files, process_file);
+    Ogunda.yi_pada(files, process_file);
     Irosu.fo("Site generated!");
 }</code></pre>
 

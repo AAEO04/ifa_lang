@@ -3,14 +3,27 @@
 //! Tests for Odù domain handlers using interpreter-level testing.
 //! Uses ayanmo (variable declaration) statements to capture results.
 
-use ifa_vm::{IfaVM, IfaValue};
 use ifa_std::vm_registry::StdRegistry;
+use ifa_vm::{IfaVM, IfaValue};
 
 /// Helper to run Ifá code and get environment value
 fn run_and_get(code: &str, var: &str) -> Result<IfaValue, String> {
-
     let bytecode = ifa_compiler::compile(code).map_err(|e| e.to_string())?;
-    let mut vm = IfaVM::new().with_registry(Box::new(StdRegistry::new()));
+    let mut registry = StdRegistry::new();
+    let mut caps = ifa_types::capability::CapabilitySet::new();
+    caps.grant(ifa_types::capability::Ofun::Crypto);
+    caps.grant(ifa_types::capability::Ofun::Random);
+    caps.grant(ifa_types::capability::Ofun::Time);
+    caps.grant(ifa_types::capability::Ofun::Stdio);
+    caps.grant(ifa_types::capability::Ofun::ReadFiles {
+        root: std::path::PathBuf::from("."),
+    });
+    caps.grant(ifa_types::capability::Ofun::WriteFiles {
+        root: std::path::PathBuf::from("."),
+    });
+    registry.set_capabilities(caps);
+
+    let mut vm = IfaVM::new().with_registry(Box::new(registry));
     vm.execute(&bytecode).map_err(|e| e.to_string())?;
     vm.get_global(var)
         .cloned()
@@ -18,12 +31,12 @@ fn run_and_get(code: &str, var: &str) -> Result<IfaValue, String> {
 }
 
 // =============================================================================
-// Ọ̀sá (Concurrency) Handler Tests
+// Cpu (Parallelism) Handler Tests
 // =============================================================================
 
 #[test]
-fn test_osa_threads() {
-    let result = run_and_get("ayanmo t = Osa.threads();", "t").unwrap();
+fn test_cpu_threads() {
+    let result = run_and_get("ayanmo t = Cpu.threads();", "t").unwrap();
     if let IfaValue::Int(n) = result {
         assert!(n >= 1, "Should have at least 1 thread");
     } else {
@@ -32,46 +45,62 @@ fn test_osa_threads() {
 }
 
 #[test]
-fn test_osa_sum() {
-    let result = run_and_get("ayanmo s = Osa.sum([1, 2, 3, 4, 5]);", "s").unwrap();
-    assert_eq!(result, IfaValue::Int(15));
-}
-
-#[test]
-fn test_osa_product() {
-    let result = run_and_get("ayanmo p = Osa.product([2, 3, 4]);", "p").unwrap();
-    assert_eq!(result, IfaValue::Int(24));
-}
-
-#[test]
-fn test_osa_min() {
-    let result = run_and_get("ayanmo m = Osa.min([5, 2, 8, 1, 9]);", "m").unwrap();
-    assert_eq!(result, IfaValue::Int(1));
-}
-
-#[test]
-fn test_osa_max() {
-    let result = run_and_get("ayanmo m = Osa.max([5, 2, 8, 1, 9]);", "m").unwrap();
-    assert_eq!(result, IfaValue::Int(9));
-}
-
-#[test]
-fn test_osa_sort() {
-    let result = run_and_get("ayanmo s = Osa.sort([3, 1, 4, 1, 5]);", "s").unwrap();
-    if let IfaValue::List(items) = result {
-        let nums: Vec<i64> = items
-            .iter()
-            .filter_map(|v| {
-                if let IfaValue::Int(n) = v {
-                    Some(*n)
-                } else {
-                    None
-                }
-            })
-            .collect();
-        assert_eq!(nums, vec![1, 1, 3, 4, 5]);
+fn test_cpu_sum() {
+    let code = r#"
+ayanmo view = Cpu.alloc_buffer(5);
+Cpu.write_buffer(view, [1, 2, 3, 4, 5]);
+ayanmo s = Cpu.par_reduce(view, "sum");
+"#;
+    let result = run_and_get(code, "s").unwrap();
+    if let IfaValue::Float(f) = result {
+        assert_eq!(f, 15.0);
     } else {
-        panic!("Expected List");
+        panic!("Expected Float, got {:?}", result);
+    }
+}
+
+#[test]
+fn test_cpu_product() {
+    let code = r#"
+ayanmo view = Cpu.alloc_buffer(3);
+Cpu.write_buffer(view, [2, 3, 4]);
+ayanmo p = Cpu.par_reduce(view, "product");
+"#;
+    let result = run_and_get(code, "p").unwrap();
+    if let IfaValue::Float(f) = result {
+        assert_eq!(f, 24.0);
+    } else {
+        panic!("Expected Float, got {:?}", result);
+    }
+}
+
+#[test]
+fn test_cpu_min() {
+    let code = r#"
+ayanmo view = Cpu.alloc_buffer(5);
+Cpu.write_buffer(view, [5, 2, 8, 1, 9]);
+ayanmo m = Cpu.par_reduce(view, "min");
+"#;
+    let result = run_and_get(code, "m").unwrap();
+    if let IfaValue::Float(f) = result {
+        assert_eq!(f, 1.0);
+    } else {
+        panic!("Expected Float, got {:?}", result);
+    }
+}
+
+#[test]
+fn test_cpu_max() {
+    let code = r#"
+ayanmo view = Cpu.alloc_buffer(5);
+Cpu.write_buffer(view, [5, 2, 8, 1, 9]);
+ayanmo m = Cpu.par_reduce(view, "max");
+"#;
+    let result = run_and_get(code, "m").unwrap();
+    if let IfaValue::Float(f) = result {
+        assert_eq!(f, 9.0);
+    } else {
+        panic!("Expected Float, got {:?}", result);
     }
 }
 
@@ -81,7 +110,7 @@ fn test_osa_sort() {
 
 #[test]
 fn test_irete_sha256() {
-    let result = run_and_get(r#"ayanmo h = Irete.sha256("hello");"#, "h").unwrap();
+    let result = run_and_get(r#"ayanmo h = Irete.sha256_hex("hello");"#, "h").unwrap();
     if let IfaValue::Str(hash) = result {
         assert_eq!(hash.len(), 64, "SHA256 hex should be 64 chars");
         assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
@@ -93,7 +122,7 @@ fn test_irete_sha256() {
 #[test]
 fn test_irete_sha256_known() {
     // SHA256("hello") known value
-    let result = run_and_get(r#"ayanmo h = Irete.sha256("hello");"#, "h").unwrap();
+    let result = run_and_get(r#"ayanmo h = Irete.sha256_hex("hello");"#, "h").unwrap();
     if let IfaValue::Str(hash) = result {
         assert_eq!(
             hash,
@@ -101,6 +130,17 @@ fn test_irete_sha256_known() {
         );
     } else {
         panic!("Expected Str");
+    }
+}
+
+#[test]
+fn test_irete_sha256_raw() {
+    let result = run_and_get(r#"ayanmo h = Irete.sha256("hello");"#, "h").unwrap();
+    if let IfaValue::List(bytes) = result {
+        assert_eq!(bytes.len(), 32);
+        assert_eq!(bytes[0], IfaValue::int(44));
+    } else {
+        panic!("Expected List");
     }
 }
 
@@ -125,8 +165,8 @@ fn test_irete_base64_decode() {
 }
 
 #[test]
-fn test_irete_uuid() {
-    let result = run_and_get("ayanmo u = Irete.uuid();", "u").unwrap();
+fn test_owonrin_uuid() {
+    let result = run_and_get("ayanmo u = Owonrin.uuid();", "u").unwrap();
     if let IfaValue::Str(uuid) = result {
         assert_eq!(uuid.len(), 36, "UUID should be 36 chars with dashes");
         assert!(uuid.contains('-'));

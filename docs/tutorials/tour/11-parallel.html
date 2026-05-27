@@ -39,7 +39,7 @@
             </div>
             <p style="margin: 0;">
                 The <code>CPU</code> domain (from the hardware layer) provides parallel operations.
-                It can be configured with <code>CPU.configure()</code> for thread counts and work group sizes.
+                It can be configured with <code>Cpu.configure()</code> for thread counts and work group sizes.
             </p>
         </div>
 
@@ -54,7 +54,7 @@ Irosu.fo("Cores: " + cores);  // e.g., 8</code></pre>
         </div>
 
         <h2>Parallel Map</h2>
-        <p><code>CPU.par_map()</code> applies a function to each element in parallel:</p>
+        <p><code>Cpu.par_map()</code> applies a function to each element in parallel:</p>
 
         <div class="code-example">
             <div class="code-header">
@@ -63,12 +63,12 @@ Irosu.fo("Cores: " + cores);  // e.g., 8</code></pre>
             <pre class="code-yoruba"><code>ayanmo numbers = [1, 2, 3, 4, 5, 6, 7, 8];
 
 // Square each number in parallel
-ayanmo squared = CPU.par_map({ x -> x * x }, numbers);
+ayanmo squared = Cpu.par_map({ x -> x * x }, numbers);
 Irosu.fo(squared);  // [1, 4, 9, 16, 25, 36, 49, 64]</code></pre>
         </div>
 
         <h2>Parallel Reduce</h2>
-        <p><code>CPU.par_reduce()</code> combines all elements using a binary function:</p>
+        <p><code>Cpu.par_reduce()</code> combines all elements using a binary function:</p>
 
         <div class="code-example">
             <div class="code-header">
@@ -77,11 +77,11 @@ Irosu.fo(squared);  // [1, 4, 9, 16, 25, 36, 49, 64]</code></pre>
             <pre class="code-yoruba"><code>ayanmo values = [1, 2, 3, 4, 5, 6, 7, 8];
 
 // Sum all numbers in parallel
-ayanmo sum = CPU.par_reduce({ a, b -> a + b }, values, 0);
+ayanmo sum = Cpu.par_reduce({ a, b -> a + b }, values, 0);
 Irosu.fo("Sum: " + sum);  // 36
 
 // Find maximum in parallel
-ayanmo max = CPU.par_reduce({ a, b -> ti (a > b) a bibẹkọ b }, values, 0);
+ayanmo max = Cpu.par_reduce({ a, b -> ti (a > b) a bibẹkọ b }, values, 0);
 Irosu.fo("Max: " + max);  // 8</code></pre>
         </div>
 
@@ -91,8 +91,8 @@ Irosu.fo("Max: " + max);  // 8</code></pre>
                 <span class="code-title">Configuring the CPU</span>
             </div>
             <pre class="code-yoruba"><code>// Configure thread pool
-CPU.configure("threads", 4);     // use 4 threads
-CPU.configure("workgroup", 64);  // work group size</code></pre>
+Cpu.configure("threads", 4);     // use 4 threads
+Cpu.configure("workgroup", 64);  // work group size</code></pre>
         </div>
 
         <div class="info-box"
@@ -112,7 +112,7 @@ CPU.configure("workgroup", 64);  // work group size</code></pre>
             <pre class="code-yoruba"><code>ayanmo pixels = [12, 45, 78, 23, 90, 34, 56, 67];
 
 // Brighten each pixel in parallel
-ayanmo brightened = CPU.par_map({ p -> 
+ayanmo brightened = Cpu.par_map({ p -> 
     ayanmo bright = p + 30;
     ti (bright > 255) 255 bibẹkọ bright
 }, pixels);
@@ -123,14 +123,14 @@ Irosu.fo(brightened);  // [42, 75, 108, 53, 120, 64, 86, 97]</code></pre>
         <h2>What You Learned</h2>
         <ul style="margin-left: 2rem; color: var(--text-dim);">
             <li>System information with <code>SYS.ìka()</code></li>
-            <li>Parallel map: <code>CPU.par_map()</code></li>
-            <li>Parallel reduce: <code>CPU.par_reduce()</code></li>
-            <li>CPU configuration: <code>CPU.configure()</code></li>
+            <li>Parallel map: <code>Cpu.par_map()</code></li>
+            <li>Parallel reduce: <code>Cpu.par_reduce()</code></li>
+            <li>CPU configuration: <code>Cpu.configure()</code></li>
             <li>Requires <code>parallel</code> feature flag</li>
         </ul>
 
         <div class="nav-buttons">
-            <a href="10-errors.html" class="nav-btn">Previous: Errors</a>
+            <a href="../../../index.html" class="nav-btn">Tour Index</a>
             <a href="12-crypto.html" class="nav-btn primary">Next: Crypto</a>
         </div>
     </div>

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Ifá-Lang Installer
-# Usage: curl -sSL https://get.ifalang.io | sh
+# Usage: curl -sSL https://raw.githubusercontent.com/AAEO04/ifa_lang/main/docs/install.sh | sh
 #
 # "Ọ̀gbè ló bí ayé" — Ogbè gave birth to the world.
 

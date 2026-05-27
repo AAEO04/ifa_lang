@@ -1,7 +1,7 @@
-use ifa_vm::vm::IfaVM;
 use ifa_types::IfaValue;
 use ifa_types::OpCode;
 use ifa_types::bytecode::Bytecode;
+use ifa_vm::vm::IfaVM;
 
 fn u16le(n: u16) -> [u8; 2] {
     n.to_le_bytes()

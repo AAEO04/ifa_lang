@@ -12,7 +12,6 @@ pub fn num_cores() -> usize {
 /// Cached system info for expensive sysinfo calls
 #[cfg(feature = "sysinfo")]
 /// Cached system info with thread-safe mutation
-#[cfg(feature = "sysinfo")]
 static SYSTEM_INFO: std::sync::OnceLock<std::sync::RwLock<sysinfo::System>> =
     std::sync::OnceLock::new();
 

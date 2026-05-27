@@ -5,9 +5,9 @@
 use pest::Parser;
 use pest_derive::Parser;
 
+use crate::lexer::OduDomain;
 use ifa_types::ast::*;
 use ifa_types::{IfaError, IfaResult};
-use crate::lexer::OduDomain;
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -121,7 +121,8 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                 visibility,
                 span,
             }))
-        }        Rule::assignment_stmt => {
+        }
+        Rule::assignment_stmt => {
             let mut inner = pair.into_inner();
             let lvalue_pair = inner
                 .next()
@@ -154,7 +155,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                     return Err(IfaError::Parse(format!(
                         "Invalid update target: {:?}",
                         first.as_rule()
-                    )))
+                    )));
                 }
             };
 
@@ -171,7 +172,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                     return Err(IfaError::Parse(format!(
                         "Unknown update operator: {}",
                         op_pair.as_str()
-                    )))
+                    )));
                 }
             };
 
@@ -184,7 +185,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
             Ok(Some(Statement::Update {
                 target,
                 op,
-                value: Some(value.ok_or_else(|| IfaError::Parse("Update missing value".into()))? ),
+                value: Some(value.ok_or_else(|| IfaError::Parse("Update missing value".into()))?),
                 span,
             }))
         }
@@ -341,6 +342,8 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
 
         Rule::ase_stmt => Ok(Some(Statement::Ase { span })),
 
+        Rule::abo_stmt => Ok(Some(Statement::Abo { span })),
+
         Rule::taboo_stmt => {
             let mut inner = pair.into_inner();
             // Skip the taboo keyword
@@ -412,7 +415,11 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
             } else {
                 None
             };
-            Ok(Some(Statement::Ebo { offering, body, span }))
+            Ok(Some(Statement::Ebo {
+                offering,
+                body,
+                span,
+            }))
         }
 
         Rule::defer_stmt => {
@@ -653,6 +660,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                 let mut finally_stmts = Vec::new();
                 for p in nipari_pair.into_inner() {
                     if p.as_rule() == Rule::statement {
+                        #[allow(clippy::collapsible_if)]
                         if let Some(stmt) = parse_statement(p)? {
                             finally_stmts.push(stmt);
                         }
@@ -670,6 +678,15 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                 finally_body,
                 span,
             }))
+        }
+
+        Rule::throw_stmt => {
+            let mut inner = pair.into_inner();
+            let expr_pair = inner
+                .next()
+                .ok_or_else(|| IfaError::Parse("Throw missing expression".to_string()))?;
+            let expr = parse_expression(expr_pair)?;
+            Ok(Some(Statement::Throw { value: expr, span }))
         }
 
         Rule::EOI => Ok(None),
@@ -751,9 +768,11 @@ fn parse_lvalue(pair: pest::iterators::Pair<Rule>) -> IfaResult<AssignTarget> {
                 .ok_or_else(|| IfaError::Parse("Index lvalue missing name".to_string()))?
                 .as_str()
                 .to_string();
-            let index_expr = parse_expression(index_inner.next().ok_or_else(|| {
-                IfaError::Parse("Index lvalue missing index".to_string())
-            })?)?;
+            let index_expr = parse_expression(
+                index_inner
+                    .next()
+                    .ok_or_else(|| IfaError::Parse("Index lvalue missing index".to_string()))?,
+            )?;
             Ok(AssignTarget::Index {
                 name,
                 index: Box::new(index_expr),
@@ -761,9 +780,10 @@ fn parse_lvalue(pair: pest::iterators::Pair<Rule>) -> IfaResult<AssignTarget> {
         }
         Rule::deref_lvalue => {
             let mut deref_inner = inner_lvalue.into_inner();
-            let expr = parse_expression(deref_inner.next().ok_or_else(|| {
-                IfaError::Parse("Deref lvalue missing expression".to_string())
-            })?)?;
+            let expr =
+                parse_expression(deref_inner.next().ok_or_else(|| {
+                    IfaError::Parse("Deref lvalue missing expression".to_string())
+                })?)?;
             Ok(AssignTarget::Dereference(Box::new(expr)))
         }
         _ => Err(IfaError::Parse(format!(
@@ -775,6 +795,40 @@ fn parse_lvalue(pair: pest::iterators::Pair<Rule>) -> IfaResult<AssignTarget> {
 
 fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> {
     match pair.as_rule() {
+        Rule::pipeline_expr => {
+            let mut inner = pair.into_inner();
+            let first = inner
+                .next()
+                .ok_or_else(|| IfaError::Parse("Empty pipeline expression".to_string()))?;
+            let mut left = parse_expression(first)?;
+
+            for next_pair in inner {
+                let right = parse_expression(next_pair)?;
+                left = desugar_pipeline(left, right)?;
+            }
+            Ok(left)
+        }
+        Rule::pow_expr => {
+            let mut inner = pair.into_inner();
+            let first = inner
+                .next()
+                .ok_or(IfaError::Parse("Empty expression group".into()))?;
+            let mut exprs = vec![parse_expression(first)?];
+            while let Some(_op_pair) = inner.next() {
+                if let Some(right_pair) = inner.next() {
+                    exprs.push(parse_expression(right_pair)?);
+                }
+            }
+            let mut result = exprs.pop().unwrap();
+            while let Some(left) = exprs.pop() {
+                result = Expression::BinaryOp {
+                    left: Box::new(left),
+                    op: BinaryOperator::Power,
+                    right: Box::new(result),
+                };
+            }
+            Ok(result)
+        }
         Rule::expression
         | Rule::null_coalesce_expr
         | Rule::or_expr
@@ -935,13 +989,11 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
 
         Rule::number => {
             let s = pair.as_str().replace('_', "");
-            if s.starts_with("0x") {
-                let hex = &s[2..];
+            if let Some(hex) = s.strip_prefix("0x") {
                 let val = i64::from_str_radix(hex, 16)
                     .map_err(|_| IfaError::Parse("Invalid hex literal".to_string()))?;
                 Ok(Expression::Int(val))
-            } else if s.starts_with("0b") {
-                let bin = &s[2..];
+            } else if let Some(bin) = s.strip_prefix("0b") {
                 let val = i64::from_str_radix(bin, 2)
                     .map_err(|_| IfaError::Parse("Invalid binary literal".to_string()))?;
                 Ok(Expression::Int(val))
@@ -1035,12 +1087,16 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
                 .ok_or(IfaError::Parse("Index access missing object".into()))?
                 .as_str()
                 .to_string();
-            
+
             let mut is_optional = false;
-            let next_pair = inner.next().ok_or(IfaError::Parse("Index access missing index".into()))?;
+            let next_pair = inner
+                .next()
+                .ok_or(IfaError::Parse("Index access missing index".into()))?;
             let index_expr_pair = if next_pair.as_rule() == Rule::optional_chain_op {
                 is_optional = true;
-                inner.next().ok_or(IfaError::Parse("Index access missing index after ?.".into()))?
+                inner.next().ok_or(IfaError::Parse(
+                    "Index access missing index after ?.".into(),
+                ))?
             } else {
                 next_pair
             };
@@ -1079,7 +1135,6 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
             }
             Ok(Expression::Map(entries))
         }
-
 
         Rule::interpolated_string => {
             let mut parts = Vec::new();
@@ -1148,7 +1203,7 @@ fn parse_odu_call(pair: pest::iterators::Pair<Rule>) -> IfaResult<OduCall> {
         .ok_or(IfaError::Parse("Odu call missing domain".into()))?
         .as_str();
     let domain = parse_odu_domain(domain_str)?;
-    
+
     let op = inner
         .next()
         .ok_or(IfaError::Parse("Odu call missing operator".into()))?;
@@ -1263,6 +1318,7 @@ fn parse_binary_op(pair: &pest::iterators::Pair<Rule>) -> IfaResult<BinaryOperat
         Rule::mul_op => Ok(BinaryOperator::Mul),
         Rule::div_op => Ok(BinaryOperator::Div),
         Rule::mod_op => Ok(BinaryOperator::Mod),
+        Rule::pow_op => Ok(BinaryOperator::Power),
         Rule::null_coalesce_op => Ok(BinaryOperator::NullCoalesce),
         Rule::comp_op => match pair.as_str() {
             "==" => Ok(BinaryOperator::Eq),
@@ -1332,9 +1388,72 @@ fn make_span(pair: &pest::iterators::Pair<Rule>) -> Span {
     }
 }
 
+fn desugar_pipeline(lhs: Expression, rhs: Expression) -> IfaResult<Expression> {
+    match rhs {
+        Expression::Call { name, mut args } => {
+            args.insert(0, lhs);
+            Ok(Expression::Call { name, args })
+        }
+        Expression::Identifier(name) => Ok(Expression::Call {
+            name,
+            args: vec![lhs],
+        }),
+        Expression::MethodCall {
+            object,
+            method,
+            mut args,
+            is_optional,
+        } => {
+            args.insert(0, lhs);
+            Ok(Expression::MethodCall {
+                object,
+                method,
+                args,
+                is_optional,
+            })
+        }
+        Expression::OduCall(mut call) => {
+            call.args.insert(0, lhs);
+            Ok(Expression::OduCall(call))
+        }
+        Expression::Get {
+            object,
+            name,
+            is_optional,
+        } => Ok(Expression::MethodCall {
+            object,
+            method: name,
+            args: vec![lhs],
+            is_optional,
+        }),
+        other => Err(IfaError::Parse(format!(
+            "RHS of pipeline operator must be a function, method, or domain call. Found: {:?}",
+            other
+        ))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_pipeline_operator() {
+        let program = parse("\"hello\" |> print;").unwrap();
+        assert_eq!(program.statements.len(), 1);
+
+        if let Statement::Expr { expr, .. } = &program.statements[0] {
+            if let Expression::Call { name, args } = expr {
+                assert_eq!(name, "print");
+                assert_eq!(args.len(), 1);
+                assert!(matches!(&args[0], Expression::String(s) if s == "hello"));
+            } else {
+                panic!("Expected Expression::Call");
+            }
+        } else {
+            panic!("Expected Statement::Expr");
+        }
+    }
 
     #[test]
     fn test_parse_var_decl() {

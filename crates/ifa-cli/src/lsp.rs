@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_if)]
+
 use ifa_babalawo::{BabalawoConfig, LintContext, Severity as IfaSeverity, analyze_program};
 use ifa_vm::parse;
 use lsp_server::{Connection, Message, Notification, RequestId, Response};
@@ -57,7 +59,9 @@ fn main_loop(
                     return Ok(());
                 }
                 let req_msg = Message::Request(req);
-                if let Ok((id, params)) = cast_req::<lsp_types::request::Completion>(req_msg.clone()) {
+                if let Ok((id, params)) =
+                    cast_req::<lsp_types::request::Completion>(req_msg.clone())
+                {
                     eprintln!(
                         "Got completion request for: {}",
                         params.text_document_position.text_document.uri
@@ -67,41 +71,63 @@ fn main_loop(
                     )));
                     let result = serde_json::to_value(&result)
                         .map_err(|e| format!("Failed to serialize completion: {}", e))?;
-                    let resp = Response { id, result: Some(result), error: None };
+                    let resp = Response {
+                        id,
+                        result: Some(result),
+                        error: None,
+                    };
                     connection.sender.send(Message::Response(resp))?;
-                } else if let Ok((id, params)) = cast_req::<lsp_types::request::CodeActionRequest>(req_msg.clone()) {
+                } else if let Ok((id, params)) =
+                    cast_req::<lsp_types::request::CodeActionRequest>(req_msg.clone())
+                {
                     let mut actions = Vec::new();
                     for diagnostic in params.context.diagnostics {
-                        if diagnostic.code == Some(lsp_types::NumberOrString::String("UNUSED_VARIABLE".to_string())) {
+                        if diagnostic.code
+                            == Some(lsp_types::NumberOrString::String(
+                                "UNUSED_VARIABLE".to_string(),
+                            ))
+                        {
                             let msg = &diagnostic.message;
                             if let Some(start) = msg.find('\'') {
-                                if let Some(end) = msg[start+1..].find('\'') {
-                                    let name = &msg[start+1..start+1+end];
+                                if let Some(end) = msg[start + 1..].find('\'') {
+                                    let name = &msg[start + 1..start + 1 + end];
                                     let new_name = format!("_{}", name);
-                                    
-                                    let mut changes = std::collections::HashMap::new();
-                                    changes.insert(params.text_document.uri.clone(), vec![lsp_types::TextEdit {
-                                        range: diagnostic.range,
-                                        new_text: new_name.clone(),
-                                    }]);
 
-                                    actions.push(lsp_types::CodeActionOrCommand::CodeAction(lsp_types::CodeAction {
-                                        title: format!("Sanctify (prefix with _): {}", new_name),
-                                        kind: Some(lsp_types::CodeActionKind::QUICKFIX),
-                                        diagnostics: Some(vec![diagnostic]),
-                                        edit: Some(lsp_types::WorkspaceEdit {
-                                            changes: Some(changes),
+                                    let mut changes = std::collections::HashMap::new();
+                                    changes.insert(
+                                        params.text_document.uri.clone(),
+                                        vec![lsp_types::TextEdit {
+                                            range: diagnostic.range,
+                                            new_text: new_name.clone(),
+                                        }],
+                                    );
+
+                                    actions.push(lsp_types::CodeActionOrCommand::CodeAction(
+                                        lsp_types::CodeAction {
+                                            title: format!(
+                                                "Sanctify (prefix with _): {}",
+                                                new_name
+                                            ),
+                                            kind: Some(lsp_types::CodeActionKind::QUICKFIX),
+                                            diagnostics: Some(vec![diagnostic]),
+                                            edit: Some(lsp_types::WorkspaceEdit {
+                                                changes: Some(changes),
+                                                ..Default::default()
+                                            }),
+                                            is_preferred: Some(true),
                                             ..Default::default()
-                                        }),
-                                        is_preferred: Some(true),
-                                        ..Default::default()
-                                    }));
+                                        },
+                                    ));
                                 }
                             }
                         }
                     }
                     let result = serde_json::to_value(&actions).unwrap_or(serde_json::Value::Null);
-                    let resp = Response { id, result: Some(result), error: None };
+                    let resp = Response {
+                        id,
+                        result: Some(result),
+                        error: None,
+                    };
                     connection.sender.send(Message::Response(resp))?;
                 } else {
                     // Unknown or unhandled request
@@ -185,7 +211,8 @@ fn publish_diagnostics(
                         },
                         end: Position {
                             line: span.line.saturating_sub(1) as u32, // Simplified: assume single line for now if not available
-                            character: (span.column as u32 + (span.end as u32).saturating_sub(span.start as u32)),
+                            character: (span.column as u32
+                                + (span.end as u32).saturating_sub(span.start as u32)),
                         },
                     }
                 } else {
@@ -280,58 +307,22 @@ fn get_completions(context: &Option<LintContext>) -> Vec<CompletionItem> {
         ci("nla", "Large / True", CompletionItemKind::KEYWORD),
         ci("kekere", "Small / False", CompletionItemKind::KEYWORD),
         // Modules (Odu) (Static)
-        ci(
-            "Ogbe",
-            "The Supporter (Lifecycle)",
-            CompletionItemKind::MODULE,
-        ),
-        ci(
-            "Oyeku",
-            "The Mother (Death/Exit)",
-            CompletionItemKind::MODULE,
-        ),
-        ci(
-            "Iwori",
-            "The Viewer (Time/Date)",
-            CompletionItemKind::MODULE,
-        ),
-        ci("Odi", "The Sealer (Files/IO)", CompletionItemKind::MODULE),
-        ci("Irosu", "The Sound (Log/Print)", CompletionItemKind::MODULE),
-        ci(
-            "Owonrin",
-            "The Reverse (Random)",
-            CompletionItemKind::MODULE,
-        ),
-        ci("Obara", "The Resting (Math +)", CompletionItemKind::MODULE),
-        ci(
-            "Okanran",
-            "The Striker (Strings)",
-            CompletionItemKind::MODULE,
-        ),
-        ci("Ogunda", "The Creator (Arrays)", CompletionItemKind::MODULE),
-        ci(
-            "Osa",
-            "The Spirit (Concurrency)",
-            CompletionItemKind::MODULE,
-        ),
-        ci(
-            "Ika",
-            "The Controller (Control)",
-            CompletionItemKind::MODULE,
-        ),
-        ci(
-            "Oturupon",
-            "The Bearer (Math -)",
-            CompletionItemKind::MODULE,
-        ),
-        ci("Otura", "The Vision (Network)", CompletionItemKind::MODULE),
+        ci("Ogbe", "The Light (System/Lifecycle)", CompletionItemKind::MODULE),
+        ci("Oyeku", "The Darkness (Exit/Cleanup)", CompletionItemKind::MODULE),
+        ci("Iwori", "The Mirror (Time/Loops)", CompletionItemKind::MODULE),
+        ci("Odi", "The Vessel (File I/O)", CompletionItemKind::MODULE),
+        ci("Irosu", "The Speaker (Log/Print)", CompletionItemKind::MODULE),
+        ci("Owonrin", "The Chaotic (Random)", CompletionItemKind::MODULE),
+        ci("Obara", "The King (Math)", CompletionItemKind::MODULE),
+        ci("Okanran", "The Troublemaker (Errors)", CompletionItemKind::MODULE),
+        ci("Ogunda", "The Cutter (Arrays)", CompletionItemKind::MODULE),
+        ci("Osa", "The Wind (Flow/Concurrency)", CompletionItemKind::MODULE),
+        ci("Ika", "The Constrictor (Strings)", CompletionItemKind::MODULE),
+        ci("Oturupon", "The Bearer (Reduce/Div)", CompletionItemKind::MODULE),
+        ci("Otura", "The Messenger (Network)", CompletionItemKind::MODULE),
         ci("Irete", "The Crusher (Crypto)", CompletionItemKind::MODULE),
-        ci("Ose", "The Conqueror (UI/Docs)", CompletionItemKind::MODULE),
-        ci(
-            "Ofun",
-            "The Giver (Permissions)",
-            CompletionItemKind::MODULE,
-        ),
+        ci("Ose", "The Beautifier (UI/Graphics)", CompletionItemKind::MODULE),
+        ci("Ofun", "The Creator (Root/Perms)", CompletionItemKind::MODULE),
         // Std Functions (Static)
         ci("ka", "Read (read)", CompletionItemKind::FUNCTION),
         ci("ko", "Write (write)", CompletionItemKind::FUNCTION),
@@ -348,7 +339,7 @@ fn get_completions(context: &Option<LintContext>) -> Vec<CompletionItem> {
 
     // Dynamic Completions from Context
     if let Some(ctx) = context {
-        for (var, _) in &ctx.defined_vars {
+        for var in ctx.defined_vars.keys() {
             let detail = if let Some(type_hint) = ctx.get_var_type(var) {
                 format!("Variable: {:?}", type_hint)
             } else {

@@ -26,11 +26,42 @@ pub enum Ofun {
     Bridge { language: String },
 }
 
+fn covers(granted: &Ofun, required: &Ofun) -> bool {
+    match (granted, required) {
+        (Ofun::ReadFiles { root: g }, Ofun::ReadFiles { root: r }) => {
+            let r_canon = canonicalize_safe(r);
+            let g_canon = canonicalize_safe(g);
+            r_canon.starts_with(&g_canon)
+        }
+        (Ofun::WriteFiles { root: g }, Ofun::WriteFiles { root: r }) => {
+            let r_canon = canonicalize_safe(r);
+            let g_canon = canonicalize_safe(g);
+            r_canon.starts_with(&g_canon)
+        }
+        (Ofun::Network { domains: g }, Ofun::Network { domains: r }) => {
+            r.iter().all(|d| g.contains(d))
+        }
+        (Ofun::Environment { keys: g }, Ofun::Environment { keys: r }) => {
+            r.iter().all(|k| g.contains(k))
+        }
+        (Ofun::Execute { programs: g }, Ofun::Execute { programs: r }) => {
+            r.iter().all(|p| g.contains(p))
+        }
+        (Ofun::Time, Ofun::Time) => true,
+        (Ofun::Random, Ofun::Random) => true,
+        (Ofun::Stdio, Ofun::Stdio) => true,
+        (Ofun::Crypto, Ofun::Crypto) => true,
+        (Ofun::Bridge { language: g }, Ofun::Bridge { language: r }) => g == r || g == "*",
+        _ => false,
+    }
+}
+
 /// A set of granted capabilities
 #[derive(Debug, Clone, Default)]
 pub struct CapabilitySet {
     capabilities: Vec<Ofun>,
     violations: Vec<CapabilityViolation>,
+    sacrificed: Vec<Ofun>,
 }
 
 #[derive(Debug, Clone)]
@@ -46,46 +77,34 @@ impl CapabilitySet {
     }
 
     pub fn grant(&mut self, cap: Ofun) {
-        self.capabilities.push(cap);
+        // Block the grant if any sacrificed capability covers the target capability
+        if self.sacrificed.iter().any(|sac| covers(sac, &cap)) {
+            return;
+        }
+        if !self.capabilities.contains(&cap) {
+            self.capabilities.push(cap);
+        }
     }
 
     /// Check if an operation is allowed
     pub fn check(&self, required: &Ofun) -> bool {
+        // If the required capability is covered by any sacrificed capability, it is denied
+        if self.sacrificed.iter().any(|sac| covers(sac, required)) {
+            return false;
+        }
         self.capabilities
             .iter()
-            .any(|granted| match (granted, required) {
-                (Ofun::ReadFiles { root: g }, Ofun::ReadFiles { root: r }) => {
-                    let r_canon = canonicalize_safe(r);
-                    let g_canon = canonicalize_safe(g);
-                    r_canon.starts_with(&g_canon)
-                }
-                (Ofun::WriteFiles { root: g }, Ofun::WriteFiles { root: r }) => {
-                    let r_canon = canonicalize_safe(r);
-                    let g_canon = canonicalize_safe(g);
-                    r_canon.starts_with(&g_canon)
-                }
-                (Ofun::Network { domains: g }, Ofun::Network { domains: r }) => {
-                    // Simple exact match for now, could add globbing
-                    r.iter().all(|d| g.contains(d))
-                }
-                (Ofun::Environment { keys: g }, Ofun::Environment { keys: r }) => {
-                    r.iter().all(|k| g.contains(k))
-                }
-                (Ofun::Execute { programs: g }, Ofun::Execute { programs: r }) => {
-                    r.iter().all(|p| g.contains(p))
-                }
-                (Ofun::Time, Ofun::Time) => true,
-                (Ofun::Random, Ofun::Random) => true,
-                (Ofun::Stdio, Ofun::Stdio) => true,
-                (Ofun::Crypto, Ofun::Crypto) => true,
-                (Ofun::Bridge { language: g }, Ofun::Bridge { language: r }) => g == r || g == "*",
-                _ => false,
-            })
+            .any(|granted| covers(granted, required))
     }
 
     /// Get all granted capabilities
     pub fn all(&self) -> &[Ofun] {
         &self.capabilities
+    }
+
+    /// Get all sacrificed capabilities
+    pub fn sacrificed(&self) -> &[Ofun] {
+        &self.sacrificed
     }
 
     /// Get recorded violations (for audit/debugging)
@@ -102,23 +121,51 @@ impl CapabilitySet {
         });
     }
 
-    /// Revoke a previously granted capability
+    /// Revoke a previously granted capability (Sacrifice)
     pub fn revoke(&mut self, cap: &Ofun) {
         self.capabilities.retain(|c| c != cap);
+        if !self.sacrificed.contains(cap) {
+            self.sacrificed.push(cap.clone());
+        }
     }
 
-    /// Revoke capabilities matching a predicate
+    /// Revoke capabilities matching a predicate (Sacrifice)
     pub fn remove_matching<F>(&mut self, mut f: F)
     where
         F: FnMut(&Ofun) -> bool,
     {
-        self.capabilities.retain(|c| !f(c));
+        let mut removed = Vec::new();
+        self.capabilities.retain(|c| {
+            if f(c) {
+                removed.push(c.clone());
+                false
+            } else {
+                true
+            }
+        });
+        for c in removed {
+            if !self.sacrificed.contains(&c) {
+                self.sacrificed.push(c);
+            }
+        }
     }
 
     /// Inherit capabilities from a parent set
     pub fn inherit_from(&mut self, parent: &CapabilitySet) {
+        // Inherit the sacrificed list first to prevent illegal grants
+        for cap in &parent.sacrificed {
+            if !self.sacrificed.contains(cap) {
+                self.sacrificed.push(cap.clone());
+            }
+        }
+        // Remove any existing capabilities that are now covered by newly inherited sacrifices
+        self.capabilities
+            .retain(|c| !self.sacrificed.iter().any(|sac| covers(sac, c)));
+
         for cap in &parent.capabilities {
-            if !self.capabilities.contains(cap) {
+            if !self.capabilities.contains(cap)
+                && !self.sacrificed.iter().any(|sac| covers(sac, cap))
+            {
                 self.capabilities.push(cap.clone());
             }
         }
@@ -126,7 +173,7 @@ impl CapabilitySet {
 
     /// Check if a specific capability is granted (exact match)
     pub fn has(&self, cap: &Ofun) -> bool {
-        self.capabilities.contains(cap)
+        self.capabilities.contains(cap) && !self.sacrificed.contains(cap)
     }
 }
 

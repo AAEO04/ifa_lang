@@ -11,23 +11,21 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
-#[cfg(feature = "std")]
-use std::sync::OnceLock;
 #[cfg(feature = "vm")]
 use std::sync::Mutex;
+#[cfg(feature = "std")]
+use std::sync::OnceLock;
 
 #[cfg(feature = "std")]
 // Dashmap removed for PR-28 / I-Stream (No global caching)
-
 #[cfg(feature = "vm")]
 use crate::ast::Statement;
-use crate::nan_box::{BoxedPrimitive, NanBox};
-use crate::token::ResourceToken;
 use crate::error::{IfaError, IfaResult};
+use crate::nan_box::{BoxedPrimitive, NanBox};
 use crate::shared::IfaShared;
+use crate::token::ResourceToken;
 
-#[cfg(feature = "std")]
-// UNICODE_LEN_CACHE removed for PR-28 (No global caching)
+
 
 // ============================================================================
 // 1. Core Implementation (The "Nano-Boxed" Enum)
@@ -168,9 +166,8 @@ impl IfaValue {
             static SMALL_INT_POOL: OnceLock<[IfaValue; 256]> = OnceLock::new();
 
             if (0..=255).contains(&n) {
-                let pool = SMALL_INT_POOL.get_or_init(|| {
-                    std::array::from_fn(|i| IfaValue::Int(i as i64))
-                });
+                let pool =
+                    SMALL_INT_POOL.get_or_init(|| std::array::from_fn(|i| IfaValue::Int(i as i64)));
                 return pool[n as usize].clone();
             }
         }
@@ -379,7 +376,7 @@ impl IfaValue {
                     return false;
                 }
                 a.iter()
-                    .all(|(k, v)| b.get(k).map_or(false, |bv| v.is_equal(bv)))
+                    .all(|(k, v)| b.get(k).is_some_and(|bv| v.is_equal(bv)))
             }
             (IfaValue::Result(a), IfaValue::Result(b)) => match (a.as_ref(), b.as_ref()) {
                 (ResultPayload::Ok(av), ResultPayload::Ok(bv))
@@ -435,6 +432,33 @@ impl PartialEq for IfaValue {
 }
 
 impl Eq for IfaValue {}
+
+impl std::cmp::PartialOrd for IfaValue {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (IfaValue::Int(a), IfaValue::Int(b)) => a.partial_cmp(b),
+            (IfaValue::Float(a), IfaValue::Float(b)) => a.partial_cmp(b),
+            (IfaValue::Int(a), IfaValue::Float(b)) => {
+                let a_f64 = *a as f64;
+                if a_f64 as i64 == *a {
+                    a_f64.partial_cmp(b)
+                } else {
+                    None
+                }
+            }
+            (IfaValue::Float(a), IfaValue::Int(b)) => {
+                let b_f64 = *b as f64;
+                if b_f64 as i64 == *b {
+                    a.partial_cmp(&b_f64)
+                } else {
+                    None
+                }
+            }
+            (IfaValue::Str(a), IfaValue::Str(b)) => a.partial_cmp(b),
+            _ => None,
+        }
+    }
+}
 
 impl fmt::Display for IfaValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -579,8 +603,8 @@ mod tests {
             let boxed = value
                 .to_nan_boxed_primitive()
                 .expect("primitive should box");
-            let roundtrip = IfaValue::from_nan_boxed_primitive(boxed)
-                .expect("boxed primitive should unbox");
+            let roundtrip =
+                IfaValue::from_nan_boxed_primitive(boxed).expect("boxed primitive should unbox");
             assert_eq!(roundtrip, value);
         }
     }

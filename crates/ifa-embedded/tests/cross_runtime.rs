@@ -1,5 +1,5 @@
-use ifa_vm::{Bytecode, OpCode};
 use ifa_embedded::{EmbeddedConfig, EmbeddedOpCode, EmbeddedValue, EmbeddedVm, VmExit};
+use ifa_vm::{Bytecode, OpCode};
 
 /// Transpile standard 64-bit bytecode to 32-bit embedded bytecode
 /// This is a simplified transpiler for testing compatibility.
@@ -25,7 +25,7 @@ fn transpile_for_embedded(bc: &Bytecode) -> Vec<u8> {
                 let val = i64::from_le_bytes(val_bytes);
                 ip += 8;
 
-                // Embedded: PushInt (0x01) + 4 bytes (i32)
+                // Embedded: PushInt (0x08) + 4 bytes (i32)
                 out.push(EmbeddedOpCode::PushInt as u8);
                 out.extend_from_slice(&(val as i32).to_le_bytes());
             }
@@ -47,7 +47,7 @@ fn transpile_for_embedded(bc: &Bytecode) -> Vec<u8> {
             }
             OpCode::Halt => {
                 // Std: Halt (0x55)
-                // Embedded: Halt (0xFF)
+                // Embedded: Halt (0x55)
                 out.push(EmbeddedOpCode::Halt as u8);
             }
             _ => {

@@ -8,12 +8,12 @@
 //! - `Send + Sync` required
 //! - No `RefCell` or `Rc`
 
-use crate::token::ResourceToken;
 use crate::IfaValue;
+use crate::token::ResourceToken;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 #[cfg(feature = "dashmap")]
 use dashmap::DashMap;
@@ -84,7 +84,10 @@ impl IfaShared {
                 #[cfg(feature = "dashmap")]
                 {
                     for r in o.iter() {
-                        thawed_map.insert(crate::CompactString::new(r.key().as_ref()), r.value().thaw());
+                        thawed_map.insert(
+                            crate::CompactString::new(r.key().as_ref()),
+                            r.value().thaw(),
+                        );
                     }
                 }
                 #[cfg(not(feature = "dashmap"))]

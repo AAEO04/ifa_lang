@@ -12,8 +12,24 @@ use std::sync::{Arc, RwLock, Weak};
 // TYPE ALIASES for complex types (reduces clippy::type_complexity warnings)
 // ============================================================================
 
+type SubscriberId = u64;
+
 /// Type alias for signal subscribers
-type Subscribers<T> = Arc<RwLock<Vec<Box<dyn Fn(&T) + Send + Sync>>>>;
+type Subscribers<T> = Arc<RwLock<HashMap<SubscriberId, Box<dyn Fn(&T) + Send + Sync>>>>;
+
+/// Guard representing a subscription. Unsubscribes on drop.
+pub struct SubscriptionGuard<T> {
+    subscribers: Subscribers<T>,
+    id: SubscriberId,
+}
+
+impl<T> Drop for SubscriptionGuard<T> {
+    fn drop(&mut self) {
+        if let Ok(mut subs) = self.subscribers.write() {
+            subs.remove(&self.id);
+        }
+    }
+}
 
 /// Type alias for reactive binding relationships  
 #[allow(dead_code)]
@@ -45,14 +61,16 @@ pub struct Signal<T> {
     value: Arc<RwLock<T>>,
     subscribers: Subscribers<T>,
     version: Arc<AtomicU64>,
+    next_sub_id: Arc<AtomicU64>,
 }
 
 impl<T: Clone + Send + Sync + 'static> Signal<T> {
     pub fn new(initial: T) -> Self {
         Signal {
             value: Arc::new(RwLock::new(initial)),
-            subscribers: Arc::new(RwLock::new(Vec::new())),
+            subscribers: Arc::new(RwLock::new(HashMap::new())),
             version: Arc::new(AtomicU64::new(0)),
+            next_sub_id: Arc::new(AtomicU64::new(0)),
         }
     }
 
@@ -81,8 +99,16 @@ impl<T: Clone + Send + Sync + 'static> Signal<T> {
     }
 
     /// Subscribe to changes
-    pub fn subscribe(&self, callback: impl Fn(&T) + Send + Sync + 'static) {
-        self.subscribers.write().unwrap().push(Box::new(callback));
+    pub fn subscribe(&self, callback: impl Fn(&T) + Send + Sync + 'static) -> SubscriptionGuard<T> {
+        let id = self.next_sub_id.fetch_add(1, Ordering::Relaxed);
+        self.subscribers
+            .write()
+            .unwrap()
+            .insert(id, Box::new(callback));
+        SubscriptionGuard {
+            subscribers: Arc::clone(&self.subscribers),
+            id,
+        }
     }
 
     /// Get version number (for dirty checking)
@@ -92,8 +118,10 @@ impl<T: Clone + Send + Sync + 'static> Signal<T> {
 
     fn notify(&self) {
         let value = self.value.read().unwrap();
-        for sub in self.subscribers.read().unwrap().iter() {
-            sub(&value);
+        if let Ok(subs) = self.subscribers.read() {
+            for sub in subs.values() {
+                sub(&value);
+            }
         }
     }
 }
@@ -104,6 +132,7 @@ impl<T: Clone + 'static> Clone for Signal<T> {
             value: Arc::clone(&self.value),
             subscribers: Arc::clone(&self.subscribers),
             version: Arc::clone(&self.version),
+            next_sub_id: Arc::clone(&self.next_sub_id),
         }
     }
 }
@@ -297,14 +326,14 @@ macro_rules! bind {
         let target = $target.clone();
         source.subscribe(move |val| {
             target.set(val.clone());
-        });
+        })
     }};
     ($source:expr => $target:expr, |$v:ident| $transform:expr) => {{
         let source = $source.clone();
         let target = $target.clone();
         source.subscribe(move |$v| {
             target.set($transform);
-        });
+        })
     }};
 }
 
@@ -556,12 +585,50 @@ mod tests {
         let received = Arc::new(AtomicI32::new(0));
         let received_clone = received.clone();
 
-        signal.subscribe(move |v| {
+        let _guard = signal.subscribe(move |v| {
             received_clone.store(*v, Ordering::Relaxed);
         });
 
         signal.set(42);
         assert_eq!(received.load(Ordering::Relaxed), 42);
+    }
+
+    #[test]
+    fn test_signal_unsubscribe() {
+        use std::sync::atomic::{AtomicI32, Ordering};
+        let signal = Signal::new(0);
+        let c1 = Arc::new(AtomicI32::new(0));
+        let c2 = Arc::new(AtomicI32::new(0));
+        let c3 = Arc::new(AtomicI32::new(0));
+
+        let c1_clone = c1.clone();
+        let _g1 = signal.subscribe(move |v| c1_clone.store(*v, Ordering::Relaxed));
+        let c2_clone = c2.clone();
+        let g2 = signal.subscribe(move |v| c2_clone.store(*v, Ordering::Relaxed));
+        let c3_clone = c3.clone();
+        let _g3 = signal.subscribe(move |v| c3_clone.store(*v, Ordering::Relaxed));
+
+        // Drop second guard
+        std::mem::drop(g2);
+
+        signal.set(100);
+        assert_eq!(c1.load(Ordering::Relaxed), 100);
+        assert_eq!(c2.load(Ordering::Relaxed), 0);
+        assert_eq!(c3.load(Ordering::Relaxed), 100);
+    }
+
+    #[test]
+    fn test_signal_subscribe_immediate_drop() {
+        use std::sync::atomic::{AtomicI32, Ordering};
+        let signal = Signal::new(0);
+        let received = Arc::new(AtomicI32::new(0));
+        let received_clone = received.clone();
+
+        // Subscribe and immediately drop
+        let _ = signal.subscribe(move |v| received_clone.store(*v, Ordering::Relaxed));
+
+        signal.set(42);
+        assert_eq!(received.load(Ordering::Relaxed), 0);
     }
 
     #[test]

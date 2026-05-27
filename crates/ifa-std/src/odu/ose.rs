@@ -5,15 +5,24 @@
 //! Terminal UI using ratatui, converted to a declarative interface for Ifá-Lang scripts.
 
 use crate::impl_odu_domain;
-#[cfg(feature = "full")]
-use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEventKind};
-#[cfg(feature = "full")]
+#[cfg(feature = "tui")]
+use crossterm::event::{
+    self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEventKind,
+};
+#[cfg(feature = "tui")]
 use crossterm::{
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, size, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode, size,
+    },
 };
-#[cfg(feature = "full")]
+use ifa_types::ResourceToken;
+use ifa_vm::IfaValue;
+use ifa_vm::error::{IfaError, IfaResult};
+use ifa_vm::native::VmContext;
+#[cfg(feature = "tui")]
 use ratatui::{
+    Terminal,
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -22,17 +31,12 @@ use ratatui::{
         Block, Borders, Chart, Dataset, Gauge, GraphType, List, ListItem, Paragraph, Row,
         Scrollbar, ScrollbarOrientation, Sparkline, Table, Tabs,
     },
-    Terminal,
 };
 use std::collections::HashMap;
 use std::io;
 use std::sync::{Arc, Mutex};
-use ifa_types::ResourceToken;
-use ifa_vm::IfaValue;
-use ifa_vm::error::{IfaError, IfaResult};
-use ifa_vm::native::VmContext;
 
-#[cfg(feature = "full")]
+#[cfg(feature = "tui")]
 use ratatui::widgets::RenderDirection;
 
 /// Ọ̀ṣẹ́ - The Painter (Graphics/UI)
@@ -40,7 +44,7 @@ pub struct Ose;
 
 impl_odu_domain!(Ose, "Ọ̀ṣẹ́", "1010", "The Painter - Graphics/UI");
 
-#[cfg(feature = "full")]
+#[cfg(feature = "tui")]
 impl Ose {
     pub fn dispatch(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaResult<IfaValue> {
         match method {
@@ -54,18 +58,23 @@ impl Ose {
             "pari_ẹmí" | "mouse_off" => Self::handle_mouse_off(args, ctx),
             "iwọn" | "size" => Self::handle_iwọn(),
             "duro" | "wait" => Self::handle_duro(args),
-            _ => Err(IfaError::Custom(format!("Ose: unknown method '{}'", method))),
+            _ => Err(IfaError::Custom(format!(
+                "Ose: unknown method '{}'",
+                method
+            ))),
         }
     }
 
-    fn extract_token(args: &[IfaValue]) -> IfaResult<(ResourceToken, &HashMap<ifa_types::CompactString, IfaValue>)> {
+    fn extract_token(
+        args: &[IfaValue],
+    ) -> IfaResult<(ResourceToken, &HashMap<ifa_types::CompactString, IfaValue>)> {
         let token_arc = match args.first() {
             Some(IfaValue::Resource(arc)) => arc,
             Some(other) => {
                 return Err(IfaError::TypeError {
                     expected: "Resource".into(),
                     got: other.type_name().into(),
-                })
+                });
             }
             None => {
                 return Err(IfaError::ArgumentError("Missing terminal resource".into()));
@@ -78,7 +87,7 @@ impl Ose {
                 return Err(IfaError::TypeError {
                     expected: "Map".into(),
                     got: other.type_name().into(),
-                })
+                });
             }
             None => {
                 return Err(IfaError::ArgumentError("Missing map argument".into()));
@@ -110,9 +119,9 @@ impl Ose {
     fn handle_pari(args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaResult<IfaValue> {
         if let Some(IfaValue::Resource(token_arc)) = args.first() {
             let token: ResourceToken = **token_arc;
-            if let Some(terminal_mutex) =
-                ctx.resource_registry()
-                    .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
+            if let Some(terminal_mutex) = ctx
+                .resource_registry()
+                .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
             {
                 let mut terminal = terminal_mutex.lock().unwrap();
                 let _ = execute!(terminal.backend_mut(), DisableMouseCapture);
@@ -337,7 +346,9 @@ impl Ose {
             .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
             .ok_or_else(|| IfaError::Runtime("Terminal resource not found".into()))?;
         let terminal = terminal_arc.lock().unwrap();
-        let terminal_size = terminal.size().map_err(|e| IfaError::Runtime(e.to_string()))?;
+        let terminal_size = terminal
+            .size()
+            .map_err(|e| IfaError::Runtime(e.to_string()))?;
         drop(terminal);
 
         let full_area = Rect::new(0, 0, terminal_size.width, terminal_size.height);
@@ -379,7 +390,6 @@ impl Ose {
             match direction {
                 Direction::Horizontal => layout.horizontal_margin(gap / 2),
                 Direction::Vertical => layout.vertical_margin(gap / 2),
-                _ => layout,
             }
         } else {
             layout
@@ -411,7 +421,7 @@ impl Ose {
             _ => {
                 return Err(IfaError::ArgumentError(
                     "Ose.mouse_on requires (terminal)".into(),
-                ))
+                ));
             }
         };
         let token: ResourceToken = **token_arc;
@@ -431,7 +441,7 @@ impl Ose {
             _ => {
                 return Err(IfaError::ArgumentError(
                     "Ose.mouse_off requires (terminal)".into(),
-                ))
+                ));
             }
         };
         let token: ResourceToken = **token_arc;
@@ -610,8 +620,9 @@ impl Ose {
             IfaValue::List(l) => Some(l),
             _ => None,
         }) {
-            Some(list) => Row::new(list.iter().map(|v| v.to_string()).collect::<Vec<_>>())
-                .style(header_style),
+            Some(list) => {
+                Row::new(list.iter().map(|v| v.to_string()).collect::<Vec<_>>()).style(header_style)
+            }
             None => Row::new(Vec::<String>::new()),
         };
 
@@ -701,7 +712,10 @@ impl Ose {
                     IfaValue::Map(m) => m,
                     _ => return None,
                 };
-                let name = ds_map.get("name").map(|v| v.to_string()).unwrap_or_default();
+                let name = ds_map
+                    .get("name")
+                    .map(|v| v.to_string())
+                    .unwrap_or_default();
                 let data: Vec<(f64, f64)> = match ds_map.get("data").and_then(|v| match v {
                     IfaValue::List(l) => Some(l),
                     _ => None,
@@ -734,16 +748,19 @@ impl Ose {
                         _ => None,
                     })
                     .unwrap_or(style);
-                let graph_type = match ds_map
-                    .get("graph_type")
-                    .and_then(|v| match v {
-                        IfaValue::Str(s) => Some(s.as_str()),
-                        _ => None,
-                    }) {
+                let graph_type = match ds_map.get("graph_type").and_then(|v| match v {
+                    IfaValue::Str(s) => Some(s.as_str()),
+                    _ => None,
+                }) {
                     Some("bar" | "ọpọ") => GraphType::Bar,
                     _ => GraphType::Line,
                 };
-                Some(DatasetSpec { name, data, style: ds_style, graph_type })
+                Some(DatasetSpec {
+                    name,
+                    data,
+                    style: ds_style,
+                    graph_type,
+                })
             })
             .collect();
 
@@ -778,7 +795,11 @@ impl Ose {
                             _ => None,
                         })
                         .collect();
-                    if items.len() == 2 { Some([items[0], items[1]]) } else { None }
+                    if items.len() == 2 {
+                        Some([items[0], items[1]])
+                    } else {
+                        None
+                    }
                 }
                 _ => None,
             })
@@ -796,14 +817,24 @@ impl Ose {
                             _ => None,
                         })
                         .collect();
-                    if items.len() == 2 { Some([items[0], items[1]]) } else { None }
+                    if items.len() == 2 {
+                        Some([items[0], items[1]])
+                    } else {
+                        None
+                    }
                 }
                 _ => None,
             })
             .unwrap_or([0.0, 100.0]);
 
-        let x_title = ui_map.get("x_title").map(|v| v.to_string()).unwrap_or_default();
-        let y_title = ui_map.get("y_title").map(|v| v.to_string()).unwrap_or_default();
+        let x_title = ui_map
+            .get("x_title")
+            .map(|v| v.to_string())
+            .unwrap_or_default();
+        let y_title = ui_map
+            .get("y_title")
+            .map(|v| v.to_string())
+            .unwrap_or_default();
 
         let x_axis = ratatui::widgets::Axis::default()
             .title(x_title)
@@ -923,12 +954,10 @@ impl Ose {
             .unwrap_or(1)
             .max(1);
 
-        let orientation = match ui_map
-            .get("orientation")
-            .and_then(|v| match v {
-                IfaValue::Str(s) => Some(s.as_str()),
-                _ => None,
-            }) {
+        let orientation = match ui_map.get("orientation").and_then(|v| match v {
+            IfaValue::Str(s) => Some(s.as_str()),
+            _ => None,
+        }) {
             Some("horiz" | "horizontal" | "petẹsì") => ScrollbarOrientation::HorizontalBottom,
             _ => ScrollbarOrientation::VerticalRight,
         };
@@ -1071,22 +1100,20 @@ impl Ose {
     }
 }
 
-#[cfg(not(feature = "full"))]
+#[cfg(not(feature = "tui"))]
 impl Ose {
     pub fn dispatch(
         method: &str,
         _args: Vec<IfaValue>,
         _ctx: &mut VmContext,
     ) -> IfaResult<IfaValue> {
-        Err(IfaError::Runtime(
-            "TUI not compiled in minimal mode".into(),
-        ))
+        Err(IfaError::Runtime("TUI not compiled in minimal mode".into()))
     }
 }
 
 // ── Free helper functions ──────────────────────────────────────────────────
 
-#[cfg(feature = "full")]
+#[cfg(feature = "tui")]
 fn parse_color_value(value: Option<&IfaValue>) -> Option<Color> {
     match value {
         Some(IfaValue::Str(s)) => {
@@ -1138,7 +1165,7 @@ fn parse_color_value(value: Option<&IfaValue>) -> Option<Color> {
     }
 }
 
-#[cfg(feature = "full")]
+#[cfg(feature = "tui")]
 fn is_truthy(value: Option<&IfaValue>) -> bool {
     match value {
         Some(IfaValue::Bool(b)) => *b,

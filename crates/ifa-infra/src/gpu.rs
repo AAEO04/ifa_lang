@@ -13,6 +13,9 @@ use wgpu::{Device, Instance, Queue};
 
 use crate::compute::{ComputeBackend, DeviceInfo};
 
+#[cfg(all(feature = "gpu", target_arch = "wasm32"))]
+use futures_channel::oneshot;
+
 /// Global GPU Context with pipeline caching
 #[cfg(feature = "gpu")]
 pub struct GpuContext {
@@ -23,6 +26,11 @@ pub struct GpuContext {
     /// Reusable staging buffer for readback (Linus optimization)
     staging_buffer: Arc<RwLock<Option<wgpu::Buffer>>>,
 }
+
+#[cfg(all(feature = "gpu", target_arch = "wasm32"))]
+unsafe impl Send for GpuContext {}
+#[cfg(all(feature = "gpu", target_arch = "wasm32"))]
+unsafe impl Sync for GpuContext {}
 
 #[cfg(feature = "gpu")]
 impl Clone for GpuContext {
@@ -243,8 +251,8 @@ impl GpuContext {
             pass.set_pipeline(&pipeline);
             pass.set_bind_group(0, &bind_group, &[]);
             // Dispatch workgroups (16x16 tiles)
-            let wg_x = (n + 15) / 16;
-            let wg_y = (m + 15) / 16;
+            let wg_x = n.div_ceil(16);
+            let wg_y = m.div_ceil(16);
             pass.dispatch_workgroups(wg_x, wg_y, 1);
         }
 
@@ -296,7 +304,7 @@ impl GpuContext {
             });
             pass.set_pipeline(&pipeline);
             pass.set_bind_group(0, &bind_group, &[]);
-            pass.dispatch_workgroups((count + 255) / 256, 1, 1);
+            pass.dispatch_workgroups(count.div_ceil(256), 1, 1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -365,7 +373,7 @@ impl GpuContext {
             });
             pass.set_pipeline(&pipeline);
             pass.set_bind_group(0, &bind_group, &[]);
-            pass.dispatch_workgroups((count + 255) / 256, 1, 1);
+            pass.dispatch_workgroups(count.div_ceil(256), 1, 1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -431,7 +439,7 @@ impl GpuContext {
             });
             pass.set_pipeline(&pipeline);
             pass.set_bind_group(0, &bind_group, &[]);
-            pass.dispatch_workgroups((count + 255) / 256, 1, 1);
+            pass.dispatch_workgroups(count.div_ceil(256), 1, 1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -440,13 +448,72 @@ impl GpuContext {
 
     /// Wait for all GPU operations to complete
     pub fn sync(&self) {
+        #[cfg(target_arch = "wasm32")]
+        self.device.poll(wgpu::Maintain::Poll);
+        #[cfg(not(target_arch = "wasm32"))]
         self.device.poll(wgpu::Maintain::Wait);
     }
 
     /// Read buffer content back to CPU
-    /// Handles staging buffer creation and copy
+    /// Handles staging buffer reuse and copy.
+    #[cfg(target_arch = "wasm32")]
+    pub async fn read_buffer_async(&self, buffer: &wgpu::Buffer) -> Result<Vec<u8>, String> {
+        let size = buffer.size();
+        let mut staging_guard = self.staging_buffer.write().unwrap();
+
+        let need_recreate = match &*staging_guard {
+            Some(b) => b.size() < size,
+            None => true,
+        };
+
+        if need_recreate {
+            let new_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("reusable_staging_buffer"),
+                size: size.max(1024),
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            *staging_guard = Some(new_buffer);
+        }
+
+        let staging_buffer = staging_guard.as_ref().unwrap();
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("readback_encoder"),
+            });
+
+        encoder.copy_buffer_to_buffer(buffer, 0, staging_buffer, 0, size);
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        let slice = staging_buffer.slice(..size);
+        let (tx, rx) = oneshot::channel();
+        slice.map_async(wgpu::MapMode::Read, move |result| {
+            let _ = tx.send(result.map_err(|e| e.to_string()));
+        });
+
+        drop(staging_guard);
+        self.device.poll(wgpu::Maintain::Poll);
+
+        match rx.await {
+            Ok(Ok(())) => {
+                let staging_guard_read = self.staging_buffer.read().unwrap();
+                let staging_buffer = staging_guard_read.as_ref().unwrap();
+                let slice = staging_buffer.slice(..size);
+                let data = slice.get_mapped_range();
+                let result = data.to_vec();
+                drop(data);
+                staging_buffer.unmap();
+                Ok(result)
+            }
+            Ok(Err(e)) => Err(format!("Map failed: {e}")),
+            Err(_) => Err("Readback channel dropped".into()),
+        }
+    }
+
     /// Read buffer content back to CPU
     /// Handles staging buffer reuse and copy
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn read_buffer(&self, buffer: &wgpu::Buffer) -> Result<Vec<u8>, String> {
         let size = buffer.size();
         let mut staging_guard = self.staging_buffer.write().unwrap();
@@ -499,6 +566,11 @@ impl GpuContext {
             Err(_) => Err("Device dropped".into()),
         }
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn read_buffer_async(&self, buffer: &wgpu::Buffer) -> Result<Vec<u8>, String> {
+        self.read_buffer(buffer)
+    }
 }
 
 /// GPU Buffer Wrapper (GpuVec)
@@ -520,7 +592,7 @@ impl<T> GpuVec<T> {
     }
 }
 
-#[cfg(feature = "gpu")]
+#[cfg(all(feature = "gpu", not(target_arch = "wasm32")))]
 impl ComputeBackend for GpuContext {
     fn par_map<T, U, F>(&self, data: &[T], f: F) -> Vec<U>
     where
@@ -534,16 +606,20 @@ impl ComputeBackend for GpuContext {
     fn matmul(&self, a: &[f32], b: &[f32], m: usize, n: usize, k: usize) -> Vec<f32> {
         use wgpu::util::DeviceExt;
 
-        let buf_a = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("compute_matmul_a"),
-            contents: bytemuck::cast_slice(a),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
-        let buf_b = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("compute_matmul_b"),
-            contents: bytemuck::cast_slice(b),
-            usage: wgpu::BufferUsages::STORAGE,
-        });
+        let buf_a = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("compute_matmul_a"),
+                contents: bytemuck::cast_slice(a),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
+        let buf_b = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("compute_matmul_b"),
+                contents: bytemuck::cast_slice(b),
+                usage: wgpu::BufferUsages::STORAGE,
+            });
 
         let buf_c = self.matmul(&buf_a, &buf_b, m as u32, n as u32, k as u32);
         let bytes = self
@@ -747,7 +823,7 @@ impl Slab {
         });
 
         // Bitmap: 1 bit per slot, using usize for atomic ops (64 slots per word on 64-bit)
-        let words = (slot_count + 63) / 64;
+        let words = slot_count.div_ceil(64);
         let free_bitmap: Vec<AtomicUsize> = (0..words)
             .map(|_| AtomicUsize::new(!0)) // All 1s = all free
             .collect();

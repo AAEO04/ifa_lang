@@ -28,12 +28,12 @@
 ese get_users() {
     ayanmo response = Otura.gba("https://jsonplaceholder.typicode.com/users");
     Irosu.fo("Response received");
-    padap? response;
+    pada response;
 }
 
 ese get_user(id) {
     ayanmo url = "https://jsonplaceholder.typicode.com/users/" + id;
-    padap? Otura.gba(url);
+    pada Otura.gba(url);
 }
 
 // Usage
@@ -50,7 +50,7 @@ ese create_user(name, email) {
     ayanmo payload = "{\"name\":\"" + name + "\",\"email\":\"" + email + "\"}";
     ayanmo response = Otura.ran("https://jsonplaceholder.typicode.com/users", payload);
     Irosu.fo("User created");
-    padap? response;
+    pada response;
 }
 
 ese send_log(entry) {

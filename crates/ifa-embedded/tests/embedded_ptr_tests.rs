@@ -1,23 +1,35 @@
-use ifa_embedded::{EmbeddedValue, EmbeddedVm};
+use ifa_embedded::{EmbeddedOpCode, EmbeddedValue, EmbeddedVm};
 
 #[test]
 fn test_embedded_ptr_ops() {
     let mut vm = EmbeddedVm::<256, 64>::default();
 
     // 1. Push Value (42) -> Stack: [42]
-    // 2. Push Address (5) using Ref (A0) -> Stack: [42, Ptr(5)]
-    // 3. StoreDeref (A2) -> Opon[5] = 42, Stack: []
-    // 4. Push Address (5) using Ref (A0) -> Stack: [Ptr(5)]
-    // 5. Deref (A1) -> Stack: [42]
+    // 2. Push Address (5) using Ref -> Stack: [42, Ptr(5)]
+    // 3. StoreDeref -> Opon[5] = 42, Stack: []
+    // 4. Push Address (5) using Ref -> Stack: [Ptr(5)]
+    // 5. Deref -> Stack: [42]
     // 6. Halt
 
     let bytecode = [
-        0x01, 42, 0, 0, 0, // PushInt(42)
-        0xA0, 5, 0, 0, 0,    // Ref(5) -> Ptr(5)
-        0xA2, // StoreDeref
-        0xA0, 5, 0, 0, 0,    // Ref(5) -> Ptr(5)
-        0xA1, // Deref
-        0xFF, // Halt
+        EmbeddedOpCode::PushInt as u8,
+        42,
+        0,
+        0,
+        0, // PushInt(42)
+        EmbeddedOpCode::Ref as u8,
+        5,
+        0,
+        0,
+        0,                                // Ref(5) -> Ptr(5)
+        EmbeddedOpCode::StoreDeref as u8, // StoreDeref
+        EmbeddedOpCode::Ref as u8,
+        5,
+        0,
+        0,
+        0,                           // Ref(5) -> Ptr(5)
+        EmbeddedOpCode::Deref as u8, // Deref
+        EmbeddedOpCode::Halt as u8,  // Halt
     ];
 
     let result = vm.start(&bytecode).unwrap();
@@ -34,8 +46,18 @@ fn test_ptr_memory_bounds() {
     // 3. StoreDeref
 
     let bytecode = [
-        0x01, 1, 0, 0, 0, 0xA0, 44, 1, 0, 0, // 300 (0x12C = 44 01 00 00)
-        0xA2, 0xFF,
+        EmbeddedOpCode::PushInt as u8,
+        1,
+        0,
+        0,
+        0,
+        EmbeddedOpCode::Ref as u8,
+        44,
+        1,
+        0,
+        0, // 300 (0x12C = 44 01 00 00)
+        EmbeddedOpCode::StoreDeref as u8,
+        EmbeddedOpCode::Halt as u8,
     ];
 
     let result = vm.start(&bytecode);

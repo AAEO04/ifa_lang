@@ -37,7 +37,7 @@ impl Esu {
             Ok(g) => g,
             Err(poisoned) => poisoned.into_inner(),
         };
-        
+
         if guard.check(requested_cap) {
             Ok(())
         } else {
@@ -54,6 +54,17 @@ impl Esu {
             Err(poisoned) => poisoned.into_inner(),
         };
         guard.revoke(&cap);
+    }
+
+    pub fn ju_match<F>(&self, f: F)
+    where
+        F: FnMut(&Ofun) -> bool,
+    {
+        let mut guard = match self.world_state.lock() {
+            Ok(g) => g,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        guard.remove_matching(f);
     }
 
     pub fn grant(&self, cap: Ofun) {

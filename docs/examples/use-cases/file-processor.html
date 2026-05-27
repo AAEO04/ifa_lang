@@ -40,7 +40,7 @@
                 <div class="code-header">
                     <span class="code-title">Basic File Operations</span>
                 </div>
-                <pre><code>fn process_file(path) {
+                <pre><code>ese process_file(path) {
     ti (Odi.wa(path)) {
         ayanmo content = Odi.ka(path);
         ayanmo length = Ika.gigun(content);
@@ -64,16 +64,16 @@
                 <div class="code-header">
                     <span class="code-title">Batch File Operations</span>
                 </div>
-                <pre><code>fn batch_process(paths) {
+                <pre><code>ese batch_process(paths) {
     ayanmo total = Ogunda.iwọn(paths);
     Irosu.fo("Processing " + total + " files");
 
-    fn process_one(p) {
+    ese process_one(p) {
         process_file(p);
         pada p;
     }
 
-    ayanmo results = Ogunda.maapu(paths, process_one);
+    ayanmo results = Ogunda.yi_pada(paths, process_one);
     Irosu.fo("Completed: " + Ogunda.iwọn(results) + " files");
 }
 
@@ -88,8 +88,8 @@ batch_process(files);</code></pre>
                 <div class="code-header">
                     <span class="code-title">Filter Existing Files</span>
                 </div>
-                <pre><code>fn filter_existing(paths) {
-    fn exists(p) {
+                <pre><code>ese filter_existing(paths) {
+    ese exists(p) {
         ti (Odi.wa(p)) { pada p; } bibẹkọ { pada ofifo; }
     }
     pada Ogunda.yan(paths, exists);

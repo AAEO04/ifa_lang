@@ -9,7 +9,8 @@ fn transpile_for_embedded(bc: &Bytecode) -> Vec<u8> {
         let op_byte = bc.code[ip];
         ip += 1;
 
-        let op = OpCode::from_u8(op_byte).unwrap_or_else(|| panic!("Unknown std opcode: {op_byte:#04x}"));
+        let op = OpCode::from_u8(op_byte)
+            .unwrap_or_else(|| panic!("Unknown std opcode: {op_byte:#04x}"));
 
         match op {
             OpCode::PushInt => {

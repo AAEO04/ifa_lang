@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../js/common.css">
-    <title>Ogunda - Arrays &amp; Processes Domain</title>
+    <title>Ogunda - Arrays Domain</title>
 </head>
 
 <body>
@@ -18,29 +18,23 @@
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">ogunda.ifa</span></div><div class="terminal-body">
         <header>
             <h1><span class="pattern">1110</span> Ogunda</h1>
-            <p style="color: var(--dim)">The Warrior — Arrays &amp; Process Management</p>
+            <p style="color: var(--dim)">The Warrior — Arrays & Collections</p>
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/ogunda.rs</code>. Subprocess commands are sandboxed with shell-injection protection.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>.
         </div>
 
         <h2>Array Operations</h2>
 
         <div class="method">
-            <h3>seda / new</h3>
-            <div class="sig">Ogunda.seda() → List</div>
-            <p>Create new empty list.</p>
+            <h3>iwon / len / count / apapo</h3>
+            <div class="sig">Ogunda.iwon(list: List) → Int</div>
+            <p>Get list length.</p>
         </div>
 
         <div class="method">
-            <h3>seda_agbara / with_capacity</h3>
-            <div class="sig">Ogunda.seda_agbara(capacity: Int) → List</div>
-            <p>Create list with pre-allocated capacity.</p>
-        </div>
-
-        <div class="method">
-            <h3>fi / push</h3>
+            <h3>fi / push / append</h3>
             <div class="sig">Ogunda.fi(list: List, item: Any)</div>
             <p>Push item to end of list.</p>
         </div>
@@ -52,9 +46,47 @@
         </div>
 
         <div class="method">
-            <h3>iwon / len</h3>
-            <div class="sig">Ogunda.iwon(list: List) → Int</div>
-            <p>Get list length.</p>
+            <h3>yi_pada / map / maapu</h3>
+            <div class="sig">Ogunda.yi_pada(list: List, mapper: Function) → List</div>
+            <p>Map function over list.</p>
+        </div>
+
+        <div class="method">
+            <h3>yan / filter</h3>
+            <div class="sig">Ogunda.yan(list: List, predicate: Function) → List</div>
+            <p>Filter list with predicate function.</p>
+        </div>
+
+        <div class="method">
+            <h3>ṣẹ́kù / reduce / fold</h3>
+            <div class="sig">Ogunda.ṣẹ́kù(list: List, fn: Function, init: Any) → Any</div>
+            <p>Reduce list with accumulator function.</p>
+        </div>
+
+        <div class="method">
+            <h3>ge / alloc</h3>
+            <div class="sig">Ogunda.ge(size: Int) → List</div>
+            <p>Allocate a list with given size.</p>
+        </div>
+
+        <div class="method">
+            <h3>da / create</h3>
+            <div class="sig">Ogunda.da() → List</div>
+            <p>Create a new empty list.</p>
+        </div>
+
+        <h2>Creation & Inspection</h2>
+
+        <div class="method">
+            <h3>seda / new_list</h3>
+            <div class="sig">Ogunda.seda(items: List) → List</div>
+            <p>Create a new list from existing items.</p>
+        </div>
+
+        <div class="method">
+            <h3>seda_agbara / with_capacity</h3>
+            <div class="sig">Ogunda.seda_agbara(capacity: Int) → List</div>
+            <p>Create a new list with pre-allocated capacity.</p>
         </div>
 
         <div class="method">
@@ -66,105 +98,93 @@
         <div class="method">
             <h3>pada / reverse</h3>
             <div class="sig">Ogunda.pada(list: List) → List</div>
-            <p>Return reversed copy of list.</p>
+            <p>Reverse list order.</p>
         </div>
 
         <div class="method">
             <h3>to / sort</h3>
             <div class="sig">Ogunda.to(list: List) → List</div>
-            <p>Return sorted copy of list.</p>
+            <p>Sort list in ascending order.</p>
         </div>
 
         <div class="method">
             <h3>dapo / concat</h3>
-            <div class="sig">Ogunda.dapo(a: List, b: List) → List</div>
+            <div class="sig">Ogunda.dapo(list_a: List, list_b: List) → List</div>
             <p>Concatenate two lists.</p>
         </div>
 
         <div class="method">
-            <h3>yan / filter</h3>
-            <div class="sig">Ogunda.yan(list: List, predicate: Function) → List</div>
-            <p>Filter list with predicate function.</p>
-        </div>
-
-        <div class="method">
-            <h3>yi_pada / map</h3>
-            <div class="sig">Ogunda.yi_pada(list: List, mapper: Function) → List</div>
-            <p>Map function over list.</p>
-        </div>
-
-        <div class="method">
             <h3>wa / find</h3>
-            <div class="sig">Ogunda.wa(list: List, predicate: Function) → Any?</div>
-            <p>Find first matching element.</p>
+            <div class="sig">Ogunda.wa(list: List, fn: Function) → Any</div>
+            <p>Find first element matching predicate.</p>
         </div>
 
         <div class="method">
             <h3>eyikeyi / any</h3>
-            <div class="sig">Ogunda.eyikeyi(list: List, predicate: Function) → Bool</div>
+            <div class="sig">Ogunda.eyikeyi(list: List, fn: Function) → Bool</div>
             <p>Check if any element matches predicate.</p>
         </div>
 
         <div class="method">
             <h3>gbogbo / all</h3>
-            <div class="sig">Ogunda.gbogbo(list: List, predicate: Function) → Bool</div>
+            <div class="sig">Ogunda.gbogbo(list: List, fn: Function) → Bool</div>
             <p>Check if all elements match predicate.</p>
-        </div>
-
-        <div class="method">
-            <h3>ge / slice</h3>
-            <div class="sig">Ogunda.ge(list: List, start: Int, end: Int) → List</div>
-            <p>Slice list from start (inclusive) to end (exclusive).</p>
         </div>
 
         <h2>Map Operations</h2>
 
         <div class="method">
             <h3>awon_kokoro / keys</h3>
-            <div class="sig">Ogunda.awon_kokoro(map: Map) → List(Str)</div>
-            <p>Get map keys as string list.</p>
+            <div class="sig">Ogunda.awon_kokoro(map: Map) → List</div>
+            <p>Get all keys from a map.</p>
         </div>
 
         <div class="method">
             <h3>awon_iye / values</h3>
             <div class="sig">Ogunda.awon_iye(map: Map) → List</div>
-            <p>Get map values as list.</p>
+            <p>Get all values from a map.</p>
         </div>
 
         <div class="method">
             <h3>awon_nkan / items</h3>
-            <div class="sig">Ogunda.awon_nkan(map: Map) → List(List)</div>
-            <p>Get map items as list of [key, value] pairs.</p>
+            <div class="sig">Ogunda.awon_nkan(map: Map) → List</div>
+            <p>Get all [key, value] pairs from a map.</p>
         </div>
 
         <div class="method">
             <h3>yo / remove</h3>
-            <div class="sig">Ogunda.yo(map: Map, key: Str) → Any?</div>
-            <p>Remove key from map and return its value.</p>
+            <div class="sig">Ogunda.yo(map: Map, key: Any) → Map</div>
+            <p>Remove a key from a map.</p>
         </div>
 
-        <h2>Process Operations</h2>
+        <h2>Process & Environment</h2>
 
         <div class="method">
             <h3>sise / run</h3>
-            <div class="sig">Ogunda.sise(command: Str, args: List(Str)) → Output</div>
-            <p>Run command and capture output. Shell interpreters are blocked for security.</p>
+            <div class="sig">Ogunda.sise(cmd: Str, args: List) → Int</div>
+            <p>Run a command and return exit code.</p>
         </div>
 
         <div class="method">
             <h3>sise_ka / run_read</h3>
-            <div class="sig">Ogunda.sise_ka(command: Str, args: List(Str)) → Str</div>
-            <p>Run command and capture stdout as string.</p>
+            <div class="sig">Ogunda.sise_ka(cmd: Str, args: List) → Str</div>
+            <p>Run a command and capture stdout.</p>
         </div>
 
         <div class="method">
             <h3>bere / spawn</h3>
-            <div class="sig">Ogunda.bere(command: Str, args: List(Str)) → Int</div>
-            <p>Spawn detached process, return PID.</p>
+            <div class="sig">Ogunda.bere(cmd: Str, args: List) → Pid</div>
+            <p>Spawn a background process.</p>
+        </div>
+
+        <div class="method">
+            <h3>ayika / get_env</h3>
+            <div class="sig">Ogunda.ayika(key: Str) → Str?</div>
+            <p>Get environment variable value.</p>
         </div>
 
         <footer>
-            <p><a href="../index.html">← Back to Documentation</a> · <a href="../../crates/ifa-docs/std-library.html">Corrected API Reference</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
         </footer>
     </div></div>
     <script src="../js/nav.js"></script>

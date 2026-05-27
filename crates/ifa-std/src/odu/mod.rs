@@ -10,16 +10,15 @@ pub mod oturupon;
 pub mod owonrin;
 pub mod oyeku;
 
-#[cfg(feature = "backend")]
 pub mod odi;
 
-#[cfg(feature = "backend")]
+#[cfg(feature = "async_runtime")]
 pub mod osa;
 
-#[cfg(feature = "backend")]
+#[cfg(feature = "network")]
 pub mod otura;
 
-#[cfg(feature = "game")]
+#[cfg(feature = "tui")]
 pub mod ose;
 
 #[cfg(feature = "crypto")]

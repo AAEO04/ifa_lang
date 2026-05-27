@@ -28,7 +28,7 @@
             <div class="lesson-num">10</div>
             <div>
                 <h1>Errors</h1>
-                <p style="color: var(--text-dim); margin: 0;">Assertions and error handling with Okanran</p>
+                <p style="color: var(--text-dim); margin: 0;">Assertions, exceptions, and cleanup</p>
             </div>
         </div>
 
@@ -71,6 +71,111 @@ Okanran.beko(condition, msg);   // assert false
 Okanran.ko_si(value, msg);     // assert null/nil</code></pre>
         </div>
 
+        <h2>The <code>ewo</code> Keyword</h2>
+        <p>Use <code>ewo</code> / <code>assert</code> for inline runtime assertions:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Inline Assertions</span>
+            </div>
+            <pre class="code-yoruba"><code>ewo balance >= 0, "Balance must be positive";
+ewo user != ofifo;
+
+// Without message
+ewo x > 0;</code></pre>
+        </div>
+
+        <h2>Try / Catch / Finally</h2>
+        <p>Use <code>gbiyanju</code> / <code>try</code> blocks with <code>gba</code> / <code>catch</code> to handle errors:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Try / Catch</span>
+                <div class="lang-toggle">
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                </div>
+            </div>
+            <pre class="code-yoruba"><code>gbiyanju {
+    ayanmo result = 10 / 0;
+    Irosu.fo("Result: " + result);
+} gba (err) {
+    Irosu.fo("Caught error: " + err);
+} nipari {
+    Irosu.fo("This always runs");
+}</code></pre>
+            <pre class="code-english"><code>try {
+    let result = 10 / 0;
+    Irosu.println("Result: " + result);
+} catch (err) {
+    Irosu.println("Caught error: " + err);
+} finally {
+    Irosu.println("This always runs");
+}</code></pre>
+        </div>
+
+        <h2>Throwing Errors</h2>
+        <p>Use <code>Okanran.ta()</code> or the <code>ta</code> / <code>throw</code> keyword to raise an error:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Throwing</span>
+                <div class="lang-toggle">
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                </div>
+            </div>
+            <pre class="code-yoruba"><code>isodale divide(a, b) {
+    ti (b == 0) {
+        ta "Cannot divide by zero";
+    }
+    a / b
+}
+
+gbiyanju {
+    ayanmo result = divide(10, 0);
+} gba (err) {
+    Irosu.fo("Error: " + err);
+}</code></pre>
+            <pre class="code-english"><code>fn divide(a, b) {
+    if (b == 0) {
+        throw "Cannot divide by zero";
+    }
+    a / b
+}
+
+try {
+    let result = divide(10, 0);
+} catch (err) {
+    Irosu.println("Error: " + err);
+}</code></pre>
+        </div>
+
+        <h2>Deferred Cleanup</h2>
+        <p>Use <code>defer</code> / <code>gbe</code> to schedule cleanup code that runs when the current scope exits:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Defer</span>
+                <div class="lang-toggle">
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                </div>
+            </div>
+            <pre class="code-yoruba"><code>defer {
+    Irosu.fo("Cleaning up...");
+}
+
+Irosu.fo("Doing work...");
+// "Cleaning up..." runs when this scope exits</code></pre>
+            <pre class="code-english"><code>defer {
+    Irosu.println("Cleaning up...");
+}
+
+Irosu.println("Doing work...");
+// "Cleaning up..." runs when this scope exits</code></pre>
+        </div>
+
         <h2>Fallible Operations (gbiyanju)</h2>
         <p>Use <code>Okanran.gbiyanju()</code> to try an operation with a default fallback:</p>
 
@@ -84,40 +189,6 @@ ayanmo result = Okanran.gbiyanju(
     "default content"
 );
 Irosu.fo(result);  // file content or "default content"</code></pre>
-        </div>
-
-        <h2>Throwing Errors</h2>
-        <p>Use <code>Okanran.ta()</code> to throw an error:</p>
-
-        <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Throwing</span>
-            </div>
-            <pre class="code-yoruba"><code>isọdẹlẹ divide(a, b) {
-    ti (b == 0) {
-        Okanran.ta("Cannot divide by zero");
-    }
-    a / b
-}
-
-ayanmo result = divide(10, 2);  // 5
-// divide(10, 0) would halt with error message</code></pre>
-        </div>
-
-        <h2>Custom Assertions</h2>
-
-        <div class="code-example">
-            <div class="code-header">
-                <span class="code-title">Custom Checks</span>
-            </div>
-            <pre class="code-yoruba"><code>isọdẹlẹ validate_age(age) {
-    Okanran.sise(age >= 0, "Age cannot be negative");
-    Okanran.sise(age < 150, "Age seems too high");
-    Irosu.fo("Age " + age + " is valid");
-}
-
-validate_age(25);   // OK
-validate_age(-1);   // halts: "Age cannot be negative"</code></pre>
         </div>
 
         <h2>Proverbs as Error Messages</h2>
@@ -134,25 +205,29 @@ Irosu.fo(proverb);  // "Bi a ba nṣe ire, a ko nii ṣe ibi"</code></pre>
 
         <div class="info-box"
             style="border: 1px solid #facc15; background: rgba(250, 204, 21, 0.1); padding: 1rem; border-radius: 8px;">
-            <div class="info-box-title" style="color: #facc15; font-weight: bold; margin-bottom: 0.5rc;">Note</div>
+            <div class="info-box-title" style="color: #facc15; font-weight: bold; margin-bottom: 0.5rem;">Note</div>
             <p style="margin: 0;">
-                Ifá-Lang does not have try/catch blocks. Use <code>Okanran.gbiyanju()</code> for fallible operations
-                with a default value, and <code>Okanran.ta()</code> to halt on unrecoverable errors.
+                Ifá-Lang provides multiple error handling strategies: assertions with <code>Okanran.beeni()</code>,
+                inline checks with <code>ewo</code>, structured exceptions with <code>try/catch/finally</code>,
+                cleanup with <code>defer</code>, and fallback with <code>Okanran.gbiyanju()</code>.
+                Choose the approach that fits your use case.
             </p>
         </div>
 
         <h2>What You Learned</h2>
         <ul style="margin-left: 2rem; color: var(--text-dim);">
             <li>Assertions: <code>Okanran.beeni()</code>, <code>Okanran.sise()</code></li>
-            <li>Equality checks: <code>Okanran.dogba()</code>, <code>Okanran.yato()</code></li>
+            <li>Inline assertions with <code>ewo</code> / <code>assert</code></li>
+            <li>Structured exception handling: <code>gbiyanju</code>/<code>try</code>, <code>gba</code>/<code>catch</code>, <code>nipari</code>/<code>finally</code></li>
+            <li>Throwing errors with <code>ta</code> / <code>throw</code></li>
+            <li>Deferred cleanup with <code>defer</code> / <code>gbe</code></li>
             <li>Fallible operations: <code>Okanran.gbiyanju()</code></li>
-            <li>Throwing errors: <code>Okanran.ta()</code></li>
             <li>Proverbs: <code>Okanran.owe()</code></li>
         </ul>
 
         <div class="nav-buttons">
             <a href="09-files.html" class="nav-btn">Previous: Files</a>
-            <a href="11-parallel.html" class="nav-btn primary">Next: Parallel</a>
+            <a href="16-maps.html" class="nav-btn primary">Next: Maps & Dictionaries</a>
         </div>
     </div>
 </body>

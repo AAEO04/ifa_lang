@@ -4,11 +4,11 @@
 //!
 //! Tokio async networking with rustls for TLS and SSRF protection.
 
-use crate::impl_odu_domain;
 use crate::esu::Esu;
-use std::net::IpAddr;
+use crate::impl_odu_domain;
 use ifa_vm::error::{IfaError, IfaResult};
-#[cfg(feature = "full")]
+use std::net::IpAddr;
+#[cfg(feature = "network")]
 use tokio::net::{TcpListener, TcpStream};
 
 /// Blocked hosts for SSRF protection
@@ -80,7 +80,7 @@ impl Otura {
     }
 }
 
-#[cfg(feature = "full")]
+#[cfg(feature = "network")]
 impl Otura {
     /// HTTP GET request (gbà)
     pub async fn gba(&self, url: &str) -> IfaResult<String> {
@@ -158,7 +158,7 @@ impl Otura {
     }
 }
 
-#[cfg(not(feature = "full"))]
+#[cfg(not(feature = "network"))]
 impl Otura {
     /// Placeholder for minimal builds
     pub fn placeholder(&self) {

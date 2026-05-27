@@ -112,6 +112,7 @@ impl Bytecode {
     }
 
     /// Serialize to .ifab binary format
+    #[allow(clippy::map_entry)]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut output = Vec::new();
         let mut constant_bytes = Vec::new();
@@ -233,7 +234,9 @@ impl Bytecode {
         let string_count = u32::from_le_bytes(count_bytes) as usize;
 
         if string_count > 65536 {
-            return Err(IfaError::Custom("String pool count exceeds limit".to_string()));
+            return Err(IfaError::Custom(
+                "String pool count exceeds limit".to_string(),
+            ));
         }
 
         let mut export_indices: Vec<u16> = Vec::new();
@@ -393,7 +396,9 @@ impl Bytecode {
 
         loop {
             if constants.len() > 65536 {
-                return Err(IfaError::Custom("Constant pool size exceeds limit".to_string()));
+                return Err(IfaError::Custom(
+                    "Constant pool size exceeds limit".to_string(),
+                ));
             }
 
             let mut tag = [0u8; 1];

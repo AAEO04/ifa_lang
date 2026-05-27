@@ -97,8 +97,71 @@ let count = 42;</code></pre>
                     <td><code>ofifo</code></td>
                     <td>Absence of value</td>
                 </tr>
+                <tr>
+                    <td><code>Map</code></td>
+                    <td><code>{"key": val}</code></td>
+                    <td>Key-value dictionary</td>
+                </tr>
             </tbody>
         </table>
+
+        <h2>Constant Declarations</h2>
+        <p>Use <code>const</code> (English) or <code>ayanfe</code> (Yoruba: "chosen") for compile-time constant values that never change:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Constants</span>
+                <div class="lang-toggle">
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                </div>
+            </div>
+            <pre class="code-yoruba"><code>// Constants are inlined at compile time
+ayanfe MAX_RETRIES = 3;
+ayanfe APP_NAME = "Ifá";
+
+ayanmo x = MAX_RETRIES;  // inlined to 3</code></pre>
+            <pre class="code-english"><code>// Constants are inlined at compile time
+const MAX_RETRIES = 3;
+const APP_NAME = "Ifá";
+
+let x = MAX_RETRIES;  // inlined to 3</code></pre>
+        </div>
+
+        <h2>Maps (Dictionaries)</h2>
+        <p>Maps store key-value pairs using <code>{ key: value }</code> syntax:</p>
+
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Maps</span>
+                <div class="lang-toggle">
+                    <button class="toggle-yoruba active" onclick="setLang('yoruba')">Yoruba</button>
+                    <button class="toggle-english" onclick="setLang('english')">English</button>
+                </div>
+            </div>
+            <pre class="code-yoruba"><code>// Creating maps
+ayanmo user = { "name": "Ifá", "age": 1000 };
+
+// Access by key
+ayanmo name = user["name"];
+
+// Nested maps
+ayanmo config = {
+    "db": { "host": "localhost", "port": 5432 }
+};
+ayanmo port = config["db"]["port"];</code></pre>
+            <pre class="code-english"><code>// Creating maps
+let user = { "name": "Ifá", "age": 1000 };
+
+// Access by key
+let name = user["name"];
+
+// Nested maps
+let config = {
+    "db": { "host": "localhost", "port": 5432 }
+};
+let port = config["db"]["port"];</code></pre>
+        </div>
 
         <h2>Working with Variables</h2>
 
@@ -165,7 +228,10 @@ ayanmo s = "Hello";
 Irosu.fo(Ofun.iru(s));  // "Str"
 
 ayanmo list = [1, 2, 3];
-Irosu.fo(Ofun.iru(list));  // "List"</code></pre>
+Irosu.fo(Ofun.iru(list));  // "List"
+
+ayanmo map = {"a": 1};
+Irosu.fo(Ofun.iru(map));  // "Map"</code></pre>
             <pre class="code-english"><code>let x = 42;
 let t = Ofun.iru(x);
 Irosu.println(t);  // "Int"
@@ -174,7 +240,10 @@ let s = "Hello";
 Irosu.println(Ofun.iru(s));  // "Str"
 
 let list = [1, 2, 3];
-Irosu.println(Ofun.iru(list));  // "List"</code></pre>
+Irosu.println(Ofun.iru(list));  // "List"
+
+let map = {"a": 1};
+Irosu.println(Ofun.iru(map));  // "Map"</code></pre>
         </div>
 
         <h2>String Concatenation</h2>
@@ -203,7 +272,9 @@ Irosu.println("Age: " + age);  // Numbers auto-convert</code></pre>
         <h2>What You Learned</h2>
         <ul style="margin-left: 2rem; color: var(--text-dim);">
             <li>Declaring variables with <code>ayanmo</code> or <code>let</code></li>
-            <li>The 5 basic types: Number, String, Boolean, List, Null</li>
+            <li>The 6 basic types: Number, String, Boolean, List, Map, Null</li>
+            <li>Compile-time constants with <code>const</code></li>
+            <li>Map literals and key access with <code>map["key"]</code></li>
             <li>String concatenation with <code>+</code></li>
             <li>Type checking with <code>Ofun.iru()</code></li>
         </ul>

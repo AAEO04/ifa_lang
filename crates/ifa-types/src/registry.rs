@@ -1,12 +1,12 @@
-use dashmap::DashMap;
 use crate::token::ResourceToken;
+use dashmap::DashMap;
 use std::any::Any;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 #[cfg(feature = "std")]
 thread_local! {
-    static CURRENT_ACTOR_ID: std::cell::Cell<Option<u64>> = std::cell::Cell::new(None);
+    static CURRENT_ACTOR_ID: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
 }
 
 #[cfg(feature = "std")]
@@ -72,10 +72,10 @@ impl ResourceRegistry {
     pub fn register<T: Any + Send + Sync>(&self, resource: T) -> ResourceToken {
         let id = self.counter.fetch_add(1, Ordering::SeqCst);
         self.resources.insert(id, Arc::new(resource));
-        
+
         let owner = get_current_actor_id().unwrap_or(0);
         self.owners.insert(id, owner);
-        
+
         ResourceToken(id)
     }
 
@@ -97,11 +97,8 @@ impl ResourceRegistry {
     /// Get a strong reference to a resource by token
     /// Returns None if token is invalid, type mismatch, or ownership check fails
     pub fn get<T: Any + Send + Sync>(&self, token: ResourceToken) -> Option<Arc<T>> {
-        // Enforce ownership check if running inside an actor context
-        if let Some(actor_id) = get_current_actor_id() {
-            if !self.check_owner(token, actor_id) {
-                return None;
-            }
+        if get_current_actor_id().is_some_and(|actor_id| !self.check_owner(token, actor_id)) {
+            return None;
         }
 
         // Retrieve generic Arc from map
@@ -121,6 +118,11 @@ impl ResourceRegistry {
         self.resources.remove(&token.0).is_some()
     }
 
+    /// Check if a resource token is registered/alive (laaye)
+    pub fn contains(&self, token: ResourceToken) -> bool {
+        self.resources.contains_key(&token.0)
+    }
+
     /// Take ownership of a resource, removing it from this registry
     pub fn take(&self, token: ResourceToken) -> Option<Arc<dyn Any + Send + Sync>> {
         self.owners.remove(&token.0);
@@ -128,7 +130,12 @@ impl ResourceRegistry {
     }
 
     /// Insert a raw resource into this registry (used for actor transfers)
-    pub fn insert_raw(&self, token: ResourceToken, resource: Arc<dyn Any + Send + Sync>, owner_id: u64) {
+    pub fn insert_raw(
+        &self,
+        token: ResourceToken,
+        resource: Arc<dyn Any + Send + Sync>,
+        owner_id: u64,
+    ) {
         self.resources.insert(token.0, resource);
         self.owners.insert(token.0, owner_id);
     }

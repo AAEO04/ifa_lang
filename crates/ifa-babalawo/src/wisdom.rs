@@ -217,13 +217,13 @@ pub static ODU_WISDOM: Lazy<HashMap<&'static str, OduWisdom>> = Lazy::new(|| {
         OduWisdom {
             name: "Ìrẹtẹ̀",
             title: "The Crusher",
-            meaning: "Memory management, garbage collection",
+            meaning: "Cryptography, hashing, compression",
             proverbs: &[
-                "Make space for the new by releasing the old.",
-                "The granary must be emptied before the harvest.",
-                "What is no longer needed becomes burden.",
+                "Secrets kept are burdens lifted.",
+                "The essence remains when the shell is crushed.",
+                "Hide what is precious from the unworthy.",
             ],
-            advice: "Free your memory. Release creates space for growth.",
+            advice: "Secure your data. Compress what is bloated.",
         },
     );
 

@@ -1,6 +1,6 @@
 /**
  * Ifá-Lang Documentation Common JavaScript
- * Version: 1.2.2
+ * Version: 1.3.0
  */
 
 // Initialize language switcher universally
@@ -83,9 +83,10 @@ function initCodeActions() {
                 // Unicode-safe Base64 encoding
                 const encoded = btoa(unescape(encodeURIComponent(code.textContent)));
 
-                // Determine path to playground
-                const isDeep = window.location.pathname.includes('/domains/') || window.location.pathname.includes('/stacks/');
-                const playgroundPath = isDeep ? '../playground.html' : 'playground.html';
+                // Use nav.js's dynamic pathing system
+                const basePath = window.getBasePath ? window.getBasePath() : 
+                                 (window.IFA_DOCS && window.IFA_DOCS.getBasePath ? window.IFA_DOCS.getBasePath() : './');
+                const playgroundPath = `${basePath}playground.html`;
 
                 window.open(`${playgroundPath}?code=${encoded}`, '_blank');
             } catch (err) {
@@ -136,7 +137,7 @@ function initCodeActions() {
 
 // Add version footer
 function addVersionFooter() {
-    const version = '1.2.2';
+    const version = '1.3.0';
     const footer = document.querySelector('footer, .doc-footer');
     if (footer && !footer.querySelector('.version')) {
         const versionEl = document.createElement('p');
@@ -249,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load preference
     const pref = localStorage.getItem('ifa-lang-pref') || 'yoruba';
-    currentLang = 'yoruba';
+    currentLang = pref;
 
     // Initialize language-switcher.js if loaded
     if (isLanguageSwitcherLoaded() && typeof enhanceAllCodeExamples === 'function') {

@@ -103,7 +103,7 @@ ese process_queue(handler) {
 enqueue({"name": "Send email", "to": "user@example.com"});
 enqueue({"name": "Generate report", "type": "monthly"});
 
-process_queue({ task -> Oyeku.sleep(500); });</code></pre>
+process_queue({ task -> Oyeku.sun(500); });</code></pre>
 
         <h2>Use Case 3: Map, Filter, Reduce</h2>
         <pre><code>// transform.ifa - Data transformation
@@ -125,11 +125,11 @@ fun e ninu evens {
 }
 
 // Reduce: sum all numbers
-ayanmo sum = Ogunda.seku(numbers, 0, { acc, n -> Obara.fikun(acc, n) });
+ayanmo sum = Ogunda.ge(numbers, 0, { acc, n -> Obara.fikun(acc, n) });
 Irosu.fo("Sum: " + sum);
 
 // Reduce: product of all numbers
-ayanmo prod = Ogunda.seku(numbers, 1, { acc, n -> Obara.isodipupo(acc, n) });
+ayanmo prod = Ogunda.ge(numbers, 1, { acc, n -> Obara.isodipupo(acc, n) });
 Irosu.fo("Product: " + prod);</code></pre>
 
         <h2>Use Case 4: Inventory Management</h2>

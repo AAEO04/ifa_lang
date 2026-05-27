@@ -37,43 +37,43 @@
             <div class="api-card">
                 <h4>configure</h4>
                 <p>Configure the global Rayon thread pool with specified number of worker threads.</p>
-                <pre><code>CPU.configure(8)</code></pre>
+                <pre><code>Cpu.configure(8)</code></pre>
             </div>
 
             <div class="api-card">
                 <h4>threads | num_threads</h4>
                 <p>Get current number of thread pool workers.</p>
-                <pre><code>ayanmo n = CPU.threads()</code></pre>
+                <pre><code>ayanmo n = Cpu.threads()</code></pre>
             </div>
 
             <div class="api-card">
                 <h4>alloc_buffer</h4>
                 <p>Allocate a CpuOponView buffer of given size (float32 elements).</p>
-                <pre><code>ayanmo buf = CPU.alloc_buffer(1024)</code></pre>
+                <pre><code>ayanmo buf = Cpu.alloc_buffer(1024)</code></pre>
             </div>
 
             <div class="api-card">
                 <h4>read_buffer</h4>
                 <p>Read data from a CpuOponView buffer into a list.</p>
-                <pre><code>ayanmo data = CPU.read_buffer(buf)</code></pre>
+                <pre><code>ayanmo data = Cpu.read_buffer(buf)</code></pre>
             </div>
 
             <div class="api-card">
                 <h4>write_buffer</h4>
                 <p>Write a list of numbers into a CpuOponView buffer.</p>
-                <pre><code>CPU.write_buffer(buf, [1.0, 2.0, 3.0])</code></pre>
+                <pre><code>Cpu.write_buffer(buf, [1.0, 2.0, 3.0])</code></pre>
             </div>
 
             <div class="api-card">
                 <h4>par_map | map</h4>
                 <p>Apply a named operation (e.g., "square", "sqrt", "negate") to each element of a buffer in parallel.</p>
-                <pre><code>ayanmo result = CPU.par_map(buf, "square")</code></pre>
+                <pre><code>ayanmo result = Cpu.par_map(buf, "square")</code></pre>
             </div>
 
             <div class="api-card">
                 <h4>par_reduce | reduce</h4>
                 <p>Reduce a buffer to a single value using a named operation ("sum", "min", "max").</p>
-                <pre><code>ayanmo total = CPU.par_reduce(buf, "sum")</code></pre>
+                <pre><code>ayanmo total = Cpu.par_reduce(buf, "sum")</code></pre>
             </div>
         </div>
 

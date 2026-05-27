@@ -22,21 +22,15 @@
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/odu/iwori.rs</code>. Uses <code>chrono</code> for date/time.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>.
         </div>
 
         <h2>Current Time</h2>
 
         <div class="method">
-            <h3>isisinyi / now</h3>
-            <div class="sig">Iwori.isisinyi() → DateTime</div>
+            <h3>bayi / now / current</h3>
+            <div class="sig">Iwori.bayi() → DateTime</div>
             <p>Get current local time.</p>
-        </div>
-
-        <div class="method">
-            <h3>utc</h3>
-            <div class="sig">Iwori.utc() → DateTime</div>
-            <p>Get current UTC time.</p>
         </div>
 
         <div class="method">
@@ -46,129 +40,18 @@
             <pre><code>ayanmo now = Iwori.akoko();  // 1748044800</code></pre>
         </div>
 
-        <div class="method">
-            <h3>akoko_ms / timestamp_ms</h3>
-            <div class="sig">Iwori.akoko_ms() → Int</div>
-            <p>Unix timestamp in milliseconds.</p>
-        </div>
-
-        <h2>Date/Time Components</h2>
+        <h2>Iteration</h2>
 
         <div class="method">
-            <h3>odun / year</h3>
-            <div class="sig">Iwori.odun() → Int</div>
-            <p>Current year.</p>
+            <h3>yipo / iterate</h3>
+            <div class="sig">Iwori.yipo(iter: Iterator) → Any?</div>
+            <p>Iterate over values, returning the last value or null.</p>
         </div>
 
         <div class="method">
-            <h3>osu / month</h3>
-            <div class="sig">Iwori.osu() → Int</div>
-            <p>Current month (1-12).</p>
-        </div>
-
-        <div class="method">
-            <h3>ojo_osu / day</h3>
-            <div class="sig">Iwori.ojo_osu() → Int</div>
-            <p>Current day of month (1-31).</p>
-        </div>
-
-        <div class="method">
-            <h3>wakati / hour</h3>
-            <div class="sig">Iwori.wakati() → Int</div>
-            <p>Current hour (0-23).</p>
-        </div>
-
-        <div class="method">
-            <h3>iseju / minute</h3>
-            <div class="sig">Iwori.iseju() → Int</div>
-            <p>Current minute (0-59).</p>
-        </div>
-
-        <div class="method">
-            <h3>aaya / second</h3>
-            <div class="sig">Iwori.aaya() → Int</div>
-            <p>Current second (0-59).</p>
-        </div>
-
-        <div class="method">
-            <h3>ojo_ose / weekday</h3>
-            <div class="sig">Iwori.ojo_ose() → Int</div>
-            <p>Day of week (0=Sunday, 6=Saturday).</p>
-        </div>
-
-        <h2>Formatting & Parsing</h2>
-
-        <div class="method">
-            <h3>ojo / format</h3>
-            <div class="sig">Iwori.ojo(format: Str) → Str</div>
-            <p>Format current time using <code>chrono</code> format string.</p>
-            <pre><code>Iwori.ojo("%Y-%m-%d");  // "2026-05-24"</code></pre>
-        </div>
-
-        <div class="method">
-            <h3>ka_ojo / parse_date</h3>
-            <div class="sig">Iwori.ka_ojo(date_str: Str, format: Str) → DateTime?</div>
-            <p>Parse date string. Returns null on failure.</p>
-        </div>
-
-        <div class="method">
-            <h3>odun_abule / is_leap_year</h3>
-            <div class="sig">Iwori.odun_abule(year: Int) → Bool</div>
-            <p>Check if year is a leap year.</p>
-        </div>
-
-        <h2>Calculations</h2>
-
-        <div class="method">
-            <h3>fikun / add_duration</h3>
-            <div class="sig">Iwori.fikun(days: Int, hours: Int, minutes: Int, seconds: Int) → DateTime</div>
-            <p>Add duration to current time.</p>
-            <pre><code>Iwori.fikun(1, 0, 0, 0);  // Tomorrow</code></pre>
-        </div>
-
-        <div class="method">
-            <h3>iye_ojo / days_between</h3>
-            <div class="sig">Iwori.iye_ojo(from: DateTime, to: DateTime) → Int</div>
-            <p>Number of days between two dates.</p>
-        </div>
-
-        <h2>Iterators</h2>
-        <p>These are module-level free functions, not methods on the Iwori struct:</p>
-
-        <div class="method">
-            <h3>range</h3>
-            <div class="sig">range(start: Int, end: Int) → Iterator</div>
-            <p>Inclusive range iterator from start to end.</p>
-            <pre><code>fun i ninu range(0, 5) {
-    Irosu.fo(i);  // 0, 1, 2, 3, 4, 5
-}</code></pre>
-        </div>
-
-        <div class="method">
-            <h3>range_step</h3>
-            <div class="sig">range_step(start: Int, end: Int, step: Int) → Iterator</div>
-            <p>Range iterator with step.</p>
-            <pre><code>fun i ninu range_step(0, 10, 2) {
-    Irosu.fo(i);  // 0, 2, 4, 6, 8, 10
-}</code></pre>
-        </div>
-
-        <div class="method">
-            <h3>repeat</h3>
-            <div class="sig">repeat(value: Any, count: Int) → Iterator</div>
-            <p>Repeat a value count times.</p>
-        </div>
-
-        <div class="method">
-            <h3>enumerate</h3>
-            <div class="sig">enumerate(iter: Iterator) → Iterator(Int, Any)</div>
-            <p>Enumerate iterator (returns index + value pairs).</p>
-        </div>
-
-        <div class="method">
-            <h3>zip</h3>
-            <div class="sig">zip(a: Iterator, b: Iterator) → Iterator</div>
-            <p>Zip two iterators together.</p>
+            <h3>pada / return</h3>
+            <div class="sig">Iwori.pada(value: Any)</div>
+            <p>Return a value from the current function.</p>
         </div>
 
         <footer>

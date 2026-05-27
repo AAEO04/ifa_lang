@@ -157,7 +157,8 @@ impl Sandbox {
 
     /// Check if sandbox is currently running
     pub fn is_running(&self) -> bool {
-        self.state == SandboxState::Running && self.elapsed_time() < self.config.limits.max_execution_time
+        self.state == SandboxState::Running
+            && self.elapsed_time() < self.config.limits.max_execution_time
     }
 
     /// Terminate the sandbox

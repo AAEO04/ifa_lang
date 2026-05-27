@@ -2,8 +2,8 @@
 //! Implements Zero-Copy CpuOponView memory abstraction.
 
 use ifa_infra::cpu::CpuContext;
-use ifa_types::{IfaError, IfaResult};
 use ifa_types::value_union::IfaValue;
+use ifa_types::{IfaError, IfaResult};
 use std::sync::{Arc, RwLock};
 
 /// A hardware-aware zero-copy buffer for CPU computing.
@@ -13,7 +13,11 @@ pub struct CpuOponView {
     pub size: usize,
 }
 
-pub fn dispatch(method: &str, args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) -> IfaResult<IfaValue> {
+pub fn dispatch(
+    method: &str,
+    args: Vec<IfaValue>,
+    ctx: &mut ifa_vm::native::VmContext,
+) -> IfaResult<IfaValue> {
     match method {
         "configure" => handle_configure(args),
         "threads" | "num_threads" => Ok(IfaValue::Int(CpuContext::num_threads() as i64)),
@@ -22,7 +26,10 @@ pub fn dispatch(method: &str, args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmC
         "write_buffer" => handle_write_buffer(args, ctx),
         "par_map" | "map" => handle_par_map(args, ctx),
         "par_reduce" | "reduce" => handle_par_reduce(args, ctx),
-        _ => Err(IfaError::Custom(format!("Cpu: unknown method '{}'", method))),
+        _ => Err(IfaError::Custom(format!(
+            "Cpu: unknown method '{}'",
+            method
+        ))),
     }
 }
 
@@ -37,17 +44,26 @@ fn handle_configure(args: Vec<IfaValue>) -> IfaResult<IfaValue> {
             });
         }
         None => {
-            return Err(IfaError::ArgumentError("Cpu.configure expects a thread count".into()));
+            return Err(IfaError::ArgumentError(
+                "Cpu.configure expects a thread count".into(),
+            ));
         }
     };
     CpuContext::configure(threads).map_err(IfaError::Runtime)?;
     Ok(IfaValue::null())
 }
 
-fn handle_alloc_buffer(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) -> IfaResult<IfaValue> {
+fn handle_alloc_buffer(
+    args: Vec<IfaValue>,
+    ctx: &mut ifa_vm::native::VmContext,
+) -> IfaResult<IfaValue> {
     let size = match args.first() {
         Some(IfaValue::Int(i)) if *i > 0 => *i as usize,
-        _ => return Err(IfaError::ArgumentError("cpu.alloc_buffer: arg must be size (int)".into())),
+        _ => {
+            return Err(IfaError::ArgumentError(
+                "cpu.alloc_buffer: arg must be size (int)".into(),
+            ));
+        }
     };
 
     let view = CpuOponView {
@@ -59,14 +75,23 @@ fn handle_alloc_buffer(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext)
     Ok(IfaValue::Resource(Arc::new(token)))
 }
 
-fn handle_read_buffer(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) -> IfaResult<IfaValue> {
+fn handle_read_buffer(
+    args: Vec<IfaValue>,
+    ctx: &mut ifa_vm::native::VmContext,
+) -> IfaResult<IfaValue> {
     let view_token = match args.first() {
         Some(IfaValue::Resource(r)) => **r,
-        _ => return Err(IfaError::ArgumentError("cpu.read_buffer: first arg must be CpuOponView".into())),
+        _ => {
+            return Err(IfaError::ArgumentError(
+                "cpu.read_buffer: first arg must be CpuOponView".into(),
+            ));
+        }
     };
 
     let registry = ctx.resource_registry();
-    let view = registry.get::<CpuOponView>(view_token).ok_or_else(|| IfaError::Runtime("CpuOponView handle not found".into()))?;
+    let view = registry
+        .get::<CpuOponView>(view_token)
+        .ok_or_else(|| IfaError::Runtime("CpuOponView handle not found".into()))?;
 
     let buffer = view.buffer.read().unwrap();
     let mut list = Vec::with_capacity(view.size);
@@ -77,21 +102,38 @@ fn handle_read_buffer(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) 
     Ok(IfaValue::List(Arc::new(list)))
 }
 
-fn handle_write_buffer(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) -> IfaResult<IfaValue> {
+fn handle_write_buffer(
+    args: Vec<IfaValue>,
+    ctx: &mut ifa_vm::native::VmContext,
+) -> IfaResult<IfaValue> {
     let view_token = match args.first() {
         Some(IfaValue::Resource(r)) => **r,
-        _ => return Err(IfaError::ArgumentError("cpu.write_buffer: first arg must be CpuOponView".into())),
+        _ => {
+            return Err(IfaError::ArgumentError(
+                "cpu.write_buffer: first arg must be CpuOponView".into(),
+            ));
+        }
     };
     let list_val = match args.get(1) {
         Some(IfaValue::List(l)) => l,
-        _ => return Err(IfaError::ArgumentError("cpu.write_buffer: second arg must be a List of numbers".into())),
+        _ => {
+            return Err(IfaError::ArgumentError(
+                "cpu.write_buffer: second arg must be a List of numbers".into(),
+            ));
+        }
     };
 
     let registry = ctx.resource_registry();
-    let view = registry.get::<CpuOponView>(view_token).ok_or_else(|| IfaError::Runtime("CpuOponView handle not found".into()))?;
+    let view = registry
+        .get::<CpuOponView>(view_token)
+        .ok_or_else(|| IfaError::Runtime("CpuOponView handle not found".into()))?;
 
     if list_val.len() != view.size {
-        return Err(IfaError::Runtime(format!("List size {} does not match CpuOponView size {}", list_val.len(), view.size)));
+        return Err(IfaError::Runtime(format!(
+            "List size {} does not match CpuOponView size {}",
+            list_val.len(),
+            view.size
+        )));
     }
 
     let mut buffer = view.buffer.write().unwrap();
@@ -109,15 +151,25 @@ fn handle_write_buffer(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext)
 fn handle_par_map(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) -> IfaResult<IfaValue> {
     let view_token = match args.first() {
         Some(IfaValue::Resource(r)) => **r,
-        _ => return Err(IfaError::ArgumentError("cpu.par_map: first arg must be CpuOponView".into())),
+        _ => {
+            return Err(IfaError::ArgumentError(
+                "cpu.par_map: first arg must be CpuOponView".into(),
+            ));
+        }
     };
     let op = match args.get(1) {
         Some(IfaValue::Str(s)) => s.to_string(),
-        _ => return Err(IfaError::ArgumentError("cpu.par_map: second arg must be operation string".into())),
+        _ => {
+            return Err(IfaError::ArgumentError(
+                "cpu.par_map: second arg must be operation string".into(),
+            ));
+        }
     };
 
     let registry = ctx.resource_registry();
-    let view = registry.get::<CpuOponView>(view_token).ok_or_else(|| IfaError::Runtime("CpuOponView handle not found".into()))?;
+    let view = registry
+        .get::<CpuOponView>(view_token)
+        .ok_or_else(|| IfaError::Runtime("CpuOponView handle not found".into()))?;
 
     // Pre-validate operation so we don't panic inside Rayon loop
     map_numeric_op(0.0, &op)?;
@@ -134,18 +186,31 @@ fn handle_par_map(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) -> I
     Ok(IfaValue::Resource(Arc::new(token)))
 }
 
-fn handle_par_reduce(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) -> IfaResult<IfaValue> {
+fn handle_par_reduce(
+    args: Vec<IfaValue>,
+    ctx: &mut ifa_vm::native::VmContext,
+) -> IfaResult<IfaValue> {
     let view_token = match args.first() {
         Some(IfaValue::Resource(r)) => **r,
-        _ => return Err(IfaError::ArgumentError("cpu.par_reduce: first arg must be CpuOponView".into())),
+        _ => {
+            return Err(IfaError::ArgumentError(
+                "cpu.par_reduce: first arg must be CpuOponView".into(),
+            ));
+        }
     };
     let op = match args.get(1) {
         Some(IfaValue::Str(s)) => s.to_string(),
-        _ => return Err(IfaError::ArgumentError("cpu.par_reduce: second arg must be operation string".into())),
+        _ => {
+            return Err(IfaError::ArgumentError(
+                "cpu.par_reduce: second arg must be operation string".into(),
+            ));
+        }
     };
 
     let registry = ctx.resource_registry();
-    let view = registry.get::<CpuOponView>(view_token).ok_or_else(|| IfaError::Runtime("CpuOponView handle not found".into()))?;
+    let view = registry
+        .get::<CpuOponView>(view_token)
+        .ok_or_else(|| IfaError::Runtime("CpuOponView handle not found".into()))?;
 
     // Pre-validate
     reduce_numeric_op(&[0.0], &op)?;
@@ -166,7 +231,10 @@ fn map_numeric_op(value: f32, op: &str) -> IfaResult<f32> {
         "neg" | "negate" => Ok(-value),
         "abs" => Ok(value.abs()),
         "sqrt" => Ok(value.sqrt()),
-        _ => Err(IfaError::ArgumentError(format!("Cpu.par_map unknown operation '{}'", op))),
+        _ => Err(IfaError::ArgumentError(format!(
+            "Cpu.par_map unknown operation '{}'",
+            op
+        ))),
     }
 }
 
@@ -186,6 +254,9 @@ fn reduce_numeric_op(data: &[f32], op: &str) -> IfaResult<f32> {
             |x| *x,
             |a, b| a.max(b),
         )),
-        _ => Err(IfaError::ArgumentError(format!("Cpu.par_reduce unknown operation '{}'", op))),
+        _ => Err(IfaError::ArgumentError(format!(
+            "Cpu.par_reduce unknown operation '{}'",
+            op
+        ))),
     }
 }

@@ -144,6 +144,7 @@ impl FfiValue {
 pub struct FfiSignature {
     pub arg_types: Vec<IfaType>,
     pub ret_type: IfaType,
+    pub owned_str_free: Option<unsafe extern "C" fn(*mut std::os::raw::c_void)>,
 }
 
 /// Bound function ready to call
@@ -180,8 +181,18 @@ impl GuestAuditPolicy {
         if matches!(module.as_str(), "os" | "subprocess")
             && matches!(
                 func.as_str(),
-                "system" | "popen" | "spawn" | "spawnl" | "spawnlp" | "spawnv" | "spawnvp"
-                    | "exec" | "execv" | "execve" | "run" | "call"
+                "system"
+                    | "popen"
+                    | "spawn"
+                    | "spawnl"
+                    | "spawnlp"
+                    | "spawnv"
+                    | "spawnvp"
+                    | "exec"
+                    | "execv"
+                    | "execve"
+                    | "run"
+                    | "call"
             )
             && !self.allow_spawn
         {
@@ -191,8 +202,10 @@ impl GuestAuditPolicy {
             )));
         }
 
-        if matches!(module.as_str(), "socket" | "urllib" | "urllib.request" | "requests" | "http.client")
-            && !self.allow_network
+        if matches!(
+            module.as_str(),
+            "socket" | "urllib" | "urllib.request" | "requests" | "http.client"
+        ) && !self.allow_network
         {
             return Err(FfiError::SecurityViolation(format!(
                 "Guest call '{}.{}' requires network capability",
@@ -203,15 +216,31 @@ impl GuestAuditPolicy {
         if matches!(module.as_str(), "builtins" | "io" | "pathlib" | "os")
             && matches!(
                 func.as_str(),
-                "open" | "read_text" | "read_bytes" | "write_text" | "write_bytes" | "remove"
-                    | "unlink" | "rename" | "replace" | "mkdir" | "rmdir" | "listdir"
+                "open"
+                    | "read_text"
+                    | "read_bytes"
+                    | "write_text"
+                    | "write_bytes"
+                    | "remove"
+                    | "unlink"
+                    | "rename"
+                    | "replace"
+                    | "mkdir"
+                    | "rmdir"
+                    | "listdir"
                     | "scandir"
             )
         {
             let needs_write = matches!(
                 func.as_str(),
-                "write_text" | "write_bytes" | "remove" | "unlink" | "rename" | "replace"
-                    | "mkdir" | "rmdir"
+                "write_text"
+                    | "write_bytes"
+                    | "remove"
+                    | "unlink"
+                    | "rename"
+                    | "replace"
+                    | "mkdir"
+                    | "rmdir"
             );
             if needs_write && !self.allow_write_files {
                 return Err(FfiError::SecurityViolation(format!(
@@ -504,11 +533,7 @@ impl IfaFfi {
         Ok(canonical_path)
     }
 
-    fn verify_library_hash(
-        &self,
-        path: &std::path::Path,
-        expected_sha256: &str,
-    ) -> FfiResult<()> {
+    fn verify_library_hash(&self, path: &std::path::Path, expected_sha256: &str) -> FfiResult<()> {
         use ring::digest::{Context, SHA256};
         use std::io::Read;
 
@@ -591,7 +616,11 @@ impl IfaFfi {
                 .get("python")
                 .and_then(|cfg| cfg.interpreter_path.clone())
         });
-        let audit = self.bridge_audits.get("python").cloned().unwrap_or_default();
+        let audit = self
+            .bridge_audits
+            .get("python")
+            .cloned()
+            .unwrap_or_default();
         self.backends.insert(
             name.to_string(),
             Backend::Python {
@@ -604,7 +633,25 @@ impl IfaFfi {
     }
 
     /// Bind a function (Native only)
-    pub(crate) fn bind(&mut self, lib: &str, func: &str, args: &[&str], ret: &str) -> FfiResult<()> {
+    pub(crate) fn bind(
+        &mut self,
+        lib: &str,
+        func: &str,
+        args: &[&str],
+        ret: &str,
+    ) -> FfiResult<()> {
+        self.bind_with_free(lib, func, args, ret, None)
+    }
+
+    /// Bind a function with a deallocator for OwnedStr return values (Native only)
+    pub(crate) fn bind_with_free(
+        &mut self,
+        lib: &str,
+        func: &str,
+        args: &[&str],
+        ret: &str,
+        free_fn: Option<unsafe extern "C" fn(*mut std::os::raw::c_void)>,
+    ) -> FfiResult<()> {
         let backend = self
             .backends
             .get(lib)
@@ -621,7 +668,10 @@ impl IfaFfi {
 
                     let ptr = *symbol.deref() as *const () as *mut c_void;
                     NonNull::new(ptr).ok_or_else(|| {
-                        FfiError::CallFailed(format!("Function '{}' resolved to a null pointer", func))
+                        FfiError::CallFailed(format!(
+                            "Function '{}' resolved to a null pointer",
+                            func
+                        ))
                     })?
                 };
 
@@ -632,7 +682,7 @@ impl IfaFfi {
                     })?;
                     arg_types.push(ty);
                 }
-                
+
                 let ret_type = IfaType::from_str(ret).ok_or_else(|| {
                     FfiError::TypeMismatch(format!("Unknown FFI return type: {}", ret))
                 })?;
@@ -646,6 +696,7 @@ impl IfaFfi {
                         sig: FfiSignature {
                             arg_types,
                             ret_type,
+                            owned_str_free: free_fn,
                         },
                     },
                 );
@@ -700,12 +751,15 @@ impl IfaFfi {
                 }
 
                 let global = context.global_object();
-                let func_val = global.get(func, context)
-                    .map_err(|e| FfiError::FunctionNotFound(format!("JS function '{}' not found: {}", func, e)))?;
-                let func_obj = func_val.as_object()
-                    .ok_or_else(|| FfiError::FunctionNotFound(format!("JS value '{}' is not a function", func)))?;
+                let func_val = global.get(func, context).map_err(|e| {
+                    FfiError::FunctionNotFound(format!("JS function '{}' not found: {}", func, e))
+                })?;
+                let func_obj = func_val.as_object().ok_or_else(|| {
+                    FfiError::FunctionNotFound(format!("JS value '{}' is not a function", func))
+                })?;
 
-                let result = func_obj.call(&boa_engine::JsValue::undefined(), &js_args, context)
+                let result = func_obj
+                    .call(&boa_engine::JsValue::undefined(), &js_args, context)
                     .map_err(|e| FfiError::CallFailed(format!("JS Call failed: {}", e)))?;
 
                 Ok(self.js_to_ffi(result))
@@ -801,6 +855,11 @@ impl IfaFfi {
             }
         }
 
+        // Collect stable C string pointers. Since str_args is now fully populated,
+        // its elements will not be reallocated, so we can take stable pointers to their buffers.
+        let str_ptrs: Vec<*const std::os::raw::c_char> =
+            str_args.iter().map(|s| s.as_ptr()).collect();
+
         // Build the Arg vector for the call
         let mut ffi_args: Vec<Arg> = Vec::with_capacity(args.len());
         let mut i32_idx = 0;
@@ -823,7 +882,7 @@ impl IfaFfi {
                     f64_idx += 1;
                 }
                 (FfiValue::Str(_), IfaType::Str | IfaType::OwnedStr) => {
-                    ffi_args.push(Arg::new(&str_args[str_idx].as_ptr()));
+                    ffi_args.push(Arg::new(&str_ptrs[str_idx]));
                     str_idx += 1;
                 }
                 _ => unreachable!(), // Already validated above
@@ -879,6 +938,9 @@ impl IfaFfi {
                     } else {
                         let c_str = std::ffi::CStr::from_ptr(result);
                         let owned = c_str.to_string_lossy().into_owned();
+                        if let Some(free_fn) = bound.sig.owned_str_free {
+                            free_fn(result as *mut std::os::raw::c_void);
+                        }
                         Ok(FfiValue::Str(owned))
                     }
                 }
@@ -1256,6 +1318,7 @@ impl IfaApi {
                     FfiSignature {
                         arg_types: ep.arg_types.clone(),
                         ret_type: ep.ret_type,
+                        owned_str_free: None,
                     },
                 )
             })
@@ -1274,6 +1337,7 @@ impl IfaApi {
                     FfiSignature {
                         arg_types: ep.arg_types.clone(),
                         ret_type: ep.ret_type,
+                        owned_str_free: None,
                     },
                 )
             })
@@ -1663,6 +1727,7 @@ mod tests {
             FfiSignature {
                 arg_types: vec![IfaType::I32, IfaType::I32],
                 ret_type: IfaType::I32,
+                owned_str_free: None,
             },
         )];
 
@@ -1719,6 +1784,7 @@ mod tests {
             sig: FfiSignature {
                 arg_types: vec![IfaType::I32, IfaType::I64, IfaType::Str],
                 ret_type: IfaType::I32,
+                owned_str_free: None,
             },
         };
 
@@ -1765,5 +1831,38 @@ mod tests {
             .expect_err("path outside allowed root should be rejected");
 
         assert!(matches!(err, FfiError::SecurityViolation(_)));
+    }
+
+    #[test]
+    fn test_owned_str_free_is_called() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+
+        static CALLED: AtomicBool = AtomicBool::new(false);
+        unsafe extern "C" fn mock_free(ptr: *mut std::os::raw::c_void) {
+            assert!(!ptr.is_null());
+            let c_str = std::ffi::CStr::from_ptr(ptr as *mut std::os::raw::c_char);
+            assert_eq!(c_str.to_str().unwrap(), "test_free");
+            CALLED.store(true, Ordering::SeqCst);
+        }
+
+        unsafe extern "C" fn mock_func() -> *mut std::os::raw::c_char {
+            b"test_free\0".as_ptr() as *mut std::os::raw::c_char
+        }
+
+        let ffi = IfaFfi::new();
+        let bound = BoundFunction {
+            name: "mock".to_string(),
+            ptr: NonNull::new(mock_func as *mut std::os::raw::c_void).unwrap(),
+            sig: FfiSignature {
+                arg_types: vec![],
+                ret_type: IfaType::OwnedStr,
+                owned_str_free: Some(mock_free),
+            },
+        };
+
+        CALLED.store(false, Ordering::SeqCst);
+        let res = ffi.call_native_libffi(&bound, &[]).unwrap();
+        assert!(CALLED.load(Ordering::SeqCst));
+        assert_eq!(res.as_str(), Some("test_free"));
     }
 }

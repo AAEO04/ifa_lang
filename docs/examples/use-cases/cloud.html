@@ -48,14 +48,14 @@
                 <div class="code-header">
                     <span class="code-title">Concurrent Health Checks</span>
                 </div>
-                <pre><code>fn check_health(service, url) {
+                <pre><code>ese check_health(service, url) {
     ayanmo result = Otura.gba(url);
     ayanmo log = service + ": " + result;
     Odi.ko("logs/" + service + ".log", log + "\n");
     pada log;
 }
 
-fn check_all() {
+ese check_all() {
     ayanmo services = ["api", "db", "cache", "worker"];
     ayanmo urls = [
         "https://api.example.com/health",
@@ -87,7 +87,7 @@ check_all();</code></pre>
                 <div class="code-header">
                     <span class="code-title">Cloud Configuration</span>
                 </div>
-                <pre><code>fn load_cloud_config() {
+                <pre><code>ese load_cloud_config() {
     ayanmo config_file = "cloud/config.json";
     ti (Odi.wa(config_file)) {
         pada Odi.ka(config_file);
@@ -96,7 +96,7 @@ check_all();</code></pre>
     Oyeku.jade(1);
 }
 
-fn deploy_service(name, version) {
+ese deploy_service(name, version) {
     ayanmo url = "https://deploy.example.com/services";
     ayanmo payload = "name=" + name + "&version=" + version;
     ayanmo response = Otura.ran(url, payload);

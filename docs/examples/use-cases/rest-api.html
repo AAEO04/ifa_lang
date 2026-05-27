@@ -47,7 +47,7 @@
                 <div class="code-header">
                     <span class="code-title">Fetch Data from API</span>
                 </div>
-                <pre><code>fn fetch_users() {
+                <pre><code>ese fetch_users() {
     ayanmo url = "https://jsonplaceholder.typicode.com/users";
     ayanmo response = Otura.gba(url);
     ayanmo file = "cache/users.json";
@@ -56,7 +56,7 @@
     Irosu.fo("Cached " + Ika.gigun(response) + " bytes to " + file);
 }
 
-fn read_cached_users() {
+ese read_cached_users() {
     ti (Odi.wa("cache/users.json")) {
         ayanmo data = Odi.ka("cache/users.json");
         Irosu.fo("Loaded cached data: " + Ika.gigun(data) + " chars");
@@ -74,7 +74,7 @@ fn read_cached_users() {
                 <div class="code-header">
                     <span class="code-title">Post Data to API</span>
                 </div>
-                <pre><code>fn create_post(title, body) {
+                <pre><code>ese create_post(title, body) {
     ayanmo url = "https://jsonplaceholder.typicode.com/posts";
     ayanmo payload = "title=" + title + "&body=" + body;
     ayanmo response = Otura.ran(url, payload);
@@ -83,11 +83,11 @@ fn read_cached_users() {
     Irosu.fo("Created post: " + title);
 }
 
-fn save_api_key(key) {
+ese save_api_key(key) {
     Odi.ko("config/api.key", key);
 }
 
-fn load_api_key() {
+ese load_api_key() {
     ti (Odi.wa("config/api.key")) {
         pada Odi.ka("config/api.key");
     }
@@ -102,7 +102,7 @@ fn load_api_key() {
                 <div class="code-header">
                     <span class="code-title">Integrated API Client</span>
                 </div>
-                <pre><code>fn sync_data() {
+                <pre><code>ese sync_data() {
     // 1. Fetch remote data
     ayanmo data = Otura.gba("https://api.example.com/data");
 

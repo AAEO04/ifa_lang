@@ -36,29 +36,34 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
+          targets: ${{ matrix.target }}
           components: rustfmt, clippy
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
 
-      # 1. Format & Lint (Ìwà Pẹ̀lẹ́)
+      # 1. Format & Lint (Ìwà Pẹ̀lẹ́) - Only run on Linux to save runner minutes
       - name: Check Formatting
+        if: matrix.os == 'ubuntu-latest'
         run: cargo fmt --all -- --check
 
       - name: Clippy Lints
+        if: matrix.os == 'ubuntu-latest'
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       # 2. Build Core
       - name: Build Workspace
-        run: cargo build --workspace --verbose
+        run: cargo build --workspace --verbose --target ${{ matrix.target }}
 
       # 3. Test Core & Standard Library
       - name: Run Standard Tests
-        run: cargo test --workspace --verbose
+        run: cargo test --workspace --verbose --target ${{ matrix.target }}
 
       # 4. Cross-Runtime Test
       - name: Run Cross-Runtime Tests
-        run: cargo test -p ifa-embedded --test cross_runtime
+        run: cargo test -p ifa-embedded --test cross_runtime --target ${{ matrix.target }}
 
   # ═══════════════════════════════════════════════════════════════════════════════
   # AIYE CHECK - Specialized Environments
@@ -71,6 +76,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: thumbv7em-none-eabihf
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: thumbv7em-none-eabihf
       
       - name: Verify Embedded Build (no_std)
         run: cargo build -p ifa-embedded --target thumbv7em-none-eabihf
@@ -83,6 +92,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: wasm32-unknown-unknown
       
       - name: Verify WASM Build
         run: cargo build -p ifa-wasm --target wasm32-unknown-unknown
@@ -96,6 +109,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
       
       # Ensure benchmarks compile (don't run full suite)
       - name: Check Benchmarks

@@ -1,9 +1,20 @@
+#![allow(
+    clippy::collapsible_if,
+    clippy::unnecessary_cast,
+    clippy::manual_range_contains,
+    clippy::manual_is_multiple_of,
+    clippy::needless_range_loop,
+    clippy::explicit_auto_deref,
+    clippy::new_without_default,
+    clippy::single_match,
+    clippy::collapsible_else_if
+)]
 //! # Ifá-Std - The 16 Odù Domains
 //!
 //! Standard library implementing the 16 principal Odù as Rust modules.
 //!
 //! ### ⚠️ SECURITY ADVISORY (FFI Bridge)
-//! The `ffi` module is under a hardening mandate. Refer to `patch.md` for details 
+//! The `ffi` module is under a hardening mandate. Refer to `patch.md` for details
 //! on BUG-018 through BUG-021. Use `ffi.itumo` only for sanctified bridges.
 //!
 //! ## Domain Overview
@@ -52,5 +63,5 @@ pub mod ffi;
 pub mod opele;
 
 // Re-exports
-pub use traits::OduDomain;
 pub use esu::Esu;
+pub use traits::OduDomain;

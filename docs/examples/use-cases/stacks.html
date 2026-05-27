@@ -35,8 +35,8 @@
 ayanmo SECRET = "shared_key_123";
 
 ese sign_message(message) {
-    ayanmo signature = Irete.hmac_sha256(message, SECRET);
-    padap? message + "." + signature;
+    ayanmo signature = Irete.hmac_sha256(SECRET, message);
+    pada message + "." + signature;
 }
 
 ese verify_message(signed) {
@@ -49,12 +49,12 @@ ese verify_message(signed) {
         ayanmo i = i + 1;
     }
     ti (dot == 0) {
-        padap? iro;
+        pada iro;
     }
     ayanmo msg = Ika.ge(signed, 0, dot);
     ayanmo sig = Ika.ge(signed, dot + 1, Ika.gigun(signed));
-    ayanmo expected = Irete.hmac_sha256(msg, SECRET);
-    padap? sig == expected;
+    ayanmo expected = Irete.hmac_sha256(SECRET, msg);
+    pada sig == expected;
 }
 
 // Usage
@@ -73,7 +73,7 @@ ese fetch_and_cache(url, cache_file) {
     ayanmo data = Otura.gba(url);
     ti (data == ofifo) {
         Irosu.kigbe("Fetch failed");
-        padap?;
+        pada;
     }
     Odi.ko(cache_file, data);
     Irosu.fo("Cached to: " + cache_file);
@@ -81,9 +81,9 @@ ese fetch_and_cache(url, cache_file) {
 
 ese load_cached(cache_file) {
     ti (Odi.wa(cache_file)) {
-        padap? Odi.ka(cache_file);
+        pada Odi.ka(cache_file);
     }
-    padap? ofifo;
+    pada ofifo;
 }
 
 // Usage
@@ -102,18 +102,18 @@ ti (cached != ofifo) {
 
 ese extract_title(path) {
     ti (!Odi.wa(path)) {
-        padap? ofifo;
+        pada ofifo;
     }
     ayanmo html = Odi.ka(path);
-    padap? Ika.oruko_html(html);
+    pada Ika.oruko_html(html);
 }
 
 ese strip_html_tags(path) {
     ti (!Odi.wa(path)) {
-        padap? ofifo;
+        pada ofifo;
     }
     ayanmo html = Odi.ka(path);
-    padap? Ika.tumo_html(html);
+    pada Ika.tumo_html(html);
 }
 
 // Usage
@@ -132,10 +132,10 @@ Irosu.fo("Plain text: " + Ika.ge(text, 0, 50) + "...");</code></pre>
             <h4 style="color: var(--accent); margin-top: 1rem;">Use Case: Simple Game Screen</h4>
             <pre><code>// game_screen.ifa - Game title screen
 
-Ose.bere();
-Ose.apoti("Ifa Quest", 30);
-Ose.ya("Press SPACE to start");
-Ose.ipinro("Controls");
+ayanmo tty = Ose.bere();
+Ose.ya(tty, {"type": "apoti", "title": "Ifa Quest"});
+Ose.ya(tty, {"type": "ipinro", "text": "Press SPACE to start"});
+Ose.ya(tty, {"type": "ipinro", "text": "Controls"});
 
 Irosu.fo("Arrow keys: move");
 Irosu.fo("Space: action");
@@ -158,20 +158,20 @@ Ose.pari();</code></pre>
             <pre><code>// transform.ifa - Parallel data transformation
 
 ese normalize(data) {
-    ayanmo squares = CPU.par_map(data, "square");
-    ayanmo total = CPU.par_reduce(squares, "sum");
+    ayanmo squares = Cpu.par_map(data, "square");
+    ayanmo total = Cpu.par_reduce(squares, "sum");
     ayanmo count = Ogunda.iwọn(data);
-    ti (count == 0) { padap? []; }
+    ti (count == 0) { pada []; }
 
-    ayanmo mean = Oturupon.pipin(total, count);
+    ayanmo mean = Oturupon.pin(total, count);
     ayanmo result = [];
     ayanmo i = 0;
     nigba (i < count) {
-        ayanmo diff = Oturupon.yokuro(data[i], mean);
+        ayanmo diff = Oturupon.din(data[i], mean);
         ayanmo result = Ogunda.fi(result, diff);
         ayanmo i = i + 1;
     }
-    padap? result;
+    pada result;
 }
 
 // Usage
@@ -200,7 +200,7 @@ ese log_reading(sensor_id, value) {
 ese read_history() {
     ti (!Odi.wa("sensor.log")) {
         Irosu.fo("No logs yet");
-        padap?;
+        pada;
     }
     ayanmo data = Odi.ka("sensor.log");
     Irosu.fo("=== Sensor History ===");
@@ -226,7 +226,7 @@ ese run_pipeline(url, output_file) {
     ayanmo raw = Otura.gba(url);
     ti (raw == ofifo) {
         Irosu.kigbe("Fetch failed");
-        padap? iro;
+        pada iro;
     }
 
     // Process
@@ -238,7 +238,7 @@ ese run_pipeline(url, output_file) {
     ayanmo result = "size=" + size + "\nhash=" + hash + "\n---\n" + raw;
     Odi.ko(output_file, result);
     Irosu.fo("Saved to: " + output_file);
-    padap? otito;
+    pada otito;
 }
 
 // Usage

@@ -29,9 +29,9 @@ ayanmo CONFIG_FILE = "app.cfg";
 
 ese load_config() {
     ti (Odi.wa(CONFIG_FILE)) {
-        padap? Odi.ka(CONFIG_FILE);
+        pada Odi.ka(CONFIG_FILE);
     }
-    padap? "theme=dark\nlang=en";
+    pada "theme=dark\nlang=en";
 }
 
 ese save_config(config) {
@@ -51,7 +51,7 @@ save_config("theme=light\nlang=en\nauto_save=true");</code></pre>
 ese read_log(path) {
     ti (!Odi.wa(path)) {
         Irosu.kigbe("File not found: " + path);
-        padap? ofifo;
+        pada ofifo;
     }
 
     ayanmo content = Odi.ka(path);
@@ -68,7 +68,7 @@ ese read_log(path) {
     Irosu.fo("File: " + path);
     Irosu.fo("Lines: " + count);
     Irosu.fo("Size: " + Ika.gigun(content) + " bytes");
-    padap? content;
+    pada content;
 }
 
 // Usage
@@ -83,7 +83,7 @@ ti (data != ofifo) {
 ese backup_file(source) {
     ti (!Odi.wa(source)) {
         Irosu.kigbe("Source not found: " + source);
-        padap? iro;
+        pada iro;
     }
 
     ayanmo content = Odi.ka(source);
@@ -92,7 +92,7 @@ ese backup_file(source) {
 
     Odi.ko(backup, content);
     Irosu.fo("Backup created: " + backup);
-    padap? otito;
+    pada otito;
 }
 
 // Usage

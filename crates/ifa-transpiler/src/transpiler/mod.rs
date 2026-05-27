@@ -49,4 +49,30 @@ mod tests {
         assert!(rust_code.contains("\"IoError\""));
         assert!(!rust_code.contains("std::fs::write(&p, &c).ok()"));
     }
+
+    #[test]
+    fn test_exponentiation_transpile() {
+        let source = r#"
+        ayanmo a = 2;
+        ayanmo b = 3;
+        ayanmo x = a ** b;
+        "#;
+        let program = parse(source).unwrap();
+        let rust_code = transpile_to_rust(&program);
+        println!("RUST CODE EXP:\n{}", rust_code);
+        assert!(rust_code.contains(".pow(&"));
+    }
+
+    #[test]
+    fn test_literal_folding_transpile() {
+        let source = r#"
+        ayanmo x = 1 + 2;
+        ayanmo y = 3.5 * 2.0;
+        "#;
+        let program = parse(source).unwrap();
+        let rust_code = transpile_to_rust(&program);
+        // Literal folding wraps raw arithmetic in IfaValue at the boundary
+        assert!(rust_code.contains("IfaValue::Int(1i64 + 2i64)"));
+        assert!(rust_code.contains("IfaValue::Float(3.5f64 * 2f64)"));
+    }
 }

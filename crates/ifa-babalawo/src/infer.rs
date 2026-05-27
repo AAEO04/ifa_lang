@@ -17,74 +17,88 @@ pub fn infer_capabilities(program: &Program) -> CapabilitySet {
     caps
 }
 
+fn scan_odu_call(call: &ifa_types::ast::OduCall, caps: &mut CapabilitySet) {
+    let domain = format!("{:?}", call.domain).to_lowercase();
+    match domain.as_str() {
+        "coop" => {
+            caps.grant(Ofun::Bridge {
+                language: call.method.clone(),
+            });
+        }
+        "odi" => {
+            // File I/O
+            // Odi.ka("file") -> Read
+            // Odi.ko("file") -> Write
+            if call.method == "ka" || call.method == "read" {
+                if let Some(path) = extract_string_arg(&call.args, 0) {
+                    caps.grant(Ofun::ReadFiles {
+                        root: PathBuf::from(path),
+                    });
+                } else {
+                    // If dynamic path, grant generous permission
+                    caps.grant(Ofun::ReadFiles {
+                        root: PathBuf::from("/"),
+                    });
+                }
+            } else if call.method == "ko" || call.method == "write" {
+                if let Some(path) = extract_string_arg(&call.args, 0) {
+                    caps.grant(Ofun::WriteFiles {
+                        root: PathBuf::from(path),
+                    });
+                } else {
+                    caps.grant(Ofun::WriteFiles {
+                        root: PathBuf::from("/"),
+                    });
+                }
+            }
+        }
+        "otura" => {
+            // Networking
+            caps.grant(Ofun::Network {
+                domains: vec!["*".to_string()],
+            });
+        }
+        "ogunda" => {
+            // Processes
+            if call.method == "bẹrẹ" || call.method == "run" {
+                if let Some(prog) = extract_string_arg(&call.args, 0) {
+                    caps.grant(Ofun::Execute {
+                        programs: vec![prog],
+                    });
+                } else {
+                    caps.grant(Ofun::Execute {
+                        programs: vec!["*".to_string()],
+                    });
+                }
+            }
+        }
+        "iwori" => {
+            if call.method == "akoko" || call.method == "isisinyi" {
+                caps.grant(Ofun::Time);
+            }
+        }
+        "owonrin" => {
+            caps.grant(Ofun::Random);
+        }
+        "ogbe" => {
+            if call.method == "ayika" || call.method == "env" {
+                caps.grant(Ofun::Environment {
+                    keys: vec!["*".to_string()],
+                });
+            }
+        }
+        _ => {}
+    }
+
+    for arg in &call.args {
+        scan_expression(arg, caps);
+    }
+}
+
 fn scan_statement(stmt: &Statement, caps: &mut CapabilitySet) {
     match stmt {
         Statement::Instruction { call, .. } => {
-            let domain = format!("{:?}", call.domain).to_lowercase();
-            match domain.as_str() {
-                "odi" => {
-                    // File I/O
-                    // Odi.ka("file") -> Read
-                    // Odi.ko("file") -> Write
-                    if call.method == "ka" || call.method == "read" {
-                        if let Some(path) = extract_string_arg(&call.args, 0) {
-                            caps.grant(Ofun::ReadFiles {
-                                root: PathBuf::from(path),
-                            });
-                        } else {
-                            // If dynamic path, grant generous permission or warn?
-                            // zero-config philosophy -> broad permission if unknown
-                            caps.grant(Ofun::ReadFiles {
-                                root: PathBuf::from("/"),
-                            });
-                        }
-                    } else if call.method == "ko" || call.method == "write" {
-                        if let Some(path) = extract_string_arg(&call.args, 0) {
-                            caps.grant(Ofun::WriteFiles {
-                                root: PathBuf::from(path),
-                            });
-                        } else {
-                            caps.grant(Ofun::WriteFiles {
-                                root: PathBuf::from("/"),
-                            });
-                        }
-                    }
-                }
-                "otura" => {
-                    // Networking
-                    caps.grant(Ofun::Network {
-                        domains: vec!["*".to_string()],
-                    });
-                }
-                "ogunda" => {
-                    // Processes
-                    if call.method == "bẹrẹ" || call.method == "run" {
-                        // Spawning processes requires capabilities
-                        // How is this represented in Ofun? Need to check Capability definitions.
-                        // Assuming Ofun::Command or similar checking Ofun enum.
-                    }
-                }
-                "iwori" => {
-                    if call.method == "akoko" || call.method == "isisinyi" {
-                        caps.grant(Ofun::Time);
-                    }
-                }
-                "owonrin" => {
-                    caps.grant(Ofun::Random);
-                }
-                "ogbe" => {
-                    if call.method == "ayika" || call.method == "env" {
-                        caps.grant(Ofun::Environment {
-                            keys: vec!["*".to_string()],
-                        });
-                    }
-                }
-                _ => {}
-            }
-
-            for arg in &call.args {
-                scan_expression(arg, caps);
-            }
+            scan_odu_call(call, caps);
         }
         Statement::VarDecl { value, .. } => scan_expression(value, caps),
         Statement::Assignment { value, .. } => scan_expression(value, caps),
@@ -131,6 +145,7 @@ fn scan_statement(stmt: &Statement, caps: &mut CapabilitySet) {
             }
         }
         Statement::Return { value: Some(v), .. } => scan_expression(v, caps),
+        Statement::Throw { value, .. } => scan_expression(value, caps),
         _ => {}
     }
 }
@@ -138,32 +153,7 @@ fn scan_statement(stmt: &Statement, caps: &mut CapabilitySet) {
 fn scan_expression(expr: &Expression, caps: &mut CapabilitySet) {
     match expr {
         Expression::OduCall(call) => {
-            // Re-use logic for instructions but for expr calls (e.g. nested calls)
-            // Copy-paste logic from scan_instruction for now or refactor
-            // For OduCall in Expression, it's the exact same structure as Instruction's OduCall
-            // We can synthesise a Statement::Instruction check, or just extract logic.
-            // Simpler: Just recursively check args.
-
-            let domain = format!("{:?}", call.domain).to_lowercase();
-            if domain == "odi" {
-                // If reading file in expression
-                if call.method == "ka" || call.method == "read" {
-                    if let Some(path) = extract_string_arg(&call.args, 0) {
-                        caps.grant(Ofun::ReadFiles {
-                            root: PathBuf::from(path),
-                        });
-                    } else {
-                        caps.grant(Ofun::ReadFiles {
-                            root: PathBuf::from("/"),
-                        });
-                    }
-                }
-            }
-            // ... other domains
-
-            for arg in &call.args {
-                scan_expression(arg, caps);
-            }
+            scan_odu_call(call, caps);
         }
         Expression::BinaryOp { left, right, .. } => {
             scan_expression(left, caps);

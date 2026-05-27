@@ -96,7 +96,6 @@ pub fn derive_ebo(input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemFn);
-    let fn_name = &input.sig.ident;
     let fn_vis = &input.vis;
     let fn_sig = &input.sig;
     let fn_block = &input.block;

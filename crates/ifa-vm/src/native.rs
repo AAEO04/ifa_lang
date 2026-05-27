@@ -28,7 +28,13 @@ impl<'a> VmContext<'a> {
         let bytecode = std::sync::Arc::new(self.bytecode.clone());
         let new_registry = self.vm.registry.as_ref().map(|r| r.clone_registry());
         let resource_registry = std::sync::Arc::new(ifa_types::registry::ResourceRegistry::new());
-        crate::actor::spawn_actor(handler, bytecode, self.vm.actor_table.clone(), new_registry, resource_registry)
+        crate::actor::spawn_actor(
+            handler,
+            bytecode,
+            self.vm.actor_table.clone(),
+            new_registry,
+            resource_registry,
+        )
     }
 
     /// H2: Send a value to an actor. Non-blocking — returns error on full inbox.

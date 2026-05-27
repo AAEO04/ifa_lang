@@ -28,88 +28,49 @@
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/odu/ogbe.rs</code>.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>.
+        </div>
+
+        <h2>Lifecycle</h2>
+
+        <div class="method">
+            <h3>bere / version</h3>
+            <div class="sig">Ogbe.bere() → Str</div>
+            <p>Get Ifá-Lang version string.</p>
+        </div>
+
+        <div class="method">
+            <h3>bi / init</h3>
+            <div class="sig">Ogbe.bi()</div>
+            <p>Initialize the runtime (called automatically at startup).</p>
         </div>
 
         <h2>CLI Arguments</h2>
 
         <div class="method">
-            <h3>awon_ohun / args</h3>
-            <div class="sig">Ogbe.awon_ohun() → List(Str)</div>
+            <h3>args</h3>
+            <div class="sig">Ogbe.args() → List(Str)</div>
             <p>Get all CLI arguments as a list of strings.</p>
         </div>
 
+        <h2>Environment</h2>
+
         <div class="method">
-            <h3>ohun / arg</h3>
-            <div class="sig">Ogbe.ohun(index: Int) → Str?</div>
-            <p>Get CLI argument at index. Returns null if index out of range.</p>
+            <h3>env / ayika</h3>
+            <div class="sig">Ogbe.env(key: Str) → Str?</div>
+            <p>Get environment variable. Returns null if not set.</p>
         </div>
 
         <div class="method">
-            <h3>iye_ohun / arg_count</h3>
-            <div class="sig">Ogbe.iye_ohun() → Int</div>
-            <p>Get number of CLI arguments.</p>
-        </div>
-
-        <h2>Environment Variables</h2>
-
-        <div class="method">
-            <h3>ayika / get_env</h3>
-            <div class="sig">Ogbe.ayika(key: Str) → Str?</div>
-            <p>Get environment variable. Returns null if not set or capability denied.</p>
-        </div>
-
-        <div class="method">
-            <h3>ayika_tabi / get_env_or</h3>
-            <div class="sig">Ogbe.ayika_tabi(key: Str, default: Str) → Str</div>
-            <p>Get environment variable with default fallback.</p>
-        </div>
-
-        <div class="method deprecated">
-            <h3>fi_ayika / set_env (deprecated)</h3>
-            <div class="sig">Ogbe.fi_ayika(key: Str, value: Str)</div>
-            <p><strong>Deprecated since 1.2.1.</strong> Setting environment variables at runtime is thread-unsafe. This operation is a no-op that prints a warning.</p>
-        </div>
-
-        <h2>System Information</h2>
-
-        <div class="method">
-            <h3>ile / home_dir</h3>
-            <div class="sig">Ogbe.ile() → Str?</div>
-            <p>Get home directory path (<code>$HOME</code> or <code>$USERPROFILE</code>).</p>
-        </div>
-
-        <div class="method">
-            <h3>oju_ona / cwd</h3>
-            <div class="sig">Ogbe.oju_ona() → Str?</div>
+            <h3>cwd</h3>
+            <div class="sig">Ogbe.cwd() → Str?</div>
             <p>Get current working directory.</p>
-        </div>
-
-        <div class="method">
-            <h3>eto / os</h3>
-            <div class="sig">Ogbe.eto() → Str</div>
-            <p>Get operating system name (e.g. <code>linux</code>, <code>windows</code>, <code>macos</code>).</p>
-        </div>
-
-        <div class="method">
-            <h3>apere / arch</h3>
-            <div class="sig">Ogbe.apere() → Str</div>
-            <p>Get CPU architecture (e.g. <code>x86_64</code>, <code>aarch64</code>).</p>
         </div>
 
         <h2>Example</h2>
         <pre><code>ese main() {
-    ayanmo args = Ogbe.awon_ohun();
-    ayanmo count = Ogbe.iye_ohun();
-
-    ti (count < 2) {
-        Irosu.fo("Usage: " + Ogbe.ohun(0) + " <file>");
-        Oyeku.ku(1);
-    }
-
-    ayanmo filename = Ogbe.ohun(1);
-    Irosu.fo("Running on: " + Ogbe.eto() + " (" + Ogbe.apere() + ")");
-    Irosu.fo("Working directory: " + Ogbe.oju_ona());
+    ayanmo args = Ogbe.args();
+    Irosu.fo("Version: " + Ogbe.bere());
 }</code></pre>
 
         <footer>

@@ -1,6 +1,6 @@
 // use ifa_types::ast::Span;
-use ifa_types::{IfaError, IfaResult};
 use crate::parser::Rule;
+use ifa_types::{IfaError, IfaResult};
 
 /// Safely get the next pair from an iterator, or return a parse error
 pub fn safe_next<'a>(

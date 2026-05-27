@@ -108,7 +108,7 @@ fn main() {
         compute_pass.set_pipeline(&pipeline);
         compute_pass.set_bind_group(0, &bind_group, &[]);
         // Dispatch enough workgroups to cover all elements
-        let workgroups = (data_size + 255) / 256;
+        let workgroups = data_size.div_ceil(256);
         compute_pass.dispatch_workgroups(workgroups, 1, 1);
     }
 

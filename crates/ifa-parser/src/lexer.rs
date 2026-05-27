@@ -3,7 +3,7 @@
 //! Tokenizer for Ifá-Lang source code using logos.
 //! Handles Yoruba diacritics and ASCII aliases.
 
-use logos::{Lexer, Logos};
+use logos::Logos;
 use std::fmt;
 
 /// Normalize Yoruba text to ASCII for matching
@@ -12,19 +12,12 @@ fn normalize_yoruba(text: &str) -> String {
         .replace('ẹ', "e")
         .replace('ọ', "o")
         .replace('ṣ', "s")
-        .replace('à', "a")
-        .replace('á', "a")
-        .replace('è', "e")
-        .replace('é', "e")
-        .replace('ì', "i")
-        .replace('í', "i")
-        .replace('ò', "o")
-        .replace('ó', "o")
-        .replace('ù', "u")
-        .replace('ú', "u")
-        .replace('̀', "")
-        .replace('́', "")
-        .replace('̣', "")
+        .replace(['à', 'á'], "a")
+        .replace(['è', 'é'], "e")
+        .replace(['ì', 'í'], "i")
+        .replace(['ò', 'ó'], "o")
+        .replace(['ù', 'ú'], "u")
+        .replace(['̀', '́', '̣'], "")
 }
 
 /// Map identifier text to an Odù domain when it is a reserved domain name.
@@ -52,10 +45,10 @@ fn classify_domain(slice: &str) -> Option<OduDomain> {
         "ofun" => Some(OduDomain::Ofun),
         "opele" => Some(OduDomain::Opele),
         _ => {
-            // Standard programming aliases (max 2 per domain - keep it simple!)
+            // Standard programming aliases (match docgen.rs canonical English aliases)
             match lower.as_str() {
                 // Ogbe (1111) - System/Lifecycle
-                "lifecycle" => Some(OduDomain::Ogbe),
+                "system" | "lifecycle" => Some(OduDomain::Ogbe),
 
                 // Oyeku (0000) - Exit/Cleanup
                 "exit" => Some(OduDomain::Oyeku),
@@ -64,43 +57,43 @@ fn classify_domain(slice: &str) -> Option<OduDomain> {
                 "time" | "datetime" => Some(OduDomain::Iwori),
 
                 // Odi (1001) - File I/O
-                "fs" | "io" => Some(OduDomain::Odi),
+                "file" | "fs" | "io" => Some(OduDomain::Odi),
 
                 // Irosu (1100) - Console/Logging
-                "fmt" | "log" => Some(OduDomain::Irosu),
+                "log" | "fmt" => Some(OduDomain::Irosu),
 
                 // Owonrin (0011) - Random
-                "rand" => Some(OduDomain::Owonrin),
+                "random" | "rand" => Some(OduDomain::Owonrin),
 
-                // Obara (1000) - Math+
+                // Obara (1000) - Math (Addition/Multiplication)
                 "math" => Some(OduDomain::Obara),
 
                 // Okanran (0001) - Errors
-                "err" | "panic" => Some(OduDomain::Okanran),
+                "error" | "err" => Some(OduDomain::Okanran),
 
-                // Ogunda (1110) - Collections
-                "vec" | "list" => Some(OduDomain::Ogunda),
+                // Ogunda (1110) - Arrays/Collections
+                "array" | "vec" | "list" => Some(OduDomain::Ogunda),
 
-                // Osa (0111) - Concurrency
-                "async" | "thread" => Some(OduDomain::Osa),
+                // Osa (0111) - Flow/Concurrency
+                "flow" | "async" | "thread" => Some(OduDomain::Osa),
 
                 // Ika (0100) - Strings
-                "str" | "string" => Some(OduDomain::Ika),
+                "string" | "str" => Some(OduDomain::Ika),
 
-                // Oturupon (0010) - Division / Inverse
-                "inv" | "inverse" | "div" => Some(OduDomain::Oturupon),
+                // Oturupon (0010) - Reduce/Division
+                "reduce" | "math_sub" => Some(OduDomain::Oturupon),
 
-                // Otura (1011) - Networking
+                // Otura (1011) - Net/Networking
                 "net" | "http" => Some(OduDomain::Otura),
 
                 // Irete (1101) - Crypto
                 "crypto" | "hash" => Some(OduDomain::Irete),
 
-                // Ose (1010) - Terminal UI
-                "tui" | "term" => Some(OduDomain::Ose),
+                // Ose (1010) - UI/Graphics
+                "ui" | "tui" => Some(OduDomain::Ose),
 
-                // Ofun (0101) - Permissions
-                "perm" | "auth" => Some(OduDomain::Ofun),
+                // Ofun (0101) - Root/Permissions
+                "root" | "perm" | "auth" => Some(OduDomain::Ofun),
 
                 // Opele - Divination/Compound Odù
                 "opele" | "oracle" => Some(OduDomain::Opele),
@@ -108,8 +101,8 @@ fn classify_domain(slice: &str) -> Option<OduDomain> {
                 // Coop - FFI Bridge
                 "ffi" | "bridge" => Some(OduDomain::Coop),
 
-                // Infrastructure Layer
-                "sys" | "system" => Some(OduDomain::Sys),
+                // Sys (11011) - System Info
+                "sys" => Some(OduDomain::Sys),
                 "cpu" | "parallel" => Some(OduDomain::Cpu),
                 "gpu" | "compute" => Some(OduDomain::Gpu),
                 "storage" | "kv" | "db" => Some(OduDomain::Storage),
@@ -117,7 +110,6 @@ fn classify_domain(slice: &str) -> Option<OduDomain> {
                 // Note: audio/sound → Irosu (console I/O domain handles audio output)
                 // Note: stacks (backend, frontend, ml, gamedev, iot, video)
                 // are library identifiers — classified as Identifier, not Domain.
-
                 _ => None,
             }
         }
@@ -175,13 +167,13 @@ pub enum Token {
     #[token("break")]
     Break,
 
-    #[token("ta")]        // canonical throw
+    #[token("ta")] // canonical throw
     #[token("tá")]
     #[token("throw")]
     Throw,
 
-    #[token("tesiwaju")]  // canonical Yoruba (spec §3.4)
-    #[token("bayan")]     // Yoruba alias
+    #[token("tesiwaju")] // canonical Yoruba (spec §3.4)
+    #[token("bayan")] // Yoruba alias
     #[token("continue")]
     Continue,
 
@@ -218,7 +210,7 @@ pub enum Token {
     #[token("async")]
     Async,
 
-    #[token("reti")]       // canonical await (spec §3.4 ratified)
+    #[token("reti")] // canonical await (spec §3.4 ratified)
     #[token("rẹti")]
     #[token("await")]
     Await,
@@ -238,7 +230,7 @@ pub enum Token {
     False,
 
     #[token("ohunkohun")]
-    #[token("ofo")]       // canonical Yoruba (spec §3.4)
+    #[token("ofo")] // canonical Yoruba (spec §3.4)
     #[token("ófo")]
     #[token("nil")]
     #[token("null")]
@@ -491,6 +483,8 @@ mod tests {
     #[test]
     fn test_interpolated_string() {
         let tokens = tokenize(r#"$"The value is {x}""#);
-        assert!(matches!(&tokens[0].value, Token::InterpolatedString(s) if s == "The value is {x}"));
+        assert!(
+            matches!(&tokens[0].value, Token::InterpolatedString(s) if s == "The value is {x}")
+        );
     }
 }

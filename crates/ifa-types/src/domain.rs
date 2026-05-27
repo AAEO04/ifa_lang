@@ -174,7 +174,10 @@ impl OduDomain {
 
     /// True for hardware/OS infrastructure domains.
     pub fn is_infrastructure(&self) -> bool {
-        matches!(self, OduDomain::Cpu | OduDomain::Gpu | OduDomain::Storage | OduDomain::Sys)
+        matches!(
+            self,
+            OduDomain::Cpu | OduDomain::Gpu | OduDomain::Storage | OduDomain::Sys
+        )
     }
 
     /// True for reserved pseudo-domains with no current dispatch path.

@@ -3,7 +3,7 @@
 //! Dependency resolution, lockfile generation, and sandboxed execution.
 //! Conforms to IFA_LANG_RUNTIME_SPEC §33.
 
-#![allow(dead_code)]
+#![allow(dead_code, clippy::collapsible_if)]
 
 use chrono::Local;
 use eyre::{Result, WrapErr, eyre};
@@ -29,7 +29,7 @@ struct SemVer {
 impl SemVer {
     fn parse(raw: &str) -> Option<Self> {
         let parts: Vec<&str> = raw.split('.').collect();
-        let major = parts.get(0)?.parse().ok()?;
+        let major = parts.first()?.parse().ok()?;
         let minor = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
         let patch = parts.get(2).and_then(|s| s.parse().ok()).unwrap_or(0);
         Some(Self {
@@ -643,7 +643,7 @@ opt-level = 3
     pub fn fetch(&self) -> Result<()> {
         println!("🛒  Fetching dependencies...");
 
-        let (lib_dir, cache_dir) = self.ensure_igbale()?;
+        let (lib_dir, _cache_dir) = self.ensure_igbale()?;
         let manifest = self.load_manifest()?;
 
         if manifest.dependencies.is_empty() {
@@ -702,8 +702,6 @@ opt-level = 3
             "   🔒 Wrote oja.lock ({} packages)",
             lockfile.packages.len()
         );
-
-
 
         println!("✨  Ready to run.");
         Ok(())
@@ -1379,7 +1377,7 @@ opt-level = 3
             .collect();
 
         // Print direct deps, then recurse
-        for (name, _) in &manifest.dependencies {
+        for name in manifest.dependencies.keys() {
             self.print_tree_node(name, &pkg_map, 0, &mut HashSet::new());
         }
         Ok(())

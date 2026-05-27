@@ -8,7 +8,7 @@
         { title: "Getting Started", href: "getting-started/quickstart.html", content: "installation guide quick start hello world" },
         { title: "Language Syntax", href: "language/syntax.html", content: "syntax variable types control flow loops functions" },
         { title: "API Reference", href: "api/api.html", content: "api standard library modules domains" },
-        { title: "Playground", href: "examples/playground.html", content: "try online browser editor" },
+        { title: "Playground", href: "playground.html", content: "try online browser editor" },
         { title: "CLI Tools", href: "tools/cli.html", content: "command line interface ifa run build" },
         { title: "Odù Philosophy", href: "language/philosophy.html", content: "16 odu domains ifa wisdom" },
         { title: "Tutorials", href: "tutorials/index.html", content: "guides learn tutorial" },

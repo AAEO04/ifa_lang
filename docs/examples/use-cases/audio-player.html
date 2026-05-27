@@ -48,19 +48,19 @@
                 <div class="code-header">
                     <span class="code-title">Load, Browse, and Queue Tracks</span>
                 </div>
-                <pre><code>fn load_playlist(path) {
+                <pre><code>ese load_playlist(path) {
     ti (Odi.wa(path)) {
         pada Odi.ka(path);
     }
     pada "";
 }
 
-fn save_playlist(path, content) {
+ese save_playlist(path, content) {
     Odi.ko(path, content);
     Irosu.fo("Saved playlist: " + path);
 }
 
-fn list_tracks(playlist) {
+ese list_tracks(playlist) {
     ayanmo lines = Ika.ge(playlist, 0, Ika.gigun(playlist));
     Irosu.fo("Tracks in queue:");
     // In practice, split by newline and display numbered
@@ -78,7 +78,7 @@ list_tracks(pl);</code></pre>
                 <div class="code-header">
                     <span class="code-title">Simulated Playback</span>
                 </div>
-                <pre><code>fn play_track(track_name) {
+                <pre><code>ese play_track(track_name) {
     Irosu.fo("Now playing: " + track_name);
     Irosu.fo("Duration: 3:45");
     Irosu.fo("--- [playing] ---");
@@ -86,7 +86,7 @@ list_tracks(pl);</code></pre>
     Irosu.fo("Track ended");
 }
 
-fn player_loop() {
+ese player_loop() {
     Irosu.fo("Audio Player v0.1 (console mode)");
     Irosu.fo("Commands: play &lt;name&gt;, list, add &lt;name&gt;, stop, exit");
 
@@ -124,14 +124,14 @@ player_loop();</code></pre>
                 <div class="code-header">
                     <span class="code-title">Adding and Removing Tracks</span>
                 </div>
-                <pre><code>fn add_track(queue, track) {
+                <pre><code>ese add_track(queue, track) {
     ayanmo updated = queue;
     Ogunda.fi(updated, track);
     Irosu.fo("Added: " + track);
     pada updated;
 }
 
-fn skip_track(queue) {
+ese skip_track(queue) {
     ayanmo remaining = queue;
     Ogunda.mu(remaining); // pop first
     Irosu.fo("Skipped to next track");

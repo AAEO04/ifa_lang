@@ -79,7 +79,12 @@ impl Ikin {
     /// Consult the nuts (Get constant by ID)
     #[inline(always)]
     pub fn consult_string(&self, idx: usize) -> Option<&Arc<str>> {
-        let actual_idx = self.bytecode_to_ikin.get(idx).copied().map(|i| i as usize).unwrap_or(idx);
+        let actual_idx = self
+            .bytecode_to_ikin
+            .get(idx)
+            .copied()
+            .map(|i| i as usize)
+            .unwrap_or(idx);
         self.strings.get(actual_idx)
     }
 
@@ -131,7 +136,10 @@ impl Ikin {
                 let new_id = self.strings.len() as u32;
                 self.string_map.insert(arc.clone(), new_id);
                 self.strings.push(arc);
-                self.string_lengths.push(ifa_types::value_union::IfaValue::unicode_string_len(s.as_str()));
+                self.string_lengths
+                    .push(ifa_types::value_union::IfaValue::unicode_string_len(
+                        s.as_str(),
+                    ));
                 new_id
             };
             self.bytecode_to_ikin.push(id);
@@ -164,7 +172,10 @@ impl Ikin {
                 let new_id = self.strings.len() as u32;
                 self.string_map.insert(arc.clone(), new_id);
                 self.strings.push(arc);
-                self.string_lengths.push(ifa_types::value_union::IfaValue::unicode_string_len(s.as_str()));
+                self.string_lengths
+                    .push(ifa_types::value_union::IfaValue::unicode_string_len(
+                        s.as_str(),
+                    ));
                 new_id
             };
             self.bytecode_to_ikin.push(id);
@@ -215,7 +226,10 @@ impl<'de> Deserialize<'de> for Ikin {
             let arc: std::sync::Arc<str> = s.as_str().into();
             ikin.strings.push(arc.clone());
             ikin.string_map.insert(arc, i as u32);
-            ikin.string_lengths.push(ifa_types::value_union::IfaValue::unicode_string_len(s.as_str()));
+            ikin.string_lengths
+                .push(ifa_types::value_union::IfaValue::unicode_string_len(
+                    s.as_str(),
+                ));
         }
         ikin.constants = data.constants;
         Ok(ikin)
@@ -233,9 +247,12 @@ mod tests {
         bytecode.strings = vec!["alpha".into(), "beta".into()];
 
         let mut ikin = Ikin::new();
-        ikin.load_from_bytecode(&bytecode).expect("load should succeed");
+        ikin.load_from_bytecode(&bytecode)
+            .expect("load should succeed");
 
-        let id = ikin.intern("beta").expect("intern should reuse existing string");
+        let id = ikin
+            .intern("beta")
+            .expect("intern should reuse existing string");
         assert_eq!(id, 1);
 
         let gamma = ikin.intern("gamma").expect("new string should append");
@@ -258,7 +275,7 @@ mod tests {
         let mut ikin = Ikin::new();
         let s = "e\u{301}".repeat(16); // 48 bytes, heap allocated
         ikin.intern(&s).unwrap();
-        
+
         let value = ifa_types::CompactString::new(&s);
 
         assert_eq!(ikin.string_len(&value), 32);

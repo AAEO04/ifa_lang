@@ -27,7 +27,8 @@ fn osa_spawn_returns_future() {
     let program = parse(source).expect("parse failed");
     let compiler = Compiler::new("osa_spawn_returns_future");
     let bytecode = compiler.compile(&program).expect("compile failed");
-    let mut vm = ifa_vm::vm::IfaVM::new().with_registry(Box::new(ifa_std::vm_registry::StdRegistry::new()));
+    let mut vm =
+        ifa_vm::vm::IfaVM::new().with_registry(Box::new(ifa_std::vm_registry::StdRegistry::new()));
     let got = vm.execute(&bytecode).expect("vm failed");
     assert_eq!(got, ifa_types::IfaValue::Int(7));
 }

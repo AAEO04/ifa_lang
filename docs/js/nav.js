@@ -25,8 +25,21 @@
         // Find 'docs' in the path and count depth after it
         const docsIndex = segments.findIndex(s => s === 'docs');
         if (docsIndex === -1) {
-            // If opened as file://, count from the HTML file
-            const htmlPath = path.substring(path.lastIndexOf('/docs/') + 6);
+            // Check if /docs/ exists in the path (e.g. file:///.../docs/...)
+            const docsPos = path.lastIndexOf('/docs/');
+            if (docsPos !== -1) {
+                const htmlPath = path.substring(docsPos + 6);
+                const depth = htmlPath.split('/').filter(Boolean).length - 1;
+                return '../'.repeat(Math.max(0, depth)) || './';
+            }
+            // If not found, and we are serving via HTTP/HTTPS, the depth is the number of path segments
+            // because the root of the server is the docs directory.
+            if (window.location.protocol.startsWith('http')) {
+                const depth = segments.length;
+                return '../'.repeat(depth) || './';
+            }
+            // Fallback for file:// opened without 'docs' in the path
+            const htmlPath = path.substring(Math.max(0, path.lastIndexOf('/') + 1));
             const depth = htmlPath.split('/').length - 1;
             return '../'.repeat(depth) || './';
         }
@@ -44,6 +57,7 @@
             items: [
                 { href: 'getting-started/quickstart.html', label: ' Quick Start' },
                 { href: 'getting-started/install.html', label: ' Installation' },
+                { href: 'getting-started/installer.html', label: ' Installer Architecture' },
                 { href: 'getting-started/hello-world.html', label: ' Hello World' }
             ]
         },
@@ -54,9 +68,9 @@
                 { href: 'language/types-crate.html', label: '🏗️ Types' },
                 { href: 'language/macros.html', label: '⚙️ Macros' },
                 { href: 'language/philosophy.html', label: '🔮 Philosophy' },
-                { href: 'reference/comparison.html', label: '🆚 vs Others' },
-                { href: 'reference/migrating-from-python.html', label: '🐍 Python Migration' },
-                { href: 'reference/migrating-from-javascript.html', label: '🟨 JS Migration' }
+                { href: 'ajose.html', label: '🔄 Àjọṣe (Reactivity)' },
+                { href: 'ebo.html', label: '🛡️ Ebo (Resources)' },
+                { href: 'ewo.html', label: '🚫 Ewo (Assertions)' }
             ]
         },
         {
@@ -66,17 +80,34 @@
             ]
         },
         {
+            label: '📘 Reference',
+            items: [
+                { href: 'reference/index.html', label: '📋 Reference Home' },
+                { href: 'reference/types.html', label: '🏗️ Type System' },
+                { href: 'reference/grammar.html', label: '📐 Grammar' },
+                { href: 'reference/reserved-words.html', label: '🔤 Reserved Words' },
+                { href: 'reference/memory.html', label: '💾 Memory Management' },
+                { href: 'reference/errors.html', label: '🚨 Errors' },
+                { href: 'reference/comparison.html', label: '🆚 vs Others' },
+                { href: 'reference/migrating-from-python.html', label: '🐍 Python Migration' },
+                { href: 'reference/migrating-from-javascript.html', label: '🟨 JS Migration' }
+            ]
+        },
+        {
             label: '💡 Examples',
             items: [
                 { href: 'examples/examples.html', label: '📚 Examples Gallery' },
-                { href: 'examples/playground.html', label: '🎮 Playground' },
-                { href: 'examples/use-cases/index.html', label: '🔧 Use Cases' }
+                { href: 'playground.html', label: '🎮 Playground' },
+                { href: 'examples/use-cases/index.html', label: '🔧 Use Cases' },
+                { href: 'examples/showcase-life.html', label: '🧬 Life Simulation' }
             ]
         },
         {
             label: '🚀 Deployment',
             items: [
                 { href: 'deployment/deployment.html', label: '📦 Deployment Guide' },
+                { href: 'deployment/embedded.html', label: '⚡ Embedded' },
+                { href: 'deployment/oja.html', label: '📦 Oja Manager' },
                 { href: 'deployment/oja-publishing.html', label: '📤 Oja Publishing' }
             ]
         },
@@ -89,18 +120,54 @@
             ]
         },
         {
+            label: '🎓 Tutorials',
+            items: [
+                { href: 'tutorials/index.html', label: '📚 All Tutorials' },
+                { href: 'tutorials/tour/index.html', label: '🚶 Language Tour' },
+                { href: 'tutorials/advanced/index.html', label: '🔬 Advanced' },
+                { href: 'tutorials/testing.html', label: '🧪 Testing' },
+                { href: 'tutorials/debugging.html', label: '🐛 Debugging' },
+                { href: 'tutorials/performance.html', label: '⚡ Performance' }
+            ]
+        },
+        {
+            label: '🧩 Domains',
+            items: [
+                { href: 'domains/index.html', label: '🗺️ All 16 Domains' },
+                { href: 'domains/ogbe.html', label: ' Ogbe (System)' },
+                { href: 'domains/oyeku.html', label: ' Òyèkú (Random)' },
+                { href: 'domains/iwori.html', label: ' Ìwòrì (Time)' },
+                { href: 'domains/odi.html', label: ' Òdí (Errors)' },
+                { href: 'domains/irosu.html', label: ' Ìròsú (Console)' },
+                { href: 'domains/owonrin.html', label: ' Ọ̀wọ́nrín (Collections)' },
+                { href: 'domains/obara.html', label: ' Ọ̀bàrà (Math)' },
+                { href: 'domains/okanran.html', label: ' Ọ̀kànràn (Debug)' },
+                { href: 'domains/ogunda.html', label: ' Ògúndá (Process)' },
+                { href: 'domains/osa.html', label: ' Ọ̀sá (Concurrency)' },
+                { href: 'domains/ika.html', label: ' Ìká (Strings)' },
+                { href: 'domains/oturupon.html', label: ' Òtúúrúpọ̀n (Math)' },
+                { href: 'domains/otura.html', label: ' Òtúrá (Networking)' },
+                { href: 'domains/irete.html', label: ' Ìrẹtẹ̀ (Crypto)' },
+                { href: 'domains/ose.html', label: ' Ọ̀ṣẹ́ (Graphics)' },
+                { href: 'domains/ofun.html', label: ' Òfún (Capabilities)' }
+            ]
+        },
+        {
+            label: '🔬 Infrastructure',
+            items: [
+                { href: 'infrastructure/index.html', label: '📋 Overview' },
+                { href: 'infrastructure/infra/index.html', label: '🖥️ Infra Modules' },
+                { href: 'infrastructure/internals/index.html', label: '⚙️ Internals' }
+            ]
+        },
+        {
             label: '🌍 Community',
             items: [
                 { href: 'community/community.html', label: '👥 Community Hub' },
                 { href: 'community/contributing.html', label: '🤝 Contributing' },
-                { href: 'community/babalawo.html', label: '🧙‍♂️ Babalawo' }
-            ]
-        },
-        {
-            label: '🎓 Tutorials',
-            items: [
-                { href: 'tutorials/index.html', label: '📚 All Tutorials' },
-                { href: 'tutorials/tour/index.html', label: '🚶 Language Tour' }
+                { href: 'community/babalawo.html', label: '🧙‍♂️ Babalawo' },
+                { href: 'community/changelog.html', label: '📋 Changelog' },
+                { href: 'faq.html', label: '❓ FAQ' }
             ]
         },
         {
@@ -216,30 +283,41 @@
             // Load search script
             const script = document.createElement('script');
             script.src = ROOT + 'js/search.js';
+            document.body.appendChild(script);
             // Load highlight script
             const highlightScript = document.createElement('script');
             highlightScript.src = ROOT + 'js/highlight.js';
             document.body.appendChild(highlightScript);
         }
 
-        // Always load universal language switcher (for all pages with code)
+        // Load universal language switcher (for all pages with code)
+        // Guard: only inject if not already present as a static <script> tag
         const langSwitcherStyle = document.createElement('link');
         langSwitcherStyle.rel = 'stylesheet';
         langSwitcherStyle.href = ROOT + 'js/language-switcher.css';
         document.head.appendChild(langSwitcherStyle);
 
-        const langSwitcherScript = document.createElement('script');
-        langSwitcherScript.src = ROOT + 'js/language-switcher.js';
-        langSwitcherScript.onload = function () {
-            // Initialize language switcher after loading
-            if (typeof enhanceAllCodeExamples === 'function') {
-                enhanceAllCodeExamples();
-            }
-        };
-        document.head.appendChild(langSwitcherScript);
+        const alreadyLoaded =
+            typeof wordMappings !== 'undefined' ||
+            document.querySelector('script[src*="language-switcher.js"]');
+
+        if (!alreadyLoaded) {
+            const langSwitcherScript = document.createElement('script');
+            langSwitcherScript.src = ROOT + 'js/language-switcher.js';
+            langSwitcherScript.onload = function () {
+                if (typeof enhanceAllCodeExamples === 'function') {
+                    enhanceAllCodeExamples();
+                }
+            };
+            document.head.appendChild(langSwitcherScript);
+        } else if (typeof enhanceAllCodeExamples === 'function') {
+            // Script already present — just initialize
+            enhanceAllCodeExamples();
+        }
     });
 
     // Export for use in other scripts
+    window.getBasePath = getBasePath;
     window.IFA_DOCS = {
         ROOT: ROOT,
         getBasePath: getBasePath

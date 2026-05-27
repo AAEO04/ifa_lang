@@ -123,10 +123,84 @@ fn test_unsafe_ffi_bridge_is_flagged() {
     Coop.itumo("python");
     "#;
     let baba = check(src);
-    assert!(baba.has_errors(), "unsafe FFI bridge summon should be flagged");
+    assert!(
+        baba.has_errors(),
+        "unsafe FFI bridge summon should be flagged"
+    );
     assert!(
         baba.diagnostics
             .iter()
             .any(|d| d.error.code == "TABOO_UNSAFE_FFI")
+    );
+}
+
+#[test]
+fn test_ffi_spawn_warnings_outside_strict() {
+    // Without strict mode directive (abo;), using FFI/Spawn outside ailewu produces a warning
+    let src = r#"
+    Coop.js("console.log('hello')");
+    Ogunda.run("ls");
+    "#;
+    let baba = check(src);
+    assert!(
+        !baba.has_errors(),
+        "FFI/Spawn outside strict/ailewu should not produce errors"
+    );
+    assert!(
+        baba.warning_count() >= 2,
+        "Expected warnings for FFI and Spawn escapes"
+    );
+    assert!(
+        baba.diagnostics
+            .iter()
+            .any(|d| d.error.code == "UNSAFE_ESCAPE_WARNING")
+    );
+}
+
+#[test]
+fn test_ffi_spawn_errors_inside_strict() {
+    // With strict mode directive (abo;), using FFI/Spawn outside ailewu produces hard errors
+    let src = r#"
+    abo;
+    Coop.js("console.log('hello')");
+    Ogunda.bẹrẹ("dir");
+    "#;
+    let baba = check(src);
+    assert!(
+        baba.has_errors(),
+        "FFI/Spawn inside strict outside ailewu must produce hard errors"
+    );
+    assert!(
+        baba.diagnostics
+            .iter()
+            .any(|d| d.error.code == "UNAUTHORIZED_ESCAPE")
+    );
+}
+
+#[test]
+fn test_ffi_spawn_authorized_in_ailewu() {
+    // Inside an ailewu (unsafe) block, FFI and Spawn are explicitly authorized
+    let src = r#"
+    abo;
+    ailewu {
+        Coop.js("console.log('hello')");
+        Ogunda.run("ls");
+    }
+    "#;
+    let baba = check(src);
+    assert!(
+        !baba.has_errors(),
+        "FFI/Spawn inside ailewu should be authorized (no errors)"
+    );
+    // There will be a warning for entering the ailewu block itself, but no UNSAFE_ESCAPE_WARNING
+    assert!(
+        baba.warning_count() <= 1,
+        "Only AILEWU_BLOCK warning is allowed"
+    );
+    assert!(
+        !baba
+            .diagnostics
+            .iter()
+            .any(|d| d.error.code == "UNSAFE_ESCAPE_WARNING")
     );
 }

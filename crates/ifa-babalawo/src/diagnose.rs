@@ -312,8 +312,13 @@ impl Babalawo {
             // Severity + code
             output.push_str(&format!(
                 "{}{}[{}]{} {}:{}:{}\n",
-                color, diag.severity, odu_name, reset,
-                diag.error.file, diag.error.line, diag.error.column,
+                color,
+                diag.severity,
+                odu_name,
+                reset,
+                diag.error.file,
+                diag.error.line,
+                diag.error.column,
             ));
 
             // Source annotation
@@ -322,10 +327,7 @@ impl Babalawo {
                 // Location arrow
                 output.push_str(&format!(
                     " {} {}:{}:{}\n",
-                    "\x1b[36m-->\x1b[0m",
-                    diag.error.file,
-                    diag.error.line,
-                    diag.error.column
+                    "\x1b[36m-->\x1b[0m", diag.error.file, diag.error.line, diag.error.column
                 ));
                 output.push_str("   \x1b[36m|\x1b[0m\n");
 
@@ -340,31 +342,35 @@ impl Babalawo {
                     let is_error_line = i == line_i;
                     let lineno = i + 1;
                     let marker = if is_error_line {
-                        format!("\x1b[{}m >\x1b[0m", if diag.severity == Severity::Error { "31" } else { "33" })
+                        format!(
+                            "\x1b[{}m >\x1b[0m",
+                            if diag.severity == Severity::Error {
+                                "31"
+                            } else {
+                                "33"
+                            }
+                        )
                     } else {
                         "   ".to_string()
                     };
                     let gutter = format!("{:>width$}", lineno, width = line_width);
                     output.push_str(&format!(
                         "{}{} {} {}\n",
-                        marker,
-                        "\x1b[36m|\x1b[0m",
-                        gutter,
-                        source_lines[i]
+                        marker, "\x1b[36m|\x1b[0m", gutter, source_lines[i]
                     ));
 
                     // Caret line
                     if is_error_line {
-                        let col = diag.error.column.max(1).min(source_lines[i].len().saturating_add(1));
-                        let padding = " ".repeat(gutter.len().saturating_add(col).saturating_add(1));
+                        let col = diag
+                            .error
+                            .column
+                            .max(1)
+                            .min(source_lines[i].len().saturating_add(1));
+                        let padding =
+                            " ".repeat(gutter.len().saturating_add(col).saturating_add(1));
                         let caret = format!(
                             "{}{}{}^{}{} {}",
-                            "  ",
-                            "\x1b[36m|\x1b[0m",
-                            padding,
-                            color,
-                            reset,
-                            diag.error.message
+                            "  ", "\x1b[36m|\x1b[0m", padding, color, reset, diag.error.message
                         );
                         output.push_str(&format!("{}\n", caret));
                     }
@@ -374,14 +380,20 @@ impl Babalawo {
 
             // Notes
             for note in &diag.error.notes {
-                output.push_str(&format!("    {} {}: {}\n", "\x1b[36m=\x1b[0m", "\x1b[1mnote\x1b[0m", note));
+                output.push_str(&format!(
+                    "    {} {}: {}\n",
+                    "\x1b[36m=\x1b[0m", "\x1b[1mnote\x1b[0m", note
+                ));
             }
 
             // Wisdom
             if (self.verbose || diag.severity == Severity::Error)
                 && let Some(wisdom) = &diag.wisdom
             {
-                output.push_str(&format!("    {} {}: {}\n", "\x1b[36m=\x1b[0m", "\x1b[1mọ̀rọ̀\x1b[0m", wisdom));
+                output.push_str(&format!(
+                    "    {} {}: {}\n",
+                    "\x1b[36m=\x1b[0m", "\x1b[1mọ̀rọ̀\x1b[0m", wisdom
+                ));
             }
 
             output.push('\n');

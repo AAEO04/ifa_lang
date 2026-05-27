@@ -5,8 +5,8 @@
 //! Capability-based permissions and introspection macros.
 
 use crate::impl_odu_domain;
-use ifa_vm::IfaValue;
 use crate::sandbox_shim::CapabilitySet;
+use ifa_vm::IfaValue;
 
 /// Òfún - The Reflector (Permissions/Reflection)
 pub struct Ofun {
@@ -19,11 +19,21 @@ impl Default for Ofun {
     fn default() -> Self {
         let mut caps = CapabilitySet::new();
         // Default grants (full access for un-sandboxed mode)
-        caps.grant(crate::sandbox_shim::Ofun::ReadFiles { root: std::path::PathBuf::from("/") });
-        caps.grant(crate::sandbox_shim::Ofun::WriteFiles { root: std::path::PathBuf::from("/") });
-        caps.grant(crate::sandbox_shim::Ofun::Network { domains: vec!["*".to_string()] });
-        caps.grant(crate::sandbox_shim::Ofun::Execute { programs: vec!["*".to_string()] });
-        caps.grant(crate::sandbox_shim::Ofun::Environment { keys: vec!["*".to_string()] });
+        caps.grant(crate::sandbox_shim::Ofun::ReadFiles {
+            root: std::path::PathBuf::from("/"),
+        });
+        caps.grant(crate::sandbox_shim::Ofun::WriteFiles {
+            root: std::path::PathBuf::from("/"),
+        });
+        caps.grant(crate::sandbox_shim::Ofun::Network {
+            domains: vec!["*".to_string()],
+        });
+        caps.grant(crate::sandbox_shim::Ofun::Execute {
+            programs: vec!["*".to_string()],
+        });
+        caps.grant(crate::sandbox_shim::Ofun::Environment {
+            keys: vec!["*".to_string()],
+        });
         caps.grant(crate::sandbox_shim::Ofun::Time);
         caps.grant(crate::sandbox_shim::Ofun::Random);
         caps.grant(crate::sandbox_shim::Ofun::Stdio);
@@ -41,15 +51,41 @@ impl Ofun {
     /// Check if capability is allowed
     pub fn le(&self, cap: &str) -> bool {
         match cap {
-            "read" | "ka" => self.capabilities.all().iter().any(|c| matches!(c, crate::sandbox_shim::Ofun::ReadFiles { .. })),
-            "write" | "ko" => self.capabilities.all().iter().any(|c| matches!(c, crate::sandbox_shim::Ofun::WriteFiles { .. })),
-            "network" | "nẹtiwọki" => self.capabilities.all().iter().any(|c| matches!(c, crate::sandbox_shim::Ofun::Network { .. })),
-            "spawn" | "bere" | "execute" => self.capabilities.all().iter().any(|c| matches!(c, crate::sandbox_shim::Ofun::Execute { .. })),
-            "env" | "ayika" => self.capabilities.all().iter().any(|c| matches!(c, crate::sandbox_shim::Ofun::Environment { .. })),
-            "crypto" | "irete" => self.capabilities.all().iter().any(|c| matches!(c, crate::sandbox_shim::Ofun::Crypto)),
+            "read" | "ka" => self
+                .capabilities
+                .all()
+                .iter()
+                .any(|c| matches!(c, crate::sandbox_shim::Ofun::ReadFiles { .. })),
+            "write" | "ko" => self
+                .capabilities
+                .all()
+                .iter()
+                .any(|c| matches!(c, crate::sandbox_shim::Ofun::WriteFiles { .. })),
+            "network" | "nẹtiwọki" => self
+                .capabilities
+                .all()
+                .iter()
+                .any(|c| matches!(c, crate::sandbox_shim::Ofun::Network { .. })),
+            "spawn" | "bere" | "execute" => self
+                .capabilities
+                .all()
+                .iter()
+                .any(|c| matches!(c, crate::sandbox_shim::Ofun::Execute { .. })),
+            "env" | "ayika" => self
+                .capabilities
+                .all()
+                .iter()
+                .any(|c| matches!(c, crate::sandbox_shim::Ofun::Environment { .. })),
+            "crypto" | "irete" => self
+                .capabilities
+                .all()
+                .iter()
+                .any(|c| matches!(c, crate::sandbox_shim::Ofun::Crypto)),
             s if s.starts_with("bridge:") => {
                 let lang = &s[7..];
-                self.capabilities.check(&crate::sandbox_shim::Ofun::Bridge { language: lang.to_string() })
+                self.capabilities.check(&crate::sandbox_shim::Ofun::Bridge {
+                    language: lang.to_string(),
+                })
             }
             _ => false,
         }
@@ -58,12 +94,24 @@ impl Ofun {
     /// Drop capability (can only remove, never add)
     pub fn ju(&mut self, cap: &str) {
         match cap {
-            "read" | "ka" => self.capabilities.remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::ReadFiles { .. })),
-            "write" | "ko" => self.capabilities.remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::WriteFiles { .. })),
-            "network" | "nẹtiwọki" => self.capabilities.remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::Network { .. })),
-            "spawn" | "bere" => self.capabilities.remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::Execute { .. })),
-            "env" | "ayika" => self.capabilities.remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::Environment { .. })),
-            "crypto" | "irete" => self.capabilities.remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::Crypto)),
+            "read" | "ka" => self
+                .capabilities
+                .remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::ReadFiles { .. })),
+            "write" | "ko" => self
+                .capabilities
+                .remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::WriteFiles { .. })),
+            "network" | "nẹtiwọki" => self
+                .capabilities
+                .remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::Network { .. })),
+            "spawn" | "bere" => self
+                .capabilities
+                .remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::Execute { .. })),
+            "env" | "ayika" => self
+                .capabilities
+                .remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::Environment { .. })),
+            "crypto" | "irete" => self
+                .capabilities
+                .remove_matching(|c| matches!(c, crate::sandbox_shim::Ofun::Crypto)),
             s if s.starts_with("bridge:") => {
                 let lang = &s[7..];
                 self.capabilities.remove_matching(|c| {
@@ -108,9 +156,10 @@ impl Ofun {
 macro_rules! require_cap {
     ($ofun:expr, $cap:expr) => {
         if !$ofun.le($cap) {
-            return Err($crate::ifa_vm::error::IfaError::PermissionDenied(
-                format!("Capability '{}' not allowed", $cap),
-            ));
+            return Err($crate::ifa_vm::error::IfaError::PermissionDenied(format!(
+                "Capability '{}' not allowed",
+                $cap
+            )));
         }
     };
 }

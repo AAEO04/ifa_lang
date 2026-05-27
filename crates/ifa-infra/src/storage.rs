@@ -111,6 +111,7 @@ impl OduStore {
             .read(true)
             .write(true)
             .create(true)
+            .truncate(false)
             .open(&path)
             .await?;
 
@@ -358,8 +359,7 @@ impl OduStore {
 
         // Read and skip key
         let key_len = file.read_u32_le().await?;
-        let key_len_i64 = i64::try_from(key_len)
-            .map_err(|_| StorageError::CorruptedLog("Key length overflow".into()))?;
+        let key_len_i64 = i64::from(key_len);
         file.seek(SeekFrom::Current(key_len_i64)).await?;
 
         // Read ValLen

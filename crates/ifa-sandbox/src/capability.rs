@@ -1,1 +1,1 @@
-pub use ifa_types::capability::{Ofun, CapabilitySet, CapabilityViolation};
+pub use ifa_types::capability::{CapabilitySet, CapabilityViolation, Ofun};

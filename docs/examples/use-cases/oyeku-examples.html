@@ -31,7 +31,7 @@ ayanmo EXIT_LINT_FAILED = 3;
 
 ese run_build() {
     Irosu.fo("Building project...");
-    Oyeku.sleep(500);
+    Oyeku.sun(500);
 
     ti (!Odi.exists("src/main.ifa")) {
         Irosu.kigbe("Build failed: main.ifa not found");
@@ -44,7 +44,7 @@ ese run_build() {
 
 ese run_tests() {
     Irosu.fo("Running tests...");
-    Oyeku.sleep(300);
+    Oyeku.sun(300);
 
     ayanmo passed = 10;
     ayanmo failed = 0;
@@ -55,7 +55,7 @@ ese run_tests() {
 
 ese run_lint() {
     Irosu.fo("Linting code...");
-    Oyeku.sleep(200);
+    Oyeku.sun(200);
 
     ayanmo warnings = 2;
     ayanmo errors = 0;
@@ -99,7 +99,7 @@ ese poll_until(check, timeout_ms, interval_ms) {
             pada {"success": otito, "elapsed": elapsed};
         }
 
-        Oyeku.sleep(interval_ms);
+        Oyeku.sun(interval_ms);
         elapsed = Iwori.timestamp() - start;
     }
 
@@ -135,7 +135,7 @@ ese handle_connection(conn) {
     active_connections = active_connections + 1;
     Irosu.fo("Connection opened. Active: " + active_connections);
 
-    Oyeku.sleep(500);
+    Oyeku.sun(500);
 
     active_connections = active_connections - 1;
     Irosu.fo("Connection closed. Active: " + active_connections);
@@ -148,7 +148,7 @@ ese graceful_shutdown(timeout_seconds) {
     ayanmo waited = 0;
     nigba (active_connections > 0 && waited < timeout_seconds) {
         Irosu.fo("Waiting for " + active_connections + " connections...");
-        Oyeku.sleep(1000);
+        Oyeku.sun(1000);
         waited = waited + 1;
     }
 
@@ -202,7 +202,7 @@ ese throttled_request(op) {
 
     ti (!limit["allowed"]) {
         Irosu.fo("Rate limited. Retry in " + limit["retry_after"] + "s");
-        Oyeku.sleep(limit["retry_after"] * 1000);
+        Oyeku.sun(limit["retry_after"] * 1000);
         limit = check_rate_limit();
     }
 
@@ -214,7 +214,7 @@ ese throttled_request(op) {
 ayanmo i = 0;
 nigba (i < 15) {
     throttled_request({ -> Irosu.fo("  Processing request " + i); });
-    Oyeku.sleep(100);
+    Oyeku.sun(100);
     i = i + 1;
 }</code></pre>
 

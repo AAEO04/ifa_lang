@@ -13,7 +13,7 @@ path = "src/main.rs"
 [dependencies]
 ifa-vm = { path = "../ifa-vm", features = ["std", "sysinfo", "parallel", "gpu", "compiler"] }
 ifa-parser = { path = "../ifa-parser" }
-ifa-std = { path = "../ifa-std", features = ["iot", "kernel", "sysinfo", "gpu", "parallel", "persistence"] }
+ifa-std = { path = "../ifa-std", features = ["kernel", "sysinfo", "gpu", "parallel", "persistence", "network", "database", "async_runtime", "tui"] }
 ifa-babalawo = { path = "../ifa-babalawo" }
 ifa-fmt = { path = "../ifa-fmt" }
 ifa-sandbox = { path = "../ifa-sandbox" }

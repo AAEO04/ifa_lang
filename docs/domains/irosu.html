@@ -28,7 +28,7 @@
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/odu/irosu.rs</code>. Requires <code>Stdio</code> capability.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>. Requires <code>Stdio</code> capability.
         </div>
 
         <h2>Output</h2>
@@ -54,20 +54,6 @@
             <pre><code>Irosu.kigbe("Something went wrong");</code></pre>
         </div>
 
-        <div class="method">
-            <h3>awo / colored_print</h3>
-            <div class="sig">Irosu.awo(text: Str, color: Str)</div>
-            <p>Print with color (requires <code>crossterm</code> feature). Colors: <code>pupa</code>/red, <code>ewe</code>/green, <code>bulu</code>/blue, <code>ofeefe</code>/yellow, <code>funfun</code>/white, <code>arosayin</code>/magenta, <code>omi</code>/cyan.</p>
-            <pre><code>Irosu.awo("Success", "ewe");
-Irosu.awo("Error", "pupa");</code></pre>
-        </div>
-
-        <div class="method">
-            <h3>ilosiwaju / progress</h3>
-            <div class="sig">Irosu.ilosiwaju(current: Int, total: Int, width: Int)</div>
-            <p>Display a progress bar.</p>
-        </div>
-
         <h2>Input</h2>
 
         <div class="method">
@@ -78,16 +64,16 @@ Irosu.awo("Error", "pupa");</code></pre>
         </div>
 
         <div class="method">
-            <h3>gbo_nomba / read_int</h3>
+            <h3>gbo_nomba</h3>
             <div class="sig">Irosu.gbo_nomba(prompt: Str) → Int</div>
             <p>Read integer from stdin. Returns 0 on parse failure.</p>
             <pre><code>ayanmo age = Irosu.gbo_nomba("Age: ");</code></pre>
         </div>
 
         <div class="method">
-            <h3>gbo_odidi / read_float</h3>
-            <div class="sig">Irosu.gbo_odidi(prompt: Str) → Float</div>
-            <p>Read float from stdin. Returns 0.0 on parse failure.</p>
+            <h3>ka / read / input</h3>
+            <div class="sig">Irosu.ka(prompt: Str) → Str</div>
+            <p>Read line from stdin with optional prompt.</p>
         </div>
 
         <h2>Terminal Control</h2>
@@ -95,7 +81,7 @@ Irosu.awo("Error", "pupa");</code></pre>
         <div class="method">
             <h3>mo / clear</h3>
             <div class="sig">Irosu.mo()</div>
-            <p>Clear the terminal screen (requires <code>crossterm</code> feature).</p>
+            <p>Clear the terminal screen.</p>
         </div>
 
         <div class="method">
@@ -103,39 +89,6 @@ Irosu.awo("Error", "pupa");</code></pre>
             <div class="sig">Irosu.san()</div>
             <p>Flush stdout and stderr buffers.</p>
         </div>
-
-        <h2>Audio (feature: <code>audio</code>)</h2>
-        <p>The following methods require the <code>audio</code> feature and use <code>rodio</code> for playback:</p>
-
-        <div class="method">
-            <h3>siro / play</h3>
-            <div class="sig">Irosu.siro(path: Str) → AudioHandle</div>
-            <p>Play audio file. Returns an <code>AudioHandle</code> for control.</p>
-        </div>
-
-        <div class="method">
-            <h3>siro_duro / play_blocking</h3>
-            <div class="sig">Irosu.siro_duro(path: Str)</div>
-            <p>Play audio file and block until playback finishes.</p>
-        </div>
-
-        <div class="method">
-            <h3>kigbe_orin / beep</h3>
-            <div class="sig">Irosu.kigbe_orin()</div>
-            <p>Play a terminal bell beep.</p>
-        </div>
-
-        <h2>Example</h2>
-        <pre><code>ese main() {
-    ayanmo name = Irosu.gbo("Enter your name: ");
-    Irosu.fo("Hello, " + name + "!");
-
-    ti (name == "Ifa") {
-        Irosu.awo("Welcome, wise one!", "ewe");
-    } bibeko {
-        Irosu.awo("Nice to meet you!", "bulu");
-    }
-}</code></pre>
 
         <footer>
             <p><a href="../index.html">← Back to Documentation</a></p>

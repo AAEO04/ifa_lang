@@ -22,104 +22,114 @@
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/odu/okanran.rs</code>.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>.
         </div>
 
         <h2>Assertions</h2>
 
         <div class="method">
-            <h3>beeni / assert</h3>
-            <div class="sig">Okanran.beeni(condition: Bool, message: Str) → Result</div>
+            <h3>sise / assert / verify / check</h3>
+            <div class="sig">Okanran.sise(condition: Bool, message: Str) → Result</div>
             <p>Assert condition is true. Returns error if false.</p>
         </div>
 
         <div class="method">
-            <h3>dogba / assert_eq</h3>
+            <h3>dogba / equals</h3>
             <div class="sig">Okanran.dogba(a: Any, b: Any) → Result</div>
             <p>Assert two values are equal.</p>
-        </div>
-
-        <div class="method">
-            <h3>yato / assert_ne</h3>
-            <div class="sig">Okanran.yato(a: Any, b: Any) → Result</div>
-            <p>Assert two values are not equal.</p>
-        </div>
-
-        <div class="method">
-            <h3>beko / assert_false</h3>
-            <div class="sig">Okanran.beko(condition: Bool, message: Str) → Result</div>
-            <p>Assert condition is false.</p>
-        </div>
-
-        <div class="method">
-            <h3>ko_si / assert_not_null</h3>
-            <div class="sig">Okanran.ko_si(value: Any, name: Str) → Result</div>
-            <p>Assert value is not null.</p>
         </div>
 
         <h2>Error Raising</h2>
 
         <div class="method">
-            <h3>ta / throw</h3>
+            <h3>ta / throw / panic / raise / ku</h3>
             <div class="sig">Okanran.ta(message: Str) → Result</div>
-            <p>Throw a recoverable UserError. The value is preserved in the catch handler.</p>
+            <p>Throw a recoverable error.</p>
             <pre><code>Okanran.ta("File not found");</code></pre>
+        </div>
+
+        <h2>Advanced Assertions</h2>
+
+        <div class="method">
+            <h3>beeni / assert_true</h3>
+            <div class="sig">Okanran.beeni(value: Bool, message: Str) → Result</div>
+            <p>Assert value is true.</p>
+        </div>
+
+        <div class="method">
+            <h3>yato / assert_not_equal</h3>
+            <div class="sig">Okanran.yato(a: Any, b: Any, message: Str) → Result</div>
+            <p>Assert two values are not equal.</p>
+        </div>
+
+        <div class="method">
+            <h3>beko / assert_false</h3>
+            <div class="sig">Okanran.beko(value: Bool, message: Str) → Result</div>
+            <p>Assert value is false.</p>
+        </div>
+
+        <div class="method">
+            <h3>ko_si / assert_not_null</h3>
+            <div class="sig">Okanran.ko_si(value: Any) → Result</div>
+            <p>Assert value is not null.</p>
+        </div>
+
+        <h2>Fatal Errors</h2>
+
+        <div class="method">
+            <h3>ku / panic</h3>
+            <div class="sig">Okanran.ku(message: Str)</div>
+            <p>Panic with message (unrecoverable). Alias for ta.</p>
+        </div>
+
+        <div class="method">
+            <h3>ku_bi / fatal</h3>
+            <div class="sig">Okanran.ku_bi(message: Str)</div>
+            <p>Fatal error — immediately halts execution.</p>
+        </div>
+
+        <div class="method">
+            <h3>ko_le_de / unreachable_panic</h3>
+            <div class="sig">Okanran.ko_le_de()</div>
+            <p>Unreachable code (panics).</p>
         </div>
 
         <div class="method">
             <h3>ko_le_de_bi / unreachable</h3>
             <div class="sig">Okanran.ko_le_de_bi() → Result</div>
-            <p>Mark code path as unreachable. Returns error if hit.</p>
+            <p>Unreachable code (returns error).</p>
+        </div>
+
+        <div class="method">
+            <h3>ko_ti_se / not_implemented_panic</h3>
+            <div class="sig">Okanran.ko_ti_se()</div>
+            <p>Not implemented (panics).</p>
         </div>
 
         <div class="method">
             <h3>ko_ti_se_bi / not_implemented</h3>
-            <div class="sig">Okanran.ko_ti_se_bi(feature: Str) → Result</div>
-            <p>Mark a feature as not yet implemented.</p>
+            <div class="sig">Okanran.ko_ti_se_bi() → Result</div>
+            <p>Not implemented (returns error).</p>
+        </div>
+
+        <h2>Utilities</h2>
+
+        <div class="method">
+            <h3>owe / proverb</h3>
+            <div class="sig">Okanran.owe() → Str</div>
+            <p>Get a random Ifá proverb.</p>
         </div>
 
         <div class="method">
             <h3>gbiyanju / try_or</h3>
-            <div class="sig">Okanran.gbiyanju(f: Function, default: Any) → Any</div>
-            <p>Try an operation; return default on error.</p>
-        </div>
-
-        <div class="method">
-            <h3>owe / proverb</h3>
-            <div class="sig">Okanran.owe(error: Error) → Str</div>
-            <p>Get Yoruba proverb associated with an error type.</p>
+            <div class="sig">Okanran.gbiyanju(fn: Function, default: Any) → Any</div>
+            <p>Try calling a function; return default on error.</p>
         </div>
 
         <div class="method">
             <h3>wo / debug</h3>
-            <div class="sig">Okanran.wo(label: Str, value: Any)</div>
-            <p>Debug-print a value to stderr with label.</p>
-        </div>
-
-        <h2>Deprecated Methods</h2>
-
-        <div class="method deprecated">
-            <h3>ku / panic (deprecated)</h3>
-            <div class="sig">Okanran.ku(message: Str) → !</div>
-            <p><strong>Deprecated since 1.2.1.</strong> Panics with message. Use <code>ta</code> instead.</p>
-        </div>
-
-        <div class="method deprecated">
-            <h3>ku_bi / fatal (deprecated)</h3>
-            <div class="sig">Okanran.ku_bi(message: Str) → Result</div>
-            <p><strong>Deprecated since 1.3.0.</strong> Use <code>ta</code> instead.</p>
-        </div>
-
-        <div class="method deprecated">
-            <h3>ko_le_de / unreachable_panic (deprecated)</h3>
-            <div class="sig">Okanran.ko_le_de() → !</div>
-            <p><strong>Deprecated.</strong> Use <code>ko_le_de_bi</code> instead.</p>
-        </div>
-
-        <div class="method deprecated">
-            <h3>ko_ti_se / nyi_panic (deprecated)</h3>
-            <div class="sig">Okanran.ko_ti_se(feature: Str) → !</div>
-            <p><strong>Deprecated.</strong> Use <code>ko_ti_se_bi</code> instead.</p>
+            <div class="sig">Okanran.wo(value: Any) → Str</div>
+            <p>Debug-print a value to stderr and return its string representation.</p>
         </div>
 
         <footer>

@@ -18,11 +18,11 @@
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">osa.ifa</span></div><div class="terminal-body">
         <header>
             <h1><span class="pattern">0111</span> Osa</h1>
-            <p style="color: var(--dim)">The Runner — Concurrency &amp; Async</p>
+            <p style="color: var(--dim)">The Runner — Concurrency & Async</p>
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/osa.rs</code>. Requires <code>full</code> feature (tokio-based). In minimal builds only a <code>placeholder</code> method is available.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>. Requires <code>async_runtime</code> feature.
         </div>
 
         <h2>Task Management</h2>
@@ -30,12 +30,10 @@
         <div class="method">
             <h3>sa / spawn</h3>
             <div class="sig">Osa.sa(future: Future) → JoinHandle</div>
-            <p>Spawn an async task on the tokio runtime.</p>
+            <p>Spawn an async task.</p>
             <pre><code>ayanmo handle = Osa.sa(async {
-    // Do work
     42
-});
-ayanmo result = handle.await;</code></pre>
+});</code></pre>
         </div>
 
         <div class="method">
@@ -45,49 +43,19 @@ ayanmo result = handle.await;</code></pre>
         </div>
 
         <div class="method">
-            <h3>jeki / yield</h3>
-            <div class="sig">Osa.jeki()</div>
-            <p>Yield control to the tokio scheduler.</p>
-        </div>
-
-        <h2>Channels</h2>
-
-        <div class="method">
-            <h3>oju_ona / channel</h3>
-            <div class="sig">Osa.oju_ona(buffer: Int) → (Sender, Receiver)</div>
-            <p>Create a multi-producer, multi-consumer channel.</p>
+            <h3>gbogbo / all</h3>
+            <div class="sig">Osa.gbogbo(tasks: List(Future)) → List</div>
+            <p>Wait for all futures to complete.</p>
         </div>
 
         <div class="method">
-            <h3>oju_ona_kan / oneshot</h3>
-            <div class="sig">Osa.oju_ona_kan() → (Sender, Receiver)</div>
-            <p>Create a one-shot channel (single value).</p>
-        </div>
-
-        <h2>Synchronization</h2>
-
-        <div class="method">
-            <h3>titipe / mutex</h3>
-            <div class="sig">Osa.titipe(value: Any) → Mutex</div>
-            <p>Create an async-compatible mutex.</p>
-        </div>
-
-        <div class="method">
-            <h3>kaka / rwlock</h3>
-            <div class="sig">Osa.kaka(value: Any) → RwLock</div>
-            <p>Create an async-compatible read-write lock.</p>
-        </div>
-
-        <h2>Utilities</h2>
-
-        <div class="method">
-            <h3>pelu_akoko / with_timeout</h3>
-            <div class="sig">Osa.pelu_akoko(future: Future, timeout_ms: Int) → Any?</div>
-            <p>Run a future with timeout; returns null if timed out.</p>
+            <h3>duro / await</h3>
+            <div class="sig">Osa.duro(future: Future) → Any</div>
+            <p>Await a future, blocking until complete.</p>
         </div>
 
         <footer>
-            <p><a href="../index.html">← Back to Documentation</a> · <a href="../../crates/ifa-docs/std-library.html">Corrected API Reference</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
         </footer>
     </div></div>
     <script src="../js/nav.js"></script>

@@ -238,7 +238,7 @@ Irosu.println("OS: " + os);</code></pre>
                 <h3>Error Handling</h3>
                 <p>Debugging and troubleshooting</p>
             </a>
-            <a href="../tutorials/playground.html" class="next-step">
+            <a href="../playground.html" class="next-step">
                 <h3>Playground</h3>
                 <p>Try Ifá-Lang in your browser</p>
             </a>
@@ -249,22 +249,7 @@ Irosu.println("OS: " + os);</code></pre>
         </footer></div></div>
 <script src="../js/nav.js"></script>
     <script src="../js/common.js"></script>
-    <script>
-        function setLang(lang) {
-            document.querySelectorAll('.code-yoruba').forEach(el => {
-                el.style.display = lang === 'yoruba' ? 'block' : 'none';
-            });
-            document.querySelectorAll('.code-english').forEach(el => {
-                el.style.display = lang === 'english' ? 'block' : 'none';
-            });
-            document.querySelectorAll('.toggle-yoruba').forEach(btn => {
-                btn.classList.toggle('active', lang === 'yoruba');
-            });
-            document.querySelectorAll('.toggle-english').forEach(btn => {
-                btn.classList.toggle('active', lang === 'english');
-            });
-        }
-    </script>
+
 </body>
 
 </html>

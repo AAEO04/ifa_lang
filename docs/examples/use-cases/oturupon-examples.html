@@ -49,14 +49,14 @@
                 <span class="code-title">Basic Subtraction</span>
             </div>
             <pre><code>// Basic subtraction
-ayanmo diff = Oturupon.yokuro(100, 37);
+ayanmo diff = Oturupon.din(100, 37);
 Irosu.fo("100 - 37 = " + diff);
 
 // Chain subtraction
 ayanmo remaining = 100;
 ayanmo expenses = [25, 15, 40];
 fun e ninu expenses {
-    remaining = Oturupon.yokuro(remaining, e);
+    remaining = Oturupon.din(remaining, e);
 }
 Irosu.fo("Remaining after expenses: " + remaining);</code></pre>
         </div>
@@ -70,7 +70,7 @@ Irosu.fo("Remaining after expenses: " + remaining);</code></pre>
                 <span class="code-title">Basic Division</span>
             </div>
             <pre><code>// Basic division
-ayanmo quotient = Oturupon.pipin(100, 4);
+ayanmo quotient = Oturupon.pin(100, 4);
 Irosu.fo("100 / 4 = " + quotient);
 
 // Average calculation
@@ -79,7 +79,7 @@ ayanmo sum = 0;
 fun s ninu scores {
     sum = Obara.fikun(sum, s);
 }
-ayanmo average = Oturupon.pipin(sum, Ogunda.iwọn(scores));
+ayanmo average = Oturupon.pin(sum, Ogunda.iwọn(scores));
 Irosu.fo("Average score: " + average);</code></pre>
         </div>
     </div>
@@ -93,9 +93,9 @@ Irosu.fo("Average score: " + average);</code></pre>
             </div>
             <pre><code>// Split a restaurant bill
 ese split_bill(total, people, tip_percent) {
-    ayanmo tip = Oturupon.pipin(Obara.isodipupo(total, tip_percent), 100);
+    ayanmo tip = Oturupon.pin(Obara.isodipupo(total, tip_percent), 100);
     ayanmo grand_total = Obara.fikun(total, tip);
-    ayanmo per_person = Oturupon.pipin(grand_total, people);
+    ayanmo per_person = Oturupon.pin(grand_total, people);
     pada per_person;
 }
 
@@ -113,12 +113,12 @@ Irosu.fo("Each person pays: $" + each);</code></pre>
             </div>
             <pre><code>// Calculate travel time given distance and speed
 ese travel_time(distance, speed) {
-    pada Oturupon.pipin(distance, speed);
+    pada Oturupon.pin(distance, speed);
 }
 
 // Fuel efficiency
 ese fuel_efficiency(distance, fuel_used) {
-    pada Oturupon.pipin(distance, fuel_used);
+    pada Oturupon.pin(distance, fuel_used);
 }
 
 ayanmo time = travel_time(300, 60);

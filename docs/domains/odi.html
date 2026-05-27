@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../js/common.css">
-    <title>Odi - File I/O &amp; Database Domain</title>
+    <title>Odi - File I/O Domain</title>
 </head>
 
 <body>
@@ -18,11 +18,11 @@
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">odi.ifa</span></div><div class="terminal-body">
         <header>
             <h1><span class="pattern">1001</span> Odi</h1>
-            <p style="color: var(--dim)">The Seal — File I/O &amp; SQLite Database</p>
+            <p style="color: var(--dim)">The Seal — File I/O</p>
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/odi.rs</code>. All file operations are sandboxed via capability checks. Requires <code>ReadFiles</code> / <code>WriteFiles</code> capabilities.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>. All file operations are sandboxed via capability checks. Requires <code>ReadFiles</code> / <code>WriteFiles</code> capabilities.
         </div>
 
         <h2>Read Operations</h2>
@@ -33,36 +33,12 @@
             <p>Read file contents as UTF-8 string.</p>
         </div>
 
-        <div class="method">
-            <h3>ka_bytes / read_bytes</h3>
-            <div class="sig">Odi.ka_bytes(path: Str) → List(Byte)</div>
-            <p>Read file as raw bytes.</p>
-        </div>
-
-        <div class="method">
-            <h3>ka_mmap / read_mmap</h3>
-            <div class="sig">Odi.ka_mmap(path: Str) → Str</div>
-            <p>Memory-map file for zero-copy access.</p>
-        </div>
-
-        <div class="method">
-            <h3>ka_ila / read_lines</h3>
-            <div class="sig">Odi.ka_ila(path: Str) → List(Str)</div>
-            <p>Read file as lines.</p>
-        </div>
-
         <h2>Write Operations</h2>
 
         <div class="method">
             <h3>ko / write</h3>
             <div class="sig">Odi.ko(path: Str, content: Str)</div>
             <p>Write content to file (overwrites).</p>
-        </div>
-
-        <div class="method">
-            <h3>fi / append</h3>
-            <div class="sig">Odi.fi(path: Str, content: Str)</div>
-            <p>Append content to file.</p>
         </div>
 
         <h2>File System</h2>
@@ -74,46 +50,25 @@
         </div>
 
         <div class="method">
-            <h3>pa_faili / remove / delete</h3>
-            <div class="sig">Odi.pa_faili(path: Str)</div>
-            <p>Delete file.</p>
+            <h3>si / open</h3>
+            <div class="sig">Odi.si(path: Str) → Handle</div>
+            <p>Open a file handle for reading.</p>
         </div>
 
         <div class="method">
-            <h3>seda_apoti / mkdir</h3>
-            <div class="sig">Odi.seda_apoti(path: Str)</div>
-            <p>Create directory (and parents).</p>
+            <h3>pa / close</h3>
+            <div class="sig">Odi.pa(handle: Handle)</div>
+            <p>Close an open file handle.</p>
         </div>
 
         <div class="method">
-            <h3>akojo / ls / list</h3>
-            <div class="sig">Odi.akojo(path: Str) → List(Str)</div>
-            <p>List directory entries.</p>
-        </div>
-
-        <div class="method">
-            <h3>iwon / size</h3>
-            <div class="sig">Odi.iwon(path: Str) → Int</div>
-            <p>Get file size in bytes.</p>
-        </div>
-
-        <h2>SQLite Database</h2>
-
-        <div class="method">
-            <h3>so_db / open_db</h3>
-            <div class="sig">Odi.so_db(path: Str) → Connection</div>
-            <p>Open SQLite database file (requires read + write capability).</p>
-            <pre><code>ayanmo db = Odi.so_db("/tmp/mydb.sqlite");</code></pre>
-        </div>
-
-        <div class="method">
-            <h3>so_db_iranti / open_memory_db</h3>
-            <div class="sig">Odi.so_db_iranti() → Connection</div>
-            <p>Open in-memory SQLite database (no file perm needed).</p>
+            <h3>pa_iwe / delete</h3>
+            <div class="sig">Odi.pa_iwe(path: Str)</div>
+            <p>Delete a file.</p>
         </div>
 
         <footer>
-            <p><a href="../index.html">← Back to Documentation</a> · <a href="../../crates/ifa-docs/std-library.html">Corrected API Reference</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
         </footer>
     </div></div>
     <script src="../js/nav.js"></script>

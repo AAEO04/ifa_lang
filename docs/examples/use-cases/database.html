@@ -41,8 +41,8 @@
                     <span class="code-title">File-Backed Record Store</span>
                 </div>
                 <pre><code>// Simple file-backed record store
-fn insert(db_path, record) {
-    ayanmo line = Irete.base64(Irete.sha256(record)) + "|" + record;
+ese insert(db_path, record) {
+    ayanmo line = Irete.base64_encode(Irete.sha256(record)) + "|" + record;
     ayanmo existing = "";
     ti (Odi.wa(db_path)) {
         existing = Odi.ka(db_path);
@@ -50,7 +50,7 @@ fn insert(db_path, record) {
     Odi.ko(db_path, existing + line + "\n");
 }
 
-fn list_all(db_path) -> Vec<Str> {
+ese list_all(db_path) -> Vec<Str> {
     ti (Odi.wa(db_path)) {
         ayanmo content = Odi.ka(db_path);
         pada Ika.ge(content, 0, Ika.gigun(content));
@@ -59,7 +59,7 @@ fn list_all(db_path) -> Vec<Str> {
     pada [];
 }
 
-fn count(db_path) {
+ese count(db_path) {
     ayanmo records = list_all(db_path);
     Irosu.fo("Total records: " + Ogunda.iwọn(records));
 }
@@ -76,9 +76,9 @@ count("users.db");</code></pre>
                 <div class="code-header">
                     <span class="code-title">Filtering Records</span>
                 </div>
-                <pre><code>fn search(db_path, term) -> Vec<Str> {
+                <pre><code>ese search(db_path, term) -> Vec<Str> {
     ayanmo all = list_all(db_path);
-    fn matches(record) {
+    ese matches(record) {
         ti (Ika.gigun(record) > 0) {
             pada record; // simplified; real impl checks term
         }

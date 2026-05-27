@@ -18,14 +18,26 @@
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">ika.ifa</span></div><div class="terminal-body">
         <header>
             <h1><span class="pattern">0100</span> Ika</h1>
-            <p style="color: var(--dim)">The Controller — Strings &amp; Serialization</p>
+            <p style="color: var(--dim)">The Controller — Strings & HTML</p>
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/ika.rs</code>.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>.
         </div>
 
         <h2>String Operations</h2>
+
+        <div class="method">
+            <h3>gigun / len</h3>
+            <div class="sig">Ika.gigun(s: Str) → Int</div>
+            <p>String length in characters.</p>
+        </div>
+
+        <div class="method">
+            <h3>ge / slice</h3>
+            <div class="sig">Ika.ge(s: Str, start: Int, end: Int) → Str</div>
+            <p>Extract substring by character indices.</p>
+        </div>
 
         <div class="method">
             <h3>so / concat</h3>
@@ -34,76 +46,66 @@
             <pre><code>Ika.so(["Hello", " ", "World"])  // "Hello World"</code></pre>
         </div>
 
-        <div class="method">
-            <h3>gigun / len</h3>
-            <div class="sig">Ika.gigun(s: Str) → Int</div>
-            <p>String length in characters (not bytes).</p>
-        </div>
+        <h2>String Transformation</h2>
 
         <div class="method">
             <h3>nla / uppercase</h3>
             <div class="sig">Ika.nla(s: Str) → Str</div>
-            <p>Convert to uppercase.</p>
+            <p>Convert string to uppercase.</p>
         </div>
 
         <div class="method">
             <h3>kekere / lowercase</h3>
             <div class="sig">Ika.kekere(s: Str) → Str</div>
-            <p>Convert to lowercase.</p>
+            <p>Convert string to lowercase.</p>
         </div>
 
         <div class="method">
             <h3>wa / find</h3>
-            <div class="sig">Ika.wa(haystack: Str, needle: Str) → Int?</div>
-            <p>Find position of substring.</p>
+            <div class="sig">Ika.wa(s: Str, needle: Str) → Int?</div>
+            <p>Find index of substring.</p>
         </div>
 
         <div class="method">
             <h3>ni / has</h3>
-            <div class="sig">Ika.ni(haystack: Str, needle: Str) → Bool</div>
+            <div class="sig">Ika.ni(s: Str, needle: Str) → Bool</div>
             <p>Check if string contains substring.</p>
         </div>
 
         <div class="method">
             <h3>pin / split</h3>
-            <div class="sig">Ika.pin(s: Str, delimiter: Str) → List(Str)</div>
+            <div class="sig">Ika.pin(s: Str, delimiter: Str) → List</div>
             <p>Split string by delimiter.</p>
         </div>
 
         <div class="method">
             <h3>dapo / join</h3>
-            <div class="sig">Ika.dapo(parts: List(Str), separator: Str) → Str</div>
-            <p>Join strings with separator.</p>
+            <div class="sig">Ika.dapo(parts: List, glue: Str) → Str</div>
+            <p>Join list of strings with glue.</p>
         </div>
 
         <div class="method">
             <h3>yi_pada / replace</h3>
             <div class="sig">Ika.yi_pada(s: Str, from: Str, to: Str) → Str</div>
-            <p>Replace all occurrences.</p>
-        </div>
-
-        <div class="method">
-            <h3>ge / trim</h3>
-            <div class="sig">Ika.ge(s: Str) → Str</div>
-            <p>Trim whitespace from both ends.</p>
+            <p>Replace all occurrences of substring.</p>
         </div>
 
         <div class="method">
             <h3>pada / reverse</h3>
             <div class="sig">Ika.pada(s: Str) → Str</div>
-            <p>Reverse string by characters.</p>
+            <p>Reverse string.</p>
         </div>
 
         <div class="method">
             <h3>ge_lara / substring</h3>
             <div class="sig">Ika.ge_lara(s: Str, start: Int, end: Int) → Str</div>
-            <p>Extract substring by character indices.</p>
+            <p>Extract substring.</p>
         </div>
 
         <div class="method">
             <h3>tun / repeat</h3>
-            <div class="sig">Ika.tun(s: Str, n: Int) → Str</div>
-            <p>Repeat string n times.</p>
+            <div class="sig">Ika.tun(s: Str, count: Int) → Str</div>
+            <p>Repeat string count times.</p>
         </div>
 
         <div class="method">
@@ -118,121 +120,136 @@
             <p>Check if string ends with suffix.</p>
         </div>
 
+        <div class="method">
+            <h3>ge_trim / trim</h3>
+            <div class="sig">Ika.ge_trim(s: Str) → Str</div>
+            <p>Trim whitespace from both ends.</p>
+        </div>
+
         <h2>Regex</h2>
 
         <div class="method">
-            <h3>ba_mu / regex_match</h3>
-            <div class="sig">Ika.ba_mu(pattern: Str, text: Str) → Bool</div>
-            <p>Check if regex matches text.</p>
+            <h3>ba_mu / regex_match / matches</h3>
+            <div class="sig">Ika.ba_mu(s: Str, pattern: Str) → Bool</div>
+            <p>Check if string matches regex pattern.</p>
         </div>
 
         <div class="method">
             <h3>wa_akoko / regex_find</h3>
-            <div class="sig">Ika.wa_akoko(pattern: Str, text: Str) → Str?</div>
+            <div class="sig">Ika.wa_akoko(s: Str, pattern: Str) → Str?</div>
             <p>Find first regex match.</p>
         </div>
 
         <div class="method">
             <h3>wa_gbogbo / regex_find_all</h3>
-            <div class="sig">Ika.wa_gbogbo(pattern: Str, text: Str) → List(Str)</div>
+            <div class="sig">Ika.wa_gbogbo(s: Str, pattern: Str) → List</div>
             <p>Find all regex matches.</p>
         </div>
 
         <div class="method">
             <h3>ropo / regex_replace</h3>
-            <div class="sig">Ika.ropo(pattern: Str, text: Str, replacement: Str) → Str</div>
-            <p>Replace all regex matches.</p>
+            <div class="sig">Ika.ropo(s: Str, pattern: Str, replacement: Str) → Str</div>
+            <p>Replace regex matches.</p>
         </div>
 
-        <h2>Serialization</h2>
+        <h2>Encoding</h2>
 
         <div class="method">
-            <h3>yi_si_json / encode</h3>
+            <h3>yi_si_json / encode / to_json</h3>
             <div class="sig">Ika.yi_si_json(value: Any) → Str</div>
             <p>Serialize value to JSON string.</p>
         </div>
 
         <div class="method">
-            <h3>yi_pada_json / decode</h3>
-            <div class="sig">Ika.yi_pada_json(json: Str) → Any</div>
-            <p>Deserialize JSON string to Ifá value.</p>
+            <h3>yi_pada_json / decode / from_json</h3>
+            <div class="sig">Ika.yi_pada_json(s: Str) → Any</div>
+            <p>Deserialize JSON string to value.</p>
         </div>
 
         <div class="method">
-            <h3>yi_si_csv / to_csv</h3>
-            <div class="sig">Ika.yi_si_csv(rows: List(List)) → Str</div>
-            <p>Serialize matrix to CSV string.</p>
-        </div>
-
-        <div class="method">
-            <h3>yi_pada_csv / from_csv</h3>
-            <div class="sig">Ika.yi_pada_csv(data: Str, has_headers: Bool) → List(List)</div>
-            <p>Deserialize CSV to matrix.</p>
-        </div>
-
-        <div class="method">
-            <h3>bo_asiri_url / url_encode</h3>
-            <div class="sig">Ika.bo_asiri_url(text: Str) → Str</div>
+            <h3>bo / url_encode</h3>
+            <div class="sig">Ika.bo(s: Str) → Str</div>
             <p>URL-encode a string.</p>
         </div>
 
         <div class="method">
             <h3>titu_asiri_url / url_decode</h3>
-            <div class="sig">Ika.titu_asiri_url(text: Str) → Str</div>
+            <div class="sig">Ika.titu_asiri_url(s: Str) → Str</div>
             <p>URL-decode a string.</p>
         </div>
 
-        <h2>Rope Operations (Large Text)</h2>
+        <div class="method">
+            <h3>yi_si_csv / to_csv</h3>
+            <div class="sig">Ika.yi_si_csv(rows: List) → Str</div>
+            <p>Convert list of rows to CSV string.</p>
+        </div>
+
+        <div class="method">
+            <h3>yi_pada_csv / from_csv</h3>
+            <div class="sig">Ika.yi_pada_csv(s: Str) → List</div>
+            <p>Parse CSV string to list of rows.</p>
+        </div>
+
+        <h2>Rope Operations</h2>
 
         <div class="method">
             <h3>rope_new</h3>
-            <div class="sig">Ika.rope_new(s: Str) → Rope</div>
-            <p>Create a rope from string for efficient large-text editing.</p>
+            <div class="sig">Ika.rope_new() → Rope</div>
+            <p>Create a new empty rope.</p>
         </div>
 
         <div class="method">
             <h3>rope_insert</h3>
-            <div class="sig">Ika.rope_insert(rope: Rope, idx: Int, text: Str)</div>
+            <div class="sig">Ika.rope_insert(rope: Rope, pos: Int, text: Str)</div>
+            <p>Insert text at position in rope.</p>
         </div>
 
         <div class="method">
             <h3>rope_delete</h3>
             <div class="sig">Ika.rope_delete(rope: Rope, start: Int, end: Int)</div>
+            <p>Delete range from rope.</p>
         </div>
 
         <div class="method">
             <h3>rope_slice</h3>
             <div class="sig">Ika.rope_slice(rope: Rope, start: Int, end: Int) → Str</div>
+            <p>Extract string from rope range.</p>
         </div>
 
         <div class="method">
             <h3>rope_len</h3>
             <div class="sig">Ika.rope_len(rope: Rope) → Int</div>
+            <p>Get rope length.</p>
         </div>
 
-        <h2>HTML Operations (<code>html</code> feature)</h2>
-        <p>The following methods are available behind the <code>html</code> feature flag:</p>
+        <h2>HTML Operations</h2>
 
         <div class="method">
-            <h3>mo / clean_html</h3>
-            <div class="sig">Ika.mo(html: Str) → Str</div>
-            <p>Strip HTML tags and return plain text.</p>
-        </div>
-
-        <div class="method">
-            <h3>wa_html / query</h3>
-            <div class="sig">Ika.wa_html(html: Str, selector: Str) → List(Str)</div>
-            <p>Query selector — returns text content of matching nodes.</p>
-        </div>
-
-        <div class="method">
-            <h3>oruko_html / title</h3>
+            <h3>oruko_html / html_title</h3>
             <div class="sig">Ika.oruko_html(html: Str) → Str</div>
             <p>Get title of HTML document.</p>
         </div>
 
+        <div class="method">
+            <h3>tumo_html / strip_html</h3>
+            <div class="sig">Ika.tumo_html(html: Str) → Str</div>
+            <p>Strip HTML tags and return plain text.</p>
+        </div>
+
+        <div class="method">
+            <h3>mo / clean_html</h3>
+            <div class="sig">Ika.mo(html: Str) → Str</div>
+            <p>Sanitize HTML, removing dangerous tags and attributes.</p>
+        </div>
+
+        <div class="method">
+            <h3>wa_html / html_query</h3>
+            <div class="sig">Ika.wa_html(html: Str, selector: Str) → List</div>
+            <p>Query HTML with CSS selector. Returns list of matching elements as text.</p>
+        </div>
+
         <footer>
-            <p><a href="../index.html">← Back to Documentation</a> · <a href="../../crates/ifa-docs/std-library.html">Corrected API Reference</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
         </footer>
     </div></div>
     <script src="../js/nav.js"></script>

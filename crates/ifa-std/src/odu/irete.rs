@@ -8,8 +8,8 @@ use crate::impl_odu_domain;
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use ifa_types::error::{IfaError, IfaResult};
 use ring::rand::SecureRandom;
-use ring::{aead, digest, hmac, rand as ring_rand, signature};
 use ring::signature::KeyPair;
+use ring::{aead, digest, hmac, rand as ring_rand, signature};
 
 /// Ìrẹtẹ̀ - The Presser (Crypto/Compression)
 pub struct Irete {
@@ -30,10 +30,8 @@ impl Irete {
 
     /// SHA-256 hash (ẹ̀rí)
     pub fn sha256(&self, data: &[u8]) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.sha256",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.sha256")?;
         let result = digest::digest(&digest::SHA256, data);
         Ok(result.as_ref().to_vec())
     }
@@ -41,28 +39,21 @@ impl Irete {
     /// SHA-256 as hex string
     pub fn sha256_hex(&self, data: &[u8]) -> IfaResult<String> {
         let hash = self.sha256(data)?;
-        Ok(hash
-            .iter()
-            .map(|b| format!("{:02x}", b))
-            .collect())
+        Ok(hash.iter().map(|b| format!("{:02x}", b)).collect())
     }
 
     /// SHA-512 hash
     pub fn sha512(&self, data: &[u8]) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.sha512",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.sha512")?;
         let result = digest::digest(&digest::SHA512, data);
         Ok(result.as_ref().to_vec())
     }
 
     /// HMAC-SHA256
     pub fn hmac_sha256(&self, key: &[u8], data: &[u8]) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.hmac_sha256",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.hmac_sha256")?;
         let key = hmac::Key::new(hmac::HMAC_SHA256, key);
         let tag = hmac::sign(&key, data);
         Ok(tag.as_ref().to_vec())
@@ -70,10 +61,8 @@ impl Irete {
 
     /// Verify HMAC
     pub fn hmac_verify(&self, key: &[u8], data: &[u8], signature: &[u8]) -> IfaResult<bool> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.hmac_verify",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.hmac_verify")?;
         let key = hmac::Key::new(hmac::HMAC_SHA256, key);
         Ok(hmac::verify(&key, data, signature).is_ok())
     }
@@ -84,10 +73,8 @@ impl Irete {
 
     /// Encrypt data using ChaCha20-Poly1305 (di_pa)
     pub fn chacha20_encrypt(&self, key: &[u8], nonce: &[u8], data: &[u8]) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.chacha20_encrypt",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.chacha20_encrypt")?;
         let unbound_key = aead::UnboundKey::new(&aead::CHACHA20_POLY1305, key)
             .map_err(|_| IfaError::Custom("Invalid ChaCha20 key length".into()))?;
         let less_safe_key = aead::LessSafeKey::new(unbound_key);
@@ -110,10 +97,8 @@ impl Irete {
         nonce: &[u8],
         encrypted_data: &[u8],
     ) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.chacha20_decrypt",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.chacha20_decrypt")?;
         let unbound_key = aead::UnboundKey::new(&aead::CHACHA20_POLY1305, key)
             .map_err(|_| IfaError::Custom("Invalid ChaCha20 key length".into()))?;
         let less_safe_key = aead::LessSafeKey::new(unbound_key);
@@ -135,10 +120,8 @@ impl Irete {
 
     /// Generate Ed25519 Keypair (Private PKCS#8 bytes, Public bytes)
     pub fn ed25519_generate(&self) -> IfaResult<(Vec<u8>, Vec<u8>)> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.ed25519_generate",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.ed25519_generate")?;
         let rng = ring_rand::SystemRandom::new();
         let pkcs8_bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)
             .map_err(|_| IfaError::Custom("Key generation failed".into()))?;
@@ -153,10 +136,8 @@ impl Irete {
 
     /// Sign data with Ed25519 (fi_o)
     pub fn ed25519_sign(&self, private_pkcs8: &[u8], message: &[u8]) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.ed25519_sign",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.ed25519_sign")?;
         let key_pair = signature::Ed25519KeyPair::from_pkcs8(private_pkcs8)
             .map_err(|_| IfaError::Custom("Invalid private key format".into()))?;
         let sig = key_pair.sign(message);
@@ -164,11 +145,14 @@ impl Irete {
     }
 
     /// Verify Ed25519 Signature (yewo_fo)
-    pub fn ed25519_verify(&self, public_key: &[u8], message: &[u8], signature: &[u8]) -> IfaResult<bool> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.ed25519_verify",
-        )?;
+    pub fn ed25519_verify(
+        &self,
+        public_key: &[u8],
+        message: &[u8],
+        signature: &[u8],
+    ) -> IfaResult<bool> {
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.ed25519_verify")?;
         let unparsed_pub = signature::UnparsedPublicKey::new(&signature::ED25519, public_key);
         Ok(unparsed_pub.verify(message, signature).is_ok())
     }
@@ -179,10 +163,8 @@ impl Irete {
 
     /// Generate secure random bytes
     pub fn random_bytes(&self, count: usize) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.random_bytes",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.random_bytes")?;
         let rng = ring_rand::SystemRandom::new();
         let mut bytes = vec![0u8; count];
         rng.fill(&mut bytes)
@@ -196,19 +178,15 @@ impl Irete {
 
     /// Base64 encode
     pub fn base64_encode(&self, data: &[u8]) -> IfaResult<String> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.base64_encode",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.base64_encode")?;
         Ok(BASE64.encode(data))
     }
 
     /// Base64 decode
     pub fn base64_decode(&self, data: &str) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.base64_decode",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.base64_decode")?;
         BASE64
             .decode(data)
             .map_err(|e| IfaError::Custom(format!("Base64 decode error: {}", e)))
@@ -216,19 +194,15 @@ impl Irete {
 
     /// Hex encode
     pub fn hex_encode(&self, data: &[u8]) -> IfaResult<String> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.hex_encode",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.hex_encode")?;
         Ok(data.iter().map(|b| format!("{:02x}", b)).collect())
     }
 
     /// Hex decode
     pub fn hex_decode(&self, hex: &str) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.hex_decode",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.hex_decode")?;
         if hex.len() % 2 != 0 {
             return Err(IfaError::Custom("Invalid hex length".to_string()));
         }
@@ -249,20 +223,16 @@ impl Irete {
     /// Compress data with zstd (fún pọ̀)
     #[cfg(feature = "zstd")]
     pub fn funpo(&self, data: &[u8], level: i32) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.funpo",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.funpo")?;
         zstd::encode_all(data, level)
             .map_err(|e| IfaError::Custom(format!("Compression error: {}", e)))
     }
 
     #[cfg(not(feature = "zstd"))]
     pub fn funpo(&self, _data: &[u8], _level: i32) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.funpo",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.funpo")?;
         Err(IfaError::Runtime(
             "Compression disabled (zstd feature missing)".into(),
         ))
@@ -271,19 +241,15 @@ impl Irete {
     /// Decompress zstd data (tú)
     #[cfg(feature = "zstd")]
     pub fn tu(&self, data: &[u8]) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.tu",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.tu")?;
         zstd::decode_all(data).map_err(|e| IfaError::Custom(format!("Decompression error: {}", e)))
     }
 
     #[cfg(not(feature = "zstd"))]
     pub fn tu(&self, _data: &[u8]) -> IfaResult<Vec<u8>> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.tu",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.tu")?;
         Err(IfaError::Runtime(
             "Decompression disabled (zstd feature missing)".into(),
         ))
@@ -291,10 +257,8 @@ impl Irete {
 
     /// Get compression ratio
     pub fn iwon_funpo(&self, original: usize, compressed: usize) -> IfaResult<f64> {
-        self.esu.enforce_crossroads(
-            &crate::sandbox_shim::Ofun::Crypto,
-            "Irete.iwon_funpo",
-        )?;
+        self.esu
+            .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.iwon_funpo")?;
         if original == 0 {
             return Ok(0.0);
         }
@@ -376,6 +340,10 @@ mod tests {
         let signature = irete.ed25519_sign(&priv_key, message).unwrap();
 
         assert!(irete.ed25519_verify(&pub_key, message, &signature).unwrap());
-        assert!(!irete.ed25519_verify(&pub_key, b"Wrong data", &signature).unwrap());
+        assert!(
+            !irete
+                .ed25519_verify(&pub_key, b"Wrong data", &signature)
+                .unwrap()
+        );
     }
 }

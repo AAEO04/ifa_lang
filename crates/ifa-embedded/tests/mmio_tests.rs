@@ -1,5 +1,4 @@
-use heapless::Vec as HVec;
-use ifa_embedded::{EmbeddedConfig, EmbeddedValue, EmbeddedVm, MmioBus};
+use ifa_embedded::{EmbeddedOpCode, EmbeddedValue, EmbeddedVm, MmioBus};
 
 /// Mock MMIO implementation
 struct MockMmio {
@@ -57,16 +56,24 @@ fn test_mmio_write() {
 
     vm.attach_mmio(&mut mock);
 
-    // 0xA0 Ref(0x4000_1000)
-    // 0x01 PushInt(1)
-    // 0xA2 StoreDeref
-    // 0xFF Halt
+    // Ref(0x4000_1000)
+    // PushInt(1)
+    // StoreDeref
+    // Halt
 
     let bytecode = [
-        0x01, 1, 0, 0, 0, // Push 1
-        0xA0, 0x00, 0x10, 0x00, 0x40, // Ref 0x4000_1000 (LE)
-        0xA2, // StoreDeref
-        0xFF,
+        EmbeddedOpCode::PushInt as u8,
+        1,
+        0,
+        0,
+        0, // Push 1
+        EmbeddedOpCode::Ref as u8,
+        0x00,
+        0x10,
+        0x00,
+        0x40,                             // Ref 0x4000_1000 (LE)
+        EmbeddedOpCode::StoreDeref as u8, // StoreDeref
+        EmbeddedOpCode::Halt as u8,
     ];
 
     vm.start(&bytecode).unwrap();
@@ -85,10 +92,18 @@ fn test_mmio_write_scoped() {
 
         // Push 42, Ref 0x4000_1000, StoreDeref
         let bytecode = [
-            0x01, 42, 0, 0, 0, // Push 42
-            0xA0, 0x00, 0x10, 0x00, 0x40, // Ref 0x4000_1000
-            0xA2, // StoreDeref
-            0xFF,
+            EmbeddedOpCode::PushInt as u8,
+            42,
+            0,
+            0,
+            0, // Push 42
+            EmbeddedOpCode::Ref as u8,
+            0x00,
+            0x10,
+            0x00,
+            0x40,                             // Ref 0x4000_1000
+            EmbeddedOpCode::StoreDeref as u8, // StoreDeref
+            EmbeddedOpCode::Halt as u8,
         ];
 
         vm.start(&bytecode).unwrap();
@@ -107,14 +122,18 @@ fn test_mmio_read() {
         let mut vm = EmbeddedVm::<256, 64>::default();
         vm.attach_mmio(&mut mock);
 
-        // 0xA0 Ref(0x4000_0000) (Mock returns 0xDEAD_BEEF / 3735928559)
-        // 0xA1 Deref
-        // 0xFF Halt
+        // Ref(0x4000_0000) (Mock returns 0xDEAD_BEEF / 3735928559)
+        // Deref
+        // Halt
 
         let bytecode = [
-            0xA0, 0x00, 0x00, 0x00, 0x40, // Ref 0x4000_0000
-            0xA1, // Deref
-            0xFF,
+            EmbeddedOpCode::Ref as u8,
+            0x00,
+            0x00,
+            0x00,
+            0x40,                        // Ref 0x4000_0000
+            EmbeddedOpCode::Deref as u8, // Deref
+            EmbeddedOpCode::Halt as u8,
         ];
 
         let res = vm.start(&bytecode).unwrap();
@@ -138,8 +157,18 @@ fn test_mmio_sized_write() {
         vm.attach_mmio(&mut mock);
         // Push 0x12345678, Ref 0x4000_0000, Store8
         let code = [
-            0x01, 0x78, 0x56, 0x34, 0x12, 0xA0, 0x00, 0x00, 0x00, 0x40, 0xA3, // Store8
-            0xFF,
+            EmbeddedOpCode::PushInt as u8,
+            0x78,
+            0x56,
+            0x34,
+            0x12,
+            EmbeddedOpCode::Ref as u8,
+            0x00,
+            0x00,
+            0x00,
+            0x40,
+            EmbeddedOpCode::Store8 as u8, // Store8
+            EmbeddedOpCode::Halt as u8,
         ];
         vm.start(&code).unwrap();
     }
@@ -152,8 +181,18 @@ fn test_mmio_sized_write() {
         vm.attach_mmio(&mut mock);
         // Push 0x12345678, Ref 0x4000_0000, Store16
         let code = [
-            0x01, 0x78, 0x56, 0x34, 0x12, 0xA0, 0x00, 0x00, 0x00, 0x40, 0xA4, // Store16
-            0xFF,
+            EmbeddedOpCode::PushInt as u8,
+            0x78,
+            0x56,
+            0x34,
+            0x12,
+            EmbeddedOpCode::Ref as u8,
+            0x00,
+            0x00,
+            0x00,
+            0x40,
+            EmbeddedOpCode::Store16 as u8, // Store16
+            EmbeddedOpCode::Halt as u8,
         ];
         vm.start(&code).unwrap();
     }

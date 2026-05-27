@@ -48,11 +48,11 @@
                 <div class="code-header">
                     <span class="code-title">Main Loop</span>
                 </div>
-                <pre><code>fn show_help() {
+                <pre><code>ese show_help() {
     Irosu.fo("Commands: greet &lt;name&gt;, save &lt;file&gt;, count &lt;file&gt;, exit");
 }
 
-fn main() {
+ese main() {
     Irosu.fo("Ifá-Lang CLI v1.0");
     show_help();
 
@@ -85,12 +85,12 @@ main();</code></pre>
                 <div class="code-header">
                     <span class="code-title">Save & Count Commands</span>
                 </div>
-                <pre><code>fn save_file(path, content) {
+                <pre><code>ese save_file(path, content) {
     Odi.ko(path, content);
     Irosu.fo("Saved " + Ika.gigun(content) + " bytes to " + path);
 }
 
-fn count_file(path) {
+ese count_file(path) {
     ti (Odi.wa(path)) {
         ayanmo content = Odi.ka(path);
         Irosu.fo("Lines: " + Ika.gigun(content));
@@ -110,17 +110,17 @@ count_file("note.txt");</code></pre>
                 <div class="code-header">
                     <span class="code-title">Async with Osa</span>
                 </div>
-                <pre><code>fn background_task(name, duration) {
+                <pre><code>ese background_task(name, duration) {
     Irosu.fo("Task " + name + " started");
     Oyeku.sun(duration);
     Irosu.fo("Task " + name + " done");
 }
 
-fn run_tasks() {
+ese run_tasks() {
     // Spawn concurrent tasks
-    Osa.ise({ -> background_task("A", 1000) });
-    Osa.ise({ -> background_task("B", 500) });
-    Osa.ise({ -> background_task("C", 2000) });
+    Osa.sa({ -> background_task("A", 1000) });
+    Osa.sa({ -> background_task("B", 500) });
+    Osa.sa({ -> background_task("C", 2000) });
     Irosu.fo("All tasks spawned");
 }
 

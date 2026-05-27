@@ -32,9 +32,9 @@ ese download_file(name, time_ms) {
 }
 
 // Spawn concurrent tasks
-ayanmo t1 = Osa.ise({ -> download_file("image.png", 800) });
-ayanmo t2 = Osa.ise({ -> download_file("data.json", 500) });
-ayanmo t3 = Osa.ise({ -> download_file("styles.css", 300) });
+ayanmo t1 = Osa.sa({ -> download_file("image.png", 800) });
+ayanmo t2 = Osa.sa({ -> download_file("data.json", 500) });
+ayanmo t3 = Osa.sa({ -> download_file("styles.css", 300) });
 
 // Wait for all to finish
 Irosu.fo("Waiting for downloads...");
@@ -47,15 +47,15 @@ Irosu.fo("All done: " + results);</code></pre>
 ese worker(id, items) {
     fun item ninu items {
         Irosu.fo("Worker " + id + " processing: " + item);
-        Osa.sun(200 + Owonrin.pese(300));
+        Osa.sun(Owonrin.pese(200, 500));
     }
     pada "Worker " + id + " done";
 }
 
 // Spawn workers
-ayanmo w1 = Osa.ise({ -> worker(1, ["A", "B", "C"]) });
-ayanmo w2 = Osa.ise({ -> worker(2, ["D", "E", "F"]) });
-ayanmo w3 = Osa.ise({ -> worker(3, ["G", "H", "I"]) });
+ayanmo w1 = Osa.sa({ -> worker(1, ["A", "B", "C"]) });
+ayanmo w2 = Osa.sa({ -> worker(2, ["D", "E", "F"]) });
+ayanmo w3 = Osa.sa({ -> worker(3, ["G", "H", "I"]) });
 
 Irosu.fo("All workers started...");
 ayanmo results = Osa.gbogbo([w1, w2, w3]);
@@ -96,9 +96,9 @@ ese task(name, delay_ms) {
 }
 
 // Start tasks with different delays
-ayanmo fast = Osa.ise({ -> task("Fast", 300) });
-ayanmo medium = Osa.ise({ -> task("Medium", 600) });
-ayanmo slow = Osa.ise({ -> task("Slow", 900) });
+ayanmo fast = Osa.sa({ -> task("Fast", 300) });
+ayanmo medium = Osa.sa({ -> task("Medium", 600) });
+ayanmo slow = Osa.sa({ -> task("Slow", 900) });
 
 Irosu.fo("All tasks spawned, waiting...");
 

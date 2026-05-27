@@ -1,8 +1,8 @@
+use serde::de::{self, Visitor};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::ops::Deref;
 use std::sync::Arc;
-use serde::{Deserialize, Serialize, Serializer, Deserializer};
-use serde::de::{self, Visitor};
 
 #[derive(Clone)]
 pub enum CompactString {
@@ -35,9 +35,14 @@ impl CompactString {
 
     pub fn as_str(&self) -> &str {
         match self {
-            CompactString::Inline { len, char_len: _, data } => {
+            CompactString::Inline {
+                len,
+                char_len: _,
+                data,
+            } => {
                 // Safe conversion, guaranteed valid UTF-8 by constructors
-                std::str::from_utf8(&data[..(*len as usize)]).expect("CompactString contained invalid UTF-8")
+                std::str::from_utf8(&data[..(*len as usize)])
+                    .expect("CompactString contained invalid UTF-8")
             }
             CompactString::Heap(arc) => arc,
         }

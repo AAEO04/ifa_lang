@@ -27,6 +27,6 @@ pub fn domain_has_method(domain: &OduDomain, method: &str) -> bool {
     is_valid_odu_method(domain, method)
 }
 
-pub fn list_methods_for_domain(domain: &OduDomain) -> &'static [&'static str] {
+pub fn list_methods_for_domain(domain: &OduDomain) -> Vec<&'static str> {
     odu_methods(domain)
 }

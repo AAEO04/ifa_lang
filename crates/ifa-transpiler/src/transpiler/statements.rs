@@ -89,6 +89,22 @@ impl IfaValue {{
             IfaValue::Nil => false,
         }}
     }}
+
+    pub fn pow(&self, other: &Self) -> Self {{
+        match (self, other) {{
+            (IfaValue::Int(a), IfaValue::Int(b)) => {{
+                if *b >= 0 {{
+                    a.checked_pow(*b as u32).map(IfaValue::Int).unwrap_or_else(|| IfaValue::Float((*a as f64).powi(*b as i32)))
+                }} else {{
+                    IfaValue::Float((*a as f64).powi(*b as i32))
+                }}
+            }}
+            (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a.powf(*b)),
+            (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float((*a as f64).powf(*b)),
+            (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a.powi(*b as i32)),
+            _ => IfaValue::Nil,
+        }}
+    }}
 }}
 
 impl std::ops::Add for IfaValue {{
@@ -419,7 +435,6 @@ impl std::ops::Not for IfaValue {{
                 )
             }
 
-
             Statement::Import { path, names, .. } => {
                 if self.handle_import(path, names) {
                     format!("{}// import handled", indent)
@@ -433,6 +448,10 @@ impl std::ops::Not for IfaValue {{
 
             Statement::Ase { .. } => {
                 format!("{}std::process::exit(0);", indent)
+            }
+
+            Statement::Abo { .. } => {
+                format!("{}// Strict mode directive", indent)
             }
 
             Statement::Taboo { source, target, .. } => {
@@ -473,7 +492,11 @@ impl std::ops::Not for IfaValue {{
                 format!("{}{};", indent, self.transpile_expression(expr))
             }
 
-            Statement::Ebo { offering, body: None, .. } => {
+            Statement::Ebo {
+                offering,
+                body: None,
+                ..
+            } => {
                 let val = self.transpile_expression(offering);
                 format!(
                     r#"{}{{
@@ -484,11 +507,18 @@ impl std::ops::Not for IfaValue {{
                 )
             }
 
-            Statement::Ebo { offering, body: Some(body_stmts), .. } => {
+            Statement::Ebo {
+                offering,
+                body: Some(body_stmts),
+                ..
+            } => {
                 let _name = self.transpile_expression(offering);
                 let mut result = format!("{}// Ẹbọ epoch: {{}};\n", indent);
                 self.indent += 1;
-                result.push_str(&format!("{}// Epoch begin: allocations scoped to this block\n", indent));
+                result.push_str(&format!(
+                    "{}// Epoch begin: allocations scoped to this block\n",
+                    indent
+                ));
                 for s in body_stmts {
                     result.push_str(&self.transpile_statement(s));
                     result.push('\n');
@@ -543,7 +573,10 @@ impl std::ops::Not for IfaValue {{
             }
 
             Statement::Update { .. } => {
-                format!("{indent}compile_error!(\"Ifá transpiler: update statements (++, --, +=, etc) are not supported yet\");", indent = indent)
+                format!(
+                    "{indent}compile_error!(\"Ifá transpiler: update statements (++, --, +=, etc) are not supported yet\");",
+                    indent = indent
+                )
             }
 
             Statement::Try { .. } => {
@@ -556,6 +589,13 @@ impl std::ops::Not for IfaValue {{
             // K1: break/continue — native Rust keywords; exact transpilation
             Statement::Break { .. } => format!("{}break;", indent),
             Statement::Continue { .. } => format!("{}continue;", indent),
+
+            Statement::Throw { .. } => {
+                format!(
+                    "{}compile_error!(\"Ifá transpiler: throw (ta) is not supported yet\");",
+                    indent
+                )
+            }
         }
     }
 

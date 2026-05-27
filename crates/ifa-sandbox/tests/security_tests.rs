@@ -1,5 +1,6 @@
 //! Comprehensive security tests for ifa-sandbox
 
+#![allow(unused_variables)]
 use ifa_sandbox::*;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -137,6 +138,53 @@ mod capability_enforcement_tests {
         assert!(parent_caps.check(&Ofun::Stdio));
         assert!(parent_caps.check(&Ofun::Time));
         assert!(!parent_caps.check(&Ofun::Random));
+    }
+
+    #[test]
+    fn test_monotonic_sacrifice() {
+        let mut caps = CapabilitySet::new();
+        caps.grant(Ofun::ReadFiles {
+            root: PathBuf::from("/usr"),
+        });
+        assert!(caps.check(&Ofun::ReadFiles {
+            root: PathBuf::from("/usr/bin")
+        }));
+
+        // Sacrifice /usr (which covers /usr/bin)
+        caps.revoke(&Ofun::ReadFiles {
+            root: PathBuf::from("/usr"),
+        });
+
+        // Check should be false now
+        assert!(!caps.check(&Ofun::ReadFiles {
+            root: PathBuf::from("/usr/bin")
+        }));
+        assert!(!caps.check(&Ofun::ReadFiles {
+            root: PathBuf::from("/usr")
+        }));
+
+        // Attempting to grant back /usr/bin should be blocked
+        caps.grant(Ofun::ReadFiles {
+            root: PathBuf::from("/usr/bin"),
+        });
+        assert!(!caps.check(&Ofun::ReadFiles {
+            root: PathBuf::from("/usr/bin")
+        }));
+
+        // Verify inheritance of sacrificed list
+        let mut child_caps = CapabilitySet::new();
+        child_caps.grant(Ofun::ReadFiles {
+            root: PathBuf::from("/usr/bin"),
+        });
+        assert!(child_caps.check(&Ofun::ReadFiles {
+            root: PathBuf::from("/usr/bin")
+        }));
+
+        child_caps.inherit_from(&caps);
+        // Inheriting the sacrifice of /usr should have stripped the existing /usr/bin capability
+        assert!(!child_caps.check(&Ofun::ReadFiles {
+            root: PathBuf::from("/usr/bin")
+        }));
     }
 }
 

@@ -28,9 +28,9 @@
 //! `MAYBE_USE_AFTER_MOVE` warning (not an error) because we cannot prove
 //! which branch runs at compile time.
 
-use std::collections::{HashMap, HashSet};
-use ifa_types::ast::{Expression, OduCall, TypeHint};
 use ifa_types::OduDomain;
+use ifa_types::ast::{Expression, OduCall, TypeHint};
+use std::collections::{HashMap, HashSet};
 
 /// Per-variable move state.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,7 +62,8 @@ impl MoveTracker {
 
     /// Record a definitive move of `name` at the given location.
     pub fn record_move(&mut self, name: &str, line: usize, col: usize) {
-        self.state.insert(name.to_string(), MoveState::Moved { line, col });
+        self.state
+            .insert(name.to_string(), MoveState::Moved { line, col });
     }
 
     /// Check a use of `name`. Returns an error description if the variable
@@ -99,15 +100,21 @@ impl MoveTracker {
             let else_state = else_tracker.state.get(key).unwrap_or(&MoveState::Alive);
 
             let new_state = match (then_state, else_state) {
-                (MoveState::Moved { line, col }, MoveState::Moved { .. }) => {
-                    MoveState::Moved { line: *line, col: *col }
-                }
+                (MoveState::Moved { line, col }, MoveState::Moved { .. }) => MoveState::Moved {
+                    line: *line,
+                    col: *col,
+                },
                 (MoveState::Moved { line, col }, _) | (_, MoveState::Moved { line, col }) => {
-                    MoveState::MaybeMoved { line: *line, col: *col }
+                    MoveState::MaybeMoved {
+                        line: *line,
+                        col: *col,
+                    }
                 }
-                (MoveState::MaybeMoved { line, col }, _) | (_, MoveState::MaybeMoved { line, col }) => {
-                    MoveState::MaybeMoved { line: *line, col: *col }
-                }
+                (MoveState::MaybeMoved { line, col }, _)
+                | (_, MoveState::MaybeMoved { line, col }) => MoveState::MaybeMoved {
+                    line: *line,
+                    col: *col,
+                },
                 _ => MoveState::Alive,
             };
             merged.insert(key.clone(), new_state);
@@ -125,7 +132,9 @@ impl MoveTracker {
 
     /// Clone the current tracker snapshot for branch analysis.
     pub fn snapshot(&self) -> Self {
-        Self { state: self.state.clone() }
+        Self {
+            state: self.state.clone(),
+        }
     }
 
     /// Revive a moved variable (e.g. after re-assignment: `x = new_value`).
@@ -183,18 +192,17 @@ pub fn as_identifier(expr: &Expression) -> Option<&str> {
 ///
 /// Currently: any call into the Osa (concurrency) domain is a move boundary.
 /// All non-copy-eligible identifier arguments are considered moved.
-pub fn move_args_from_odu_call<'a>(call: &'a OduCall) -> impl Iterator<Item = (&'a str, usize, usize)> {
+pub fn move_args_from_odu_call<'a>(
+    call: &'a OduCall,
+) -> impl Iterator<Item = (&'a str, usize, usize)> {
     let is_actor_boundary = call.domain == OduDomain::Osa;
-    call.args
-        .iter()
-        .enumerate()
-        .filter_map(move |(_, arg)| {
-            if is_actor_boundary && !is_copy_eligible(arg) {
-                as_identifier(arg).map(|name| (name, call.span.line, call.span.column))
-            } else {
-                None
-            }
-        })
+    call.args.iter().enumerate().filter_map(move |(_, arg)| {
+        if is_actor_boundary && !is_copy_eligible(arg) {
+            as_identifier(arg).map(|name| (name, call.span.line, call.span.column))
+        } else {
+            None
+        }
+    })
 }
 
 /// Check an expression for uses of moved variables, reporting any violations.
@@ -285,7 +293,10 @@ mod tests {
         let mut t = MoveTracker::new();
         t.declare("x");
         t.record_move("x", 5, 1);
-        assert!(matches!(t.check_use("x"), Some(MoveCheckResult::UseAfterMove { .. })));
+        assert!(matches!(
+            t.check_use("x"),
+            Some(MoveCheckResult::UseAfterMove { .. })
+        ));
     }
 
     #[test]
@@ -308,7 +319,10 @@ mod tests {
         else_t.record_move("x", 7, 1);
 
         let merged = MoveTracker::merge_branches(&then_t, &else_t);
-        assert!(matches!(merged.check_use("x"), Some(MoveCheckResult::UseAfterMove { .. })));
+        assert!(matches!(
+            merged.check_use("x"),
+            Some(MoveCheckResult::UseAfterMove { .. })
+        ));
     }
 
     #[test]
@@ -320,13 +334,16 @@ mod tests {
         let else_t = MoveTracker::new(); // x is alive in else branch
 
         let merged = MoveTracker::merge_branches(&then_t, &else_t);
-        assert!(matches!(merged.check_use("x"), Some(MoveCheckResult::MaybeUseAfterMove { .. })));
+        assert!(matches!(
+            merged.check_use("x"),
+            Some(MoveCheckResult::MaybeUseAfterMove { .. })
+        ));
     }
 
     #[test]
     fn copy_eligible_not_moved() {
         assert!(is_copy_eligible(&Expression::Int(42)));
-        assert!(is_copy_eligible(&Expression::Float(3.14)));
+        assert!(is_copy_eligible(&Expression::Float(1.5)));
         assert!(is_copy_eligible(&Expression::Bool(true)));
         assert!(is_copy_eligible(&Expression::Nil));
         assert!(!is_copy_eligible(&Expression::String("hello".into())));

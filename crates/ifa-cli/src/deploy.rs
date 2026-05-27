@@ -5,8 +5,8 @@
 
 use eyre::{Result, WrapErr};
 use ifa_babalawo::infer_capabilities;
-use ifa_vm::parse;
 use ifa_sandbox::{CapabilitySet, Ofun};
+use ifa_vm::parse;
 use std::path::{Path, PathBuf};
 
 /// Scan directory and generate capability manifest
@@ -49,6 +49,21 @@ pub fn scan_and_generate(path: &Path) -> Result<()> {
     println!("🛡️  Inferred Capabilities (Odu Ofun):");
     print_capabilities(&total_caps);
 
+    let has_bridge = total_caps
+        .all()
+        .iter()
+        .any(|c| matches!(c, Ofun::Bridge { .. }));
+    let has_execute = total_caps
+        .all()
+        .iter()
+        .any(|c| matches!(c, Ofun::Execute { .. }));
+    if has_bridge {
+        println!("⚠️  WARNING: FFI/Bridge capability detected. Ensure this is authorized.");
+    }
+    if has_execute {
+        println!("⚠️  WARNING: Process execution capability detected. Ensure this is authorized.");
+    }
+
     println!();
     println!("📜 Generated Manifest Snippet (Iwe.toml):");
     println!("```toml");
@@ -73,6 +88,8 @@ pub fn scan_and_generate(path: &Path) -> Result<()> {
             Ofun::Time => println!("time = true"),
             Ofun::Random => println!("random = true"),
             Ofun::Stdio => println!("stdio = true"),
+            Ofun::Bridge { language } => println!("bridge = [\"{}\"]", language),
+            Ofun::Execute { programs } => println!("execute = {:?}", programs),
             _ => {}
         }
     }

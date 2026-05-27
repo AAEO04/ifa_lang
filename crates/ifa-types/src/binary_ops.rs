@@ -1,17 +1,11 @@
-#[cfg(feature = "vm")]
 use crate::ast::{BinaryOperator, TypeHint};
 
-#[cfg(feature = "vm")]
-use core::fmt;
-
-#[cfg(feature = "vm")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OpCompat {
     Valid(TypeHint),
     Invalid,
 }
 
-#[cfg(feature = "vm")]
 impl OpCompat {
     pub fn result_type(&self) -> Option<TypeHint> {
         match self {
@@ -25,22 +19,22 @@ impl OpCompat {
     }
 }
 
-#[cfg(feature = "vm")]
-pub fn binary_op_result_type(op: &BinaryOperator, lhs: &TypeHint, rhs: &TypeHint) -> Option<TypeHint> {
+pub fn binary_op_result_type(
+    op: &BinaryOperator,
+    lhs: &TypeHint,
+    rhs: &TypeHint,
+) -> Option<TypeHint> {
     use BinaryOperator::*;
     use TypeHint::*;
 
     match op {
-        Add => check_numeric(lhs, rhs)
-            .or_else(|| check_string(lhs, rhs)),
+        Add => check_numeric(lhs, rhs).or_else(|| check_string(lhs, rhs)),
 
         Sub | Mul => check_numeric(lhs, rhs),
 
         Div | Mod => check_numeric_nonzero(lhs, rhs, op),
 
         Power => check_numeric(lhs, rhs),
-
-        Concat => check_string(lhs, rhs),
 
         Eq | NotEq => {
             if types_compat_for_eq(lhs, rhs) {
@@ -50,8 +44,7 @@ pub fn binary_op_result_type(op: &BinaryOperator, lhs: &TypeHint, rhs: &TypeHint
             }
         }
 
-        Lt | LtEq | Gt | GtEq => check_numeric(lhs, rhs)
-            .map(|_| Bool),
+        Lt | LtEq | Gt | GtEq => check_numeric(lhs, rhs).map(|_| Bool),
 
         And | Or | NullCoalesce => {
             if *lhs == Any || *rhs == Any {
@@ -63,12 +56,10 @@ pub fn binary_op_result_type(op: &BinaryOperator, lhs: &TypeHint, rhs: &TypeHint
     }
 }
 
-#[cfg(feature = "vm")]
 pub fn is_valid_binary_op(op: &BinaryOperator, lhs: &TypeHint, rhs: &TypeHint) -> bool {
     binary_op_result_type(op, lhs, rhs).is_some()
 }
 
-#[cfg(feature = "vm")]
 fn check_numeric(lhs: &TypeHint, rhs: &TypeHint) -> Option<TypeHint> {
     use TypeHint::*;
 
@@ -115,12 +106,10 @@ fn check_numeric(lhs: &TypeHint, rhs: &TypeHint) -> Option<TypeHint> {
     }
 }
 
-#[cfg(feature = "vm")]
 fn check_numeric_nonzero(lhs: &TypeHint, rhs: &TypeHint, _op: &BinaryOperator) -> Option<TypeHint> {
     check_numeric(lhs, rhs)
 }
 
-#[cfg(feature = "vm")]
 fn check_string(lhs: &TypeHint, rhs: &TypeHint) -> Option<TypeHint> {
     use TypeHint::*;
     match (lhs, rhs) {
@@ -129,7 +118,6 @@ fn check_string(lhs: &TypeHint, rhs: &TypeHint) -> Option<TypeHint> {
     }
 }
 
-#[cfg(feature = "vm")]
 fn types_compat_for_eq(lhs: &TypeHint, rhs: &TypeHint) -> bool {
     use TypeHint::*;
     match (lhs, rhs) {

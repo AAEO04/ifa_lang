@@ -47,25 +47,25 @@
                 <div class="code-header">
                     <span class="code-title">Guess the Number</span>
                 </div>
-                <pre><code>fn guess_game() {
-    Ose.bere("Number Guessing Game");
-    ayanmo target = Owonrin.pese(100) + 1;
+                <pre><code>ese guess_game() {
+    ayanmo tty = Ose.bere();
+    ayanmo target = Owonrin.pese(1, 100);
     ayanmo attempts = 0;
     ayanmo playing = otito;
 
-    Ose.ya("I'm thinking of a number 1-100");
+    Ose.ya(tty, {"type": "ipinro", "text": "I'm thinking of a number 1-100"});
 
     nigba (playing) {
         ayanmo guess = Irosu.gbo_nomba("Your guess: ");
         attempts = attempts + 1;
 
         ti (guess == target) {
-            Ose.ya("Correct! You got it in " + attempts + " tries");
+            Ose.ya(tty, {"type": "ipinro", "text": "Correct! You got it in " + attempts + " tries"});
             playing = iro;
         } bibẹkọ ti (guess < target) {
-            Ose.ya("Too low! Try again");
+            Ose.ya(tty, {"type": "ipinro", "text": "Too low! Try again"});
         } bibẹkọ {
-            Ose.ya("Too high! Try again");
+            Ose.ya(tty, {"type": "ipinro", "text": "Too high! Try again"});
         }
     }
 
@@ -83,18 +83,18 @@ guess_game();</code></pre>
                 <div class="code-header">
                     <span class="code-title">Reaction Timer</span>
                 </div>
-                <pre><code>fn reaction_game() {
-    Ose.bere("Reaction Timer");
+                <pre><code>ese reaction_game() {
+    ayanmo tty = Ose.bere();
 
     // Wait random time, then signal
-    ayanmo delay = Owonrin.pese(3000) + 1000;
+    ayanmo delay = Owonrin.pese(1000, 4000);
     Oyeku.sun(delay);
 
-    Ose.ya("PRESS ANY KEY NOW!");
+    Ose.ya(tty, {"type": "ipinro", "text": "PRESS ANY KEY NOW!"});
 
     // Read key press
     ayanmo key = Ose.gbile();
-    Ose.ya("You pressed: " + key);
+    Ose.ya(tty, {"type": "ipinro", "text": "You pressed: " + key});
 
     Oyeku.sun(1000);
     Ose.pari();
@@ -110,12 +110,12 @@ reaction_game();</code></pre>
                 <div class="code-header">
                     <span class="code-title">Layout and Listen</span>
                 </div>
-                <pre><code>fn layout_demo() {
-    Ose.bere("Layout Demo");
+                <pre><code>ese layout_demo() {
+    ayanmo tty = Ose.bere();
 
     // Get terminal size
     ayanmo sz = Ose.iwọn();
-    Ose.ya("Terminal: " + sz.width + "x" + sz.height);
+    Ose.ya(tty, {"type": "ipinro", "text": "Terminal: " + sz.width + "x" + sz.height});
 
     // Listen for mouse events
     Ose.ẹmí();
@@ -124,7 +124,7 @@ reaction_game();</code></pre>
         ayanmo event = Ose.gboran();
         ti (event == "q" or event == "quit") { da; }
         ti (Ika.gigun(event) > 0) {
-            Ose.ya("Event: " + event);
+            Ose.ya(tty, {"type": "ipinro", "text": "Event: " + event});
         }
     }
 

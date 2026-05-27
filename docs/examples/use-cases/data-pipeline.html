@@ -47,24 +47,24 @@
                 <div class="code-header">
                     <span class="code-title">CPU Parallel Processing</span>
                 </div>
-                <pre><code>fn process_numbers(data) {
-    ayanmo cores = CPU.threads();
+                <pre><code>ese process_numbers(data) {
+    ayanmo cores = Cpu.threads();
     Irosu.fo("Using " + cores + " cores");
 
     // Parallel map: square each element
-    ayanmo squared = CPU.par_map(data, "square");
+    ayanmo squared = Cpu.par_map(data, "square");
     Irosu.fo("Squared: " + squared);
 
     // Parallel map: double each element
-    ayanmo doubled = CPU.par_map(data, "double");
+    ayanmo doubled = Cpu.par_map(data, "double");
     Irosu.fo("Doubled: " + doubled);
 
     // Parallel reduce: sum all values
-    ayanmo total = CPU.par_reduce(squared, "sum");
+    ayanmo total = Cpu.par_reduce(squared, "sum");
     Irosu.fo("Sum of squares: " + total);
 
     // Parallel reduce: find max
-    ayanmo maximum = CPU.par_reduce(data, "max");
+    ayanmo maximum = Cpu.par_reduce(data, "max");
     Irosu.fo("Max value: " + maximum);
 }
 
@@ -79,12 +79,12 @@ process_numbers(values);</code></pre>
                 <div class="code-header">
                     <span class="code-title">Ogunda Map / Filter / Reduce</span>
                 </div>
-                <pre><code>fn analyze_data(items) {
+                <pre><code>ese analyze_data(items) {
     ayanmo count = Ogunda.iwọn(items);
     Irosu.fo("Total items: " + count);
 
     // Map: increment each value
-    ayanmo incremented = Ogunda.maapu(items, { x -> x + 1 });
+    ayanmo incremented = Ogunda.yi_pada(items, { x -> x + 1 });
     Irosu.fo("Incremented: " + incremented);
 
     // Filter: keep numbers > 3
@@ -92,7 +92,7 @@ process_numbers(values);</code></pre>
     Irosu.fo("Filtered (>3): " + evens);
 
     // Reduce: sum all values
-    ayanmo sum = Ogunda.ṣẹ́kù(items, { a, b -> a + b }, 0);
+    ayanmo sum = Ogunda.ge(items, { a, b -> a + b }, 0);
     Irosu.fo("Sum: " + sum);
 }
 
@@ -106,22 +106,22 @@ analyze_data([1, 2, 3, 4, 5, 6]);</code></pre>
                 <div class="code-header">
                     <span class="code-title">Osa Concurrency</span>
                 </div>
-                <pre><code>fn stage_one(data) {
+                <pre><code>ese stage_one(data) {
     Oyeku.sun(500);
-    pada CPU.par_map(data, "increment");
+    pada Cpu.par_map(data, "increment");
 }
 
-fn stage_two(data) {
+ese stage_two(data) {
     Oyeku.sun(300);
-    pada CPU.par_reduce(data, "sum");
+    pada Cpu.par_reduce(data, "sum");
 }
 
-fn stage_three(data) {
+ese stage_three(data) {
     Oyeku.sun(200);
-    pada CPU.par_map(data, "square");
+    pada Cpu.par_map(data, "square");
 }
 
-fn run_pipeline(data) {
+ese run_pipeline(data) {
     // Run stages concurrently
     ayanmo results = Osa.gbogbo([
         { -> stage_one(data) },

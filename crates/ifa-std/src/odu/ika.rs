@@ -69,9 +69,12 @@ impl Ika {
                 }
             }
             serde_json::Value::String(s) => IfaValue::Str(s.into()),
-            serde_json::Value::Array(arr) => {
-                IfaValue::List(arr.into_iter().map(Self::json_value_to_ifa).collect::<Vec<_>>().into())
-            }
+            serde_json::Value::Array(arr) => IfaValue::List(
+                arr.into_iter()
+                    .map(Self::json_value_to_ifa)
+                    .collect::<Vec<_>>()
+                    .into(),
+            ),
             serde_json::Value::Object(obj) => {
                 let mut map = HashMap::with_capacity(obj.len());
                 for (key, value) in obj {
@@ -169,8 +172,8 @@ impl Ika {
 
     /// Deserialize from JSON (yi_padà_json)
     pub fn yi_pada_json(&self, json: &str) -> IfaResult<IfaValue> {
-        let value: serde_json::Value =
-            serde_json::from_str(json).map_err(|e| IfaError::Custom(format!("JSON error: {}", e)))?;
+        let value: serde_json::Value = serde_json::from_str(json)
+            .map_err(|e| IfaError::Custom(format!("JSON error: {}", e)))?;
         Ok(Self::json_value_to_ifa(value))
     }
 
@@ -382,6 +385,31 @@ impl Ika {
             .into_iter()
             .next()
             .unwrap_or_default()
+    }
+
+    #[cfg(not(feature = "html"))]
+    pub fn tumo(&self, _html: &str) -> IfaValue {
+        IfaValue::Null
+    }
+
+    #[cfg(not(feature = "html"))]
+    pub fn mo(&self, _html: &str) -> String {
+        String::new()
+    }
+
+    #[cfg(not(feature = "html"))]
+    pub fn tumo_html(&self, _html: &str) -> String {
+        String::new()
+    }
+
+    #[cfg(not(feature = "html"))]
+    pub fn wa_html(&self, _html: &str, _selector: &str) -> Vec<String> {
+        Vec::new()
+    }
+
+    #[cfg(not(feature = "html"))]
+    pub fn oruko_html(&self, _html: &str) -> String {
+        String::new()
     }
 }
 

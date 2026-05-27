@@ -83,7 +83,7 @@ jobs:
               fi
               
               # Fallback: Update version tag in any remaining release URLs
-              sed -i -E "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/|/releases/download/$TAG/|g" "$file"
+              sed -i -E "s|/releases/download/v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?/|/releases/download/$TAG/|g" "$file"
             fi
           done
           

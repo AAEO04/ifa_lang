@@ -81,7 +81,7 @@ ayanmo response = Otura.get("https://api.example.com/users");
 
 ti (response["status"] >= 200) {
     // Parse JSON response
-    ayanmo users = Ogbe.parse_json(response["body"]);
+    ayanmo users = response["body"];
     
     fun user ninu users {
         Irosu.fo("User: " + user["name"]);
@@ -99,9 +99,9 @@ ti (response["status"] >= 200) {
                 </div>
                 <pre><code>// Parallel data processing
 ayanmo numbers = Iwori.range(1, 1000);
-ayanmo sum = Osa.sum(numbers);
-ayanmo max = Osa.max(numbers);
-ayanmo min = Osa.min(numbers);
+ayanmo sum = Cpu.sum(numbers);
+ayanmo max = Cpu.max(numbers);
+ayanmo min = Cpu.min(numbers);
 
 Irosu.fo("Sum: " + sum);
 Irosu.fo("Max: " + max);

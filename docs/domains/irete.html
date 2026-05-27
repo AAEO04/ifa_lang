@@ -18,110 +18,42 @@
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">irete.ifa</span></div><div class="terminal-body">
         <header>
             <h1><span class="pattern">1101</span> Irete</h1>
-            <p style="color: var(--dim)">The Presser — Cryptography &amp; Compression</p>
+            <p style="color: var(--dim)">The Presser — Cryptography & Compression</p>
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/irete.rs</code>. Uses <code>ring</code> for audited crypto primitives.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>. Uses <code>ring</code> for audited crypto primitives.
         </div>
 
         <h2>Hashing</h2>
 
         <div class="method">
-            <h3>sha256</h3>
-            <div class="sig">Irete.sha256(data: Bytes) → Bytes</div>
+            <h3>hash / sha256</h3>
+            <div class="sig">Irete.hash(data: Bytes) → Bytes</div>
             <p>SHA-256 hash (32 bytes).</p>
         </div>
 
         <div class="method">
-            <h3>sha256_hex</h3>
-            <div class="sig">Irete.sha256_hex(data: Bytes) → Str</div>
-            <p>SHA-256 as 64-char hex string.</p>
-        </div>
-
-        <div class="method">
-            <h3>sha512</h3>
-            <div class="sig">Irete.sha512(data: Bytes) → Bytes</div>
-            <p>SHA-512 hash (64 bytes).</p>
-        </div>
-
-        <div class="method">
-            <h3>hmac_sha256</h3>
-            <div class="sig">Irete.hmac_sha256(key: Bytes, data: Bytes) → Bytes</div>
+            <h3>hmac / hmac_sha256</h3>
+            <div class="sig">Irete.hmac(key: Bytes, data: Bytes) → Bytes</div>
             <p>HMAC-SHA256 authentication.</p>
-        </div>
-
-        <div class="method">
-            <h3>hmac_verify</h3>
-            <div class="sig">Irete.hmac_verify(key: Bytes, data: Bytes, signature: Bytes) → Bool</div>
-            <p>Verify HMAC signature.</p>
-        </div>
-
-        <h2>Symmetric Encryption</h2>
-
-        <div class="method">
-            <h3>chacha20_encrypt</h3>
-            <div class="sig">Irete.chacha20_encrypt(key: Bytes, nonce: Bytes, data: Bytes) → Bytes</div>
-            <p>ChaCha20-Poly1305 authenticated encryption. Key must be 32 bytes, nonce 12 bytes.</p>
-        </div>
-
-        <div class="method">
-            <h3>chacha20_decrypt</h3>
-            <div class="sig">Irete.chacha20_decrypt(key: Bytes, nonce: Bytes, encrypted_data: Bytes) → Bytes</div>
-            <p>ChaCha20-Poly1305 decryption with integrity verification.</p>
-        </div>
-
-        <h2>Asymmetric (Ed25519)</h2>
-
-        <div class="method">
-            <h3>ed25519_generate</h3>
-            <div class="sig">Irete.ed25519_generate() → (Bytes, Bytes)</div>
-            <p>Generate Ed25519 keypair. Returns (private PKCS#8, public key).</p>
-        </div>
-
-        <div class="method">
-            <h3>ed25519_sign</h3>
-            <div class="sig">Irete.ed25519_sign(private_pkcs8: Bytes, message: Bytes) → Bytes</div>
-            <p>Sign message with Ed25519 private key.</p>
-        </div>
-
-        <div class="method">
-            <h3>ed25519_verify</h3>
-            <div class="sig">Irete.ed25519_verify(public_key: Bytes, message: Bytes, signature: Bytes) → Bool</div>
-            <p>Verify Ed25519 signature.</p>
-        </div>
-
-        <h2>Cryptographic Random</h2>
-
-        <div class="method">
-            <h3>random_bytes</h3>
-            <div class="sig">Irete.random_bytes(count: Int) → Bytes</div>
-            <p>Generate secure random bytes via system RNG.</p>
         </div>
 
         <h2>Encoding</h2>
 
         <div class="method">
-            <h3>base64_encode</h3>
-            <div class="sig">Irete.base64_encode(data: Bytes) → Str</div>
+            <h3>base64 / base64_encode</h3>
+            <div class="sig">Irete.base64(data: Bytes) → Str</div>
+            <p>Base64 encode data.</p>
         </div>
 
         <div class="method">
-            <h3>base64_decode</h3>
-            <div class="sig">Irete.base64_decode(data: Str) → Bytes</div>
+            <h3>decode / base64_decode</h3>
+            <div class="sig">Irete.decode(data: Str) → Bytes</div>
+            <p>Base64 decode string to bytes.</p>
         </div>
 
-        <div class="method">
-            <h3>hex_encode</h3>
-            <div class="sig">Irete.hex_encode(data: Bytes) → Str</div>
-        </div>
-
-        <div class="method">
-            <h3>hex_decode</h3>
-            <div class="sig">Irete.hex_decode(hex: Str) → Bytes</div>
-        </div>
-
-        <h2>Compression (<code>zstd</code> feature)</h2>
+        <h2>Compression</h2>
 
         <div class="method">
             <h3>funpo / compress</h3>
@@ -130,19 +62,93 @@
         </div>
 
         <div class="method">
-            <h3>tu / decompress</h3>
+            <h3>tu / decompress / free</h3>
             <div class="sig">Irete.tu(data: Bytes) → Bytes</div>
             <p>Decompress zstd data.</p>
         </div>
 
+        <h2>Advanced Hashing</h2>
+
         <div class="method">
-            <h3>iwon_funpo / compression_ratio</h3>
-            <div class="sig">Irete.iwon_funpo(original: Int, compressed: Int) → Float</div>
-            <p>Calculate compression ratio (0.0 = no compression, 0.5 = 50% smaller).</p>
+            <h3>sha512</h3>
+            <div class="sig">Irete.sha512(data: Bytes) → Bytes</div>
+            <p>SHA-512 hash (64 bytes).</p>
+        </div>
+
+        <div class="method">
+            <h3>hmac_verify</h3>
+            <div class="sig">Irete.hmac_verify(key: Bytes, data: Bytes, tag: Bytes) → Bool</div>
+            <p>Verify HMAC-SHA256 authentication tag.</p>
+        </div>
+
+        <h2>Encryption</h2>
+
+        <div class="method">
+            <h3>chacha20_encrypt / encrypt</h3>
+            <div class="sig">Irete.chacha20_encrypt(key: Bytes, nonce: Bytes, data: Bytes) → Bytes</div>
+            <p>ChaCha20 encryption. Key must be 32 bytes, nonce 12 bytes.</p>
+        </div>
+
+        <div class="method">
+            <h3>chacha20_decrypt / decrypt</h3>
+            <div class="sig">Irete.chacha20_decrypt(key: Bytes, nonce: Bytes, data: Bytes) → Bytes</div>
+            <p>ChaCha20 decryption.</p>
+        </div>
+
+        <h2>Signatures</h2>
+
+        <div class="method">
+            <h3>ed25519_generate / keypair</h3>
+            <div class="sig">Irete.ed25519_generate() → Map</div>
+            <p>Generate Ed25519 keypair. Returns {public, secret}.</p>
+        </div>
+
+        <div class="method">
+            <h3>ed25519_sign / sign</h3>
+            <div class="sig">Irete.ed25519_sign(secret: Bytes, data: Bytes) → Bytes</div>
+            <p>Sign data with Ed25519 secret key.</p>
+        </div>
+
+        <div class="method">
+            <h3>ed25519_verify / verify</h3>
+            <div class="sig">Irete.ed25519_verify(public: Bytes, data: Bytes, sig: Bytes) → Bool</div>
+            <p>Verify Ed25519 signature.</p>
+        </div>
+
+        <h2>Utilities</h2>
+
+        <div class="method">
+            <h3>sha256_hex</h3>
+            <div class="sig">Irete.sha256_hex(data: Bytes) → Str</div>
+            <p>SHA-256 hash returning lowercase hex string.</p>
+        </div>
+
+        <div class="method">
+            <h3>random_bytes / random</h3>
+            <div class="sig">Irete.random_bytes(len: Int) → Bytes</div>
+            <p>Generate cryptographically secure random bytes.</p>
+        </div>
+
+        <div class="method">
+            <h3>hex_encode / hex</h3>
+            <div class="sig">Irete.hex_encode(data: Bytes) → Str</div>
+            <p>Hex-encode bytes to string.</p>
+        </div>
+
+        <div class="method">
+            <h3>hex_decode / unhex</h3>
+            <div class="sig">Irete.hex_decode(s: Str) → Bytes</div>
+            <p>Decode hex string to bytes.</p>
+        </div>
+
+        <div class="method">
+            <h3>iwon_funpo / ratio</h3>
+            <div class="sig">Irete.iwon_funpo(data: Bytes, compressed: Bytes) → Float</div>
+            <p>Compute compression ratio.</p>
         </div>
 
         <footer>
-            <p><a href="../index.html">← Back to Documentation</a> · <a href="../../crates/ifa-docs/std-library.html">Corrected API Reference</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
         </footer>
     </div></div>
     <script src="../js/nav.js"></script>

@@ -38,8 +38,19 @@
             </div>
             <p style="margin: 0;">
                 Odi (the Odù of boundaries) governs filesystem operations and requires the
-                <code>backend</code> feature flag in your <code>Ifa.toml</code>.
+                <code>database</code> feature flag in your <code>Ifa.toml</code>.
             </p>
+        </div>
+
+        <h2>Opening Files</h2>
+        <div class="code-example">
+            <div class="code-header">
+                <span class="code-title">Open File Handle</span>
+            </div>
+            <pre class="code-yoruba"><code>// Open file (returns a handle)
+ayanmo handle = Odi.si("data.txt");
+// ... operations ...
+Odi.pa();                    // close the handle</code></pre>
         </div>
 
         <h2>Reading Files</h2>
@@ -76,20 +87,22 @@ Odi.fikun("log.txt", "New log entry");</code></pre>
                 <span class="code-title">File Checks</span>
             </div>
             <pre class="code-yoruba"><code>// Check if file exists
-ayanmo exists = Odi.wà("data.txt");  // otito or iro
+ayanmo exists = Odi.wa("data.txt");  // otito or iro
 
 // Delete file
-Odi.pa("temp.txt");</code></pre>
+Odi.pa_iwe("temp.txt");</code></pre>
         </div>
 
         <h2>What You Learned</h2>
         <ul style="margin-left: 2rem; color: var(--text-dim);">
+            <li>Opening: <code>Odi.si()</code></li>
             <li>Reading: <code>Odi.ka()</code></li>
             <li>Writing: <code>Odi.kọ()</code></li>
             <li>Appending: <code>Odi.fikun()</code></li>
-            <li>Existence: <code>Odi.wà()</code></li>
-            <li>Deletion: <code>Odi.pa()</code></li>
-            <li>Requires <code>backend</code> feature flag</li>
+            <li>Existence: <code>Odi.wa()</code></li>
+            <li>Closing: <code>Odi.pa()</code></li>
+            <li>Deletion: <code>Odi.pa_iwe()</code></li>
+            <li>Requires <code>database</code> feature flag</li>
         </ul>
 
         <div class="nav-buttons">

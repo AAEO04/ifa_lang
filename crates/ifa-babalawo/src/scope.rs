@@ -90,10 +90,7 @@ impl ScopeChain {
     }
 
     pub fn enter_scope(&mut self) {
-        let new_current = Scope::child(std::mem::replace(
-            &mut self.current,
-            Scope::new(),
-        ));
+        let new_current = Scope::child(std::mem::replace(&mut self.current, Scope::new()));
         self.current = new_current;
     }
 

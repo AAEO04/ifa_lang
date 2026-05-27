@@ -116,7 +116,12 @@ fn conformance_ast_defined_programs() {
                 panic!("VM error for {}: {e}", path.display());
             });
             let expected_value = parse_expected_value(&expect);
-            assert_eq!(got_val, expected_value, "wrong result for {}", path.display());
+            assert_eq!(
+                got_val,
+                expected_value,
+                "wrong result for {}",
+                path.display()
+            );
         }
     }
 }

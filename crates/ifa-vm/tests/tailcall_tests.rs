@@ -1,6 +1,6 @@
+use ifa_types::OpCode;
 use ifa_vm::compiler::Compiler;
 use ifa_vm::parser::parse;
-use ifa_types::OpCode;
 
 fn disassemble_opcodes(code: &[u8]) -> Vec<OpCode> {
     let mut out = Vec::new();
@@ -38,7 +38,7 @@ fn return_direct_call_emits_tailcall() {
 
     let ops = disassemble_opcodes(&bytecode.code);
     assert!(
-        ops.iter().any(|op| *op == OpCode::TailCall),
+        ops.contains(&OpCode::TailCall),
         "expected TailCall to be emitted somewhere; ops={ops:?}"
     );
 }

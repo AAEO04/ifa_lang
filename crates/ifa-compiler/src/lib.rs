@@ -9,12 +9,12 @@
 //! General `+` expressions remain source-compatible; this hardening pass isolates
 //! interpolation without forcing a language-wide string-operator redesign.
 
-use ifa_types::ast::*;
-use ifa_types::{Bytecode, OpCode};
-use ifa_types::bytecode::OponSize;
-use ifa_types::{IfaError, IfaResult};
 use ifa_types::OduDomain;
+use ifa_types::ast::*;
+use ifa_types::bytecode::OponSize;
 use ifa_types::methods::resolve_method_id;
+use ifa_types::{Bytecode, OpCode};
+use ifa_types::{IfaError, IfaResult};
 use std::collections::{HashMap, HashSet};
 
 /// Bytecode compiler - transforms AST to executable bytecode
@@ -34,6 +34,7 @@ pub struct Compiler {
 
 #[derive(Debug)]
 struct LoopContext {
+    #[allow(dead_code)]
     start_ip: usize,
     break_jumps: Vec<usize>,
     continue_jumps: Vec<usize>,
@@ -324,17 +325,17 @@ impl Compiler {
             }
 
             Statement::Update {
-                target,
-                op,
-                value,
-                ..
+                target, op, value, ..
             } => {
                 // 1. Load current value onto stack
                 match target {
                     AssignTarget::Variable(name) => {
                         if self.is_const_binding(name) {
                             self.emit(OpCode::PushStr);
-                            self.emit_string(&format!("Type mismatch: expected Mutable binding, got const {}", name));
+                            self.emit_string(&format!(
+                                "Type mismatch: expected Mutable binding, got const {}",
+                                name
+                            ));
                             self.emit(OpCode::Throw);
                             return Ok(());
                         }
@@ -432,7 +433,7 @@ impl Compiler {
                         // GetIndex -> [index, value]
                         // Op -> [index, new_value]
                         // But SetIndex expects [container, index, new_value]
-                        
+
                         // Let's redo Index Update stack dance:
                         // Load container [c]
                         // Compile index [c, i]
@@ -459,7 +460,10 @@ impl Compiler {
                         if self.is_const_binding(name) {
                             self.emit(OpCode::Pop);
                             self.emit(OpCode::PushStr);
-                            self.emit_string(&format!("Type mismatch: expected Mutable binding, got const {}", name));
+                            self.emit_string(&format!(
+                                "Type mismatch: expected Mutable binding, got const {}",
+                                name
+                            ));
                             self.emit(OpCode::Throw);
                             return Ok(());
                         }
@@ -567,7 +571,7 @@ impl Compiler {
                 self.emit(OpCode::Jump);
                 self.emit_u32(loop_start as u32);
 
-                let mut loop_ctx = self.loop_stack.pop().unwrap();
+                let loop_ctx = self.loop_stack.pop().unwrap();
                 for jump in loop_ctx.break_jumps {
                     self.patch_jump(jump);
                 }
@@ -671,7 +675,7 @@ impl Compiler {
                 self.emit(OpCode::Jump);
                 self.emit_u32(loop_start as u32);
 
-                let mut loop_ctx = self.loop_stack.pop().unwrap();
+                let loop_ctx = self.loop_stack.pop().unwrap();
                 for jump in loop_ctx.break_jumps {
                     self.patch_jump(jump);
                 }
@@ -695,8 +699,6 @@ impl Compiler {
                 for scope_list in &mut ctx.deferred {
                     scope_list.clear();
                 }
-                // Drop borrow before recursive compile_statement calls
-                drop(ctx);
                 for body in &deferred_bodies {
                     for s in body {
                         self.compile_statement(s)?;
@@ -743,6 +745,8 @@ impl Compiler {
             Statement::Ase { .. } => {
                 self.emit(OpCode::Halt);
             }
+
+            Statement::Abo { .. } => {}
 
             Statement::Expr { expr, .. } => {
                 self.compile_expression(expr)?;
@@ -1022,12 +1026,16 @@ impl Compiler {
                     None
                 };
                 self.begin_scope();
-                for s in try_body { self.compile_statement(s)?; }
+                for s in try_body {
+                    self.compile_statement(s)?;
+                }
                 self.end_scope()?;
                 self.emit(OpCode::TryEnd);
                 if let Some(fb) = finally_body {
                     self.begin_scope();
-                    for s in fb { self.compile_statement(s)?; }
+                    for s in fb {
+                        self.compile_statement(s)?;
+                    }
                     self.end_scope()?;
                 }
                 let skip_catch_jump = self.emit_jump(OpCode::Jump);
@@ -1040,7 +1048,9 @@ impl Compiler {
                 self.bytecode.code[try_begin_offset + 3] = bytes[3];
                 self.begin_scope();
                 self.declare_local(catch_var);
-                for s in catch_body { self.compile_statement(s)?; }
+                for s in catch_body {
+                    self.compile_statement(s)?;
+                }
                 self.end_scope()?;
                 if let Some(fb) = finally_body {
                     let finally_ip = self.current_offset() as u32;
@@ -1052,7 +1062,9 @@ impl Compiler {
                         self.bytecode.code[fb_off + 3] = bytes[3];
                     }
                     self.begin_scope();
-                    for s in fb { self.compile_statement(s)?; }
+                    for s in fb {
+                        self.compile_statement(s)?;
+                    }
                     self.end_scope()?;
                     self.emit(OpCode::FinallyEnd);
                 }
@@ -1062,7 +1074,9 @@ impl Compiler {
             // K1: break/continue — emit jump, offset resolved by loop context
             Statement::Break { .. } => {
                 if self.loop_stack.is_empty() {
-                    return Err(IfaError::Custom("Cannot use 'break' outside of a loop".into()));
+                    return Err(IfaError::Custom(
+                        "Cannot use 'break' outside of a loop".into(),
+                    ));
                 }
                 let jump = self.emit_jump(OpCode::Jump);
                 self.loop_stack.last_mut().unwrap().break_jumps.push(jump);
@@ -1070,15 +1084,25 @@ impl Compiler {
 
             Statement::Continue { .. } => {
                 if self.loop_stack.is_empty() {
-                    return Err(IfaError::Custom("Cannot use 'continue' outside of a loop".into()));
+                    return Err(IfaError::Custom(
+                        "Cannot use 'continue' outside of a loop".into(),
+                    ));
                 }
                 let jump = self.emit_jump(OpCode::Jump);
-                self.loop_stack.last_mut().unwrap().continue_jumps.push(jump);
+                self.loop_stack
+                    .last_mut()
+                    .unwrap()
+                    .continue_jumps
+                    .push(jump);
+            }
+
+            Statement::Throw { value, .. } => {
+                self.compile_expression(value)?;
+                self.emit(OpCode::Throw);
             }
         }
         Ok(())
     }
-
 
     fn compile_function(
         &mut self,
@@ -1228,45 +1252,51 @@ impl Compiler {
                 // Dup [c, c, i, i]
                 // GetIndex [c, c, i, v]
                 // Op [c, c, i, nv]
-                // Swap [c, c, nv, i]... wait. 
-                
+                // Swap [c, c, nv, i]... wait.
+
                 // Let's just push them twice, it's safer and less stack mental gymnastics.
                 // It's less efficient but guaranteed correct.
                 if let Some(slot) = self.resolve_local(name) {
                     self.emit(OpCode::LoadLocal);
-                    let s = slot as u16; self.emit_byte((s & 0xff) as u8); self.emit_byte((s >> 8) as u8);
-                } else { /* ... */ }
+                    let s = slot as u16;
+                    self.emit_byte((s & 0xff) as u8);
+                    self.emit_byte((s >> 8) as u8);
+                } else { /* ... */
+                }
                 self.compile_expression(index)?;
                 self.emit(OpCode::GetIndex); // [v]
                 self.compile_update_op(op, value)?; // [nv]
-                
+
                 // Now I need c and i again.
                 // Let's use the first set.
                 // Re-push c and i for real.
                 if let Some(slot) = self.resolve_local(name) {
                     self.emit(OpCode::LoadLocal);
-                    let s = slot as u16; self.emit_byte((s & 0xff) as u8); self.emit_byte((s >> 8) as u8);
-                } else { /* ... */ }
+                    let s = slot as u16;
+                    self.emit_byte((s & 0xff) as u8);
+                    self.emit_byte((s >> 8) as u8);
+                } else { /* ... */
+                }
                 self.compile_expression(index)?;
                 // [nv, c, i]
                 self.emit(OpCode::SetIndex); // [nv, c, i] -> SetIndex(c, i, nv) -> wait, OpCode::SetIndex pops [col, idx, val]
                 // So I need [c, i, nv]
                 // Swap2? No.
-                
+
                 // OK, final refined Index update Plan:
                 // 1. Load c, i
                 // 2. Load c, i
                 // 3. GetIndex -> [c, i, v]
                 // 4. Op -> [c, i, nv]
                 // 5. SetIndex -> []
-                
+
                 self.emit_load_target_var(name)?;
                 self.compile_expression(index)?;
-                
+
                 self.emit_load_target_var(name)?;
                 self.compile_expression(index)?;
                 self.emit(OpCode::GetIndex);
-                
+
                 self.compile_update_op(op, value)?;
                 self.emit(OpCode::SetIndex);
             }
@@ -1404,13 +1434,13 @@ impl Compiler {
                     // Emits: lhs, Dup, IsNull-equivalent (PushNull + Eq), JumpIfFalse(skip), Pop, rhs
                     // Uses existing opcodes: Dup + PushNull + Eq + JumpIfFalse + Pop
                     BinaryOperator::NullCoalesce => {
-                        self.compile_expression(left)?;           // [lhs]
-                        self.emit(OpCode::Dup);                   // [lhs, lhs]
-                        self.emit(OpCode::PushNull);              // [lhs, lhs, null]
-                        self.emit(OpCode::Eq);                    // [lhs, is_null]
+                        self.compile_expression(left)?; // [lhs]
+                        self.emit(OpCode::Dup); // [lhs, lhs]
+                        self.emit(OpCode::PushNull); // [lhs, lhs, null]
+                        self.emit(OpCode::Eq); // [lhs, is_null]
                         let skip_rhs = self.emit_jump(OpCode::JumpIfFalse); // [lhs] — jump if lhs != null
-                        self.emit(OpCode::Pop);                   // [] — discard null lhs
-                        self.compile_expression(right)?;          // [rhs]
+                        self.emit(OpCode::Pop); // [] — discard null lhs
+                        self.compile_expression(right)?; // [rhs]
                         self.patch_jump(skip_rhs);
                     }
                     _ => {
@@ -1645,7 +1675,10 @@ impl Compiler {
                 // Build a Param slice from the plain name vec.
                 let param_list: Vec<Param> = params
                     .iter()
-                    .map(|n| Param { name: n.clone(), type_hint: None })
+                    .map(|n| Param {
+                        name: n.clone(),
+                        type_hint: None,
+                    })
                     .collect();
                 self.compile_function(&anon_name, &param_list, body, false)?;
             }
@@ -1759,7 +1792,6 @@ fn domain_to_byte(domain: &OduDomain) -> u8 {
     })
 }
 
-
 /// Compile source code to bytecode
 pub fn compile(source: &str) -> IfaResult<Bytecode> {
     let program = ifa_parser::parse(source)?;
@@ -1767,28 +1799,6 @@ pub fn compile(source: &str) -> IfaResult<Bytecode> {
     compiler.compile(&program)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_compile_simple() {
-        let bytecode = compile("ayanmo x = 42;").unwrap();
-        assert!(!bytecode.code.is_empty());
-    }
-
-    #[test]
-    fn test_compile_arithmetic() {
-        let bytecode = compile("ayanmo x = 1 + 2 * 3;").unwrap();
-        assert!(!bytecode.code.is_empty());
-    }
-
-    #[test]
-    fn test_compile_print() {
-        let bytecode = compile(r#"Irosu.fo("Hello");"#).unwrap();
-        assert!(!bytecode.code.is_empty());
-    }
-}
 
 fn collect_exports(program: &Program) -> Vec<String> {
     let mut out = Vec::new();
@@ -1820,6 +1830,7 @@ fn collect_exports(program: &Program) -> Vec<String> {
     out
 }
 
+#[allow(clippy::collapsible_if)]
 fn fold_expression(expr: &Expression) -> Expression {
     match expr {
         Expression::BinaryOp { left, op, right } => {
@@ -1827,13 +1838,23 @@ fn fold_expression(expr: &Expression) -> Expression {
             let right_folded = fold_expression(right);
             match (left_folded, op, right_folded) {
                 // Arithmetic
-                (Expression::Int(l), BinaryOperator::Add, Expression::Int(r)) => Expression::Int(l + r),
-                (Expression::Int(l), BinaryOperator::Sub, Expression::Int(r)) => Expression::Int(l - r),
-                (Expression::Int(l), BinaryOperator::Mul, Expression::Int(r)) => Expression::Int(l * r),
-                (Expression::Int(l), BinaryOperator::Div, Expression::Int(r)) if r != 0 => Expression::Int(l / r),
-                (Expression::Int(l), BinaryOperator::Mod, Expression::Int(r)) if r != 0 => Expression::Int(l % r),
+                (Expression::Int(l), BinaryOperator::Add, Expression::Int(r)) => {
+                    Expression::Int(l + r)
+                }
+                (Expression::Int(l), BinaryOperator::Sub, Expression::Int(r)) => {
+                    Expression::Int(l - r)
+                }
+                (Expression::Int(l), BinaryOperator::Mul, Expression::Int(r)) => {
+                    Expression::Int(l * r)
+                }
+                (Expression::Int(l), BinaryOperator::Div, Expression::Int(r)) if r != 0 => {
+                    Expression::Int(l / r)
+                }
+                (Expression::Int(l), BinaryOperator::Mod, Expression::Int(r)) if r != 0 => {
+                    Expression::Int(l % r)
+                }
                 (Expression::Int(l), BinaryOperator::Power, Expression::Int(r)) => {
-                    if r >= 0 && r <= 30 {
+                    if (0..=30).contains(&r) {
                         Expression::Int(l.pow(r as u32))
                     } else {
                         Expression::BinaryOp {
@@ -1843,21 +1864,45 @@ fn fold_expression(expr: &Expression) -> Expression {
                         }
                     }
                 }
-                
-                (Expression::Float(l), BinaryOperator::Add, Expression::Float(r)) => Expression::Float(l + r),
-                (Expression::Float(l), BinaryOperator::Sub, Expression::Float(r)) => Expression::Float(l - r),
-                (Expression::Float(l), BinaryOperator::Mul, Expression::Float(r)) => Expression::Float(l * r),
-                (Expression::Float(l), BinaryOperator::Div, Expression::Float(r)) => Expression::Float(l / r),
-                
+
+                (Expression::Float(l), BinaryOperator::Add, Expression::Float(r)) => {
+                    Expression::Float(l + r)
+                }
+                (Expression::Float(l), BinaryOperator::Sub, Expression::Float(r)) => {
+                    Expression::Float(l - r)
+                }
+                (Expression::Float(l), BinaryOperator::Mul, Expression::Float(r)) => {
+                    Expression::Float(l * r)
+                }
+                (Expression::Float(l), BinaryOperator::Div, Expression::Float(r)) => {
+                    Expression::Float(l / r)
+                }
+
                 // Mixing Int and Float (coerce to Float)
-                (Expression::Int(l), BinaryOperator::Add, Expression::Float(r)) => Expression::Float((l as f64) + r),
-                (Expression::Float(l), BinaryOperator::Add, Expression::Int(r)) => Expression::Float(l + (r as f64)),
-                (Expression::Int(l), BinaryOperator::Sub, Expression::Float(r)) => Expression::Float((l as f64) - r),
-                (Expression::Float(l), BinaryOperator::Sub, Expression::Int(r)) => Expression::Float(l - (r as f64)),
-                (Expression::Int(l), BinaryOperator::Mul, Expression::Float(r)) => Expression::Float((l as f64) * r),
-                (Expression::Float(l), BinaryOperator::Mul, Expression::Int(r)) => Expression::Float(l * (r as f64)),
-                (Expression::Int(l), BinaryOperator::Div, Expression::Float(r)) => Expression::Float((l as f64) / r),
-                (Expression::Float(l), BinaryOperator::Div, Expression::Int(r)) => Expression::Float(l / (r as f64)),
+                (Expression::Int(l), BinaryOperator::Add, Expression::Float(r)) => {
+                    Expression::Float((l as f64) + r)
+                }
+                (Expression::Float(l), BinaryOperator::Add, Expression::Int(r)) => {
+                    Expression::Float(l + (r as f64))
+                }
+                (Expression::Int(l), BinaryOperator::Sub, Expression::Float(r)) => {
+                    Expression::Float((l as f64) - r)
+                }
+                (Expression::Float(l), BinaryOperator::Sub, Expression::Int(r)) => {
+                    Expression::Float(l - (r as f64))
+                }
+                (Expression::Int(l), BinaryOperator::Mul, Expression::Float(r)) => {
+                    Expression::Float((l as f64) * r)
+                }
+                (Expression::Float(l), BinaryOperator::Mul, Expression::Int(r)) => {
+                    Expression::Float(l * (r as f64))
+                }
+                (Expression::Int(l), BinaryOperator::Div, Expression::Float(r)) => {
+                    Expression::Float((l as f64) / r)
+                }
+                (Expression::Float(l), BinaryOperator::Div, Expression::Int(r)) => {
+                    Expression::Float(l / (r as f64))
+                }
 
                 // String concatenation
                 (Expression::String(l), BinaryOperator::Add, Expression::String(r)) => {
@@ -1865,23 +1910,51 @@ fn fold_expression(expr: &Expression) -> Expression {
                 }
 
                 // Comparison
-                (Expression::Int(l), BinaryOperator::Eq, Expression::Int(r)) => Expression::Bool(l == r),
-                (Expression::Int(l), BinaryOperator::NotEq, Expression::Int(r)) => Expression::Bool(l != r),
-                (Expression::Int(l), BinaryOperator::Lt, Expression::Int(r)) => Expression::Bool(l < r),
-                (Expression::Int(l), BinaryOperator::LtEq, Expression::Int(r)) => Expression::Bool(l <= r),
-                (Expression::Int(l), BinaryOperator::Gt, Expression::Int(r)) => Expression::Bool(l > r),
-                (Expression::Int(l), BinaryOperator::GtEq, Expression::Int(r)) => Expression::Bool(l >= r),
+                (Expression::Int(l), BinaryOperator::Eq, Expression::Int(r)) => {
+                    Expression::Bool(l == r)
+                }
+                (Expression::Int(l), BinaryOperator::NotEq, Expression::Int(r)) => {
+                    Expression::Bool(l != r)
+                }
+                (Expression::Int(l), BinaryOperator::Lt, Expression::Int(r)) => {
+                    Expression::Bool(l < r)
+                }
+                (Expression::Int(l), BinaryOperator::LtEq, Expression::Int(r)) => {
+                    Expression::Bool(l <= r)
+                }
+                (Expression::Int(l), BinaryOperator::Gt, Expression::Int(r)) => {
+                    Expression::Bool(l > r)
+                }
+                (Expression::Int(l), BinaryOperator::GtEq, Expression::Int(r)) => {
+                    Expression::Bool(l >= r)
+                }
 
-                (Expression::Float(l), BinaryOperator::Eq, Expression::Float(r)) => Expression::Bool(l == r),
-                (Expression::Float(l), BinaryOperator::NotEq, Expression::Float(r)) => Expression::Bool(l != r),
-                (Expression::Float(l), BinaryOperator::Lt, Expression::Float(r)) => Expression::Bool(l < r),
-                (Expression::Float(l), BinaryOperator::LtEq, Expression::Float(r)) => Expression::Bool(l <= r),
-                (Expression::Float(l), BinaryOperator::Gt, Expression::Float(r)) => Expression::Bool(l > r),
-                (Expression::Float(l), BinaryOperator::GtEq, Expression::Float(r)) => Expression::Bool(l >= r),
+                (Expression::Float(l), BinaryOperator::Eq, Expression::Float(r)) => {
+                    Expression::Bool(l == r)
+                }
+                (Expression::Float(l), BinaryOperator::NotEq, Expression::Float(r)) => {
+                    Expression::Bool(l != r)
+                }
+                (Expression::Float(l), BinaryOperator::Lt, Expression::Float(r)) => {
+                    Expression::Bool(l < r)
+                }
+                (Expression::Float(l), BinaryOperator::LtEq, Expression::Float(r)) => {
+                    Expression::Bool(l <= r)
+                }
+                (Expression::Float(l), BinaryOperator::Gt, Expression::Float(r)) => {
+                    Expression::Bool(l > r)
+                }
+                (Expression::Float(l), BinaryOperator::GtEq, Expression::Float(r)) => {
+                    Expression::Bool(l >= r)
+                }
 
                 // Logical
-                (Expression::Bool(l), BinaryOperator::And, Expression::Bool(r)) => Expression::Bool(l && r),
-                (Expression::Bool(l), BinaryOperator::Or, Expression::Bool(r)) => Expression::Bool(l || r),
+                (Expression::Bool(l), BinaryOperator::And, Expression::Bool(r)) => {
+                    Expression::Bool(l && r)
+                }
+                (Expression::Bool(l), BinaryOperator::Or, Expression::Bool(r)) => {
+                    Expression::Bool(l || r)
+                }
 
                 (l_f, op, r_f) => Expression::BinaryOp {
                     left: Box::new(l_f),
@@ -1905,21 +1978,31 @@ fn fold_expression(expr: &Expression) -> Expression {
         Expression::OduCall(call) => {
             let folded_args: Vec<Expression> = call.args.iter().map(fold_expression).collect();
             let all_consts = folded_args.iter().all(|a| {
-                matches!(a, Expression::Int(_) | Expression::Float(_) | Expression::String(_) | Expression::Bool(_))
+                matches!(
+                    a,
+                    Expression::Int(_)
+                        | Expression::Float(_)
+                        | Expression::String(_)
+                        | Expression::Bool(_)
+                )
             });
 
             if all_consts {
                 // E6: Constant Divination
                 match (call.domain, call.method.as_str()) {
-                    (ifa_types::OduDomain::Obara, "fikun") | (ifa_types::OduDomain::Obara, "add") => {
+                    (ifa_types::OduDomain::Obara, "fikun")
+                    | (ifa_types::OduDomain::Obara, "add") => {
                         let mut sum_int = 0;
                         let mut sum_float = 0.0;
                         let mut is_float = false;
                         for arg in &folded_args {
                             match arg {
                                 Expression::Int(n) => {
-                                    if is_float { sum_float += *n as f64; }
-                                    else { sum_int += n; }
+                                    if is_float {
+                                        sum_float += *n as f64;
+                                    } else {
+                                        sum_int += n;
+                                    }
                                 }
                                 Expression::Float(f) => {
                                     if !is_float {
@@ -1929,28 +2012,38 @@ fn fold_expression(expr: &Expression) -> Expression {
                                         sum_float += f;
                                     }
                                 }
-                                _ => return Expression::OduCall(ifa_types::ast::OduCall {
-                                    domain: call.domain,
-                                    method: call.method.clone(),
-                                    args: folded_args,
-                                    is_optional: call.is_optional,
-                                    resolved_domain: call.resolved_domain,
-                                    resolved_method_id: call.resolved_method_id,
-                                    span: call.span.clone(),
-                                })
+                                _ => {
+                                    return Expression::OduCall(ifa_types::ast::OduCall {
+                                        domain: call.domain,
+                                        method: call.method.clone(),
+                                        args: folded_args,
+                                        is_optional: call.is_optional,
+                                        resolved_domain: call.resolved_domain,
+                                        resolved_method_id: call.resolved_method_id,
+                                        span: call.span.clone(),
+                                    });
+                                }
                             }
                         }
-                        return if is_float { Expression::Float(sum_float) } else { Expression::Int(sum_int) };
+                        return if is_float {
+                            Expression::Float(sum_float)
+                        } else {
+                            Expression::Int(sum_int)
+                        };
                     }
-                    (ifa_types::OduDomain::Obara, "isodipupo") | (ifa_types::OduDomain::Obara, "mul") => {
+                    (ifa_types::OduDomain::Obara, "isodipupo")
+                    | (ifa_types::OduDomain::Obara, "mul") => {
                         let mut prod_int = 1;
                         let mut prod_float = 1.0;
                         let mut is_float = false;
                         for arg in &folded_args {
                             match arg {
                                 Expression::Int(n) => {
-                                    if is_float { prod_float *= *n as f64; }
-                                    else { prod_int *= n; }
+                                    if is_float {
+                                        prod_float *= *n as f64;
+                                    } else {
+                                        prod_int *= n;
+                                    }
                                 }
                                 Expression::Float(f) => {
                                     if !is_float {
@@ -1960,18 +2053,24 @@ fn fold_expression(expr: &Expression) -> Expression {
                                         prod_float *= f;
                                     }
                                 }
-                                _ => return Expression::OduCall(ifa_types::ast::OduCall {
-                                    domain: call.domain,
-                                    method: call.method.clone(),
-                                    args: folded_args,
-                                    is_optional: call.is_optional,
-                                    resolved_domain: call.resolved_domain,
-                                    resolved_method_id: call.resolved_method_id,
-                                    span: call.span.clone(),
-                                })
+                                _ => {
+                                    return Expression::OduCall(ifa_types::ast::OduCall {
+                                        domain: call.domain,
+                                        method: call.method.clone(),
+                                        args: folded_args,
+                                        is_optional: call.is_optional,
+                                        resolved_domain: call.resolved_domain,
+                                        resolved_method_id: call.resolved_method_id,
+                                        span: call.span.clone(),
+                                    });
+                                }
                             }
                         }
-                        return if is_float { Expression::Float(prod_float) } else { Expression::Int(prod_int) };
+                        return if is_float {
+                            Expression::Float(prod_float)
+                        } else {
+                            Expression::Int(prod_int)
+                        };
                     }
                     (ifa_types::OduDomain::Ika, "gigun") | (ifa_types::OduDomain::Ika, "len") => {
                         if folded_args.len() == 1 {
@@ -1997,7 +2096,7 @@ fn fold_expression(expr: &Expression) -> Expression {
                     _ => {}
                 }
             }
-            
+
             Expression::OduCall(ifa_types::ast::OduCall {
                 domain: call.domain,
                 method: call.method.clone(),
@@ -2028,42 +2127,44 @@ fn fold_expression(expr: &Expression) -> Expression {
                             combined_parts.push(InterpolatedPart::Literal(s));
                         }
                     }
-                    InterpolatedPart::Expression(expr) => {
-                        match *expr {
-                            Expression::String(s) => {
-                                if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut() {
-                                    last.push_str(&s);
-                                } else {
-                                    combined_parts.push(InterpolatedPart::Literal(s));
-                                }
+                    InterpolatedPart::Expression(expr) => match *expr {
+                        Expression::String(s) => {
+                            if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut()
+                            {
+                                last.push_str(&s);
+                            } else {
+                                combined_parts.push(InterpolatedPart::Literal(s));
                             }
-                            Expression::Int(n) => {
-                                let s = n.to_string();
-                                if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut() {
-                                    last.push_str(&s);
-                                } else {
-                                    combined_parts.push(InterpolatedPart::Literal(s));
-                                }
-                            }
-                            Expression::Float(f) => {
-                                let s = f.to_string();
-                                if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut() {
-                                    last.push_str(&s);
-                                } else {
-                                    combined_parts.push(InterpolatedPart::Literal(s));
-                                }
-                            }
-                            Expression::Bool(b) => {
-                                let s = b.to_string();
-                                if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut() {
-                                    last.push_str(&s);
-                                } else {
-                                    combined_parts.push(InterpolatedPart::Literal(s));
-                                }
-                            }
-                            _ => combined_parts.push(InterpolatedPart::Expression(expr)),
                         }
-                    }
+                        Expression::Int(n) => {
+                            let s = n.to_string();
+                            if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut()
+                            {
+                                last.push_str(&s);
+                            } else {
+                                combined_parts.push(InterpolatedPart::Literal(s));
+                            }
+                        }
+                        Expression::Float(f) => {
+                            let s = f.to_string();
+                            if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut()
+                            {
+                                last.push_str(&s);
+                            } else {
+                                combined_parts.push(InterpolatedPart::Literal(s));
+                            }
+                        }
+                        Expression::Bool(b) => {
+                            let s = b.to_string();
+                            if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut()
+                            {
+                                last.push_str(&s);
+                            } else {
+                                combined_parts.push(InterpolatedPart::Literal(s));
+                            }
+                        }
+                        _ => combined_parts.push(InterpolatedPart::Expression(expr)),
+                    },
                 }
             }
             if combined_parts.len() == 1 {
@@ -2071,8 +2172,33 @@ fn fold_expression(expr: &Expression) -> Expression {
                     return Expression::String(s.clone());
                 }
             }
-            Expression::InterpolatedString { parts: combined_parts }
+            Expression::InterpolatedString {
+                parts: combined_parts,
+            }
         }
         _ => expr.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compile_simple() {
+        let bytecode = compile("ayanmo x = 42;").unwrap();
+        assert!(!bytecode.code.is_empty());
+    }
+
+    #[test]
+    fn test_compile_arithmetic() {
+        let bytecode = compile("ayanmo x = 1 + 2 * 3;").unwrap();
+        assert!(!bytecode.code.is_empty());
+    }
+
+    #[test]
+    fn test_compile_print() {
+        let bytecode = compile(r#"Irosu.fo("Hello");"#).unwrap();
+        assert!(!bytecode.code.is_empty());
     }
 }

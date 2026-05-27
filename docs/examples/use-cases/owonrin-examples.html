@@ -30,7 +30,7 @@ ese roll_dice(count, sides) {
 
     nigba (i < count) {
         // pese(sides) returns 0..sides-1, so add 1
-        ayanmo roll = Owonrin.pese(sides) + 1;
+        ayanmo roll = Owonrin.pese(1, sides);
         results = Ogunda.fi(results, roll);
         i = i + 1;
     }
@@ -55,7 +55,7 @@ Irosu.fo("Total: " + total);</code></pre>
         <pre><code>// coin.ifa - Simulate coin flips
 
 ese flip_coin() {
-    ayanmo result = Owonrin.pese(2); // 0 or 1
+    ayanmo result = Owonrin.pese(0, 1); // 0 or 1
     ti (result == 0) {
         pada "Heads";
     }
@@ -94,7 +94,7 @@ ese generate_password(length) {
     ayanmo char_count = Ika.len(CHARS);
 
     nigba (i < length) {
-        ayanmo idx = Owonrin.pese(char_count);
+        ayanmo idx = Owonrin.pese(0, Ika.len(CHARS));
         // Use Ika.ge (slice) to extract one char
         password = Ika.so(password, Ika.ge(CHARS, idx, idx + 1));
         i = i + 1;

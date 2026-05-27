@@ -24,6 +24,7 @@ impl Default for FormatterConfig {
 }
 
 /// Format Ifá-Lang source code
+#[allow(clippy::collapsible_if)]
 pub fn format(source: &str, config: FormatterConfig) -> String {
     let tokens = tokenize(source);
     let mut formatted = String::with_capacity(source.len() * 2);

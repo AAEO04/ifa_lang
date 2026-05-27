@@ -18,11 +18,11 @@
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">ose.ifa</span></div><div class="terminal-body">
         <header>
             <h1><span class="pattern">1010</span> Ose</h1>
-            <p style="color: var(--dim)">The Painter — Terminal UI (ratatui)</p>
+            <p style="color: var(--dim)">The Painter — Terminal UI</p>
         </header>
 
         <div class="note">
-            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-std/src/ose.rs</code>. Requires <code>full</code> feature (ratatui + crossterm). In minimal mode, all methods return a "TUI not compiled" error.
+            <strong>Source of truth note:</strong> Verified against <code>crates/ifa-types/src/odu_metadata.rs</code>. Requires <code>tui</code> feature.
         </div>
 
         <h2>Methods</h2>
@@ -30,54 +30,94 @@
         <div class="method">
             <h3>bere / init</h3>
             <div class="sig">Ose.bere() → Resource</div>
-            <p>Initialize terminal UI. Enables raw mode and switches to alternate screen. Returns a terminal resource token.</p>
+            <p>Initialize terminal UI. Enables raw mode and switches to alternate screen.</p>
             <pre><code>ayanmo tty = Ose.bere();</code></pre>
         </div>
 
         <div class="method">
             <h3>pari / end</h3>
             <div class="sig">Ose.pari(tty: Resource)</div>
-            <p>Restore terminal: disable raw mode, leave alternate screen, show cursor. Frees the terminal resource.</p>
-        </div>
-
-        <div class="method">
-            <h3>ya / draw</h3>
-            <div class="sig">Ose.ya(tty: Resource, ui_map: Map)</div>
-            <p>Draw UI from a declarative map. Supports widget types:</p>
-            <pre><code>Ose.ya(tty, {
-    "type": "apoti",       // Box with border
-    "title": "Header",
-    "text": "Content"
-});
-
-Ose.ya(tty, {
-    "type": "ipinro",      // Plain text
-    "text": "Hello"
-});</code></pre>
-        </div>
-
-        <div class="method">
-            <h3>gboran / listen</h3>
-            <div class="sig">Ose.gboran() → Str?</div>
-            <p>Poll for key press (non-blocking). Returns key as string or null.</p>
-            <pre><code>ayanmo key = Ose.gboran();</code></pre>
+            <p>Restore terminal: disable raw mode, leave alternate screen.</p>
         </div>
 
         <div class="method">
             <h3>gbile / read_key</h3>
             <div class="sig">Ose.gbile() → Str</div>
-            <p>Blocking key read. Waits for a key press and returns it as string.</p>
-            <pre><code>ayanmo choice = Ose.gbile();</code></pre>
+            <p>Blocking key read. Waits for a key press.</p>
         </div>
 
-        <h2>Supported Keys</h2>
-        <ul>
-            <li>Character keys → the character as string</li>
-            <li><code>Enter</code>, <code>Esc</code>, <code>Up</code>, <code>Down</code>, <code>Left</code>, <code>Right</code>, <code>Backspace</code></li>
-        </ul>
+        <div class="method">
+            <h3>apoti / box</h3>
+            <div class="sig">Ose.apoti(tty: Resource, title: Str, content: Str)</div>
+            <p>Draw a box with border and title.</p>
+        </div>
+
+        <div class="method">
+            <h3>ipinro / section</h3>
+            <div class="sig">Ose.ipinro(tty: Resource, title: Str, items: List(Str))</div>
+            <p>Draw a section with items.</p>
+        </div>
+
+        <div class="method">
+            <h3>ya / draw</h3>
+            <div class="sig">Ose.ya(tty: Resource, ui_map: Map)</div>
+            <p>Draw UI from a declarative map.</p>
+        </div>
+
+        <div class="method">
+            <h3>nu / clear</h3>
+            <div class="sig">Ose.nu(tty: Resource)</div>
+            <p>Clear the terminal screen.</p>
+        </div>
+
+        <div class="method">
+            <h3>wo / debug</h3>
+            <div class="sig">Ose.wo(label: Str, value: Any)</div>
+            <p>Debug-print a value to stderr.</p>
+        </div>
+
+        <h2>Input & Events</h2>
+
+        <div class="method">
+            <h3>gboran / listen</h3>
+            <div class="sig">Ose.gboran(tty: Resource) → Str</div>
+            <p>Listen for a single key press event. Returns key name.</p>
+        </div>
+
+        <div class="method">
+            <h3>emi / ẹmí / mouse_on</h3>
+            <div class="sig">Ose.emi(tty: Resource)</div>
+            <p>Enable mouse capture in terminal.</p>
+        </div>
+
+        <div class="method">
+            <h3>pari_emi / pari_ẹmí / mouse_off</h3>
+            <div class="sig">Ose.pari_emi(tty: Resource)</div>
+            <p>Disable mouse capture in terminal.</p>
+        </div>
+
+        <h2>Layout & Info</h2>
+
+        <div class="method">
+            <h3>ipile / layout</h3>
+            <div class="sig">Ose.ipile(tty: Resource, layout_map: Map)</div>
+            <p>Calculate and apply a layout from a declarative map.</p>
+        </div>
+
+        <div class="method">
+            <h3>iwon / iwọn / size</h3>
+            <div class="sig">Ose.iwon() → Map</div>
+            <p>Get terminal size. Returns {width: Int, height: Int}.</p>
+        </div>
+
+        <div class="method">
+            <h3>duro / wait</h3>
+            <div class="sig">Ose.duro(millis: Int)</div>
+            <p>Non-blocking wait for specified milliseconds.</p>
+        </div>
 
         <footer>
-            <p><a href="../index.html">← Back to Documentation</a> · <a href="../../crates/ifa-docs/std-library.html">Corrected API Reference</a></p>
+            <p><a href="../index.html">← Back to Documentation</a></p>
         </footer>
     </div></div>
     <script src="../js/nav.js"></script>

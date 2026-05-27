@@ -540,7 +540,7 @@ abo;           // at top of file
 
 ---
 
-## 5. Domain Wiring (Stream F)
+
 
 ---
 
@@ -554,7 +554,7 @@ abo;           // at top of file
 
 | ID | Name | Purpose | Priority |
 |----|------|---------|----------|
-| 14 | Eta-Ogunda | Infrastructure (network, storage, config) | Medium |
+
 | 15 | Ofun Nje | Security / permissions supplement | Medium |
 | 16 | Coop | Cooperative concurrency, actors | Low |
 | 17 | Opele | Extended random / divination chain | Low |

@@ -461,6 +461,7 @@ impl TaskGraph {
 
                 // Decrease in-degree of dependent tasks
                 for (other_id, deps) in &dependencies {
+                    #[allow(clippy::collapsible_if)]
                     if deps.contains(&result.id)
                         && !completed.contains(other_id)
                         && !failed.contains(other_id)

@@ -19,7 +19,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "ifa")]
 #[command(author = "Ifá-Lang Contributors")]
-#[command(version = "1.2.2")]
+#[command(version = "1.3.0")]
 #[command(about = "Ifá-Lang - The Yoruba Programming Language", long_about = None)]
 #[command(propagate_version = true)]
 struct Cli {
@@ -343,12 +343,15 @@ enum OjaCommands {
     Publish,
 }
 
-fn run_babalawo(program: &Program, filepath: &std::path::Path) -> bool {
+fn run_babalawo(
+    program: &Program,
+    filepath: &std::path::Path,
+) -> Option<ifa_babalawo::LintContext> {
     let filename = filepath.display().to_string();
     let config = ifa_babalawo::BabalawoConfig {
         include_wisdom: true,
     };
-    let baba = ifa_babalawo::check_program_with_config(program, &filename, config);
+    let (baba, ctx) = ifa_babalawo::analyze_program(program, &filename, config);
     if baba.error_count() > 0 || baba.warning_count() > 0 {
         eprintln!("{}", baba.format());
     }
@@ -358,9 +361,9 @@ fn run_babalawo(program: &Program, filepath: &std::path::Path) -> bool {
             filename,
             baba.error_count()
         );
-        return false;
+        return None;
     }
-    true
+    Some(ctx)
 }
 
 fn cli_args_value(args: Vec<String>) -> IfaValue {
@@ -375,7 +378,8 @@ fn main() -> Result<()> {
     if args.len() >= 2 && !args[1].starts_with('-') {
         let first_arg = args[1].as_str();
         let subcommands = [
-            "run", "runb", "bytecode", "check", "doc", "fmt", "test", "lsp", "oja", "deploy", "help"
+            "run", "runb", "bytecode", "check", "doc", "fmt", "test", "lsp", "oja", "deploy",
+            "help",
         ];
         if !subcommands.contains(&first_arg) {
             args.insert(1, "run".to_string());
@@ -401,7 +405,7 @@ fn main() -> Result<()> {
         } => {
             use ifa_sandbox::{CapabilitySet, Ofun};
 
-            println!("Ifa-Lang Interpreter v1.2.2");
+            println!("Ifa-Lang Interpreter v1.3.0");
             println!();
             println!("Running: {}", file.display());
 
@@ -487,7 +491,7 @@ fn main() -> Result<()> {
                 parse(&source).map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
 
             // 5-Layer Integrity Defence (Babalawo Static Analysis)
-            if !run_babalawo(&program, &file) {
+            if run_babalawo(&program, &file).is_none() {
                 std::process::exit(1);
             }
 
@@ -573,7 +577,7 @@ fn main() -> Result<()> {
                 .map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
 
             // 5-Layer Integrity Defence
-            if !run_babalawo(&program, &file) {
+            if run_babalawo(&program, &file).is_none() {
                 std::process::exit(1);
             }
 
@@ -627,37 +631,66 @@ fn main() -> Result<()> {
             let program = ifa_vm::parse(&source).map_err(|e| {
                 color_eyre::eyre::eyre!("Failed to parse source for verification: {}", e)
             })?;
-            if !run_babalawo(&program, &source_candidate) {
-                return Err(color_eyre::eyre::eyre!(
-                    "Babalawo verification failed for {}",
-                    source_candidate.display()
-                ));
-            }
+            let _lint_ctx = run_babalawo(&program, &source_candidate).unwrap_or_else(|| {
+                std::process::exit(1);
+            });
 
             // Configure Capabilities
             let mut caps = CapabilitySet::new();
 
             if allow_all {
                 println!("Warning: Running bytecode with all permissions allowed!");
-                caps.grant(Ofun::ReadFiles { root: PathBuf::from("/") });
-                caps.grant(Ofun::ReadFiles { root: PathBuf::from("C:\\") });
-                caps.grant(Ofun::WriteFiles { root: PathBuf::from("/") });
-                caps.grant(Ofun::WriteFiles { root: PathBuf::from("C:\\") });
-                caps.grant(Ofun::Network { domains: vec!["*".to_string()] });
-                caps.grant(Ofun::Environment { keys: vec!["*".to_string()] });
+                caps.grant(Ofun::ReadFiles {
+                    root: PathBuf::from("/"),
+                });
+                caps.grant(Ofun::ReadFiles {
+                    root: PathBuf::from("C:\\"),
+                });
+                caps.grant(Ofun::WriteFiles {
+                    root: PathBuf::from("/"),
+                });
+                caps.grant(Ofun::WriteFiles {
+                    root: PathBuf::from("C:\\"),
+                });
+                caps.grant(Ofun::Network {
+                    domains: vec!["*".to_string()],
+                });
+                caps.grant(Ofun::Environment {
+                    keys: vec!["*".to_string()],
+                });
                 caps.grant(Ofun::Time);
                 caps.grant(Ofun::Random);
                 caps.grant(Ofun::Stdio);
             } else {
                 caps.grant(Ofun::Stdio); // Default allow stdio
-                for path in allow_read { caps.grant(Ofun::ReadFiles { root: path }); }
-                for path in allow_write { caps.grant(Ofun::WriteFiles { root: path }); }
-                if !allow_net.is_empty() { caps.grant(Ofun::Network { domains: allow_net }); }
-                if !allow_env.is_empty() { caps.grant(Ofun::Environment { keys: allow_env }); }
-                if allow_time { caps.grant(Ofun::Time); }
-                if allow_random { caps.grant(Ofun::Random); }
-                if allow_js { caps.grant(Ofun::Bridge { language: "js".into() }); }
-                if allow_python { caps.grant(Ofun::Bridge { language: "python".into() }); }
+                for path in allow_read {
+                    caps.grant(Ofun::ReadFiles { root: path });
+                }
+                for path in allow_write {
+                    caps.grant(Ofun::WriteFiles { root: path });
+                }
+                if !allow_net.is_empty() {
+                    caps.grant(Ofun::Network { domains: allow_net });
+                }
+                if !allow_env.is_empty() {
+                    caps.grant(Ofun::Environment { keys: allow_env });
+                }
+                if allow_time {
+                    caps.grant(Ofun::Time);
+                }
+                if allow_random {
+                    caps.grant(Ofun::Random);
+                }
+                if allow_js {
+                    caps.grant(Ofun::Bridge {
+                        language: "js".into(),
+                    });
+                }
+                if allow_python {
+                    caps.grant(Ofun::Bridge {
+                        language: "python".into(),
+                    });
+                }
             }
 
             // Read bytecode
@@ -731,9 +764,10 @@ fn main() -> Result<()> {
                 .map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
 
             // 5-Layer Integrity Defence
-            if !run_babalawo(&program, &file) {
-                std::process::exit(1);
-            }
+            let lint_ctx = match run_babalawo(&program, &file) {
+                Some(ctx) => ctx,
+                None => std::process::exit(1),
+            };
 
             println!("   🔄 Transpiling to Rust...");
 
@@ -752,8 +786,13 @@ fn main() -> Result<()> {
 
                 println!("   📁 Generating Cargo project: {}", project_dir.display());
 
-                let config = ifa_vm::generate_project(&program, &project_name, &project_dir)
-                    .map_err(|e| color_eyre::eyre::eyre!("Failed to generate project: {}", e))?;
+                let config = ifa_vm::generate_project_with_types(
+                    &program,
+                    &project_name,
+                    &project_dir,
+                    lint_ctx.var_types.clone(),
+                )
+                .map_err(|e| color_eyre::eyre::eyre!("Failed to generate project: {}", e))?;
 
                 println!();
                 println!("✅ Created Cargo project at: {}", project_dir.display());
@@ -782,7 +821,8 @@ fn main() -> Result<()> {
                 return Ok(());
             }
 
-            let rust_code = ifa_vm::transpile_to_rust(&program);
+            let mut transpiler = ifa_vm::RustTranspiler::new().with_type_env(lint_ctx.var_types);
+            let rust_code = transpiler.transpile_program(&program);
 
             // Create temp Cargo project
             let temp_dir = std::env::temp_dir().join(format!("ifa_build_{}", std::process::id()));
@@ -932,7 +972,9 @@ lto = true
             if let Some(ref p) = port {
                 println!("   Port: {}", p);
             }
-            println!("   (IoT flashing has been delegated to external tools - stacks are now external libraries)");
+            println!(
+                "   (IoT flashing has been delegated to external tools - stacks are now external libraries)"
+            );
             Ok(())
         }
 
@@ -1022,7 +1064,7 @@ lto = true
             let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
             match ifa_vm::parse(&source) {
                 Ok(program) => {
-                    if run_babalawo(&program, &file) {
+                    if run_babalawo(&program, &file).is_some() {
                         println!(
                             "✅ No syntax or static analysis errors found in {}",
                             file.display()
@@ -1063,13 +1105,11 @@ lto = true
                     println!("⚠️ Misaligned lines in {}", file.display());
                     std::process::exit(1);
                 }
+            } else if source != formatted {
+                std::fs::write(&file, formatted).wrap_err("Failed to write formatted file")?;
+                println!("✨ Syntactic harmony restored in {}", file.display());
             } else {
-                if source != formatted {
-                    std::fs::write(&file, formatted).wrap_err("Failed to write formatted file")?;
-                    println!("✨ Syntactic harmony restored in {}", file.display());
-                } else {
-                    println!("✨ Already formatted.");
-                }
+                println!("✨ Already formatted.");
             }
             Ok(())
         }
@@ -1223,7 +1263,8 @@ lto = true
                 // Parse and execute
                 match ifa_vm::parse(&code) {
                     Ok(program) => {
-                        let compiler = ifa_vm::Compiler::new("repl").with_constants(repl_constants.clone());
+                        let compiler =
+                            ifa_vm::Compiler::new("repl").with_constants(repl_constants.clone());
                         match compiler.compile_repl(&program) {
                             Ok((bytecode, updated_constants)) => {
                                 repl_constants = updated_constants;
@@ -1420,7 +1461,7 @@ lto = true
                 match parse(&source) {
                     Ok(program) => {
                         // 5-Layer Integrity Defence
-                        if !run_babalawo(&program, file) {
+                        if run_babalawo(&program, file).is_none() {
                             println!("FAIL (Babalawo)");
                             failed += 1;
                             continue;

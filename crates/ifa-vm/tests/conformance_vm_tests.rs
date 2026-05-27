@@ -3,11 +3,11 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use ifa_types::IfaValue;
 use ifa_vm::compiler::Compiler;
 use ifa_vm::error::IfaError;
 use ifa_vm::parser::parse;
 use ifa_vm::vm::IfaVM;
-use ifa_types::IfaValue;
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -105,24 +105,41 @@ fn conformance_vm_defined_programs() {
         let source = fs::read_to_string(&path).expect("failed to read .ifa");
         let expect = parse_expectation(&source)
             .unwrap_or_else(|| panic!("missing '# expect:' directive in {}", path.display()));
-        let expected_value = parse_expected_value(&expect);
 
         let program = parse(&source).unwrap_or_else(|e| {
             panic!("parse failed for {}: {e}", path.display());
         });
-        let compiler = Compiler::new(&path.display().to_string());
+        let relative_path = path.strip_prefix(&root).unwrap_or(&path);
+        let normalized_path = relative_path.to_string_lossy().replace('\\', "/");
+        let compiler = Compiler::new(&normalized_path);
         let bytecode = compiler.compile(&program).unwrap_or_else(|e| {
             panic!("compile failed for {}: {e}", path.display());
         });
 
         let mut vm = IfaVM::new();
         match execute_to_completion(&mut vm, &bytecode) {
-            Ok(got) => assert_eq!(got, expected_value, "wrong result for {}", path.display()),
-            Err(err) => panic!(
-                "vm error for {}: {err} (code={:?})",
-                path.display(),
-                err.error_code()
-            ),
+            Ok(got) => {
+                let expected_value = parse_expected_value(&expect);
+                assert_eq!(got, expected_value, "wrong result for {}", path.display());
+            }
+            Err(err) => {
+                let err_str = err.to_string().replace('\\', "/");
+                if expect.starts_with("[at") {
+                    assert!(
+                        err_str.contains(&expect),
+                        "Expected error to contain '{}' for {}, but got '{}'",
+                        expect,
+                        path.display(),
+                        err_str
+                    );
+                } else {
+                    panic!(
+                        "vm error for {}: {err} (code={:?})",
+                        path.display(),
+                        err.error_code()
+                    );
+                }
+            }
         }
     }
 }
@@ -192,8 +209,7 @@ fn conformance_vm_tailcall_emits_and_executes() {
     assert!(
         bytecode
             .code
-            .iter()
-            .any(|b| *b == ifa_vm::OpCode::TailCall as u8),
+            .contains(&(ifa_vm::OpCode::TailCall as u8)),
         "expected TailCall opcode byte to be present"
     );
 

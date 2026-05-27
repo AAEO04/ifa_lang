@@ -2,6 +2,10 @@
 #![allow(clippy::collapsible_str_replace)]
 #![allow(clippy::should_implement_trait)]
 #![allow(clippy::type_complexity)]
+#![allow(clippy::empty_line_after_doc_comments)]
+#![allow(clippy::useless_conversion)]
+#![allow(clippy::let_unit_value)]
+#![allow(clippy::get_first)]
 
 //! # Ifá-Core
 //!
@@ -53,14 +57,16 @@ pub mod oracle;
 pub use ajose::{Ajose, Computed, RelContext, Relationship, Signal, effect};
 pub use ast::{Expression, Program, Statement};
 pub use bytecode::{Bytecode, OpCode};
+pub use ebo::{Ebo, EboScope};
+pub use error::{IfaError, IfaResult};
 #[cfg(feature = "compiler")]
 pub use ifa_compiler::{Compiler, compile};
 #[cfg(feature = "compiler")]
 pub use ifa_parser::parse;
 #[cfg(feature = "compiler")]
-pub use ifa_transpiler::{ProjectConfig, RustTranspiler, generate_project, transpile_to_rust};
-pub use ebo::{Ebo, EboScope};
-pub use error::{IfaError, IfaResult};
+pub use ifa_transpiler::{
+    ProjectConfig, RustTranspiler, generate_project, generate_project_with_types, transpile_to_rust,
+};
 pub use iwa_pele::{IwaPele, IwaPeleError, IwaPeleErrorKind};
 pub use module_resolver::{ImportGuard, ModuleResolver};
 pub use opon::{Opon, OponError, OponErrorKind, OponResult, OponSize};

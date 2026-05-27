@@ -1,11 +1,11 @@
 #![cfg(feature = "std")]
 
+use ifa_types::ErrorCode;
 use ifa_vm::compiler::Compiler;
 use ifa_vm::parser::parse;
 use ifa_vm::transpile_to_rust;
 use ifa_vm::value::IfaValue;
 use ifa_vm::vm::IfaVM;
-use ifa_types::ErrorCode;
 
 /// Evaluates source code on VM and Transpiler.
 fn assert_conformance(source: &str, var_name: &str, expected: IfaValue) {
@@ -19,7 +19,8 @@ fn assert_conformance(source: &str, var_name: &str, expected: IfaValue) {
     let mut vm = IfaVM::new();
     let vm_res = vm.execute(&bytecode);
     assert!(vm_res.is_ok(), "Bytecode VM failed: {:?}", vm_res);
-    let vm_val = vm.get_global(var_name)
+    let vm_val = vm
+        .get_global(var_name)
         .unwrap_or_else(|| panic!("Bytecode VM: Variable '{}' not found", var_name));
 
     // 2. Transpiler (Native)
@@ -28,9 +29,11 @@ fn assert_conformance(source: &str, var_name: &str, expected: IfaValue) {
 
     // 3. Conformance Checks
     assert_eq!(
-        vm_val.clone(), expected,
+        vm_val.clone(),
+        expected,
         "Bytecode VM mismatch. Expected {:?}, got {:?}",
-        expected, vm_val
+        expected,
+        vm_val
     );
 }
 

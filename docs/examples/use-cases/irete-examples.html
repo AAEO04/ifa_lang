@@ -27,12 +27,12 @@
 
 ese hash_password(password, salt) {
     ayanmo salted = salt + password;
-    padap? Irete.sha256(salted);
+    pada Irete.sha256(salted);
 }
 
 ese verify_password(password, salt, stored_hash) {
     ayanmo hash = hash_password(password, salt);
-    padap? hash == stored_hash;
+    pada hash == stored_hash;
 }
 
 // Usage
@@ -53,16 +53,16 @@ ti (verify_password("my_secret", salt, stored)) {
 ese hash_file(path) {
     ti (!Odi.wa(path)) {
         Irosu.kigbe("File not found");
-        padap? ofifo;
+        pada ofifo;
     }
     ayanmo content = Odi.ka(path);
-    padap? Irete.sha256(content);
+    pada Irete.sha256(content);
 }
 
 ese verify_file(path, expected_hash) {
     ayanmo actual = hash_file(path);
     ti (actual == ofifo) {
-        padap? iro;
+        pada iro;
     }
     ayanmo match = actual == expected_hash;
     ti (match) {
@@ -70,7 +70,7 @@ ese verify_file(path, expected_hash) {
     } bibẹkọ {
         Irosu.kigbe("File hash mismatch");
     }
-    padap? match;
+    pada match;
 }
 
 // Usage
@@ -84,15 +84,15 @@ verify_file("document.pdf", hash);</code></pre>
         <pre><code>// encode.ifa - Base64 encode and decode data
 
 ese encode_data(data) {
-    ayanmo encoded = Irete.base64(data);
+    ayanmo encoded = Irete.base64_encode(data);
     Irosu.fo("Encoded: " + encoded);
-    padap? encoded;
+    pada encoded;
 }
 
 ese decode_data(encoded) {
-    ayanmo decoded = Irete.decode(encoded);
+    ayanmo decoded = Irete.base64_decode(encoded);
     Irosu.fo("Decoded: " + decoded);
-    padap? decoded;
+    pada decoded;
 }
 
 // Usage

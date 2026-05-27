@@ -25,13 +25,13 @@
         <pre><code>// validate.ifa - Validate function inputs
 
 ese divide(a, b) {
-    Okanran.sise(b != 0, "Division by zero");
+    Okanran.beeni(b != 0, "Division by zero");
     pada a / b;
 }
 
 ese set_age(age) {
-    Okanran.sise(age >= 0, "Age cannot be negative");
-    Okanran.sise(age <= 150, "Age exceeds maximum");
+    Okanran.beeni(age >= 0, "Age cannot be negative");
+    Okanran.beeni(age <= 150, "Age exceeds maximum");
     Irosu.fo("Age set to " + age);
 }
 
@@ -46,7 +46,7 @@ ese connect_db(host, port) {
     Irosu.fo("Connecting to " + host + ":" + port + "...");
 
     ti (port < 1) {
-        Okanran.kigbe("Invalid port: " + port);
+        Okanran.ta("Invalid port: " + port);
     }
 
     Irosu.fo("Connected");
@@ -54,7 +54,7 @@ ese connect_db(host, port) {
 
 ese read_config(path) {
     ti (!Odi.wa(path)) {
-        Okanran.kigbe("Config not found: " + path);
+        Okanran.ta("Config not found: " + path);
     }
 
     ayanmo content = Odi.ka(path);
@@ -65,14 +65,14 @@ ese read_config(path) {
         <pre><code>// preconditions.ifa - Guard clauses with assert
 
 ese process_order(item, quantity) {
-    Okanran.sise(item != null, "Item is required");
-    Okanran.sise(quantity > 0, "Quantity must be positive");
+    Okanran.beeni(item != null, "Item is required");
+    Okanran.beeni(quantity > 0, "Quantity must be positive");
 
     Irosu.fo("Processing " + quantity + "x " + item);
 }
 
 ese lookup_user(id) {
-    Okanran.sise(id >= 1000, "Invalid user ID range");
+    Okanran.beeni(id >= 1000, "Invalid user ID range");
 
     Irosu.fo("Looking up user " + id + "...");
 }

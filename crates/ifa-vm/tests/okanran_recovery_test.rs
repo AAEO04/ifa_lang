@@ -1,6 +1,6 @@
+use ifa_types::IfaValue;
 use ifa_vm::bytecode::{Bytecode, OpCode};
 use ifa_vm::vm::IfaVM;
-use ifa_types::IfaValue;
 // use ifa_types::IfaError; // Not needed if we check values
 
 #[test]
