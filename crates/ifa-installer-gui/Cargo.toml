@@ -6,9 +6,6 @@ edition.workspace = true
 [dependencies]
 ifa-installer-core = { path = "../ifa-installer-core" }
 eframe = "0.27"
-tokio.workspace = true
-headers = "0.3"
 rfd = "0.14"
-# Added missing deps used in main.rs
 clap.workspace = true
 dirs = "5.0"

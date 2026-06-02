@@ -95,6 +95,10 @@ enum Commands {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
 
+        /// Bypass Babalawo static analysis check and source file verification
+        #[arg(short, long)]
+        force: bool,
+
         /// Allow all permissions (insecure)
         #[arg(long)]
         allow_all: bool,
@@ -143,28 +147,7 @@ enum Commands {
         #[arg(long)]
         target: Option<String>,
 
-        /// Build for Backend domain (default)
-        #[arg(long)]
-        backend: bool,
-        /// Build for Frontend domain (WASM)
-        #[arg(long)]
-        frontend: bool,
-        /// Build for Game domain
-        #[arg(long)]
-        game: bool,
-        /// Build for IoT domain (no_std)
-        #[arg(long)]
-        iot: bool,
-        /// Build for Crypto domain (constant-time)
-        #[arg(long)]
-        crypto: bool,
 
-        /// Build for ML/AI domain (Python interop + GPU)
-        #[arg(long)]
-        ml: bool,
-        /// Build as Fullstack Hybrid Executable (Backend + Frontend)
-        #[arg(long)]
-        fullstack: bool,
         /// Output as reusable Cargo project (instead of building executable)
         #[arg(long)]
         project: bool,
@@ -267,6 +250,9 @@ enum Commands {
         #[arg(long)]
         file: Option<PathBuf>,
     },
+
+    /// Update Ifá-Lang toolchain to the latest version
+    SelfUpdate,
 }
 
 #[derive(Subcommand)]
@@ -379,7 +365,7 @@ fn main() -> Result<()> {
         let first_arg = args[1].as_str();
         let subcommands = [
             "run", "runb", "bytecode", "check", "doc", "fmt", "test", "lsp", "oja", "deploy",
-            "help",
+            "help", "build", "sandbox", "flash", "babalawo", "repl",
         ];
         if !subcommands.contains(&first_arg) {
             args.insert(1, "run".to_string());
@@ -602,6 +588,7 @@ fn main() -> Result<()> {
         Commands::Runb {
             file,
             args,
+            force,
             allow_all,
             allow_read,
             allow_write,
@@ -615,25 +602,29 @@ fn main() -> Result<()> {
             use ifa_sandbox::{CapabilitySet, Ofun};
             println!("⚡ Running bytecode: {}", file.display());
 
-            // Security gate: bytecode must remain coupled to a verifiable source file.
-            let source_candidate = file.with_extension("ifa");
-            if !source_candidate.exists() {
-                return Err(color_eyre::eyre::eyre!(
-                    "Refusing to run unverified bytecode '{}': expected matching source '{}' for Babalawo verification",
-                    file.display(),
-                    source_candidate.display()
-                ));
-            }
+            // Security gate: bytecode must remain coupled to a verifiable source file unless forced.
+            if !force {
+                let source_candidate = file.with_extension("ifa");
+                if !source_candidate.exists() {
+                    return Err(color_eyre::eyre::eyre!(
+                        "Refusing to run unverified bytecode '{}': expected matching source '{}' for Babalawo verification. Use --force to bypass this check.",
+                        file.display(),
+                        source_candidate.display()
+                    ));
+                }
 
-            let source = std::fs::read_to_string(&source_candidate).map_err(|e| {
-                color_eyre::eyre::eyre!("Failed to read source for verification: {}", e)
-            })?;
-            let program = ifa_vm::parse(&source).map_err(|e| {
-                color_eyre::eyre::eyre!("Failed to parse source for verification: {}", e)
-            })?;
-            let _lint_ctx = run_babalawo(&program, &source_candidate).unwrap_or_else(|| {
-                std::process::exit(1);
-            });
+                let source = std::fs::read_to_string(&source_candidate).map_err(|e| {
+                    color_eyre::eyre::eyre!("Failed to read source for verification: {}", e)
+                })?;
+                let program = ifa_vm::parse(&source).map_err(|e| {
+                    color_eyre::eyre::eyre!("Failed to parse source for verification: {}", e)
+                })?;
+                let _lint_ctx = run_babalawo(&program, &source_candidate).unwrap_or_else(|| {
+                    std::process::exit(1);
+                });
+            } else {
+                println!("⚠️ Bypassing Babalawo source verification due to --force flag");
+            }
 
             // Configure Capabilities
             let mut caps = CapabilitySet::new();
@@ -726,13 +717,7 @@ fn main() -> Result<()> {
             file,
             output,
             target,
-            backend,
-            frontend,
-            game,
-            iot,
-            crypto,
-            ml,
-            fullstack,
+
             project,
         } => {
             use std::process::Command;
@@ -786,11 +771,22 @@ fn main() -> Result<()> {
 
                 println!("   📁 Generating Cargo project: {}", project_dir.display());
 
+                let base_path = if let Some(parent) = file.parent() {
+                    if parent.as_os_str().is_empty() {
+                        Some(std::env::current_dir()?)
+                    } else {
+                        Some(parent.to_path_buf())
+                    }
+                } else {
+                    Some(std::env::current_dir()?)
+                };
+
                 let config = ifa_vm::generate_project_with_types(
                     &program,
                     &project_name,
                     &project_dir,
                     lint_ctx.var_types.clone(),
+                    base_path,
                 )
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to generate project: {}", e))?;
 
@@ -822,6 +818,16 @@ fn main() -> Result<()> {
             }
 
             let mut transpiler = ifa_vm::RustTranspiler::new().with_type_env(lint_ctx.var_types);
+            if let Some(parent) = file.parent() {
+                if parent.as_os_str().is_empty() {
+                    transpiler = transpiler.with_base_path(std::env::current_dir()?);
+                } else {
+                    transpiler = transpiler.with_base_path(parent.to_path_buf());
+                }
+            } else {
+                transpiler = transpiler.with_base_path(std::env::current_dir()?);
+            }
+            
             let rust_code = transpiler.transpile_program(&program);
 
             // Create temp Cargo project
@@ -833,40 +839,31 @@ fn main() -> Result<()> {
 
             // Write main.rs
             std::fs::write(src_dir.join("main.rs"), &rust_code)?;
+            
+            // Write external modules
+            for (name, content) in transpiler.external_modules.iter() {
+                std::fs::write(src_dir.join(name), content)?;
+            }
 
             // Determine features
-            let mut features = Vec::new();
-            if frontend {
-                features.push("frontend");
-            }
-            if game {
-                features.push("game");
-            }
-            if iot {
-                features.push("iot");
-            }
-            if crypto {
-                features.push("crypto");
-            }
-            if ml {
-                features.push("ml");
-            }
-            if fullstack {
-                features.push("backend");
-                features.push("frontend");
-                // Fullstack implies both
-            }
-            // Default to backend if nothing else strictly selected (or if backend explicitly selected)
-            if backend || features.is_empty() {
-                features.push("backend");
-            }
+            let mut features: Vec<&str> = Vec::new();
 
             let features_str = features
                 .iter()
                 .map(|f| format!("\"{}\"", f))
                 .collect::<Vec<_>>()
                 .join(", ");
-            let default_features = if iot { "false" } else { "true" };
+            let default_features = "true";
+
+            // Resolve workspace root from current_exe
+            let exe_dir = std::env::current_exe()?.parent().unwrap().to_path_buf();
+            let workspace_root = if exe_dir.ends_with("deps") {
+                exe_dir.parent().unwrap().parent().unwrap().parent().unwrap().to_path_buf()
+            } else if exe_dir.ends_with("debug") || exe_dir.ends_with("release") {
+                exe_dir.parent().unwrap().parent().unwrap().to_path_buf()
+            } else {
+                std::env::current_dir()?
+            };
 
             // Write Cargo.toml
             let cargo_toml = format!(
@@ -884,12 +881,12 @@ opt-level = 3
 lto = true
 "#,
                 out.file_stem().unwrap_or_default().to_string_lossy(),
-                std::env::current_dir()?
+                workspace_root
                     .join("crates/ifa-vm")
                     .display()
                     .to_string()
                     .replace("\\", "/"),
-                std::env::current_dir()?
+                workspace_root
                     .join("crates/ifa-std")
                     .display()
                     .to_string()
@@ -902,8 +899,12 @@ lto = true
             // Build with cargo
             println!("   Compiling (this may take a moment)...");
 
+            let global_target_dir = std::env::temp_dir().join("ifa_build_cache");
+            let _ = std::fs::create_dir_all(&global_target_dir);
+
             let mut cmd = Command::new("cargo");
             cmd.arg("build").arg("--release").current_dir(&temp_dir);
+            cmd.env("CARGO_TARGET_DIR", &global_target_dir);
 
             if let Some(ref t) = target {
                 cmd.arg("--target").arg(t);
@@ -932,13 +933,12 @@ lto = true
             };
 
             let built_binary = if let Some(ref t) = target {
-                temp_dir
-                    .join("target")
+                global_target_dir
                     .join(t)
                     .join("release")
                     .join(&binary_name)
             } else {
-                temp_dir.join("target/release").join(&binary_name)
+                global_target_dir.join("release").join(&binary_name)
             };
 
             // Ensure output path has .exe on Windows
@@ -1084,14 +1084,8 @@ lto = true
         Commands::Fmt {
             file,
             check,
-            unstable,
+            unstable: _,
         } => {
-            if !unstable {
-                return Err(color_eyre::eyre::eyre!(
-                    "`ifa fmt` is still unstable. Re-run with `--unstable`."
-                ));
-            }
-
             let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
 
             use ifa_fmt::{FormatterConfig, format};
@@ -1528,6 +1522,31 @@ lto = true
 
         Commands::Deploy { path } => {
             deploy::scan_and_generate(&path)?;
+            Ok(())
+        }
+
+        Commands::SelfUpdate => {
+            println!("🔄 Checking for updates...");
+            let exe_path = std::env::current_exe()
+                .wrap_err("Failed to get current executable path")?;
+            let canonical_exe = std::fs::canonicalize(&exe_path).unwrap_or(exe_path);
+            
+            // The executable is typically in <install_dir>/bin/ifa(.exe)
+            // We need to pass <install_dir> to the installer core.
+            let install_dir = canonical_exe
+                .parent() // -> /bin
+                .and_then(|p| p.parent()) // -> /install_dir
+                .ok_or_else(|| color_eyre::eyre::eyre!("Could not determine installation directory from {}", canonical_exe.display()))?;
+
+            match ifa_installer_core::install::self_update(install_dir) {
+                Ok(_) => {
+                    println!("✅ Update complete.");
+                }
+                Err(e) => {
+                    eprintln!("❌ Update failed: {}", e);
+                    std::process::exit(1);
+                }
+            }
             Ok(())
         }
     }

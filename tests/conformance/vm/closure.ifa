@@ -1,6 +1,6 @@
 # expect: 13
 ese make_adder(x) {
-  pada |y| x + y;
+  pada ese(y) { pada x + y; };
 }
 
 ayanmo add5 = make_adder(5);

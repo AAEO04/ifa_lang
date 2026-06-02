@@ -1,0 +1,5 @@
+# expect: 100
+
+iba import_helper;
+
+Irosu.fo(import_helper.get_val());

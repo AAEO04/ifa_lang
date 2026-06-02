@@ -253,11 +253,22 @@ impl NanBox {
                 let result = a.checked_div(b).ok_or(NanBoxError::IntOutOfRange(a))?;
                 NanBox::from_int(result).or_else(|_| Ok(NanBox::from_float(result as f64)))
             }
-            (BoxedPrimitive::Float(a), BoxedPrimitive::Float(b)) => Ok(NanBox::from_float(a / b)),
+            (BoxedPrimitive::Float(a), BoxedPrimitive::Float(b)) => {
+                if b == 0.0 {
+                    return Err(NanBoxError::DivisionByZero);
+                }
+                Ok(NanBox::from_float(a / b))
+            }
             (BoxedPrimitive::Int(a), BoxedPrimitive::Float(b)) => {
+                if b == 0.0 {
+                    return Err(NanBoxError::DivisionByZero);
+                }
                 Ok(NanBox::from_float(a as f64 / b))
             }
             (BoxedPrimitive::Float(a), BoxedPrimitive::Int(b)) => {
+                if b == 0 {
+                    return Err(NanBoxError::DivisionByZero);
+                }
                 Ok(NanBox::from_float(a / b as f64))
             }
             _ => Err(NanBoxError::TypeMismatch),

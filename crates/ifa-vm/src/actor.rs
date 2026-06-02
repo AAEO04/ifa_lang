@@ -151,18 +151,21 @@ impl ActorTable {
     }
 
     /// Register a new actor and return its handle.
+    // SAFETY [Poisoning]: ActorTable mutations are simple HashMap insertions and removals.
+    // If a thread panics while holding the lock, the HashMap itself is not structurally corrupted.
+    // We use `unwrap_or_else(|e| e.into_inner())` to safely recover the lock and prevent the entire VM registry from freezing.
     pub fn insert(&self, handle: ActorHandle) {
-        self.inner.lock().unwrap().insert(handle.id, handle);
+        self.inner.lock().unwrap_or_else(|e| e.into_inner()).insert(handle.id, handle);
     }
 
     /// Remove a dead actor.
     pub fn remove(&self, id: u64) {
-        self.inner.lock().unwrap().remove(&id);
+        self.inner.lock().unwrap_or_else(|e| e.into_inner()).remove(&id);
     }
 
     /// Look up a handle by ID.
     pub fn get(&self, id: u64) -> Option<ActorHandle> {
-        self.inner.lock().unwrap().get(&id).cloned()
+        self.inner.lock().unwrap_or_else(|e| e.into_inner()).get(&id).cloned()
     }
 }
 
@@ -270,16 +273,10 @@ pub fn actor_send(
                 .downcast_ref::<Arc<ActorHandle>>()
                 .ok_or_else(|| IfaError::Runtime(format!("Actor {}: invalid handle type", id)))?;
 
-            // 1. Enforce No-Shared-Mutability via freeze-then-thaw deep copy
-            let safe_value = match value.freeze() {
-                Ok(shared) => shared.thaw(),
-                Err(_) => {
-                    return Err(IfaError::Runtime(format!(
-                        "Cannot send thread-unsafe value to actor: {}",
-                        value.type_name()
-                    )));
-                }
-            };
+            // 1. Enforce No-Shared-Mutability via Zero-Copy Ownership Transfer.
+            // Babalawo statically guarantees the sender cannot access this value again.
+            let safe_value = value.clone();
+
 
             // 2. Transfer ownership of any resources contained in the message payload
             transfer_resources(

@@ -1,0 +1,159 @@
+name: Release Installer
+
+on:
+  push:
+    tags:
+      - 'installer-v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # BUILD - Cross-platform GUI Installer binaries
+  # ═══════════════════════════════════════════════════════════════════════════
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+          # Use native build for GUI due to GTK dependencies
+          target: x86_64-unknown-linux-gnu
+          platform: linux-x86_64
+          ext: ""
+          # Windows x86_64
+          - os: windows-latest
+          target: x86_64-pc-windows-msvc
+          platform: windows-x86_64
+          ext: ".exe"
+          # macOS Intel
+          - os: macos-latest
+          target: x86_64-apple-darwin
+          platform: macos-x86_64
+          ext: ""
+          # macOS ARM (Apple Silicon)
+          - os: macos-latest
+          target: aarch64-apple-darwin
+          platform: macos-arm64
+          ext: ""
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      
+      # Install native dependencies for GUI installer on Linux (native only)
+      - name: Install GTK development libraries (Linux)
+        if: matrix.platform == 'linux-x86_64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libasound2-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev
+      
+      # Build GUI installer
+      - name: Build ifa-installer-gui
+        run: cargo build --release --target ${{ matrix.target }} -p ifa-installer-gui
+      
+      - name: Get version from tag
+        id: version
+        shell: bash
+        # Strip 'installer-v' prefix if we want just the version, but standard is keep 'v'
+        # E.g. installer-v1.3.0 -> v1.3.0
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "version=${TAG_NAME#installer-}" >> $GITHUB_OUTPUT
+      
+      - name: Package binaries
+        shell: bash
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          PLATFORM=${{ matrix.platform }}
+          EXT=${{ matrix.ext }}
+          
+          mkdir -p dist
+          
+          cp target/${{ matrix.target }}/release/ifa-installer-gui${EXT} dist/ifa-installer-${VERSION}-${PLATFORM}${EXT}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-binaries-${{ matrix.platform }}
+          path: dist/*
+          retention-days: 1
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # RELEASE - Create GitHub Release for Installer
+  # ═══════════════════════════════════════════════════════════════════════════
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get version from tag
+        id: version
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "version=${TAG_NAME#installer-}" >> $GITHUB_OUTPUT
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: installer-binaries-*
+          merge-multiple: true
+      
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          sha256sum * > checksums-${{ steps.version.outputs.version }}.sha256
+          cat checksums-${{ steps.version.outputs.version }}.sha256
+      
+      - name: Generate release notes
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          
+          cat > RELEASE_NOTES.md << EOF
+          # Ifá-Lang Installer $VERSION
+          
+          This is the standalone GUI installer for Ifá-Lang. 
+          
+          It downloads the latest version of the \`ifa\` toolchain directly from GitHub. You do not need to download a new installer for every new language release. The installer manages its own version updates and handles safe extraction and environment PATH setup.
+          
+          ---
+          
+          ## Verification
+          
+          \`\`\`bash
+          sha256sum -c checksums-$VERSION.sha256
+          \`\`\`
+          EOF
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

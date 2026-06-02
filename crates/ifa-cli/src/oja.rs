@@ -9,12 +9,12 @@ use chrono::Local;
 use eyre::{Result, WrapErr, eyre};
 use flate2::read::GzDecoder;
 
-use reqwest::blocking::Client;
+
 use ring::digest::{Context, SHA256};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs::{self};
-use std::io::{Cursor, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tar::Archive;
@@ -972,12 +972,11 @@ opt-level = 3
         println!("     🔍 Searching registry: {}", url);
 
         // 2. Fetch Metadata (blocking)
-        let client = Client::new();
-        match client.get(&url).send() {
+        match ureq::get(&url).call() {
             Ok(resp) => {
-                if resp.status().is_success() {
+                if resp.status() == 200 {
                     // Parse registry Entry
-                    if let Ok(entry) = resp.json::<RegistryPackage>() {
+                    if let Ok(entry) = resp.into_json::<RegistryPackage>() {
                         println!("     ✅ Found package: {}", entry.name);
 
                         // Find version
@@ -1043,17 +1042,14 @@ opt-level = 3
     /// Download and Extract Tarball
     fn download_package(&self, url: &str, dest: &Path) -> Result<()> {
         println!("     ⬇ Downloading: {}", url);
-        let client = Client::new();
-        let response = client.get(url).send().wrap_err("Failed to send request")?;
+        let response = ureq::get(url).call().wrap_err("Failed to send request")?;
 
-        if !response.status().is_success() {
+        if response.status() != 200 {
             return Err(eyre!("Download failed: {}", response.status()));
         }
 
-        let bytes = response.bytes().wrap_err("Failed to read bytes")?;
-
         // Extract to temp dir first
-        let tar = GzDecoder::new(Cursor::new(bytes));
+        let tar = GzDecoder::new(response.into_reader());
         let mut archive = Archive::new(tar);
 
         // Strip first component (github archives have root folder)
@@ -1411,12 +1407,11 @@ opt-level = 3
     /// Search the registry for packages matching a query.
     pub fn search(&self, query: &str) -> Result<()> {
         println!("🔍  Searching registry for '{}'...", query);
-        let client = Client::new();
         let url = format!("{}/search/{}", OJA_REGISTRY_URL, query);
 
-        match client.get(&url).send() {
-            Ok(resp) if resp.status().is_success() => {
-                if let Ok(text) = resp.text() {
+        match ureq::get(&url).call() {
+            Ok(resp) => {
+                if let Ok(text) = resp.into_string() {
                     println!("{}", text);
                 } else {
                     println!("   No results.");
@@ -1464,9 +1459,23 @@ opt-level = 3
 /// channel (e.g. GitHub Releases) and OS-specific atomic replace logic.
 /// Until that exists this returns an explicit error so callers know nothing happened.
 pub fn update_cli() -> Result<()> {
-    Err(eyre!(
-        "`ifa update` is not yet implemented. \
-        Update manually by downloading the latest release from \
-        https://github.com/ifa-lang/ifa/releases"
-    ))
+    println!("🔄 Checking for updates...");
+    let exe_path = std::env::current_exe()
+        .wrap_err("Failed to get current executable path")?;
+    let canonical_exe = std::fs::canonicalize(&exe_path).unwrap_or(exe_path);
+    
+    let install_dir = canonical_exe
+        .parent()
+        .and_then(|p| p.parent())
+        .ok_or_else(|| eyre!("Could not determine installation directory from {}", canonical_exe.display()))?;
+
+    match ifa_installer_core::install::self_update(install_dir) {
+        Ok(_) => {
+            println!("✅ Update complete.");
+            Ok(())
+        }
+        Err(e) => {
+            Err(eyre!("Update failed: {}", e))
+        }
+    }
 }

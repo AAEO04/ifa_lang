@@ -1,0 +1,12 @@
+# expect: 15
+
+ayanmo counter = 0;
+
+ese increment() {
+    counter += 5;
+}
+
+increment();
+increment();
+increment();
+Irosu.fo(counter);

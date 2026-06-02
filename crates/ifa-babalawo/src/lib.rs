@@ -19,6 +19,7 @@
 )]
 mod checks;
 mod diagnose;
+pub mod effects;
 mod history;
 mod infer;
 mod inference;

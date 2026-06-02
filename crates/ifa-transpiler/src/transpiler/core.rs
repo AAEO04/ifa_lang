@@ -25,6 +25,10 @@ pub struct RustTranspiler {
     pub(crate) uses: Vec<String>,
     pub(crate) in_module: bool,
     pub type_env: std::collections::HashMap<String, TypeHint>,
+    pub global_vars: std::collections::HashSet<String>,
+    pub base_path: Option<std::path::PathBuf>,
+    pub parsed_modules: std::collections::HashSet<String>,
+    pub external_modules: std::collections::HashMap<String, String>,
 }
 
 impl Default for RustTranspiler {
@@ -48,11 +52,20 @@ impl RustTranspiler {
             uses: Vec::new(),
             in_module: false,
             type_env: std::collections::HashMap::new(),
+            global_vars: std::collections::HashSet::new(),
+            base_path: None,
+            parsed_modules: std::collections::HashSet::new(),
+            external_modules: std::collections::HashMap::new(),
         }
     }
 
     pub fn with_type_env(mut self, env: std::collections::HashMap<String, TypeHint>) -> Self {
         self.type_env = env;
+        self
+    }
+
+    pub fn with_base_path(mut self, path: std::path::PathBuf) -> Self {
+        self.base_path = Some(path);
         self
     }
 

@@ -64,6 +64,16 @@
         "body": "ayanmọ ${1:name} = ${2:value};",
         "description": "Declare a variable (Yoruba)"
     },
+    "Constant": {
+        "prefix": "const",
+        "body": "ayanfe ${1:NAME} = ${2:value};",
+        "description": "Declare a constant (Yoruba: ayanfe)"
+    },
+    "Constant (English)": {
+        "prefix": "const-en",
+        "body": "const ${1:NAME} = ${2:value};",
+        "description": "Declare a constant (English)"
+    },
     "Function": {
         "prefix": "fn",
         "body": [
@@ -82,6 +92,24 @@
         ],
         "description": "Define a function (English)"
     },
+    "Async Function": {
+        "prefix": "fn-async",
+        "body": [
+            "daro ẹsẹ ${1:name}(${2:params}) {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "Define an async function (Yoruba)"
+    },
+    "Async Function (English)": {
+        "prefix": "fn-async-en",
+        "body": [
+            "async fn ${1:name}(${2:params}) {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "Define an async function (English)"
+    },
     "If Statement": {
         "prefix": "if",
         "body": [
@@ -89,7 +117,16 @@
             "    ${0}",
             "}"
         ],
-        "description": "If statement (Yoruba)"
+        "description": "If statement (Yoruba: bí/ti)"
+    },
+    "If Statement (ti)": {
+        "prefix": "ti",
+        "body": [
+            "ti ${1:condition} {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "If statement (Yoruba: ti)"
     },
     "If-Else": {
         "prefix": "ifelse",
@@ -109,7 +146,16 @@
             "    ${0}",
             "}"
         ],
-        "description": "While loop (Yoruba)"
+        "description": "While loop (Yoruba: nigba)"
+    },
+    "While Loop (English)": {
+        "prefix": "while-en",
+        "body": [
+            "while ${1:condition} {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "While loop (English)"
     },
     "For Loop": {
         "prefix": "for",
@@ -118,7 +164,16 @@
             "    ${0}",
             "}"
         ],
-        "description": "For-each loop (Yoruba)"
+        "description": "For-each loop (Yoruba: fun ninu)"
+    },
+    "For Loop (English)": {
+        "prefix": "for-en",
+        "body": [
+            "for ${1:item} in ${2:list} {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "For-each loop (English)"
     },
     "Domain/Class": {
         "prefix": "domain",
@@ -129,7 +184,17 @@
             "    }",
             "}"
         ],
-        "description": "Define a domain/class (Yoruba)"
+        "description": "Define a domain/class (Yoruba: odu)"
+    },
+    "Match": {
+        "prefix": "match",
+        "body": [
+            "yàn (${1:expr}) {",
+            "    ${2:pattern} => ${3:body},",
+            "    _ => ${0}",
+            "}"
+        ],
+        "description": "Pattern matching (Yoruba: yan)"
     },
     "Print": {
         "prefix": "print",
@@ -238,13 +303,26 @@
     "Try-Catch": {
         "prefix": "try",
         "body": [
-            "dida_ewu {",
+            "gbiyanju {",
             "    ${1}",
-            "} kaka_ewu ${2:e} {",
+            "} gba ${2:e} {",
             "    ${0}",
             "}"
         ],
-        "description": "Try-catch block (Yoruba)"
+        "description": "Try-catch block (Yoruba: gbiyanju/gba)"
+    },
+    "Try-Catch-Finally": {
+        "prefix": "try-finally",
+        "body": [
+            "gbiyanju {",
+            "    ${1}",
+            "} gba ${2:e} {",
+            "    ${3}",
+            "} nipari {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "Try-catch-finally block (Yoruba: gbiyanju/gba/nipari)"
     },
     "Main Program": {
         "prefix": "main",
@@ -258,6 +336,69 @@
             "àṣẹ;"
         ],
         "description": "Main program template"
+    },
+    "Null Value": {
+        "prefix": "nil",
+        "body": "ofo",
+        "description": "Null/nil value (Yoruba: ofo)"
+    },
+    "Defer": {
+        "prefix": "defer",
+        "body": [
+            "gbe {",
+            "    ${1:// cleanup code}",
+            "}"
+        ],
+        "description": "Defer cleanup block (Yoruba: gbe)"
+    },
+    "Unsafe Block": {
+        "prefix": "unsafe",
+        "body": [
+            "ailewu {",
+            "    ${0}",
+            "}"
+        ],
+        "description": "Unsafe block (Yoruba: ailewu)"
+    },
+    "Yield": {
+        "prefix": "yield",
+        "body": "jowo ${1:expr};",
+        "description": "Yield control (Yoruba: jowo)"
+    },
+    "Break": {
+        "prefix": "break",
+        "body": "da;",
+        "description": "Break from loop (Yoruba: da)"
+    },
+    "Continue": {
+        "prefix": "continue",
+        "body": "tesiwaju;",
+        "description": "Continue loop (Yoruba: tesiwaju)"
+    },
+    "Await": {
+        "prefix": "await",
+        "body": "reti ${1:expr}",
+        "description": "Await async expression (Yoruba: reti)"
+    },
+    "String Interpolation": {
+        "prefix": "str-interp",
+        "body": "$\"${1:text} {${2:expr}}\"",
+        "description": "Interpolated string with $ prefix"
+    },
+    "Throw": {
+        "prefix": "throw",
+        "body": "ta ${1:error};",
+        "description": "Throw an error (Yoruba: ta)"
+    },
+    "Taboo Declaration": {
+        "prefix": "taboo",
+        "body": "èèwọ̀: ${1:DomainA} -> ${2:DomainB};",
+        "description": "Declare architectural taboo between domains"
+    },
+    "Strict Mode": {
+        "prefix": "strict",
+        "body": "abo;",
+        "description": "Enable strict mode (Yoruba: abo)"
     },
     "Ẹbọ (RAII Guard)": {
         "prefix": "ebo",

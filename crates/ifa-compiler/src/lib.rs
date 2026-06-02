@@ -327,129 +327,6 @@ impl Compiler {
             Statement::Update {
                 target, op, value, ..
             } => {
-                // 1. Load current value onto stack
-                match target {
-                    AssignTarget::Variable(name) => {
-                        if self.is_const_binding(name) {
-                            self.emit(OpCode::PushStr);
-                            self.emit_string(&format!(
-                                "Type mismatch: expected Mutable binding, got const {}",
-                                name
-                            ));
-                            self.emit(OpCode::Throw);
-                            return Ok(());
-                        }
-                        if let Some(slot) = self.resolve_local(name) {
-                            self.emit(OpCode::LoadLocal);
-                            let s = slot as u16;
-                            self.emit_byte((s & 0xff) as u8);
-                            self.emit_byte((s >> 8) as u8);
-                        } else if let Some(slot) = self.resolve_upvalue(name) {
-                            self.emit(OpCode::LoadUpvalue);
-                            let s = slot as u16;
-                            self.emit_byte((s & 0xff) as u8);
-                            self.emit_byte((s >> 8) as u8);
-                        } else {
-                            self.emit(OpCode::LoadGlobal);
-                            self.emit_string(name);
-                        }
-                    }
-                    AssignTarget::Index { name, index } => {
-                        // Push container, index
-                        if let Some(slot) = self.resolve_local(name) {
-                            self.emit(OpCode::LoadLocal);
-                            let s = slot as u16;
-                            self.emit_byte((s & 0xff) as u8);
-                            self.emit_byte((s >> 8) as u8);
-                        } else if let Some(slot) = self.resolve_upvalue(name) {
-                            self.emit(OpCode::LoadUpvalue);
-                            let s = slot as u16;
-                            self.emit_byte((s & 0xff) as u8);
-                            self.emit_byte((s >> 8) as u8);
-                        } else {
-                            self.emit(OpCode::LoadGlobal);
-                            self.emit_string(name);
-                        }
-                        self.compile_expression(index)?;
-                        self.emit(OpCode::Dup); // Duplicate index
-                        self.emit(OpCode::Swap); // [container, index, index]
-                        self.emit(OpCode::GetIndex); // [index, value]
-                        self.emit(OpCode::Swap); // [value, index]
-                    }
-                    AssignTarget::Dereference(expr) => {
-                        self.compile_expression(expr)?;
-                        self.emit(OpCode::Dup); // [ptr, ptr]
-                        self.emit(OpCode::Load8); // [ptr, val]
-                        self.emit(OpCode::Swap); // [val, ptr]
-                    }
-                }
-
-                // Stack state: [..., current_value, (index or ptr if complex target)]
-
-                // Apply operation via the centralized helper (handles AddAssign -> Concat for strings)
-                let val_expr = value
-                    .as_ref()
-                    .ok_or_else(|| IfaError::Parse("Augmented assignment missing value".into()))?;
-                self.compile_expression(val_expr)?;
-                match op {
-                    UpdateOp::AddAssign => match val_expr {
-                        Expression::String(_) | Expression::InterpolatedString { .. } => {
-                            self.emit(OpCode::Concat)
-                        }
-                        _ => self.emit(OpCode::Add),
-                    },
-                    UpdateOp::SubAssign => self.emit(OpCode::Sub),
-                    UpdateOp::MulAssign => self.emit(OpCode::Mul),
-                    UpdateOp::DivAssign => self.emit(OpCode::Div),
-                    UpdateOp::ModAssign => self.emit(OpCode::Mod),
-                }
-
-                // Stack state: [..., target_info (optional), new_value]
-
-                // 3. Store back
-                match target {
-                    AssignTarget::Variable(name) => {
-                        if let Some(slot) = self.resolve_local(name) {
-                            self.emit(OpCode::StoreLocal);
-                            let s = slot as u16;
-                            self.emit_byte((s & 0xff) as u8);
-                            self.emit_byte((s >> 8) as u8);
-                        } else if let Some(slot) = self.resolve_upvalue(name) {
-                            self.emit(OpCode::StoreUpvalue);
-                            let s = slot as u16;
-                            self.emit_byte((s & 0xff) as u8);
-                            self.emit_byte((s >> 8) as u8);
-                        } else {
-                            self.emit(OpCode::StoreGlobal);
-                            self.emit_string(name);
-                        }
-                    }
-                    AssignTarget::Index { .. } => {
-                        // Stack: [..., index, new_value]
-                        // We need container back. Wait, let's re-push container.
-                        // Better approach:
-                        // [container, index]
-                        // Dup index -> [container, index, index]
-                        // GetIndex -> [index, value]
-                        // Op -> [index, new_value]
-                        // But SetIndex expects [container, index, new_value]
-
-                        // Let's redo Index Update stack dance:
-                        // Load container [c]
-                        // Compile index [c, i]
-                        // Dup2 -> [c, i, c, i]
-                        // GetIndex -> [c, i, v]
-                        // Compile rhs -> [c, i, v, r]
-                        // Op -> [c, i, nv]
-                        // SetIndex -> []
-
-                        // Let's refactor the whole Update compilation to be cleaner.
-                        // I'll rewrite this.
-                    }
-                    _ => {}
-                }
-
-                // I'll use a more robust stack management for Update.
                 return self.compile_update_statement(target, op, value);
             }
 
@@ -757,10 +634,11 @@ impl Compiler {
                 name,
                 params,
                 body,
-                is_async,
+                effects,
                 ..
             } => {
-                self.compile_function(name, params, body, *is_async)?;
+                let is_async = effects.contains(&ifa_types::ast::Effect::Async);
+                self.compile_function(name, params, body, is_async)?;
 
                 // 8. Store in variable
                 // If inside a local scope, bind as a local (or reuse existing).
@@ -888,7 +766,7 @@ impl Compiler {
                     condition, arms, ..
                 } = stmt
                 else {
-                    unreachable!("match arm destructuring failed");
+                    return Err(IfaError::Compile("match arm destructuring failed".into()));
                 };
 
                 self.begin_scope();
@@ -1463,7 +1341,7 @@ impl Compiler {
                             BinaryOperator::And
                             | BinaryOperator::Or
                             | BinaryOperator::NullCoalesce => {
-                                unreachable!("handled above")
+                                return Err(IfaError::Compile("logical operator reached binary fallback".into()));
                             }
                         };
                         self.emit(opcode);
@@ -1601,6 +1479,12 @@ impl Compiler {
             Expression::Await(expr) => {
                 self.compile_expression(expr)?;
                 self.emit(OpCode::Await);
+            }
+
+            Expression::MoveExpr(expr) => {
+                // Babalawo guarantees move safety at compile time.
+                // At runtime, just evaluate the expression and leave its value on the stack.
+                self.compile_expression(expr)?;
             }
 
             Expression::Try(expr) => {
@@ -1973,6 +1857,10 @@ fn fold_expression(expr: &Expression) -> Expression {
                     expr: Box::new(e_f),
                 },
             }
+        }
+        Expression::MoveExpr(inner) => {
+            let inner_folded = fold_expression(inner);
+            Expression::MoveExpr(Box::new(inner_folded))
         }
         Expression::OduCall(call) => {
             let folded_args: Vec<Expression> = call.args.iter().map(fold_expression).collect();

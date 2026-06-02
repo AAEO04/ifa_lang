@@ -456,7 +456,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
         Rule::ese_def => {
             let mut inner = pair.into_inner();
             let mut visibility = Visibility::Private;
-            let mut is_async = false;
+            let mut effects = Vec::new();
 
             let first = inner
                 .next()
@@ -469,7 +469,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                     .ok_or(IfaError::Parse("Ese missing name".into()))?;
             }
             if current.as_rule() == Rule::async_mod {
-                is_async = true;
+                effects.push(ifa_types::ast::Effect::Async);
                 current = inner
                     .next()
                     .ok_or(IfaError::Parse("Ese missing name".into()))?;
@@ -497,6 +497,26 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                             });
                         }
                     }
+                    Rule::effects_decl => {
+                        for decl_inner in p.into_inner() {
+                            if decl_inner.as_rule() == Rule::effect_list {
+                                for effect_ident in decl_inner.into_inner() {
+                                    let effect = match effect_ident.as_str() {
+                                        "Network" | "Otura" => ifa_types::ast::Effect::Network,
+                                        "Async" | "Osa" => ifa_types::ast::Effect::Async,
+                                        "FileIO" | "Odi" => ifa_types::ast::Effect::FileIO,
+                                        "State" => ifa_types::ast::Effect::State,
+                                        "Impure" => ifa_types::ast::Effect::Impure,
+                                        "Pure" => ifa_types::ast::Effect::Pure,
+                                        _ => return Err(IfaError::Parse(format!("Unknown effect: {}", effect_ident.as_str()))),
+                                    };
+                                    if !effects.contains(&effect) {
+                                        effects.push(effect);
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Rule::statement => {
                         if let Some(stmt) = parse_statement(p)? {
                             body.push(stmt);
@@ -511,7 +531,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                 visibility,
                 params,
                 body,
-                is_async,
+                effects,
                 span,
             }))
         }
@@ -1080,6 +1100,16 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
             Ok(Expression::Await(Box::new(expr)))
         }
 
+        Rule::move_expr => {
+            let mut inner = pair.into_inner();
+            let expr = parse_expression(
+                inner
+                    .next()
+                    .ok_or(IfaError::Parse("Move missing expression".into()))?,
+            )?;
+            Ok(Expression::MoveExpr(Box::new(expr)))
+        }
+
         Rule::index_access => {
             let mut inner = pair.into_inner();
             let object_name = inner
@@ -1448,10 +1478,10 @@ mod tests {
                 assert_eq!(args.len(), 1);
                 assert!(matches!(&args[0], Expression::String(s) if s == "hello"));
             } else {
-                panic!("Expected Expression::Call");
+                assert!(false, "Expected Expression::Call");
             }
         } else {
-            panic!("Expected Statement::Expr");
+            assert!(false, "Expected Statement::Expr");
         }
     }
 
@@ -1464,7 +1494,7 @@ mod tests {
             assert_eq!(name, "x");
             assert!(matches!(value, Expression::Int(42)));
         } else {
-            panic!("Expected VarDecl");
+            assert!(false, "Expected VarDecl");
         }
     }
 
@@ -1477,7 +1507,7 @@ mod tests {
             assert_eq!(call.domain, OduDomain::Irosu);
             assert_eq!(call.method, "fo");
         } else {
-            panic!("Expected Instruction");
+            assert!(false, "Expected Instruction");
         }
     }
 

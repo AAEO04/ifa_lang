@@ -1,0 +1,5 @@
+ayanmo helper_val = 100;
+
+gbangba ese get_val() {
+    pada helper_val;
+}

@@ -154,13 +154,22 @@ pub fn remove_from_path(install_dir: &Path) -> Result<(), PathError> {
     let export_pattern = format!("export PATH=\"{}:$PATH\"", path_str);
 
     if content.contains(&export_pattern) {
-        let new_content: String = content
+        // str::lines() strips the trailing newline — restore it to avoid corrupting the rc file.
+        let new_content = content
             .lines()
             .filter(|line| {
-                !line.contains(&export_pattern) && !line.contains("# Added by Ifa-Lang installer")
+                !line.contains(&export_pattern)
+                    && !line.contains("# Added by Ifa-Lang installer")
             })
             .collect::<Vec<_>>()
             .join("\n");
+
+        // Re-add the trailing newline that lines() consumed.
+        let new_content = if new_content.is_empty() {
+            String::new()
+        } else {
+            format!("{}\n", new_content)
+        };
 
         fs::write(&rc_path, new_content)?;
         println!("Removed {} from PATH in {:?}", path_str, rc_path);

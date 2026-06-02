@@ -31,7 +31,9 @@ fn pending_cell() -> FutureCell {
 }
 
 fn resolve_cell(cell: &FutureCell, value: IfaValue) {
-    *cell.lock().unwrap() = FutureState::Ready(value);
+    if let Ok(mut lock) = cell.lock() {
+        *lock = FutureState::Ready(value);
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]

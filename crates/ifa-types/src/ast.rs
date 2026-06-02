@@ -5,6 +5,23 @@
 use crate::domain::OduDomain;
 use serde::{Deserialize, Serialize};
 
+/// Represents side-effects a function can perform
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+pub enum Effect {
+    /// Pure function, no side effects
+    Pure,
+    /// Yields/pauses (Osa / Concurrency)
+    Async,
+    /// Outbound network access (Otura)
+    Network,
+    /// File I/O access (Odi)
+    FileIO,
+    /// Modifies global/closure state
+    State,
+    /// Opaque/Unsafe FFI or Bridge calls
+    Impure,
+}
+
 /// Source location for error reporting
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Span {
@@ -89,7 +106,7 @@ pub enum Statement {
         visibility: Visibility,
         params: Vec<Param>,
         body: Vec<Statement>,
-        is_async: bool,
+        effects: Vec<Effect>,
         span: Span,
     },
 
@@ -283,6 +300,12 @@ pub enum TypeHint {
     Map,
     /// Any type (fully dynamic)
     Any,
+    /// Function with specified parameters, return type, and effects
+    Function {
+        params: Vec<TypeHint>,
+        ret: Box<TypeHint>,
+        effects: Vec<Effect>,
+    },
     /// Custom/user-defined type
     Custom(String),
 
@@ -454,6 +477,10 @@ pub enum Expression {
         params: Vec<String>,
         body: Vec<Statement>,
     },
+
+    /// Explicit ownership transfer (zero-copy messaging)
+    /// Yoruba: yanda (surrender) or move
+    MoveExpr(Box<Expression>),
 }
 
 /// A part of an interpolated string

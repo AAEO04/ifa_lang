@@ -236,6 +236,10 @@ pub enum Token {
     #[token("null")]
     Nil,
 
+    #[token("yanda")]
+    #[token("move")]
+    Move,
+
     // CEN Model
     #[token("ebo")]
     #[token("ẹbọ")]

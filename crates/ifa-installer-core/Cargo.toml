@@ -7,10 +7,9 @@ edition.workspace = true
 # System Info
 sysinfo = "0.30"
 dirs = "5.0"
-winreg = { version = "0.52", optional = true }
 
 # Networking
-reqwest = { workspace = true, features = ["blocking", "json"] }
+ureq = { version = "2.9", features = ["json"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 sha2 = "0.10"

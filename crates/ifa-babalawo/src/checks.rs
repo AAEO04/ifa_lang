@@ -6,7 +6,8 @@
 use crate::Severity;
 use crate::diagnose::Babalawo;
 use crate::iwa::IwaEngine;
-use crate::movement::{MoveCheckResult, MoveTracker, move_args_from_odu_call};
+use crate::movement::{MoveCheckResult, MoveTracker};
+use crate::effects::EffectChecker;
 use crate::taboo::TabooEnforcer;
 use ifa_types::ast::{Expression, Program, Statement, TypeHint, Visibility};
 use std::collections::{HashMap, HashSet};
@@ -53,6 +54,8 @@ pub struct LintContext {
     pub parallel_locals: HashSet<String>,
     /// Whether strict mode is active (abo; directive)
     pub is_strict: bool,
+    /// Effect checker — enforces side-effect boundaries
+    pub effect_checker: EffectChecker,
 }
 
 impl Default for LintContext {
@@ -83,6 +86,7 @@ impl LintContext {
             in_parallel_body: false,
             parallel_locals: HashSet::new(),
             is_strict: false,
+            effect_checker: EffectChecker::new(),
         }
     }
 
@@ -365,7 +369,7 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
             body,
             span,
             visibility,
-            is_async: _,
+            effects: _,
         } => {
             ctx.define_var(name, span.clone(), *visibility);
             // Parameters are also definitions within the function (private by default)
@@ -437,6 +441,16 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
         // Strict mode directive
         Statement::Abo { .. } => {
             ctx.is_strict = true;
+        }
+        Statement::Import { path, names, span } => {
+            if let Some(n) = names {
+                for name in n {
+                    ctx.define_var(name, span.clone(), Visibility::Private);
+                }
+            } else if let Some(last) = path.last() {
+                ctx.define_var(last, span.clone(), Visibility::Private);
+            }
+            ctx.imports.insert(path.join("."));
         }
         _ => {}
     }
@@ -628,65 +642,7 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
         }
 
         Statement::Instruction { call, span } => {
-            check_unsafe_ffi_call(call, baba, file, span);
-            check_escape_hazards(call, ctx, baba, file, span);
-
-            // Check for division by zero
-            if (call.method == "pin" || call.method == "div")
-                && let Some(Expression::Int(0)) = call.args.get(1)
-            {
-                baba.error(
-                    "DIVISION_BY_ZERO",
-                    "Division by zero detected",
-                    file,
-                    span.line,
-                    span.column,
-                );
-            }
-
-            // #opon kekere + async domain call warning
-            if ctx.opon_size.as_deref() == Some("kekere") {
-                let domain_name = format!("{:?}", call.domain).to_lowercase();
-                if domain_name == "osa" || call.method.contains("async") {
-                    baba.warning(
-                        "OPON_KEKERE_ASYNC",
-                        &format!(
-                            "#opon kekere (64 call frames) used with async domain call '{}.{}' — consider #opon arinrin or larger",
-                            domain_name, call.method
-                        ),
-                        file,
-                        span.line,
-                        span.column,
-                    );
-                }
-            }
-
-            // Track resource lifecycle
-            let domain = format!("{:?}", call.domain).to_lowercase();
-            if call.method == "si" || call.method == "open" {
-                ctx.open_resources.insert(
-                    format!("{}:{}", domain, span.line),
-                    (span.line, span.column),
-                );
-            }
-            if call.method == "pa" || call.method == "close" {
-                ctx.open_resources
-                    .remove(&format!("{}:{}", domain, span.line));
-            }
-
-            // Check taboo violations - get current context (caller) from function or "global"
-            let caller = ctx
-                .current_function
-                .clone()
-                .unwrap_or_else(|| "global".to_string());
-            let callee = format!("{:?}", call.domain).to_lowercase();
-            ctx.taboo_enforcer
-                .check_call(&caller, &callee, span.line, span.column);
-
-            // Check arguments
-            for arg in &call.args {
-                check_expression(arg, ctx, baba, file, span);
-            }
+            check_expression(&Expression::OduCall(call.clone()), ctx, baba, file, span);
         }
 
         Statement::EseDef {
@@ -695,14 +651,16 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             body,
             span,
             visibility: _,
-            is_async,
+            effects,
         } => {
             // Register params as used (they are implicitly used by the caller)
             for param in params {
                 ctx.use_var(&param.name);
             }
 
-            ctx.enter_function(name, *is_async);
+            let is_async = effects.contains(&ifa_types::ast::Effect::Async);
+            ctx.enter_function(name, is_async);
+            ctx.effect_checker.enter_function(effects.clone());
 
             for s in body {
                 check_statement(s, ctx, baba, file);
@@ -722,6 +680,12 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                 }
             }
 
+            for err in &ctx.effect_checker.errors {
+                baba.error("EFFECT_VIOLATION", &err.to_string(), file, span.line, span.column);
+            }
+            ctx.effect_checker.errors.clear();
+
+            ctx.effect_checker.leave_function();
             ctx.exit_function();
         }
 
@@ -921,6 +885,8 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
         Statement::Expr { expr, span } => {
             check_expression(expr, ctx, baba, file, span);
         }
+
+
 
         Statement::Throw { value, span } => {
             check_expression(value, ctx, baba, file, span);
@@ -1127,6 +1093,23 @@ fn check_expression(
             check_expression(index, ctx, baba, file, span);
         }
 
+        Expression::MoveExpr(inner) => {
+            check_expression(inner, ctx, baba, file, span);
+            if let Expression::Identifier(name) = &**inner {
+                if ctx.iwa_engine.is_borrowed(name) {
+                    baba.error(
+                        "MOVE_WHILE_BORROWED",
+                        &format!("Cannot move '{}' while it is borrowed", name),
+                        file,
+                        span.line,
+                        span.column,
+                    );
+                } else {
+                    ctx.move_tracker.record_move(name, span.line, span.column);
+                }
+            }
+        }
+
         Expression::MethodCall { object, args, .. } => {
             check_expression(object, ctx, baba, file, span);
             for arg in args {
@@ -1138,22 +1121,83 @@ fn check_expression(
             check_unsafe_ffi_call(call, baba, file, span);
             check_escape_hazards(call, ctx, baba, file, span);
 
-            // H1: Record actor-boundary moves (Osa domain calls move non-copy args).
-            for (moved_name, line, col) in move_args_from_odu_call(call) {
-                // Guard: warn if borrowed at point of move.
-                if ctx.iwa_engine.is_borrowed(moved_name) {
-                    baba.error(
-                        "MOVE_WHILE_BORROWED",
+            // Check for division by zero
+            if (call.method == "pin" || call.method == "div")
+                && let Some(Expression::Int(0)) = call.args.get(1)
+            {
+                baba.error(
+                    "DIVISION_BY_ZERO",
+                    "Division by zero detected",
+                    file,
+                    span.line,
+                    span.column,
+                );
+            }
+
+            // #opon kekere + async domain call warning
+            if ctx.opon_size.as_deref() == Some("kekere") {
+                let domain_name = format!("{:?}", call.domain).to_lowercase();
+                if domain_name == "osa" || call.method.contains("async") {
+                    baba.warning(
+                        "OPON_KEKERE_ASYNC",
                         &format!(
-                            "Cannot move '{}' into actor boundary while it is borrowed",
-                            moved_name
+                            "#opon kekere (64 call frames) used with async domain call '{}.{}' — consider #opon arinrin or larger",
+                            domain_name, call.method
                         ),
                         file,
-                        line,
-                        col,
+                        span.line,
+                        span.column,
                     );
-                } else {
-                    ctx.move_tracker.record_move(moved_name, line, col);
+                }
+            }
+
+            // Track resource lifecycle
+            let domain = format!("{:?}", call.domain).to_lowercase();
+            if call.method == "si" || call.method == "open" {
+                ctx.open_resources.insert(
+                    format!("{}:{}", domain, span.line),
+                    (span.line, span.column),
+                );
+            }
+            if call.method == "pa" || call.method == "close" {
+                ctx.open_resources
+                    .remove(&format!("{}:{}", domain, span.line));
+            }
+
+            // Check taboo violations - get current context (caller) from function or "global"
+            let caller = ctx
+                .current_function
+                .clone()
+                .unwrap_or_else(|| "global".to_string());
+            let callee = format!("{:?}", call.domain).to_lowercase();
+            ctx.taboo_enforcer
+                .check_call(&caller, &callee, span.line, span.column);
+
+            // Effect system check
+            let callee_effects = crate::effects::domain_effects(call.domain);
+            ctx.effect_checker.check_call(&callee_effects, file, span.line, span.column);
+
+            // H1: Enforce explicit actor-boundary moves (Osa domain requires explicit move).
+            if call.domain == ifa_types::domain::OduDomain::Osa {
+                for (idx, arg) in call.args.iter().enumerate() {
+                    let is_payload = if call.method == "ran" || call.method == "post" {
+                        idx == 1
+                    } else {
+                        true
+                    };
+                    if is_payload {
+                        if let Expression::Identifier(_) = arg {
+                            if !crate::movement::is_copy_eligible(arg) {
+                                baba.error(
+                                    "EXPLICIT_MOVE_REQUIRED",
+                                    "Cannot pass non-scalar variable to actor boundary. Use 'yanda' (or 'move') to explicitly transfer ownership.",
+                                    file,
+                                    call.span.line,
+                                    call.span.column,
+                                );
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1341,12 +1385,13 @@ fn check_escape_hazards(
 fn check_unused_vars(ctx: &LintContext, baba: &mut Babalawo, file: &str) {
     for (var, span) in &ctx.defined_vars {
         if !ctx.used_vars.contains(var) && !var.starts_with('_') {
-            baba.add_full(
+            baba.add_with_context(
                 Severity::Warning,
                 "UNUSED_VARIABLE",
                 &format!("Variable '{}' is defined but never used", var),
                 file,
                 span.clone(),
+                var,
             );
         }
     }

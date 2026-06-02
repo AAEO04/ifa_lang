@@ -14,7 +14,14 @@ impl RustTranspiler {
             Expression::String(s) => format!("IfaValue::Str(\"{}\".to_string())", s),
             Expression::Bool(b) => format!("IfaValue::Bool({})", b),
             Expression::Nil => "IfaValue::Nil".to_string(),
-            Expression::Identifier(name) => self.mangle_identifier(name),
+            Expression::Identifier(name) => {
+                let m_name = self.mangle_identifier(name);
+                if self.global_vars.contains(name) {
+                    format!("__IFA_GLOBAL_{}.with(|v| v.borrow().clone())", m_name)
+                } else {
+                    m_name
+                }
+            }
 
             Expression::BinaryOp { left, op, right } => {
                 if let Some(opt) = self.try_transpile_literal_binop(left, op, right) {
@@ -129,9 +136,11 @@ impl RustTranspiler {
                 match op {
                     UnaryOperator::Neg => format!("(-{})", o),
                     UnaryOperator::Not => format!("(!{})", o),
-                    UnaryOperator::AddressOf | UnaryOperator::Dereference => {
-                        // Not supported in transpiler yet
-                        format!("/* Pointers Unimplemented */ IfaValue::Nil")
+                    UnaryOperator::AddressOf => {
+                        format!("IfaValue::Ptr(std::sync::Arc::new(std::sync::Mutex::new({})))", o)
+                    }
+                    UnaryOperator::Dereference => {
+                        format!("(if let IfaValue::Ptr(p) = {} {{ p.lock().unwrap().clone() }} else {{ IfaValue::Nil }})", o)
                     }
                 }
             }
@@ -153,7 +162,7 @@ impl RustTranspiler {
                         )
                     })
                     .collect();
-                format!("IfaValue::Map(HashMap::from([{}]))", pairs_str.join(", "))
+                format!("IfaValue::Map(std::collections::BTreeMap::from([{}]))", pairs_str.join(", "))
             }
 
             Expression::OduCall(call) => self.transpile_odu_call(call),
@@ -286,6 +295,12 @@ impl RustTranspiler {
                     params_str.join(", "),
                     inner.trim()
                 )
+            }
+            Expression::MoveExpr(inner) => {
+                // In transpiled Rust, we just evaluate the inner expression.
+                // Rust's own move semantics or Arc cloning handles the rest,
+                // guided by Babalawo's static analysis.
+                self.transpile_expression(inner)
             }
         }
     }

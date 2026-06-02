@@ -187,23 +187,7 @@ pub fn as_identifier(expr: &Expression) -> Option<&str> {
     }
 }
 
-/// Determine which arguments to an OduCall are "move triggers" — i.e. the call
-/// crosses a concurrency boundary and the argument must be consumed.
-///
-/// Currently: any call into the Osa (concurrency) domain is a move boundary.
-/// All non-copy-eligible identifier arguments are considered moved.
-pub fn move_args_from_odu_call<'a>(
-    call: &'a OduCall,
-) -> impl Iterator<Item = (&'a str, usize, usize)> {
-    let is_actor_boundary = call.domain == OduDomain::Osa;
-    call.args.iter().enumerate().filter_map(move |(_, arg)| {
-        if is_actor_boundary && !is_copy_eligible(arg) {
-            as_identifier(arg).map(|name| (name, call.span.line, call.span.column))
-        } else {
-            None
-        }
-    })
-}
+
 
 /// Check an expression for uses of moved variables, reporting any violations.
 /// Returns a list of `MoveCheckResult` violations found.
@@ -273,6 +257,7 @@ fn collect_expr_violations(
                 }
             }
         }
+        Expression::MoveExpr(inner) => collect_expr_violations(inner, tracker, out),
         _ => {}
     }
 }

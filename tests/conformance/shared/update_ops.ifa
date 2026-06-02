@@ -1,0 +1,6 @@
+# expect: 42
+
+ayanmo x = 10;
+x += 20;
+x += 12;
+Irosu.fo(x);

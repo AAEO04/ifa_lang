@@ -168,5 +168,7 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
         }
 
         Expression::Lambda { params: _, body: _ } => Some(TypeHint::Any),
+        
+        Expression::MoveExpr(inner) => infer_expression_type(inner, ctx),
     }
 }

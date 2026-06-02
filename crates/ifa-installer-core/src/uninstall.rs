@@ -69,8 +69,18 @@ fn validate_uninstall_dir(install_dir: &Path) -> Result<(), UninstallError> {
         ));
     }
 
-    // 4. Heuristic: ensure it's likely an Ifa-lang directory
-    // (e.g., contains 'ifa' in path or a specific marker file - optional but recommended)
+    // 4. Heuristic: ensure the directory is an actual Ifá-Lang installation.
+    // The installer writes a .ifa-installed sentinel on success. Without this check,
+    // `ifa uninstall --dir /home/user/projects` would silently delete an unrelated directory.
+    let marker = canonical.join(".ifa-installed");
+    if !marker.exists() {
+        return Err(UninstallError::InvalidPath(format!(
+            "Directory {:?} does not appear to be an Ifá-Lang installation \
+             (missing .ifa-installed marker). \
+             Re-run the original installer to fix, or remove the directory manually.",
+            canonical
+        )));
+    }
 
     Ok(())
 }

@@ -74,18 +74,7 @@ jobs:
       - name: Build ifa
         run: cargo build --release --target ${{ matrix.target }} -p ifa-cli
       
-      # Install native dependencies for GUI installer on Linux (native only)
-      - name: Install GTK development libraries (Linux)
-        if: matrix.platform == 'linux-x86_64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libasound2-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev
-      
-      # Build GUI installer (skip on cross-compile - requires native GUI deps)
-      - name: Build ifa-installer
-        if: ${{ !matrix.cross }}
-        run: cargo build --release --target ${{ matrix.target }} -p ifa-installer-gui
-      
+
       - name: Get version from tag
         id: version
         shell: bash
@@ -103,11 +92,7 @@ jobs:
           # Primary binary: ifa (includes oja, babalawo, sandbox)
           cp target/${{ matrix.target }}/release/ifa${EXT} dist/ifa-${VERSION}-${PLATFORM}${EXT}
           
-          # GUI installer (if built)
-          if [ -f "target/${{ matrix.target }}/release/ifa-installer-gui${EXT}" ]; then
-            cp target/${{ matrix.target }}/release/ifa-installer-gui${EXT} dist/ifa-installer-${VERSION}-${PLATFORM}${EXT}
-          fi
-      
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -164,7 +149,7 @@ jobs:
           ```
           
           **Windows:**
-          Download `ifa-installer-$VERSION-windows-x86_64.exe` below.
+          Download the latest installer from the [Releases](https://github.com/AAEO04/ifa_lang/releases) page, or use the raw binary `ifa-$VERSION-windows-x86_64.exe` below.
           
           **Manual (any platform):**
           Download the `ifa-*` binary for your platform.
@@ -184,13 +169,13 @@ jobs:
           
           ## Downloads
           
-          | Platform | Installer (Recommended) | Raw Binary |
-          |----------|------------------------|------------|
-          | Windows x64 | `ifa-installer-...-windows-x86_64.exe` | `ifa-...-windows-x86_64.exe` |
-          | macOS ARM | — | `ifa-...-macos-arm64` |
-          | macOS Intel | — | `ifa-...-macos-x86_64` |
-          | Linux x64 | — | `ifa-...-linux-x86_64` |
-          | Linux ARM | — | `ifa-...-linux-arm64` |
+          | Platform | Raw Binary |
+          |----------|------------|
+          | Windows x64 | `ifa-...-windows-x86_64.exe` |
+          | macOS ARM | `ifa-...-macos-arm64` |
+          | macOS Intel | `ifa-...-macos-x86_64` |
+          | Linux x64 | `ifa-...-linux-x86_64` |
+          | Linux ARM | `ifa-...-linux-arm64` |
           
           ---
           

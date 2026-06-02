@@ -1187,7 +1187,7 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                 .resource_registry()
                 .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
-            let mut rope = res.0.lock().unwrap();
+            let mut rope = res.0.lock().map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
             ika.rope_insert(&mut rope, idx, &text);
             Ok(IfaValue::Null)
         }
@@ -1206,7 +1206,7 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                 .resource_registry()
                 .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
-            let mut rope = res.0.lock().unwrap();
+            let mut rope = res.0.lock().map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
             ika.rope_delete(&mut rope, start, end);
             Ok(IfaValue::Null)
         }
@@ -1225,7 +1225,7 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                 .resource_registry()
                 .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
-            let rope = res.0.lock().unwrap();
+            let rope = res.0.lock().map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
             let slice = ika.rope_slice(&rope, start, end);
             Ok(IfaValue::str(slice))
         }
@@ -1242,7 +1242,7 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                 .resource_registry()
                 .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
-            let rope = res.0.lock().unwrap();
+            let rope = res.0.lock().map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
             let len = ika.rope_len(&rope);
             Ok(IfaValue::int(len as i64))
         }
@@ -1619,17 +1619,14 @@ fn dispatch_okanran(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> I
                 .first()
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "panic".into());
-            panic!("[Ọ̀kànràn] {}", msg);
+            Err(IfaError::Runtime(format!("[Ọ̀kànràn] {}", msg)))
         }
         "ko_le_de" | "unreachable_panic" => {
-            panic!("[Ọ̀kànràn] Unreachable code executed!");
+            Err(IfaError::Runtime("[Ọ̀kànràn] Unreachable code executed!".into()))
         }
         "ko_ti_se" | "not_implemented_panic" => {
             let feat = args.first().map(|v| v.to_string()).unwrap_or_default();
-            panic!(
-                "Ẹ̀yà '{}' kò tíì ṣé (Feature '{}' is not yet implemented)",
-                feat, feat
-            );
+            Err(IfaError::Runtime(format!("Ẹ̀yà '{}' kò tíì ṣé (Feature '{}' is not yet implemented)", feat, feat)))
         }
         _ => Err(IfaError::Custom(format!(
             "Okanran: unknown method '{}'",
@@ -1649,7 +1646,7 @@ fn dispatch_ose(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                         ctx.resource_registry()
                             .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
                     {
-                        let mut terminal = terminal_mutex.lock().unwrap();
+                        let mut terminal = terminal_mutex.lock().map_err(|_| IfaError::Runtime("Terminal lock poisoned".into()))?;
                         terminal
                             .clear()
                             .map_err(|e| IfaError::Runtime(e.to_string()))?;
@@ -1859,9 +1856,13 @@ impl StdRegistry {
                 let sliced = ogunda.ge(list, start, end)?;
                 Ok(IfaValue::List(std::sync::Arc::new(sliced)))
             }
-            "da" | "create" | "seda" | "new_list" => Ok(IfaValue::List(std::sync::Arc::new(
-                ogunda.seda::<IfaValue>(),
-            ))),
+            "da" | "create" | "seda" | "new_list" => {
+                let mut list = ogunda.seda::<IfaValue>();
+                for arg in args {
+                    list.push(arg);
+                }
+                Ok(IfaValue::List(std::sync::Arc::new(list)))
+            }
             "seda_agbara" | "with_capacity" => {
                 let cap = args.first().and_then(as_int).unwrap_or(0) as usize;
                 Ok(IfaValue::List(std::sync::Arc::new(

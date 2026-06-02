@@ -92,7 +92,10 @@ pub fn add_to_path(install_dir: &Path) -> Result<(), PathError> {
         .to_str()
         .ok_or_else(|| PathError::InvalidPath("Path contains invalid UTF-8".to_string()))?;
 
-    if !path.contains(new_path) {
+    // Use segment comparison, not substring match.
+    // Substring match has false positives: "C:\\ifa" matches when "C:\\ifa-tools" is in PATH.
+    // Windows paths are case-insensitive, so use eq_ignore_ascii_case.
+    if !path.split(';').any(|seg| seg.trim().eq_ignore_ascii_case(new_path)) {
         let updated_path = format!("{};{}", path, new_path);
 
         // Check length limit

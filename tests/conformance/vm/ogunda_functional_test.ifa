@@ -4,7 +4,7 @@
 ayanmo nums = Ogunda.da(1, 2, 3, 4, 5);
 
 # 2. Map (multiply by 2)
-ayanmo mapped = Ogunda.map(nums, |x| x * 2);
+ayanmo mapped = Ogunda.map(nums, ese(x) { pada x * 2; });
 ayanmo m1 = mapped[0];
 ayanmo m2 = mapped[1];
 ayanmo m3 = mapped[2];
@@ -12,16 +12,16 @@ ayanmo m4 = mapped[3];
 ayanmo m5 = mapped[4];
 
 # 3. Filter (elements greater than 2)
-ayanmo filtered = Ogunda.filter(nums, |x| x > 2);
+ayanmo filtered = Ogunda.filter(nums, ese(x) { pada x > 2; });
 ayanmo f1 = filtered[0];
 ayanmo f2 = filtered[1];
 ayanmo f3 = filtered[2];
 
 # 4. Reduce (sum) with initial value
-ayanmo sum = Ogunda.reduce(nums, 10, |acc, x| acc + x);
+ayanmo sum = Ogunda.reduce(nums, 10, ese(acc, x) { pada acc + x; });
 
 # 5. Reduce without initial value
-ayanmo product = Ogunda.reduce(nums, |acc, x| acc * x);
+ayanmo product = Ogunda.reduce(nums, ese(acc, x) { pada acc * x; });
 
 # Print results
 Irosu.fo(m1);

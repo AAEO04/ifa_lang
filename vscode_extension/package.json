@@ -57,7 +57,8 @@
         ],
         "extensions": [
           ".ifa",
-          ".ifá"
+          ".ifá",
+          ".ifab"
         ],
         "configuration": "./language-configuration.json"
       }
@@ -132,6 +133,21 @@
           ],
           "default": "off",
           "description": "Trace communication with the language server"
+        },
+        "ifa.linter.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Babalawo static analysis linter"
+        },
+        "ifa.linter.strict": {
+          "type": "boolean",
+          "default": false,
+          "description": "Strict mode — warnings become errors"
+        },
+        "ifa.format.onSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Format Ifa files on save"
         }
       }
     },

@@ -15,6 +15,7 @@ members = [
     "crates/ifa-bytecode",
     "crates/ifa-fmt",
     "crates/ifa-infra",
+    "crates/ifa-docs",
 ]
 
 [workspace.package]

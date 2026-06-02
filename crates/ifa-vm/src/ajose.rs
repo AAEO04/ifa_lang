@@ -65,6 +65,9 @@ pub struct Signal<T> {
 }
 
 impl<T: Clone + Send + Sync + 'static> Signal<T> {
+    // SAFETY [Poisoning]: Signal data represents isolated reactive states. 
+    // If a reader or writer panics, the inner generic value remains structurally sound in memory. 
+    // We safely bypass lock poisoning via `into_inner()` to ensure surviving subscribers can still process updates.
     pub fn new(initial: T) -> Self {
         Signal {
             value: Arc::new(RwLock::new(initial)),
@@ -76,24 +79,24 @@ impl<T: Clone + Send + Sync + 'static> Signal<T> {
 
     /// Get current value
     pub fn get(&self) -> T {
-        self.value.read().unwrap().clone()
+        self.value.read().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     /// Get reference to value
     pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
-        f(&self.value.read().unwrap())
+        f(&self.value.read().unwrap_or_else(|e| e.into_inner()))
     }
 
     /// Set value and notify subscribers
     pub fn set(&self, new_value: T) {
-        *self.value.write().unwrap() = new_value;
+        *self.value.write().unwrap_or_else(|e| e.into_inner()) = new_value;
         self.version.fetch_add(1, Ordering::Relaxed);
         self.notify();
     }
 
     /// Update value with function
     pub fn update(&self, f: impl FnOnce(&mut T)) {
-        f(&mut self.value.write().unwrap());
+        f(&mut self.value.write().unwrap_or_else(|e| e.into_inner()));
         self.version.fetch_add(1, Ordering::Relaxed);
         self.notify();
     }
@@ -103,7 +106,7 @@ impl<T: Clone + Send + Sync + 'static> Signal<T> {
         let id = self.next_sub_id.fetch_add(1, Ordering::Relaxed);
         self.subscribers
             .write()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .insert(id, Box::new(callback));
         SubscriptionGuard {
             subscribers: Arc::clone(&self.subscribers),
@@ -117,7 +120,7 @@ impl<T: Clone + Send + Sync + 'static> Signal<T> {
     }
 
     fn notify(&self) {
-        let value = self.value.read().unwrap();
+        let value = self.value.read().unwrap_or_else(|e| e.into_inner());
         if let Ok(subs) = self.subscribers.read() {
             for sub in subs.values() {
                 sub(&value);
@@ -139,7 +142,7 @@ impl<T: Clone + 'static> Clone for Signal<T> {
 
 impl<T: fmt::Debug + Clone + 'static> fmt::Debug for Signal<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Signal({:?})", self.value.read().unwrap())
+        write!(f, "Signal({:?})", self.value.read().unwrap_or_else(|e| e.into_inner()))
     }
 }
 
@@ -165,8 +168,8 @@ impl<T: Clone + Send + Sync + 'static> Computed<T> {
     pub fn get(&self) -> T {
         // Recompute (in real impl, would track dependencies)
         let new_val = (self.compute)();
-        *self.value.write().unwrap() = new_val;
-        self.value.read().unwrap().clone()
+        *self.value.write().unwrap_or_else(|e| e.into_inner()) = new_val;
+        self.value.read().unwrap_or_else(|e| e.into_inner()).clone()
     }
 }
 
@@ -282,7 +285,7 @@ impl<S: Send + Sync + 'static, T: Send + Sync + 'static> Ajose<S, T> {
         let target_weak = Arc::downgrade(target);
 
         // Initial sync (must happen before we move transform into the Box)
-        transform(&source.read().unwrap(), &mut target.write().unwrap());
+        transform(&source.read().unwrap_or_else(|e| e.into_inner()), &mut target.write().unwrap_or_else(|e| e.into_inner()));
 
         self.relationships
             .push((source_weak, target_weak, Box::new(transform)));
@@ -294,7 +297,7 @@ impl<S: Send + Sync + 'static, T: Send + Sync + 'static> Ajose<S, T> {
             if let Some(src) = src_weak.upgrade() {
                 if Arc::ptr_eq(&src, source) {
                     if let Some(tgt) = tgt_weak.upgrade() {
-                        transform(&src.read().unwrap(), &mut tgt.write().unwrap());
+                        transform(&src.read().unwrap_or_else(|e| e.into_inner()), &mut tgt.write().unwrap_or_else(|e| e.into_inner()));
                     }
                 }
             }

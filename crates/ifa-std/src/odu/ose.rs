@@ -123,7 +123,7 @@ impl Ose {
                 .resource_registry()
                 .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
             {
-                let mut terminal = terminal_mutex.lock().unwrap();
+                let mut terminal = terminal_mutex.lock().map_err(|_| IfaError::Runtime("Terminal lock poisoned".into()))?;
                 let _ = execute!(terminal.backend_mut(), DisableMouseCapture);
                 disable_raw_mode().ok();
                 let _ = execute!(terminal.backend_mut(), LeaveAlternateScreen);
@@ -154,7 +154,7 @@ impl Ose {
             .resource_registry()
             .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
             .ok_or_else(|| IfaError::Runtime("Terminal resource not found".into()))?;
-        let mut terminal = terminal_arc.lock().unwrap();
+        let mut terminal = terminal_arc.lock().map_err(|_| IfaError::Runtime("Terminal lock poisoned".into()))?;
         terminal
             .draw(|f| {
                 let area = area_override.unwrap_or_else(|| f.area());
@@ -345,7 +345,7 @@ impl Ose {
             .resource_registry()
             .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
             .ok_or_else(|| IfaError::Runtime("Terminal resource not found".into()))?;
-        let terminal = terminal_arc.lock().unwrap();
+        let terminal = terminal_arc.lock().map_err(|_| IfaError::Runtime("Terminal lock poisoned".into()))?;
         let terminal_size = terminal
             .size()
             .map_err(|e| IfaError::Runtime(e.to_string()))?;
@@ -429,7 +429,7 @@ impl Ose {
             .resource_registry()
             .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
             .ok_or_else(|| IfaError::Runtime("Terminal resource not found".into()))?;
-        let mut terminal = terminal_arc.lock().unwrap();
+        let mut terminal = terminal_arc.lock().map_err(|_| IfaError::Runtime("Terminal lock poisoned".into()))?;
         execute!(terminal.backend_mut(), EnableMouseCapture)
             .map_err(|e| IfaError::Runtime(e.to_string()))?;
         Ok(IfaValue::null())
@@ -449,7 +449,7 @@ impl Ose {
             .resource_registry()
             .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
             .ok_or_else(|| IfaError::Runtime("Terminal resource not found".into()))?;
-        let mut terminal = terminal_arc.lock().unwrap();
+        let mut terminal = terminal_arc.lock().map_err(|_| IfaError::Runtime("Terminal lock poisoned".into()))?;
         execute!(terminal.backend_mut(), DisableMouseCapture)
             .map_err(|e| IfaError::Runtime(e.to_string()))?;
         Ok(IfaValue::null())

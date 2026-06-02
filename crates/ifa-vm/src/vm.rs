@@ -1011,54 +1011,111 @@ impl IfaVM {
         std::mem::swap(&mut self.ctx, &mut task.ctx);
     }
 
-    fn call_value_task(&mut self, func: IfaValue, args: Vec<IfaValue>) -> IfaResult<()> {
-        match func {
-            IfaValue::Fn(data) => {
-                if args.len() != data.arity as usize {
-                    return Err(IfaError::ArityMismatch {
-                        expected: data.arity as usize,
-                        got: args.len(),
-                    });
+
+    fn call_value(&mut self, func: IfaValue, args: Vec<IfaValue>, is_tail_call: bool, bytecode: Option<&Bytecode>) -> IfaResult<()> {
+        let (start_ip, arity, env, async_return, is_str) = match &func {
+            IfaValue::Fn(data) => (data.start_ip, data.arity as usize, None, data.is_async, false),
+            IfaValue::Closure(closure) => (
+                closure.fn_data.start_ip,
+                closure.fn_data.arity as usize,
+                Some(closure.env.clone()),
+                closure.fn_data.is_async,
+                false
+            ),
+            IfaValue::Str(_) => (0, 0, None, false, true),
+            _ => return Err(IfaError::TypeError {
+                expected: "Function".into(),
+                got: func.type_name().into(),
+            }),
+        };
+
+        if is_str {
+            let s = match func {
+                IfaValue::Str(s) => s,
+                _ => unreachable!(),
+            };
+            if let Some((domain_id, method)) = parse_odu_fn_marker(&s) {
+                if let Some(bc) = bytecode {
+                    let result = self.call_registry(domain_id, &method, args, bc)?;
+                    self.push(result)?;
+                    return Ok(());
+                } else {
+                    return Err(IfaError::Runtime("Cannot call registry without bytecode".into()));
                 }
-                self.push_frame(CallFrame::new(
-                    self.ctx.ip,
-                    self.ctx.stack.len(),
-                    None,
-                    false,
-                ))?;
-                for arg in args {
-                    self.push(arg)?;
-                }
-                self.ctx.ip = data.start_ip;
-            }
-            IfaValue::Closure(closure) => {
-                let data = &closure.fn_data;
-                if args.len() != data.arity as usize {
-                    return Err(IfaError::ArityMismatch {
-                        expected: data.arity as usize,
-                        got: args.len(),
-                    });
-                }
-                self.push_frame(CallFrame::new(
-                    self.ctx.ip,
-                    self.ctx.stack.len(),
-                    Some(closure.env.clone()),
-                    false,
-                ))?;
-                for arg in args {
-                    self.push(arg)?;
-                }
-                self.ctx.ip = data.start_ip;
-            }
-            other => {
-                return Err(IfaError::TypeError {
-                    expected: "Function".into(),
-                    got: other.type_name().into(),
-                });
+            } else if let Some((module_key, function_name)) = parse_module_fn_marker(&s) {
+                let result = self.invoke_module_function(&module_key, &function_name, args)?;
+                self.push(result)?;
+                return Ok(());
+            } else {
+                return Err(IfaError::TypeError { expected: "Function".into(), got: "Str".into() });
             }
         }
+
+        if args.len() != arity {
+            return Err(IfaError::ArityMismatch {
+                expected: arity,
+                got: args.len(),
+            });
+        }
+
+        if async_return {
+            let future = self.spawn_task(func, args)?;
+            if is_tail_call {
+                if let Some(frame) = self.ctx.frames.pop() {
+                    if self.ctx.stack.len() > frame.base_ptr {
+                        self.ctx.stack.truncate(frame.base_ptr);
+                    }
+                    self.push(future)?;
+                    self.ctx.ip = frame.return_addr;
+                } else {
+                    self.push(future)?;
+                    self.ctx.halted = true;
+                }
+            } else {
+                self.push(future)?;
+            }
+            return Ok(());
+        }
+
+        if is_tail_call {
+            if let Some(frame) = self.ctx.frames.last_mut() {
+                if self.ctx.stack.len() > frame.base_ptr {
+                    self.ctx.stack.truncate(frame.base_ptr);
+                }
+                frame.local_count = 0;
+                frame.closure_env = env;
+                frame.async_return = async_return;
+
+                for arg in args {
+                    self.push(arg)?;
+                }
+            } else {
+                self.push_frame(CallFrame::new(
+                    self.ctx.ip,
+                    self.ctx.stack.len(),
+                    env,
+                    async_return,
+                ))?;
+                for arg in args {
+                    self.push(arg)?;
+                }
+            }
+        } else {
+            self.push_frame(CallFrame::new(
+                self.ctx.ip,
+                self.ctx.stack.len(),
+                env,
+                async_return,
+            ))?;
+            for arg in args {
+                self.push(arg)?;
+            }
+        }
+
+        self.ctx.ip = start_ip;
         Ok(())
     }
+
 
     fn run_task_slice(
         &mut self,
@@ -1069,7 +1126,7 @@ impl IfaVM {
 
         if !task.started {
             task.base_depth = self.ctx.frames.len();
-            self.call_value_task(task.func.clone(), task.args.clone())?;
+            self.call_value(task.func.clone(), task.args.clone(), false, Some(bytecode))?;
             task.started = true;
         }
 
@@ -1183,7 +1240,7 @@ impl IfaVM {
 
         let cell = match IfaValue::future_pending() {
             IfaValue::Future(cell) => cell,
-            _ => unreachable!(),
+            _ => return Err(IfaError::Runtime("Internal error: future_pending did not return a Future".into())),
         };
         let task = Task {
             func,
@@ -2293,13 +2350,25 @@ impl IfaVM {
             OpCode::Pow => {
                 let exp = self.pop()?;
                 let base = self.pop()?;
-                if let (Some(b), Some(e)) = (Self::boxed_i64(&base), Self::boxed_i64(&exp)) {
-                    self.push(IfaValue::int(b.pow(e as u32)))?;
-                } else if let (Some(b), Some(e)) = (Self::boxed_f64(&base), Self::boxed_f64(&exp)) {
-                    self.push(IfaValue::float(b.powf(e)))?;
-                } else {
-                    return Err(IfaError::Runtime("Invalid types for power".into()));
-                }
+                
+                let base_prim = base.to_nan_boxed_primitive().and_then(|n| n.to_primitive().ok()).ok_or_else(|| IfaError::Runtime("Invalid base for power".into()))?;
+                let exp_prim = exp.to_nan_boxed_primitive().and_then(|n| n.to_primitive().ok()).ok_or_else(|| IfaError::Runtime("Invalid exp for power".into()))?;
+                
+                use ifa_types::nan_box::BoxedPrimitive;
+                let result = match (base_prim, exp_prim) {
+                    (BoxedPrimitive::Int(b), BoxedPrimitive::Int(e)) => {
+                        let e_u32 = u32::try_from(e).map_err(|_| IfaError::Runtime("Pow: negative exponent with integer base".into()))?;
+                        IfaValue::int(b.checked_pow(e_u32).ok_or_else(|| IfaError::Runtime("Pow: Integer overflow".into()))?)
+                    }
+                    (BoxedPrimitive::Float(b), BoxedPrimitive::Float(e)) => IfaValue::float(b.powf(e)),
+                    (BoxedPrimitive::Int(b), BoxedPrimitive::Float(e)) => IfaValue::float((b as f64).powf(e)),
+                    (BoxedPrimitive::Float(b), BoxedPrimitive::Int(e)) => {
+                        let e_i32 = i32::try_from(e).map_err(|_| IfaError::Runtime("Pow: exponent out of bounds for float".into()))?;
+                        IfaValue::float(b.powi(e_i32))
+                    }
+                    _ => return Err(IfaError::Runtime("Invalid types for power".into())),
+                };
+                self.push(result)?;
             }
             OpCode::Mod => {
                 let b = self.pop()?;
@@ -2321,7 +2390,7 @@ impl IfaVM {
                         OpCode::Le => ba.le(bb),
                         OpCode::Gt => ba.gt(bb),
                         OpCode::Ge => ba.ge(bb),
-                        _ => unreachable!(),
+                        _ => return Err(IfaError::Runtime("Invalid comparison opcode".into())),
                     };
                     if let Some(r) = res {
                         self.push(IfaValue::bool(r))?;
@@ -2383,7 +2452,7 @@ impl IfaVM {
                             });
                         }
                     },
-                    _ => unreachable!(),
+                    _ => return Err(IfaError::Runtime("Invalid comparison opcode".into())),
                 };
                 self.push(IfaValue::bool(result))?;
             }
@@ -2489,162 +2558,24 @@ impl IfaVM {
 
     fn dispatch_call(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
         let arg_count = self.read_u8(bytecode)? as usize;
-
         let mut args = Vec::with_capacity(arg_count);
         for _ in 0..arg_count {
             args.push(self.pop()?);
         }
         args.reverse();
-
         let func = self.pop()?;
-
-        match func {
-            IfaValue::Fn(data) => {
-                if args.len() != data.arity as usize {
-                    return Err(IfaError::ArityMismatch {
-                        expected: data.arity as usize,
-                        got: args.len(),
-                    });
-                }
-                if data.is_async {
-                    let future = self.spawn_task(IfaValue::Fn(data.clone()), args)?;
-                    self.push(future)?;
-                } else {
-                    self.push_frame(CallFrame::new(
-                        self.ctx.ip,
-                        self.ctx.stack.len(),
-                        None,
-                        data.is_async,
-                    ))?;
-                    for arg in args {
-                        self.push(arg)?;
-                    }
-                    self.ctx.ip = data.start_ip;
-                }
-            }
-            IfaValue::Closure(closure) => {
-                let data = &closure.fn_data;
-                if args.len() != data.arity as usize {
-                    return Err(IfaError::ArityMismatch {
-                        expected: data.arity as usize,
-                        got: args.len(),
-                    });
-                }
-                if data.is_async {
-                    let future = self.spawn_task(IfaValue::Closure(closure.clone()), args)?;
-                    self.push(future)?;
-                } else {
-                    self.push_frame(CallFrame::new(
-                        self.ctx.ip,
-                        self.ctx.stack.len(),
-                        Some(closure.env.clone()),
-                        data.is_async,
-                    ))?;
-                    for arg in args {
-                        self.push(arg)?;
-                    }
-                    self.ctx.ip = data.start_ip;
-                }
-            }
-            IfaValue::Str(s) => {
-                if let Some((domain_id, method)) = parse_odu_fn_marker(&s) {
-                    let result = self.call_registry(domain_id, &method, args, bytecode)?;
-                    self.push(result)?;
-                } else if let Some((module_key, function_name)) = parse_module_fn_marker(&s) {
-                    let result = self.invoke_module_function(&module_key, &function_name, args)?;
-                    self.push(result)?;
-                } else {
-                    return Err(IfaError::TypeError {
-                        expected: "Function".into(),
-                        got: "Str".into(),
-                    });
-                }
-            }
-            _ => {
-                return Err(IfaError::TypeError {
-                    expected: "Function".into(),
-                    got: func.type_name().into(),
-                });
-            }
-        }
-
-        Ok(())
+        self.call_value(func, args, false, Some(bytecode))
     }
 
     fn dispatch_tail_call(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
         let arg_count = self.read_u8(bytecode)? as usize;
-
         let mut args = Vec::with_capacity(arg_count);
         for _ in 0..arg_count {
             args.push(self.pop()?);
         }
         args.reverse();
-
         let func = self.pop()?;
-
-        let (start_ip, arity, env, async_return) = match func {
-            IfaValue::Fn(ref data) => (data.start_ip, data.arity as usize, None, data.is_async),
-            IfaValue::Closure(ref closure) => (
-                closure.fn_data.start_ip,
-                closure.fn_data.arity as usize,
-                Some(closure.env.clone()),
-                closure.fn_data.is_async,
-            ),
-            _ => {
-                return Err(IfaError::TypeError {
-                    expected: "Function".into(),
-                    got: func.type_name().into(),
-                });
-            }
-        };
-
-        if args.len() != arity {
-            return Err(IfaError::ArityMismatch {
-                expected: arity,
-                got: args.len(),
-            });
-        }
-
-        if async_return {
-            let future = self.spawn_task(func, args)?;
-            if let Some(frame) = self.ctx.frames.pop() {
-                if self.ctx.stack.len() > frame.base_ptr {
-                    self.ctx.stack.truncate(frame.base_ptr);
-                }
-                self.push(future)?;
-                self.ctx.ip = frame.return_addr;
-            } else {
-                self.push(future)?;
-                self.ctx.halted = true;
-            }
-            return Ok(());
-        }
-
-        if let Some(frame) = self.ctx.frames.last_mut() {
-            if self.ctx.stack.len() > frame.base_ptr {
-                self.ctx.stack.truncate(frame.base_ptr);
-            }
-            frame.local_count = 0;
-            frame.closure_env = env;
-            frame.async_return = async_return;
-
-            for arg in args {
-                self.push(arg)?;
-            }
-        } else {
-            self.push_frame(CallFrame::new(
-                self.ctx.ip,
-                self.ctx.stack.len(),
-                env,
-                async_return,
-            ))?;
-            for arg in args {
-                self.push(arg)?;
-            }
-        }
-
-        self.ctx.ip = start_ip;
-        Ok(())
+        self.call_value(func, args, true, Some(bytecode))
     }
 
     fn dispatch_return(&mut self) -> IfaResult<()> {
@@ -2775,71 +2706,8 @@ impl IfaVM {
                 let key = ifa_types::CompactString::new(method_name.as_str());
                 if let Some(func) = map.get(&key) {
                     match func {
-                        IfaValue::Fn(data) => {
-                            if args.len() != data.arity as usize {
-                                return Err(IfaError::ArityMismatch {
-                                    expected: data.arity as usize,
-                                    got: args.len(),
-                                });
-                            }
-                            if data.is_async {
-                                let future = self.spawn_task(IfaValue::Fn(data.clone()), args)?;
-                                self.push(future)?;
-                            } else {
-                                self.push_frame(CallFrame::new(
-                                    self.ctx.ip,
-                                    self.ctx.stack.len(),
-                                    None,
-                                    data.is_async,
-                                ))?;
-                                for arg in args {
-                                    self.push(arg)?;
-                                }
-                                self.ctx.ip = data.start_ip;
-                            }
-                        }
-                        IfaValue::Closure(closure) => {
-                            let data = &closure.fn_data;
-                            if args.len() != data.arity as usize {
-                                return Err(IfaError::ArityMismatch {
-                                    expected: data.arity as usize,
-                                    got: args.len(),
-                                });
-                            }
-                            if data.is_async {
-                                let future =
-                                    self.spawn_task(IfaValue::Closure(closure.clone()), args)?;
-                                self.push(future)?;
-                            } else {
-                                self.push_frame(CallFrame::new(
-                                    self.ctx.ip,
-                                    self.ctx.stack.len(),
-                                    Some(closure.env.clone()),
-                                    data.is_async,
-                                ))?;
-                                for arg in args {
-                                    self.push(arg)?;
-                                }
-                                self.ctx.ip = data.start_ip;
-                            }
-                        }
-                        IfaValue::Str(s) => {
-                            if let Some((domain_id, method)) = parse_odu_fn_marker(s) {
-                                let result =
-                                    self.call_registry(domain_id, &method, args, bytecode)?;
-                                self.push(result)?;
-                            } else if let Some((module_key, function_name)) =
-                                parse_module_fn_marker(s)
-                            {
-                                let result =
-                                    self.invoke_module_function(&module_key, &function_name, args)?;
-                                self.push(result)?;
-                            } else {
-                                self.push(IfaValue::Str(s.clone()))?;
-                            }
-                        }
-                        other => {
-                            self.push(other.clone())?;
+                        func => {
+                            self.call_value(func.clone(), args, false, Some(bytecode))?;
                         }
                     }
                 } else {
@@ -2960,6 +2828,7 @@ fn collect_exports_vm(program: &crate::ast::Program) -> Vec<String> {
             crate::ast::Statement::EseDef {
                 name,
                 visibility: crate::ast::Visibility::Public,
+                effects: _,
                 ..
             } => out.push(name.clone()),
             crate::ast::Statement::OduDef {

@@ -48,8 +48,10 @@ fn run_test_file(path: &Path, engine: &str) {
             let compile_output = compile_cmd.output().expect("Failed to compile to bytecode");
             assert!(
                 compile_output.status.success(),
-                "Failed to compile bytecode for {}",
-                path.display()
+                "Failed to compile bytecode for {}.\nSTDOUT:\n{}\nSTDERR:\n{}",
+                path.display(),
+                String::from_utf8_lossy(&compile_output.stdout),
+                String::from_utf8_lossy(&compile_output.stderr)
             );
 
             cmd.arg("runb").arg(&bytecode_path);
@@ -68,8 +70,10 @@ fn run_test_file(path: &Path, engine: &str) {
             let build_output = build_cmd.output().expect("Failed to build native binary");
             assert!(
                 build_output.status.success(),
-                "Failed to build native binary for {}",
-                path.display()
+                "Failed to build native binary for {}.\nSTDOUT:\n{}\nSTDERR:\n{}",
+                path.display(),
+                String::from_utf8_lossy(&build_output.stdout),
+                String::from_utf8_lossy(&build_output.stderr)
             );
 
             cmd = Command::new(&exe_path);
@@ -105,13 +109,11 @@ fn run_test_file(path: &Path, engine: &str) {
 }
 
 fn discover_and_run(dir: &str, engines: Vec<&str>) {
-    // Find workspace root by looking for Cargo.toml
-    let mut base_path = std::env::current_dir().unwrap();
-    while !base_path.join("Cargo.toml").exists() {
-        if !base_path.pop() {
-            panic!("Could not find workspace root");
-        }
-    }
+    // Navigate to workspace root from crates/ifa-cli
+    let base_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
+        .parent().unwrap() // goes to 'crates'
+        .parent().unwrap() // goes to 'ifa_lang'
+        .to_path_buf();
 
     let base_path = base_path.join("tests").join("conformance").join(dir);
     if !base_path.exists() {
@@ -122,7 +124,9 @@ fn discover_and_run(dir: &str, engines: Vec<&str>) {
         let entry = entry.unwrap();
         let path = entry.path();
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("ifa") {
+            println!("Running file: {}", path.display());
             for engine in &engines {
+                println!("  Engine: {}", engine);
                 run_test_file(&path, engine);
             }
         }
@@ -131,13 +135,14 @@ fn discover_and_run(dir: &str, engines: Vec<&str>) {
 
 #[test]
 fn test_conformance_shared() {
-    // Shared tests MUST pass on all three backends
-    discover_and_run("shared", vec!["ast", "vm", "build"]);
+    // Shared tests MUST pass on both the VM and AOT Transpiler
+    discover_and_run("shared", vec!["vm", "build"]);
 }
 
 #[test]
 fn test_tier1_ast() {
-    discover_and_run("ast", vec!["ast"]);
+    // AST interpreter merged into babalawo; tests should be migrated if applicable
+    // discover_and_run("ast", vec!["ast"]);
 }
 
 #[test]

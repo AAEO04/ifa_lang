@@ -73,6 +73,7 @@ pub fn generate_project_with_types(
     project_name: &str,
     output_dir: &Path,
     type_env: std::collections::HashMap<String, ifa_types::ast::TypeHint>,
+    base_path: Option<std::path::PathBuf>,
 ) -> io::Result<ProjectConfig> {
     // Create directory structure
     let src_dir = output_dir.join("src");
@@ -80,6 +81,9 @@ pub fn generate_project_with_types(
 
     // Transpile the program
     let mut transpiler = RustTranspiler::new().with_type_env(type_env);
+    if let Some(bp) = base_path {
+        transpiler = transpiler.with_base_path(bp);
+    }
     let rust_code = transpiler.transpile_program(program);
 
     // Create project config from transpiler state
@@ -96,6 +100,11 @@ pub fn generate_project_with_types(
 
     // Write main.rs
     fs::write(src_dir.join("main.rs"), rust_code)?;
+    
+    // Write external modules
+    for (name, content) in transpiler.external_modules.iter() {
+        fs::write(src_dir.join(name), content)?;
+    }
 
     // Generate .gitignore
     let gitignore = "/target\nCargo.lock\n";

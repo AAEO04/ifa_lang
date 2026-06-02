@@ -53,9 +53,9 @@
                     "match": "//.*$"
                 },
                 {
-                    "comment": "Hash comment (Python/Shell style)",
+                    "comment": "Hash comment (Python/Shell style) - excludes #opon/#ewọ directives",
                     "name": "comment.line.hash.ifa",
-                    "match": "#(?!opon|ewọ).*$"
+                    "match": "#(?!opon|ewọ|Opon|mem).*$"
                 },
                 {
                     "comment": "Block comment",
@@ -72,6 +72,40 @@
         },
         "strings": {
             "patterns": [
+                {
+                    "comment": "Interpolated string",
+                    "name": "string.quoted.double.interpolated.ifa",
+                    "begin": "\\$\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.ifa",
+                            "match": "\\\\."
+                        },
+                        {
+                            "name": "meta.embedded.expression.ifa",
+                            "begin": "\\{",
+                            "end": "\\}",
+                            "patterns": [
+                                {
+                                    "include": "#functions"
+                                },
+                                {
+                                    "include": "#keywords"
+                                },
+                                {
+                                    "include": "#types"
+                                },
+                                {
+                                    "include": "#constants"
+                                },
+                                {
+                                    "include": "#operators"
+                                }
+                            ]
+                        }
+                    ]
+                },
                 {
                     "name": "string.quoted.double.ifa",
                     "begin": "\"",
@@ -101,47 +135,57 @@
                 {
                     "comment": "Import Keywords",
                     "name": "keyword.control.import.ifa",
-                    "match": "\\b(iba|ìbà|import|respect)\\b"
+                    "match": "\\b(iba|ìbà|import|mu)\\b"
+                },
+                {
+                    "comment": "From (import) Keywords",
+                    "name": "keyword.control.import.from.ifa",
+                    "match": "\\b(lati|láti|from)\\b"
                 },
                 {
                     "comment": "Variable Declaration Keywords",
                     "name": "keyword.other.ifa",
-                    "match": "\\b(ayanmo|ayanmọ|ayànmọ́|let|destiny|var)\\b"
+                    "match": "\\b(ayanmo|ayanmọ|àyànmọ́|variable|let|var)\\b"
+                },
+                {
+                    "comment": "Constant Declaration Keywords",
+                    "name": "keyword.other.constant.ifa",
+                    "match": "\\b(const|loruko|ka|ayanfe|àyànfẹ́)\\b"
                 },
                 {
                     "comment": "Class/Module Definition Keywords",
                     "name": "keyword.other.class.ifa",
-                    "match": "\\b(odù|odu|domain|class|module)\\b"
+                    "match": "\\b(odù|odu|class)\\b"
                 },
                 {
                     "comment": "Function Definition Keywords",
                     "name": "keyword.other.function.ifa",
-                    "match": "\\b(ese|ẹsẹ|verse|fn|function|def)\\b"
+                    "match": "\\b(ese|ẹsẹ|fn|function|def)\\b"
                 },
                 {
                     "comment": "Control Flow - Conditionals",
                     "name": "keyword.control.conditional.ifa",
-                    "match": "\\b(ti|bí|if|divine|bibẹkọ|else|otherwise)\\b"
+                    "match": "\\b(ti|bí|if|bibẹkọ|else)\\b"
                 },
                 {
                     "comment": "Control Flow - Loops",
                     "name": "keyword.control.loop.ifa",
-                    "match": "\\b(nigba|while|cycle|fun|for|each|ninu|in)\\b"
+                    "match": "\\b(nigba|while|fun|for|ninu|in)\\b"
                 },
                 {
                     "comment": "Control Flow - Match/Switch",
                     "name": "keyword.control.switch.ifa",
-                    "match": "\\b(yàn|yan|match|select)\\b"
+                    "match": "\\b(yàn|yán|yan|match)\\b"
                 },
                 {
-                    "comment": "Control Flow - Try/Catch",
+                    "comment": "Control Flow - Try/Catch/Finally",
                     "name": "keyword.control.trycatch.ifa",
-                    "match": "\\b(dida_ewu|try|attempt|kaka_ewu|catch|recover)\\b"
+                    "match": "\\b(gbiyanju|gbìyànjú|try|gba|gbà|catch|nipari|nípàrí|finally)\\b"
                 },
                 {
                     "comment": "Control Flow - Return",
                     "name": "keyword.control.return.ifa",
-                    "match": "\\b(pada|padà|return)\\b"
+                    "match": "\\b(pada|return)\\b"
                 },
                 {
                     "comment": "Control Flow - End",
@@ -149,34 +193,74 @@
                     "match": "\\b(ase|àṣẹ|end)\\b"
                 },
                 {
+                    "comment": "Control Flow - Throw",
+                    "name": "keyword.control.throw.ifa",
+                    "match": "\\b(ta|tá|throw)\\b"
+                },
+                {
+                    "comment": "Control Flow - Break",
+                    "name": "keyword.control.loop.break.ifa",
+                    "match": "\\b(da|break)\\b"
+                },
+                {
+                    "comment": "Control Flow - Continue",
+                    "name": "keyword.control.loop.continue.ifa",
+                    "match": "\\b(tesiwaju|bayan|continue)\\b"
+                },
+                {
+                    "comment": "Yield",
+                    "name": "keyword.control.yield.ifa",
+                    "match": "\\b(jowo|jọ̀wọ́|yield)\\b"
+                },
+                {
+                    "comment": "Defer",
+                    "name": "keyword.other.defer.ifa",
+                    "match": "\\b(gbe|defer)\\b"
+                },
+                {
+                    "comment": "Unsafe Block",
+                    "name": "keyword.other.unsafe.ifa",
+                    "match": "\\b(ailewu|àìléwu|unsafe)\\b"
+                },
+                {
+                    "comment": "Async/Await",
+                    "name": "keyword.other.async.ifa",
+                    "match": "\\b(daro|dàrò|async|reti|rẹti|await)\\b"
+                },
+                {
                     "comment": "Taboo/Constraint Keywords",
                     "name": "keyword.other.taboo.ifa",
-                    "match": "\\b(èèwọ̀|eewo|taboo|forbid)\\b"
+                    "match": "\\b(èèwọ̀|ewọ|taboo)\\b"
                 },
                 {
                     "comment": "Assertion Keywords - Ewo",
                     "name": "keyword.control.assert.ifa",
-                    "match": "\\b(ewo|ẹ̀wọ̀|assert)\\b"
+                    "match": "\\b(ewo|ẹ̀wọ̀|assert|verify)\\b"
                 },
                 {
-                    "comment": "Critical/Atomic Block Keywords",
-                    "name": "keyword.other.critical.ifa",
-                    "match": "\\b(àṣẹ_pàtàkì|ase_pataki|critical|atomic|transaction)\\b"
+                    "comment": "Strict Mode",
+                    "name": "keyword.other.strict.ifa",
+                    "match": "\\b(abo|abò|strict)\\b"
                 },
                 {
                     "comment": "Access Modifiers",
                     "name": "keyword.other.modifier.ifa",
-                    "match": "\\b(gbangba|public)\\b"
+                    "match": "\\b(gbangba|pub|public|fi|export)\\b"
                 },
                 {
-                    "comment": "Opon Memory Configuration - Orange/Amber coloring",
+                    "comment": "Private Modifier",
+                    "name": "keyword.other.modifier.private.ifa",
+                    "match": "\\b(ikoko|àdáni|private)\\b"
+                },
+                {
+                    "comment": "Opon Memory Configuration",
                     "name": "constant.other.opon.ifa",
-                    "match": "\\b(opon|Opon|kekere|Kekere|small|arinrin|Arinrin|medium|nla|Nla|large|ailopin|Ailopin|unlimited)\\b"
+                    "match": "\\b(opon|Opon|kekere|Kekere|kẹ́kẹ́rẹ́|small|tiny|embedded|arinrin|Arinrin|àrínrin|medium|standard|default|nla|Nla|nlá|large|big|ailopin|Ailopin|àìlópin|unlimited|dynamic|max)\\b"
                 },
                 {
                     "comment": "Ẹbọ RAII - Special cleanup syntax",
                     "name": "keyword.other.ebo.ifa",
-                    "match": "\\b(ebo|ẹbọ|Ebo|Ẹbọ|EboScope)\\b"
+                    "match": "\\b(ebo|ẹbọ|Ebo|Ẹbọ|EboScope|sacrifice)\\b"
                 },
                 {
                     "comment": "Àjọṣe Reactive - Signal/Effect/Computed",
@@ -198,9 +282,9 @@
         "types": {
             "patterns": [
                 {
-                    "comment": "Type Names - Orí System",
+                    "comment": "Type Names - matching pest grammar type_name",
                     "name": "support.type.ifa",
-                    "match": "\\b(Int|Nọmbà|Number|Float|Ìdá|Ida|Str|Ọ̀rọ̀|Oro|String|Bool|Òtítọ́|Otito|List|Àkójọ|Akojo|Array|Map|Àwòrán|Aworan|Dict|Any|Àìyẹ|Dynamic)\\b"
+                    "match": "\\b(Int|Float|Str|Bool|List|Map|Any|int|float|str|bool|list|map|any|i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|void)\\b"
                 }
             ]
         },
@@ -228,12 +312,12 @@
                 {
                     "comment": "Odù Domains - Yoruba names",
                     "name": "support.class.ifa",
-                    "match": "\\b(Ogbe|Ogbè|Oyeku|Oyẹkú|Ọ̀yẹ̀kú|Iwori|Ìwòrì|Odi|Òdí|Irosu|Ìrosù|Owonrin|Ọ̀wọ́nrín|Obara|Ọ̀bàrà|Okanran|Ọ̀kànràn|Ogunda|Ògúndá|Osa|Ọ̀sá|Ika|Ìká|Oturupon|Òtúúrúpọ̀n|Otura|Òtúrá|Irete|Ìrẹtẹ̀|Ose|Ọ̀ṣẹ́|Ofun|Òfún|Opele|Ọpẹlẹ|Coop|Àjọṣe)\\b"
+                    "match": "\\b(Ogbe|Ogbè|Oyeku|Oyẹkú|Ọ̀yẹ̀kú|Iwori|Ìwòrì|Odi|Òdí|Irosu|Ìrosù|Owonrin|Ọ̀wọ́nrín|Obara|Ọ̀bàrà|Okanran|Ọ̀kànràn|Ogunda|Ògúndá|Osa|Ọ̀sá|Ika|Ìká|Oturupon|Òtúúrúpọ̀n|Otura|Òtúrá|Irete|Ìrẹtẹ̀|Ose|Ọ̀ṣẹ́|Ofun|Òfún|Opele|Ọpẹlẹ|ọpẹlẹ|Coop|coop|Ajose|ajose|Àjọṣe|àjọṣe)\\b"
                 },
                 {
-                    "comment": "Odù Domains - English aliases",
+                    "comment": "Odù Domains - English aliases from lexer.rs",
                     "name": "support.class.ifa",
-                    "match": "\\b(Init|Start|Exit|End|Time|Clock|File|Memory|Log|Print|Rand|Random|Add|Math|Error|Except|Array|List|Proc|System|Text|String|Sub|Subtract|Net|Network|Logic|Bool|Draw|Graphics|Meta|Reflect|Oracle)\\b"
+                    "match": "\\b(Init|Start|Exit|End|System|lifecycle|Time|datetime|File|fs|io|Log|fmt|Rand|Random|Math|Error|err|Array|vec|List|flow|async|thread|string|str|reduce|math_sub|Net|http|crypto|hash|ui|tui|root|perm|auth|oracle|ffi|bridge|Sys|Cpu|parallel|Gpu|compute|Storage|kv|db)\\b"
                 },
                 {
                     "comment": "FFI Module",
@@ -270,9 +354,14 @@
         "constants": {
             "patterns": [
                 {
-                    "comment": "Booleans - All variants",
+                    "comment": "Booleans - All variants matching pest grammar",
                     "name": "constant.language.boolean.ifa",
-                    "match": "\\b(ooto|òótọ́|iro|irọ́|otito|eke|true|false)\\b"
+                    "match": "\\b(otito|true|iro|false)\\b"
+                },
+                {
+                    "comment": "Null/Nil values matching pest grammar and lexer",
+                    "name": "constant.language.null.ifa",
+                    "match": "\\b(ofo|ófo|null|nil|ohunkohun)\\b"
                 },
                 {
                     "comment": "Float Numbers",
@@ -283,6 +372,16 @@
                     "comment": "Integer Numbers",
                     "name": "constant.numeric.integer.ifa",
                     "match": "\\b\\d+\\b"
+                },
+                {
+                    "comment": "Hex Numbers",
+                    "name": "constant.numeric.hex.ifa",
+                    "match": "\\b0x[0-9a-fA-F_]+\\b"
+                },
+                {
+                    "comment": "Binary Numbers",
+                    "name": "constant.numeric.binary.ifa",
+                    "match": "\\b0b[01_]+\\b"
                 }
             ]
         },
@@ -309,14 +408,49 @@
                     "match": "(\\+|\\-|\\*|\\/|%)"
                 },
                 {
-                    "comment": "Assignment Operator",
+                    "comment": "Power Operator",
+                    "name": "keyword.operator.arithmetic.power.ifa",
+                    "match": "(\\*\\*)"
+                },
+                {
+                    "comment": "Null Coalescing Operator",
+                    "name": "keyword.operator.nullcoalesce.ifa",
+                    "match": "(\\?\\?)"
+                },
+                {
+                    "comment": "Error Propagation Operator",
+                    "name": "keyword.operator.propagation.ifa",
+                    "match": "(\\?\\!|\\.\\?)"
+                },
+                {
+                    "comment": "Optional Chain Operator",
+                    "name": "keyword.operator.optional.ifa",
+                    "match": "(\\?\\.)"
+                },
+                {
+                    "comment": "Pipeline Operator",
+                    "name": "keyword.operator.pipeline.ifa",
+                    "match": "(\\|\\>)"
+                },
+                {
+                    "comment": "Assignment Operators",
                     "name": "keyword.operator.assignment.ifa",
-                    "match": "="
+                    "match": "(=)"
+                },
+                {
+                    "comment": "Compound Assignment Operators",
+                    "name": "keyword.operator.assignment.compound.ifa",
+                    "match": "(\\+=|\\-=|\\*=|\\/=|%=)"
                 },
                 {
                     "comment": "Arrow Operator",
                     "name": "keyword.operator.arrow.ifa",
                     "match": "(->|=>)"
+                },
+                {
+                    "comment": "Range Operator",
+                    "name": "keyword.operator.range.ifa",
+                    "match": "(\\.\\.)"
                 }
             ]
         }

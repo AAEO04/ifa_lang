@@ -1,4 +1,4 @@
-# expect: 1
+# expect: Execution yielded
 # spec: §17.2 `Yield` + §21 Tier 1 control flow
 
 jowo 0;

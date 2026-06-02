@@ -100,8 +100,11 @@ odu_call = { odu_name ~ chain_op ~ ident ~ "(" ~ arguments? ~ ")" }
 odu_def = { public_mod? ~ odu_kw ~ ident ~ "{" ~ odu_body ~ "}" }
 odu_body = { (ese_def | var_decl)* }
 
-// Function: ese start() { } or daro ese start() { }
-ese_def = { public_mod? ~ async_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ "{" ~ statement* ~ "}" }
+// Function: ese start() { } or daro ese start() -> effects(Network) { }
+ese_def = { public_mod? ~ async_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ effects_decl? ~ "{" ~ statement* ~ "}" }
+effects_decl = { "->" ~ effects_kw ~ "(" ~ effect_list? ~ ")" }
+effects_kw = { "effects" | "ipa" | "ipa_wiwole" }
+effect_list = { ident ~ ("," ~ ident)* }
 params = { param ~ ("," ~ param)* }
 param = { ident ~ (":" ~ type_name)? }
 
@@ -211,6 +214,7 @@ atom = {
     | function_call
     | index_access
     | await_expr
+    | move_expr
     | list_literal
     | map_literal
     | number
@@ -250,8 +254,11 @@ map_entry = { (string | ident) ~ ":" ~ expression }
 // Index: arr[0] or arr?.[0]
 index_access = { ident ~ "?."? ~ "[" ~ expression ~ "]" }
 
-// Await: reti expr
+// Await expression: reti expr
 await_expr = { await_kw ~ expression }
+
+// Move expression (zero-copy ownership transfer): yanda expr
+move_expr = { move_kw ~ expression }
 
 // Arguments
 arguments = { expression ~ ("," ~ expression)* }
@@ -299,6 +306,7 @@ public_mod = { "gbangba" | "public" | "fi" | "export" }
 async_mod = { async_kw }
 async_kw = _{ "daro" | "async" }
 await_kw = _{ "reti" | "await" }
+move_kw = _{ "yanda" | "move" }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ODÙ DOMAIN NAMES (The 16 Principal)

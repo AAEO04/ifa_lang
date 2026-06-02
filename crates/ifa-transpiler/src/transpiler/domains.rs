@@ -5,6 +5,7 @@
 use super::constants::matches_method;
 use super::constants::{
     irete, irosu, iwori, odi, ofun, ogbe, ogunda, okanran, osa, ose, otura, owonrin, oyeku,
+    obara, ika, oturupon,
 };
 use super::core::RustTranspiler;
 use ifa_types::ast::OduCall;
@@ -148,23 +149,23 @@ impl RustTranspiler {
             "okanran" if matches_method(&method, okanran::ASSERT) => {
                 if let Some(cond) = args.first() {
                     let msg = args.get(1).cloned().unwrap_or_else(|| "\"Assertion failed\"".to_string());
-                    format!("if !({}).is_truthy() {{ compile_error!(\"ifa-transpiler: Ọ̀kànràn.assert is not supported in generated Rust output\"); }} let _ = {};", cond, msg)
+                    format!("if !({}).is_truthy() {{ std::panic::panic_any(IfaValue::Str({}.to_string())); }}", cond, msg)
                 } else {
-                    "compile_error!(\"ifa-transpiler: Ọ̀kànràn.assert requires a condition\")".to_string()
+                    "std::panic::panic_any(IfaValue::Str(\"Ọ̀kànràn.assert requires a condition\".to_string()))".to_string()
                 }
             }
             "okanran" if matches_method(&method, okanran::EQUALS) => {
                 if args.len() >= 2 {
-                    format!("if {} != {} {{ compile_error!(\"ifa-transpiler: Ọ̀kànràn.equals is not supported in generated Rust output\"); }}", args[0], args[1])
+                    format!("if {} != {} {{ std::panic::panic_any(IfaValue::Str(format!(\"Assertion failed: {{:?}} != {{:?}}\", {}, {}))); }}", args[0], args[1], args[0], args[1])
                 } else {
-                    "compile_error!(\"ifa-transpiler: Ọ̀kànràn.equals requires 2 arguments\")".to_string()
+                    "std::panic::panic_any(IfaValue::Str(\"Ọ̀kànràn.equals requires 2 arguments\".to_string()))".to_string()
                 }
             }
             "okanran" if matches_method(&method, okanran::DIE) => {
                 if let Some(msg) = args.first() {
-                    format!("{{ let _ = {}; compile_error!(\"ifa-transpiler: Ọ̀kànràn.die is not supported in generated Rust output\"); }}", msg)
+                    format!("std::panic::panic_any(IfaValue::Str({}.to_string()))", msg)
                 } else {
-                    "compile_error!(\"ifa-transpiler: Ọ̀kànràn.die is not supported in generated Rust output\")".to_string()
+                    "std::panic::panic_any(IfaValue::Str(\"Fatal error\".to_string()))".to_string()
                 }
             }
 
@@ -306,6 +307,95 @@ impl RustTranspiler {
                     format!("IfaValue::Str(match {} {{ IfaValue::Int(_) => \"Int\", IfaValue::Float(_) => \"Float\", IfaValue::Str(_) => \"Str\", IfaValue::Bool(_) => \"Bool\", IfaValue::List(_) => \"List\", IfaValue::Map(_) => \"Map\", IfaValue::Nil => \"Nil\", }}.to_string())", arg)
                 } else {
                     "IfaValue::Str(\"Nil\".to_string())".to_string()
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // ỌBÀRÀ - Math
+            // ═══════════════════════════════════════════════════════════════════
+            "obara" if matches_method(&method, obara::ADD) => {
+                if args.len() >= 2 {
+                    format!("({} + {})", args[0], args[1])
+                } else {
+                    "IfaValue::Nil".to_string()
+                }
+            }
+            "obara" if matches_method(&method, obara::MUL) => {
+                if args.len() >= 2 {
+                    format!("({} * {})", args[0], args[1])
+                } else {
+                    "IfaValue::Nil".to_string()
+                }
+            }
+            "obara" if matches_method(&method, obara::POW) => {
+                if args.len() >= 2 {
+                    format!("{}.pow(&{})", args[0], args[1])
+                } else {
+                    "IfaValue::Nil".to_string()
+                }
+            }
+            "obara" if matches_method(&method, obara::SQRT) => {
+                if let Some(arg) = args.first() {
+                    format!("match {} {{ IfaValue::Int(n) => IfaValue::Float((n as f64).sqrt()), IfaValue::Float(f) => IfaValue::Float(f.sqrt()), _ => IfaValue::Nil }}", arg)
+                } else {
+                    "IfaValue::Nil".to_string()
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // ÒTÚRÚPỌ̀N - Math
+            // ═══════════════════════════════════════════════════════════════════
+            "oturupon" if matches_method(&method, oturupon::SUB) => {
+                if args.len() >= 2 {
+                    format!("({} - {})", args[0], args[1])
+                } else {
+                    "IfaValue::Nil".to_string()
+                }
+            }
+            "oturupon" if matches_method(&method, oturupon::DIV) => {
+                if args.len() >= 2 {
+                    format!("({} / {})", args[0], args[1])
+                } else {
+                    "IfaValue::Nil".to_string()
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════════════════
+            // ÌKÁ - Strings
+            // ═══════════════════════════════════════════════════════════════════
+            "ika" if matches_method(&method, ika::LEN) => {
+                if let Some(arg) = args.first() {
+                    format!("match {} {{ IfaValue::Str(s) => IfaValue::Int(s.len() as i64), IfaValue::List(l) => IfaValue::Int(l.len() as i64), _ => IfaValue::Nil }}", arg)
+                } else {
+                    "IfaValue::Nil".to_string()
+                }
+            }
+            "ika" if matches_method(&method, ika::SLICE) => {
+                if args.len() >= 3 {
+                    format!("match ({}, {}, {}) {{ (IfaValue::Str(s), IfaValue::Int(start), IfaValue::Int(end)) => IfaValue::Str(s[start as usize..end as usize].to_string()), (IfaValue::List(l), IfaValue::Int(start), IfaValue::Int(end)) => IfaValue::List(l[start as usize..end as usize].to_vec()), _ => IfaValue::Nil }}", args[0], args[1], args[2])
+                } else {
+                    "IfaValue::Nil".to_string()
+                }
+            }
+            "ika" if matches_method(&method, ika::CONCAT) => {
+                if args.len() >= 2 {
+                    format!("({} + {})", args[0], args[1])
+                } else {
+                    "IfaValue::Nil".to_string()
+                }
+            }
+            "ika" if matches_method(&method, ika::HTML_TITLE) => {
+                if let Some(arg) = args.first() {
+                    format!("match {} {{ IfaValue::Str(s) => IfaValue::Str(s.split(\"<title>\").nth(1).unwrap_or(\"\").split(\"</title>\").next().unwrap_or(\"\").to_string()), _ => IfaValue::Nil }}", arg)
+                } else {
+                    "IfaValue::Nil".to_string()
+                }
+            }
+            "ika" if matches_method(&method, ika::STRIP_HTML) => {
+                if let Some(arg) = args.first() {
+                    format!("match {} {{ IfaValue::Str(s) => {{ let mut res = String::new(); let mut in_tag = false; for c in s.chars() {{ if c == '<' {{ in_tag = true; }} else if c == '>' {{ in_tag = false; }} else if !in_tag {{ res.push(c); }} }} IfaValue::Str(res) }}, _ => IfaValue::Nil }}", arg)
+                } else {
+                    "IfaValue::Nil".to_string()
                 }
             }
 

@@ -7,6 +7,7 @@ import {
     ServerOptions,
     TransportKind
 } from 'vscode-languageclient/node';
+import { execSync } from 'child_process';
 
 let client: LanguageClient | undefined;
 let outputChannel: vscode.OutputChannel;
@@ -21,6 +22,9 @@ export function activate(context: ExtensionContext) {
     // Register commands
     registerCommands(context);
 
+    // Register document formatting provider
+    registerFormattingProvider(context);
+
     // Start LSP if enabled
     if (lspEnabled) {
         startLanguageServer(context);
@@ -29,6 +33,11 @@ export function activate(context: ExtensionContext) {
     // Register Debug Adapter
     const factory = new IfaDebugAdapterDescriptorFactory();
     context.subscriptions.push(vscode.debug.registerDebugAdapterDescriptorFactory('ifa', factory));
+
+    // Register Debug Configuration Provider
+    context.subscriptions.push(
+        vscode.debug.registerDebugConfigurationProvider('ifa', new IfaDebugConfigurationProvider())
+    );
 
     outputChannel.appendLine('Ifa-Lang extension activated');
 }
@@ -101,7 +110,7 @@ function registerCommands(context: ExtensionContext) {
         })
     );
 
-    // Format document
+    // Format document (manual command, kept for reference)
     context.subscriptions.push(
         vscode.commands.registerCommand('ifa.format', async () => {
             const editor = vscode.window.activeTextEditor;
@@ -111,14 +120,12 @@ function registerCommands(context: ExtensionContext) {
             const filePath = editor.document.fileName;
             const ifaPath = workspace.getConfiguration('ifa').get<string>('path', 'ifa');
 
-            const { exec } = require('child_process');
-            exec(`${ifaPath} fmt "${filePath}"`, (error: any, stdout: string, stderr: string) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Format failed: ${stderr || error.message}`);
-                } else {
-                    vscode.window.showInformationMessage('Syntactic harmony restored!');
-                }
-            });
+            try {
+                execSync(`${ifaPath} fmt "${filePath}" --unstable`, { timeout: 10000 });
+                vscode.window.showInformationMessage('Syntactic harmony restored!');
+            } catch (error: any) {
+                vscode.window.showErrorMessage(`Format failed: ${error.stderr?.toString() || error.message}`);
+            }
         })
     );
 
@@ -130,6 +137,45 @@ function registerCommands(context: ExtensionContext) {
             }
             startLanguageServer(context);
             vscode.window.showInformationMessage('Ifa language server restarted');
+        })
+    );
+}
+
+function registerFormattingProvider(context: ExtensionContext) {
+    context.subscriptions.push(
+        vscode.languages.registerDocumentFormattingEditProvider('ifa', {
+            async provideDocumentFormattingEdits(document: vscode.TextDocument): Promise<vscode.TextEdit[]> {
+                const ifaPath = workspace.getConfiguration('ifa').get<string>('path', 'ifa');
+
+                // Write unsaved changes to disk so the CLI formatter can read them
+                await document.save();
+
+                const filePath = document.fileName;
+                try {
+                    execSync(`${ifaPath} fmt "${filePath}" --unstable`, {
+                        timeout: 15000,
+                        cwd: path.dirname(filePath),
+                        encoding: 'utf-8'
+                    });
+
+                    // Re-read the formatted file from disk
+                    const uri = vscode.Uri.file(filePath);
+                    const contentBuffer = await vscode.workspace.fs.readFile(uri);
+                    const formattedText = Buffer.from(contentBuffer).toString('utf-8');
+
+                    const fullRange = new vscode.Range(
+                        document.positionAt(0),
+                        document.positionAt(document.getText().length)
+                    );
+
+                    return [vscode.TextEdit.replace(fullRange, formattedText)];
+                } catch (error: any) {
+                    const msg = error.stderr?.toString() || error.message;
+                    outputChannel.appendLine(`Format error: ${msg}`);
+                    vscode.window.showErrorMessage(`Ifa format failed: ${msg}`);
+                    return [];
+                }
+            }
         })
     );
 }
@@ -147,6 +193,8 @@ function startLanguageServer(context: ExtensionContext) {
     }
 
     try {
+        const traceLevel = config.get<string>('trace.server', 'off');
+
         const serverOptions: ServerOptions = {
             run: {
                 command: ifaPath,
@@ -177,6 +225,9 @@ function startLanguageServer(context: ExtensionContext) {
             serverOptions,
             clientOptions
         );
+
+        // Set trace level from configuration
+        client.setTrace(traceLevel as any);
 
         client.start().then(() => {
             outputChannel.appendLine('Ifa language server started');
@@ -216,7 +267,18 @@ export function deactivate(): Thenable<void> | undefined {
     }
     return client.stop();
 }
-return client.stop();
+
+class IfaDebugConfigurationProvider implements vscode.DebugConfigurationProvider {
+    resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, debugConfiguration: vscode.DebugConfiguration): vscode.ProviderResult<vscode.DebugConfiguration> {
+        // If no program is specified, default to the active editor
+        if (!debugConfiguration.program) {
+            const editor = vscode.window.activeTextEditor;
+            if (editor && editor.document.languageId === 'ifa') {
+                debugConfiguration.program = editor.document.fileName;
+            }
+        }
+        return debugConfiguration;
+    }
 }
 
 class IfaDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
