@@ -396,7 +396,7 @@ impl CompoundOdu {
 
     /// Get current (newest/leaf node)
     pub fn current(&self) -> PrincipalOdu {
-        *self.ancestors.last().unwrap()
+        self.ancestors.last().copied().unwrap_or(PrincipalOdu::Ogbe)
     }
 
     /// Get parent (one level up from current)

@@ -10,6 +10,7 @@ impl RustTranspiler {
     pub fn transpile_program(&mut self, program: &Program) -> String {
         self.prepare_imports(program);
         self.prepare_globals(program);
+        self.collect_signatures(program);
         let mut body = String::new();
 
         for stmt in &program.statements {
@@ -259,9 +260,17 @@ impl std::ops::Not for IfaValue {{
                 let m_name = self.mangle_identifier(name);
                 let val = self.transpile_expression(value);
                 if self.global_vars.contains(name) {
-                    format!("{indent}__IFA_GLOBAL_{m_name}.with(|v| *v.borrow_mut() = {val});", indent = indent, m_name = m_name, val = val)
+                    format!(
+                        "{indent}__IFA_GLOBAL_{m_name}.with(|v| *v.borrow_mut() = {val});",
+                        indent = indent,
+                        m_name = m_name,
+                        val = val
+                    )
                 } else if self.in_module {
-                    format!("{indent}compile_error!(\"ifa build: class-level variables are not supported\");", indent = indent)
+                    format!(
+                        "{indent}compile_error!(\"ifa build: class-level variables are not supported\");",
+                        indent = indent
+                    )
                 } else {
                     format!(
                         "{}{}let mut {} = {};",
@@ -282,9 +291,17 @@ impl std::ops::Not for IfaValue {{
                 let m_name = self.mangle_identifier(name);
                 let val = self.transpile_expression(value);
                 if self.global_vars.contains(name) {
-                    format!("{indent}__IFA_GLOBAL_{m_name}.with(|v| *v.borrow_mut() = {val});", indent = indent, m_name = m_name, val = val)
+                    format!(
+                        "{indent}__IFA_GLOBAL_{m_name}.with(|v| *v.borrow_mut() = {val});",
+                        indent = indent,
+                        m_name = m_name,
+                        val = val
+                    )
                 } else if self.in_module {
-                    format!("{indent}compile_error!(\"ifa build: class-level constants are not supported\");", indent = indent)
+                    format!(
+                        "{indent}compile_error!(\"ifa build: class-level constants are not supported\");",
+                        indent = indent
+                    )
                 } else {
                     format!(
                         "{}{}let {} = {};",
@@ -296,18 +313,33 @@ impl std::ops::Not for IfaValue {{
                 }
             }
 
+            Statement::Alias { .. } => String::new(),
+
+            Statement::AssertType { value, type_hint, .. } => {
+                let val = self.transpile_expression(value);
+                // The transpiler doesn't enforce runtime types yet, just pass through or ignore
+                format!("{indent}/* assert_type({val}, {:?}) */", type_hint, indent = indent, val = val)
+            }
+
             Statement::Assignment { target, value, .. } => {
                 let val = self.transpile_expression(value);
                 match target {
                     AssignTarget::Dereference(expr) => {
                         let ptr_expr = self.transpile_expression(expr);
-                        format!("{indent}if let IfaValue::Ptr(p) = {ptr_expr} {{\n{indent}    let mut inner = p.lock().unwrap();\n{indent}    *inner = {val};\n{indent}}}")
+                        format!(
+                            "{indent}if let IfaValue::Ptr(p) = {ptr_expr} {{\n{indent}    let mut inner = p.lock().unwrap();\n{indent}    *inner = {val};\n{indent}}}"
+                        )
                     }
                     _ => {
                         let target_str = self.transpile_assign_target(target);
                         if target_str.starts_with("__GLOBAL__") {
                             let m_name = target_str.strip_prefix("__GLOBAL__").unwrap();
-                            format!("{indent}{}.with(|v| *v.borrow_mut() = {});", m_name, val, indent = indent)
+                            format!(
+                                "{indent}{}.with(|v| *v.borrow_mut() = {});",
+                                m_name,
+                                val,
+                                indent = indent
+                            )
                         } else {
                             format!("{indent}{} = {};", target_str, val, indent = indent)
                         }
@@ -634,7 +666,9 @@ impl std::ops::Not for IfaValue {{
                 )
             }
 
-            Statement::Update { target, op, value, .. } => {
+            Statement::Update {
+                target, op, value, ..
+            } => {
                 let op_fn = match op {
                     UpdateOp::AddAssign => "std::ops::Add::add",
                     UpdateOp::SubAssign => "std::ops::Sub::sub",
@@ -651,25 +685,59 @@ impl std::ops::Not for IfaValue {{
                     AssignTarget::Variable(name) => {
                         let m_name = self.mangle_identifier(name);
                         if self.global_vars.contains(name) {
-                            format!("{indent}__IFA_GLOBAL_{name}.with(|v| {{\n{indent}    let new_val = {op_fn}(v.borrow().clone(), {val});\n{indent}    *v.borrow_mut() = new_val;\n{indent}}});", indent=indent, name=m_name, op_fn=op_fn, val=val_expr)
+                            format!(
+                                "{indent}__IFA_GLOBAL_{name}.with(|v| {{\n{indent}    let new_val = {op_fn}(v.borrow().clone(), {val});\n{indent}    *v.borrow_mut() = new_val;\n{indent}}});",
+                                indent = indent,
+                                name = m_name,
+                                op_fn = op_fn,
+                                val = val_expr
+                            )
                         } else {
-                            format!("{indent}{name} = {op_fn}({name}.clone(), {val});", indent=indent, name=m_name, op_fn=op_fn, val=val_expr)
+                            format!(
+                                "{indent}{name} = {op_fn}({name}.clone(), {val});",
+                                indent = indent,
+                                name = m_name,
+                                op_fn = op_fn,
+                                val = val_expr
+                            )
                         }
                     }
                     AssignTarget::Index { name, index } => {
                         let name_mangled = self.mangle_identifier(name);
                         let idx_expr = self.transpile_expression(index);
-                        format!("{indent}{name}.update_index(&{idx}, {op_fn}, {val});", indent=indent, name=name_mangled, idx=idx_expr, op_fn=op_fn, val=val_expr)
+                        format!(
+                            "{indent}{name}.update_index(&{idx}, {op_fn}, {val});",
+                            indent = indent,
+                            name = name_mangled,
+                            idx = idx_expr,
+                            op_fn = op_fn,
+                            val = val_expr
+                        )
                     }
                     AssignTarget::Dereference(expr) => {
                         let ptr_expr = self.transpile_expression(expr);
-                        format!("{indent}if let IfaValue::Ptr(p) = {ptr_expr} {{\n{indent}    let mut inner = p.lock().unwrap();\n{indent}    let new_val = {op_fn}(inner.clone(), {val});\n{indent}    *inner = new_val;\n{indent}}}", indent=indent, ptr_expr=ptr_expr, op_fn=op_fn, val=val_expr)
+                        format!(
+                            "{indent}if let IfaValue::Ptr(p) = {ptr_expr} {{\n{indent}    let mut inner = p.lock().unwrap();\n{indent}    let new_val = {op_fn}(inner.clone(), {val});\n{indent}    *inner = new_val;\n{indent}}}",
+                            indent = indent,
+                            ptr_expr = ptr_expr,
+                            op_fn = op_fn,
+                            val = val_expr
+                        )
                     }
                 }
             }
 
-            Statement::Try { try_body, catch_var, catch_body, finally_body, .. } => {
-                let mut result = format!("{}let _try_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {{\n", indent);
+            Statement::Try {
+                try_body,
+                catch_var,
+                catch_body,
+                finally_body,
+                ..
+            } => {
+                let mut result = format!(
+                    "{}let _try_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {{\n",
+                    indent
+                );
                 self.indent += 1;
                 for s in try_body {
                     result.push_str(&self.transpile_statement(s));
@@ -722,7 +790,7 @@ impl std::ops::Not for IfaValue {{
                     // This generates a string that needs special handling in Statement::Assignment,
                     // but transpile_assign_target normally just returns a string to be suffixed with ` = value;`.
                     // Wait, this is tricky. `VAR.with(|v| *v.borrow_mut()) = val;` is valid Rust if `borrow_mut()` returns a `RefMut`.
-                    // Yes, `*v.borrow_mut() = val;` is valid! So returning `*VAR.with(|v| v.borrow_mut())` doesn't work directly because `RefMut` doesn't live long enough for `*foo = bar`. 
+                    // Yes, `*v.borrow_mut() = val;` is valid! So returning `*VAR.with(|v| v.borrow_mut())` doesn't work directly because `RefMut` doesn't live long enough for `*foo = bar`.
                     // Actually `VAR.with(|v| *v.borrow_mut() = val)` is what we need.
                     // Let me change how Statement::Assignment uses this.
                     // Actually, if we return `__GLOBAL__m_name` we can intercept it in `Statement::Assignment`.
@@ -802,34 +870,35 @@ impl std::ops::Not for IfaValue {{
                 return true; // Already imported
             }
 
-            if let Ok(source) = std::fs::read_to_string(&file_path) {
-                if let Ok(program) = ifa_parser::parse(&source) {
-                    self.parsed_modules.insert(module_name.clone());
+            if let Ok(source) = std::fs::read_to_string(&file_path)
+                && let Ok(program) = ifa_parser::parse(&source)
+            {
+                self.parsed_modules.insert(module_name.clone());
                     self.module_aliases.insert(module_name.clone());
-                    
+
                     let mut sub = RustTranspiler::new();
                     sub.base_path = self.base_path.clone();
                     sub.parsed_modules = self.parsed_modules.clone();
-                    
+
                     let code = sub.transpile_module(&program, &module_name);
-                    
+
                     self.has_async |= sub.has_async;
                     self.needs_tokio |= sub.needs_tokio;
                     self.needs_reqwest |= sub.needs_reqwest;
                     self.needs_rand |= sub.needs_rand;
-                    
+
                     for pm in sub.parsed_modules {
                         self.parsed_modules.insert(pm);
                     }
                     for (name, content) in sub.external_modules {
                         self.external_modules.insert(name, content);
                     }
-                    
-                    self.external_modules.insert(format!("{}.rs", module_name), code);
+
+                    self.external_modules
+                        .insert(format!("{}.rs", module_name), code);
                     self.module_defs.push(format!("pub mod {};", module_name));
                     return true;
                 }
-            }
         }
         false
     }
@@ -843,8 +912,83 @@ impl std::ops::Not for IfaValue {{
             body.push_str(&self.transpile_statement(stmt));
             body.push('\n');
         }
-        let sub_modules = if self.module_defs.is_empty() { String::new() } else { self.module_defs.join("\n") };
-        
+        let sub_modules = if self.module_defs.is_empty() {
+            String::new()
+        } else {
+            self.module_defs.join("\n")
+        };
+
         format!("use crate::IfaValue;\n{}\n{}", sub_modules, body)
+    }
+
+    pub fn collect_signatures(&mut self, program: &Program) {
+        for stmt in &program.statements {
+            self.collect_signatures_stmt(stmt);
+        }
+    }
+
+    fn collect_signatures_stmt(&mut self, stmt: &Statement) {
+        match stmt {
+            Statement::Alias { name, target, .. } => {
+                self.aliases.insert(name.clone(), target.clone());
+            }
+            Statement::EseDef { name, params, body, .. } => {
+                self.fn_signatures.insert(name.clone(), params.clone());
+                for s in body {
+                    self.collect_signatures_stmt(s);
+                }
+            }
+            Statement::OduDef { body, .. } => {
+                for s in body {
+                    self.collect_signatures_stmt(s);
+                }
+            }
+            Statement::If { then_body, else_body, .. } => {
+                for s in then_body {
+                    self.collect_signatures_stmt(s);
+                }
+                if let Some(eb) = else_body {
+                    for s in eb {
+                        self.collect_signatures_stmt(s);
+                    }
+                }
+            }
+            Statement::While { body, .. } => {
+                for s in body {
+                    self.collect_signatures_stmt(s);
+                }
+            }
+            Statement::For { body, .. } => {
+                for s in body {
+                    self.collect_signatures_stmt(s);
+                }
+            }
+            Statement::Try { try_body, catch_body, finally_body, .. } => {
+                for s in try_body {
+                    self.collect_signatures_stmt(s);
+                }
+                for s in catch_body {
+                    self.collect_signatures_stmt(s);
+                }
+                if let Some(fb) = finally_body {
+                    for s in fb {
+                        self.collect_signatures_stmt(s);
+                    }
+                }
+            }
+            Statement::Ebo { body: Some(body), .. } | Statement::Ailewu { body, .. } | Statement::Defer { body, .. } => {
+                for s in body {
+                    self.collect_signatures_stmt(s);
+                }
+            }
+            Statement::Match { arms, .. } => {
+                for arm in arms {
+                    for s in &arm.body {
+                        self.collect_signatures_stmt(s);
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 }

@@ -33,9 +33,12 @@ pub struct Ikin {
     /// Mapping from bytecode string index to local deduplicated string ID.
     bytecode_to_ikin: Vec<u32>,
 
-    /// Cached Constants (Numbers, etc) - Reserved for future heavy constants
-    #[allow(dead_code)]
+    /// Cached Constants (Numbers, Arrays, Structs)
+    /// Reserved for heavy constants that don't fit inline in bytecode.
     constants: Vec<IfaValue>,
+
+    /// Pointer to length cache for fast string_len lookups
+    ptr_to_len: HashMap<usize, usize>,
 }
 
 impl Ikin {
@@ -47,6 +50,7 @@ impl Ikin {
             string_lengths: Vec::with_capacity(256),
             bytecode_to_ikin: Vec::new(),
             constants: Vec::with_capacity(64),
+            ptr_to_len: HashMap::with_capacity(256),
         }
     }
 
@@ -68,10 +72,11 @@ impl Ikin {
         let id = self.strings.len() as u32;
 
         self.strings.push(arc.clone());
-        self.string_map.insert(arc, id);
+        self.string_map.insert(arc.clone(), id);
 
         let len = ifa_types::value_union::IfaValue::unicode_string_len(s);
         self.string_lengths.push(len);
+        self.ptr_to_len.insert(arc.as_ptr() as usize, len);
 
         Ok(id)
     }
@@ -83,8 +88,7 @@ impl Ikin {
             .bytecode_to_ikin
             .get(idx)
             .copied()
-            .map(|i| i as usize)
-            .unwrap_or(idx);
+            .map(|i| i as usize)?;
         self.strings.get(actual_idx)
     }
 
@@ -101,51 +105,38 @@ impl Ikin {
         match s {
             ifa_types::CompactString::Inline { char_len, .. } => *char_len as usize,
             ifa_types::CompactString::Heap(arc) => {
-                // Safely look up by actual string content instead of pointer
-                if let Some(&id) = self.string_map.get(arc) {
-                    if let Some(&len) = self.string_lengths.get(id as usize) {
-                        return len;
-                    }
+                let ptr = arc.as_ptr() as usize;
+                if let Some(&len) = self.ptr_to_len.get(&ptr) {
+                    len
+                } else {
+                    s_str.chars().count()
                 }
-                s_str.chars().count()
             }
         }
+    }
+
+    /// Store a heavy constant (like a Struct, Array, or Large Integer).
+    ///
+    /// Currently, standard integers and floats fit inline inside the bytecode stream,
+    /// so this is primarily reserved for future architectural expansion.
+    ///
+    /// Returns the unique ID for the constant.
+    pub fn store_constant(&mut self, value: IfaValue) -> u32 {
+        let id = self.constants.len() as u32;
+        self.constants.push(value);
+        id
+    }
+
+    /// Consult the Sacred Nuts for a heavy constant by its ID.
+    #[inline(always)]
+    pub fn consult_constant(&self, id: u32) -> Option<&IfaValue> {
+        self.constants.get(id as usize)
     }
 
     /// Load constants from Bytecode into the Sacred Nuts (Ikin)
     /// This converts costly Strings into cheap Arcs for O(1) runtime usage.
     pub fn load_from_bytecode(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
-        if bytecode.strings.len() > MAX_INTERNED_STRINGS {
-            return Err(IfaError::Runtime(format!(
-                "Bytecode string pool exceeds limit ({} > {})",
-                bytecode.strings.len(),
-                MAX_INTERNED_STRINGS
-            )));
-        }
-
-        self.bytecode_to_ikin.clear();
-
-        self.strings.reserve(bytecode.strings.len());
-        self.bytecode_to_ikin.reserve(bytecode.strings.len());
-
-        for s in &bytecode.strings {
-            let id = if let Some(&existing_id) = self.string_map.get(s.as_str()) {
-                existing_id
-            } else {
-                let arc: Arc<str> = s.as_str().into();
-                let new_id = self.strings.len() as u32;
-                self.string_map.insert(arc.clone(), new_id);
-                self.strings.push(arc);
-                self.string_lengths
-                    .push(ifa_types::value_union::IfaValue::unicode_string_len(
-                        s.as_str(),
-                    ));
-                new_id
-            };
-            self.bytecode_to_ikin.push(id);
-        }
-
-        Ok(())
+        self.populate_bytecode_mapping(bytecode)
     }
 
     /// Extract the current bytecode string index mapping, used for VM context switches.
@@ -161,6 +152,19 @@ impl Ikin {
     /// Rebuild the translation mapping from bytecode strings to loaded constants.
     /// This is used on VM resume to preserve runtime interned strings while mapping bytecode.
     pub fn rebuild_bytecode_mapping(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
+        self.populate_bytecode_mapping(bytecode)
+    }
+
+    fn populate_bytecode_mapping(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
+        if self.strings.len() + bytecode.strings.len() > MAX_INTERNED_STRINGS {
+            return Err(IfaError::Runtime(format!(
+                "Bytecode string pool exceeds limit ({} + {} > {})",
+                self.strings.len(),
+                bytecode.strings.len(),
+                MAX_INTERNED_STRINGS
+            )));
+        }
+
         self.bytecode_to_ikin.clear();
         self.bytecode_to_ikin.reserve(bytecode.strings.len());
 
@@ -171,11 +175,10 @@ impl Ikin {
                 let arc: Arc<str> = s.as_str().into();
                 let new_id = self.strings.len() as u32;
                 self.string_map.insert(arc.clone(), new_id);
-                self.strings.push(arc);
-                self.string_lengths
-                    .push(ifa_types::value_union::IfaValue::unicode_string_len(
-                        s.as_str(),
-                    ));
+                self.strings.push(arc.clone());
+                let len = ifa_types::value_union::IfaValue::unicode_string_len(s.as_str());
+                self.string_lengths.push(len);
+                self.ptr_to_len.insert(arc.as_ptr() as usize, len);
                 new_id
             };
             self.bytecode_to_ikin.push(id);

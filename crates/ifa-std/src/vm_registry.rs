@@ -925,6 +925,19 @@ impl StdRegistry {
                     .record("Ìrosù", "kígbe (screamed)", &IfaValue::str(&text));
                 Ok(IfaValue::null())
             }
+            #[cfg(feature = "audio")]
+            "siro_duro" | "play_blocking" => {
+                let path = args.first().map(|v| v.to_string()).unwrap_or_default();
+                self.irosu()
+                    .siro_duro(&path)
+                    .map_err(|e| IfaError::Custom(e))?;
+                Ok(IfaValue::null())
+            }
+            #[cfg(feature = "audio")]
+            "kigbe_orin" | "beep" => {
+                self.irosu().kigbe_orin();
+                Ok(IfaValue::null())
+            }
             _ => Err(IfaError::Custom(format!(
                 "Irosu: unknown method '{}'",
                 method
@@ -1187,7 +1200,10 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                 .resource_registry()
                 .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
-            let mut rope = res.0.lock().map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
+            let mut rope = res
+                .0
+                .lock()
+                .map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
             ika.rope_insert(&mut rope, idx, &text);
             Ok(IfaValue::Null)
         }
@@ -1206,7 +1222,10 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                 .resource_registry()
                 .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
-            let mut rope = res.0.lock().map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
+            let mut rope = res
+                .0
+                .lock()
+                .map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
             ika.rope_delete(&mut rope, start, end);
             Ok(IfaValue::Null)
         }
@@ -1225,7 +1244,10 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                 .resource_registry()
                 .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
-            let rope = res.0.lock().map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
+            let rope = res
+                .0
+                .lock()
+                .map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
             let slice = ika.rope_slice(&rope, start, end);
             Ok(IfaValue::str(slice))
         }
@@ -1242,7 +1264,10 @@ fn dispatch_ika(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                 .resource_registry()
                 .get::<RopeResource>(token)
                 .ok_or_else(|| IfaError::Runtime("Rope handle not found".into()))?;
-            let rope = res.0.lock().map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
+            let rope = res
+                .0
+                .lock()
+                .map_err(|_| IfaError::Runtime("Rope lock poisoned".into()))?;
             let len = ika.rope_len(&rope);
             Ok(IfaValue::int(len as i64))
         }
@@ -1621,12 +1646,15 @@ fn dispatch_okanran(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> I
                 .unwrap_or_else(|| "panic".into());
             Err(IfaError::Runtime(format!("[Ọ̀kànràn] {}", msg)))
         }
-        "ko_le_de" | "unreachable_panic" => {
-            Err(IfaError::Runtime("[Ọ̀kànràn] Unreachable code executed!".into()))
-        }
+        "ko_le_de" | "unreachable_panic" => Err(IfaError::Runtime(
+            "[Ọ̀kànràn] Unreachable code executed!".into(),
+        )),
         "ko_ti_se" | "not_implemented_panic" => {
             let feat = args.first().map(|v| v.to_string()).unwrap_or_default();
-            Err(IfaError::Runtime(format!("Ẹ̀yà '{}' kò tíì ṣé (Feature '{}' is not yet implemented)", feat, feat)))
+            Err(IfaError::Runtime(format!(
+                "Ẹ̀yà '{}' kò tíì ṣé (Feature '{}' is not yet implemented)",
+                feat, feat
+            )))
         }
         _ => Err(IfaError::Custom(format!(
             "Okanran: unknown method '{}'",
@@ -1646,7 +1674,9 @@ fn dispatch_ose(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
                         ctx.resource_registry()
                             .get::<Mutex<Terminal<CrosstermBackend<io::Stdout>>>>(token)
                     {
-                        let mut terminal = terminal_mutex.lock().map_err(|_| IfaError::Runtime("Terminal lock poisoned".into()))?;
+                        let mut terminal = terminal_mutex
+                            .lock()
+                            .map_err(|_| IfaError::Runtime("Terminal lock poisoned".into()))?;
                         terminal
                             .clear()
                             .map_err(|e| IfaError::Runtime(e.to_string()))?;

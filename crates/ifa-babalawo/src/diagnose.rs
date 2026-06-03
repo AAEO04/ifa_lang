@@ -83,6 +83,7 @@ pub struct Babalawo {
     pub diagnostics: Vec<Diagnostic>,
     pub verbose: bool,
     pub include_wisdom: bool,
+    pub is_strict: bool,
 }
 
 impl Default for Babalawo {
@@ -97,6 +98,7 @@ impl Babalawo {
             diagnostics: Vec::new(),
             verbose: false,
             include_wisdom: true,
+            is_strict: false,
         }
     }
 
@@ -175,7 +177,11 @@ impl Babalawo {
 
     /// Add a warning diagnostic
     pub fn warning(&mut self, code: &str, msg: &str, file: &str, line: usize, col: usize) {
-        self.add_diagnostic(Severity::Warning, code, msg, file, line, col);
+        if self.is_strict {
+            self.add_diagnostic(Severity::Error, code, msg, file, line, col);
+        } else {
+            self.add_diagnostic(Severity::Warning, code, msg, file, line, col);
+        }
     }
 
     /// Add an info diagnostic

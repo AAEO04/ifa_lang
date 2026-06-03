@@ -158,8 +158,7 @@ pub fn remove_from_path(install_dir: &Path) -> Result<(), PathError> {
         let new_content = content
             .lines()
             .filter(|line| {
-                !line.contains(&export_pattern)
-                    && !line.contains("# Added by Ifa-Lang installer")
+                !line.contains(&export_pattern) && !line.contains("# Added by Ifa-Lang installer")
             })
             .collect::<Vec<_>>()
             .join("\n");

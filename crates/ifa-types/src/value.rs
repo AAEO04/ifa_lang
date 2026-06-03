@@ -204,7 +204,7 @@ impl Add for IfaValue {
                 result.extend(b.clone());
                 IfaValue::List(result)
             }
-            _ => IfaValue::Null,
+            _ => panic!("Arithmetic type mismatch: cannot perform operation on incompatible types"),
         }
     }
 }
@@ -221,7 +221,7 @@ impl Sub for IfaValue {
             (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a - b),
             (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float(*a as f64 - b),
             (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a - *b as f64),
-            _ => IfaValue::Null,
+            _ => panic!("Arithmetic type mismatch: cannot perform operation on incompatible types"),
         }
     }
 }
@@ -244,7 +244,7 @@ impl Mul for IfaValue {
             (IfaValue::Int(n), IfaValue::Str(s)) if *n >= 0 => {
                 IfaValue::Str(s.repeat(*n as usize).into())
             }
-            _ => IfaValue::Null,
+            _ => panic!("Arithmetic type mismatch: cannot perform operation on incompatible types"),
         }
     }
 }
@@ -310,7 +310,7 @@ impl Rem for IfaValue {
                 }
                 IfaValue::Float(a % b)
             }
-            _ => IfaValue::Null,
+            _ => panic!("Arithmetic type mismatch: cannot perform operation on incompatible types"),
         }
     }
 }
@@ -322,7 +322,7 @@ impl Neg for IfaValue {
         match self {
             IfaValue::Int(a) => IfaValue::Int(-a),
             IfaValue::Float(a) => IfaValue::Float(-a),
-            _ => IfaValue::Null,
+            _ => panic!("Arithmetic type mismatch: cannot perform operation on incompatible types"),
         }
     }
 }

@@ -1,11 +1,3 @@
-#![allow(clippy::collapsible_if)]
-#![allow(clippy::collapsible_str_replace)]
-#![allow(clippy::should_implement_trait)]
-#![allow(clippy::type_complexity)]
-#![allow(clippy::empty_line_after_doc_comments)]
-#![allow(clippy::useless_conversion)]
-#![allow(clippy::let_unit_value)]
-#![allow(clippy::get_first)]
 
 //! # Ifá-Core
 //!

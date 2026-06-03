@@ -7,7 +7,6 @@ mod deploy;
 mod docgen;
 mod lsp;
 mod oja;
-mod sandbox;
 
 use clap::{Parser, Subcommand};
 use eyre::{Result, WrapErr};
@@ -147,7 +146,6 @@ enum Commands {
         #[arg(long)]
         target: Option<String>,
 
-
         /// Output as reusable Cargo project (instead of building executable)
         #[arg(long)]
         project: bool,
@@ -217,6 +215,9 @@ enum Commands {
         /// Fast mode (skip proverbs/wisdom for performance)
         #[arg(long)]
         fast: bool,
+        /// Custom taboos to enforce (e.g., frontend:db)
+        #[arg(long = "taboo")]
+        taboos: Vec<String>,
     },
 
     /// Generate documentation
@@ -336,6 +337,7 @@ fn run_babalawo(
     let filename = filepath.display().to_string();
     let config = ifa_babalawo::BabalawoConfig {
         include_wisdom: true,
+        taboos: Vec::new(),
     };
     let (baba, ctx) = ifa_babalawo::analyze_program(program, &filename, config);
     if baba.error_count() > 0 || baba.warning_count() > 0 {
@@ -476,20 +478,26 @@ fn main() -> Result<()> {
             let program =
                 parse(&source).map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
 
-            // 5-Layer Integrity Defence (Babalawo Static Analysis)
-            if run_babalawo(&program, &file).is_none() {
-                std::process::exit(1);
-            }
-
             println!("Parsed {} statements", program.statements.len());
             println!("---");
             println!();
 
-            // Compile and run in VM
-            let compiler = ifa_vm::Compiler::new(&file.display().to_string());
-            let bytecode = compiler
-                .compile(&program)
-                .map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
+            // Run Babalawo Static Analysis and Compiler in parallel
+            let (babalawo_res, compile_res) = std::thread::scope(|s| {
+                let babalawo_handle = s.spawn(|| run_babalawo(&program, &file));
+                let compile_handle = s.spawn(|| {
+                    let compiler = ifa_vm::Compiler::new(&file.display().to_string());
+                    compiler.compile(&program)
+                });
+                (babalawo_handle.join().unwrap(), compile_handle.join().unwrap())
+            });
+
+            // 5-Layer Integrity Defence (Babalawo Static Analysis)
+            if babalawo_res.is_none() {
+                std::process::exit(1);
+            }
+
+            let bytecode = compile_res.map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
 
             let mut registry = ifa_std::vm_registry::StdRegistry::new();
             registry.set_capabilities(caps.clone());
@@ -562,15 +570,22 @@ fn main() -> Result<()> {
             let program = ifa_vm::parse(&source)
                 .map_err(|e| color_eyre::eyre::eyre!("Parse error: {}", e))?;
 
-            // 5-Layer Integrity Defence
-            if run_babalawo(&program, &file).is_none() {
+            // Run Babalawo Static Analysis and Compiler in parallel
+            let (babalawo_res, compile_res) = std::thread::scope(|s| {
+                let babalawo_handle = s.spawn(|| run_babalawo(&program, &file));
+                let compile_handle = s.spawn(|| {
+                    let compiler = ifa_vm::Compiler::new(&file.display().to_string());
+                    compiler.compile(&program)
+                });
+                (babalawo_handle.join().unwrap(), compile_handle.join().unwrap())
+            });
+
+            // 5-Layer Integrity Defence (Babalawo Static Analysis)
+            if babalawo_res.is_none() {
                 std::process::exit(1);
             }
 
-            let compiler = ifa_vm::Compiler::new(&file.display().to_string());
-            let bytecode = compiler
-                .compile(&program)
-                .map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
+            let bytecode = compile_res.map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
 
             // Write .ifab file
             let bytes = bytecode.to_bytes();
@@ -827,7 +842,7 @@ fn main() -> Result<()> {
             } else {
                 transpiler = transpiler.with_base_path(std::env::current_dir()?);
             }
-            
+
             let rust_code = transpiler.transpile_program(&program);
 
             // Create temp Cargo project
@@ -839,14 +854,14 @@ fn main() -> Result<()> {
 
             // Write main.rs
             std::fs::write(src_dir.join("main.rs"), &rust_code)?;
-            
+
             // Write external modules
             for (name, content) in transpiler.external_modules.iter() {
                 std::fs::write(src_dir.join(name), content)?;
             }
 
             // Determine features
-            let mut features: Vec<&str> = Vec::new();
+            let features: Vec<&str> = Vec::new();
 
             let features_str = features
                 .iter()
@@ -855,12 +870,23 @@ fn main() -> Result<()> {
                 .join(", ");
             let default_features = "true";
 
-            // Resolve workspace root from current_exe
-            let exe_dir = std::env::current_exe()?.parent().unwrap().to_path_buf();
+            // Resolve workspace root from current_exe safely
+            let exe_path = std::env::current_exe()?;
+            let exe_dir = exe_path.parent().unwrap_or(&exe_path);
+
             let workspace_root = if exe_dir.ends_with("deps") {
-                exe_dir.parent().unwrap().parent().unwrap().parent().unwrap().to_path_buf()
+                exe_dir
+                    .parent()
+                    .and_then(|p| p.parent())
+                    .and_then(|p| p.parent())
+                    .unwrap_or(exe_dir)
+                    .to_path_buf()
             } else if exe_dir.ends_with("debug") || exe_dir.ends_with("release") {
-                exe_dir.parent().unwrap().parent().unwrap().to_path_buf()
+                exe_dir
+                    .parent()
+                    .and_then(|p| p.parent())
+                    .unwrap_or(exe_dir)
+                    .to_path_buf()
             } else {
                 std::env::current_dir()?
             };
@@ -933,10 +959,7 @@ lto = true
             };
 
             let built_binary = if let Some(ref t) = target {
-                global_target_dir
-                    .join(t)
-                    .join("release")
-                    .join(&binary_name)
+                global_target_dir.join(t).join("release").join(&binary_name)
             } else {
                 global_target_dir.join("release").join(&binary_name)
             };
@@ -982,11 +1005,10 @@ lto = true
             match command {
                 SandboxCommands::Run { file, timeout } => {
                     use std::time::Duration;
-                    let config = sandbox::SandboxConfig {
-                        timeout: Duration::from_secs(timeout),
-                        ..Default::default()
-                    };
-                    let sb = sandbox::Igbale::new(config);
+                    let mut config = ifa_sandbox::SandboxConfig::new(ifa_sandbox::SecurityProfile::Standard);
+                    config.limits.max_execution_time = Duration::from_secs(timeout);
+                    
+                    let sb = ifa_sandbox::Igbale::new(config);
                     let result = sb.run(&file)?;
 
                     println!("{}", result.stdout);
@@ -999,7 +1021,7 @@ lto = true
                     }
                 }
                 SandboxCommands::Demo => {
-                    sandbox::demo();
+                    ifa_sandbox::igbale_demo();
                 }
                 SandboxCommands::List => {
                     println!("📋 No active sandbox containers");
@@ -1308,6 +1330,7 @@ lto = true
             strict,
             format,
             fast,
+            taboos,
         } => {
             use ifa_babalawo::{BabalawoConfig, check_program_with_config};
             use ifa_vm::parse;
@@ -1338,8 +1361,18 @@ lto = true
 
                 match parse(&source) {
                     Ok(program) => {
+                        let mut parsed_taboos = Vec::new();
+                        for t in &taboos {
+                            if let Some((caller, callee)) = t.split_once(':') {
+                                parsed_taboos.push((caller.to_string(), callee.to_string()));
+                            } else {
+                                println!("Warning: invalid taboo format '{}'. Expected 'caller:callee'", t);
+                            }
+                        }
+
                         let config = BabalawoConfig {
                             include_wisdom: !fast,
+                            taboos: parsed_taboos,
                         };
                         let baba = check_program_with_config(&program, &filename, config);
                         total_errors += baba.error_count();
@@ -1527,16 +1560,21 @@ lto = true
 
         Commands::SelfUpdate => {
             println!("🔄 Checking for updates...");
-            let exe_path = std::env::current_exe()
-                .wrap_err("Failed to get current executable path")?;
+            let exe_path =
+                std::env::current_exe().wrap_err("Failed to get current executable path")?;
             let canonical_exe = std::fs::canonicalize(&exe_path).unwrap_or(exe_path);
-            
+
             // The executable is typically in <install_dir>/bin/ifa(.exe)
             // We need to pass <install_dir> to the installer core.
             let install_dir = canonical_exe
                 .parent() // -> /bin
                 .and_then(|p| p.parent()) // -> /install_dir
-                .ok_or_else(|| color_eyre::eyre::eyre!("Could not determine installation directory from {}", canonical_exe.display()))?;
+                .ok_or_else(|| {
+                    color_eyre::eyre::eyre!(
+                        "Could not determine installation directory from {}",
+                        canonical_exe.display()
+                    )
+                })?;
 
             match ifa_installer_core::install::self_update(install_dir) {
                 Ok(_) => {

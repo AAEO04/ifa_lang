@@ -247,13 +247,14 @@ pub fn self_update(install_dir: &Path) -> Result<(), InstallError> {
 
     println!("New version available: {}", release.tag_name);
 
-    let asset = find_asset_for_platform(&release, "ifa")
-        .ok_or_else(|| InstallError::RequirementsNotMet(format!(
+    let asset = find_asset_for_platform(&release, "ifa").ok_or_else(|| {
+        InstallError::RequirementsNotMet(format!(
             "No asset found for {}/{} in release {}",
             std::env::consts::OS,
             std::env::consts::ARCH,
             release.tag_name,
-        )))?;
+        ))
+    })?;
 
     let checksums = net.fetch_checksums(&release).ok();
 
@@ -269,7 +270,10 @@ pub fn self_update(install_dir: &Path) -> Result<(), InstallError> {
             net.download_and_verify(&asset.browser_download_url, &temp_path, expected)?;
             println!("✓ Checksum verified");
         } else {
-            println!("⚠ No checksum entry for {}, downloading unverified", asset.name);
+            println!(
+                "⚠ No checksum entry for {}, downloading unverified",
+                asset.name
+            );
             net.download_asset(&asset.browser_download_url, &temp_path)?;
         }
     } else {
@@ -491,9 +495,7 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
 
         txn.commit();
         println!("✅ Installation complete.");
-        println!(
-            "   Run 'ifa --version' to verify (you may need to restart your terminal first)."
-        );
+        println!("   Run 'ifa --version' to verify (you may need to restart your terminal first).");
     })
 }
 

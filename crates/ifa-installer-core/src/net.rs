@@ -1,4 +1,3 @@
-use ureq::Agent;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::fs::File;
@@ -6,6 +5,7 @@ use std::io::{BufWriter, Read, Write};
 use std::path::Path;
 use std::time::Duration;
 use thiserror::Error;
+use ureq::Agent;
 
 /// Maximum file size for downloads (500 MB)
 const MAX_DOWNLOAD_SIZE: u64 = 500 * 1024 * 1024;
@@ -115,7 +115,10 @@ impl NetManager {
         let response = self.client.get(url).call()?;
 
         // Check content length if available
-        if let Some(content_length) = response.header("Content-Length").and_then(|h| h.parse::<u64>().ok()) {
+        if let Some(content_length) = response
+            .header("Content-Length")
+            .and_then(|h| h.parse::<u64>().ok())
+        {
             if content_length > MAX_DOWNLOAD_SIZE {
                 return Err(NetError::FileTooLarge {
                     size: content_length,

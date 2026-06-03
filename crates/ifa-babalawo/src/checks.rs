@@ -5,9 +5,9 @@
 
 use crate::Severity;
 use crate::diagnose::Babalawo;
+use crate::effects::EffectChecker;
 use crate::iwa::IwaEngine;
 use crate::movement::{MoveCheckResult, MoveTracker};
-use crate::effects::EffectChecker;
 use crate::taboo::TabooEnforcer;
 use ifa_types::ast::{Expression, Program, Statement, TypeHint, Visibility};
 use std::collections::{HashMap, HashSet};
@@ -56,6 +56,8 @@ pub struct LintContext {
     pub is_strict: bool,
     /// Effect checker — enforces side-effect boundaries
     pub effect_checker: EffectChecker,
+    /// Aliases defined in the program
+    pub aliases: HashMap<String, Box<Expression>>,
 }
 
 impl Default for LintContext {
@@ -87,6 +89,7 @@ impl LintContext {
             parallel_locals: HashSet::new(),
             is_strict: false,
             effect_checker: EffectChecker::new(),
+            aliases: HashMap::new(),
         }
     }
 
@@ -171,16 +174,19 @@ impl LintContext {
 }
 
 /// Configuration for the Babalawo linter
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct BabalawoConfig {
     /// Include wisdom/proverbs in diagnostics (slower)
     pub include_wisdom: bool,
+    /// Custom taboos (caller, callee) to enforce during checking
+    pub taboos: Vec<(String, String)>,
 }
 
 impl Default for BabalawoConfig {
     fn default() -> Self {
         Self {
             include_wisdom: true,
+            taboos: Vec::new(),
         }
     }
 }
@@ -212,10 +218,16 @@ pub fn analyze_program(
     }
     let mut ctx = LintContext::new();
 
+    // Register taboos from config
+    for (source, target) in &config.taboos {
+        ctx.taboo_enforcer.add_taboo(source, "", target, "", false);
+    }
+
     // First pass: collect definitions
     for stmt in &program.statements {
         collect_definitions(stmt, &mut ctx);
     }
+    babalawo.is_strict = ctx.is_strict;
 
     // Second pass: check for issues (including Ìwà and Èèwọ̀)
     for stmt in &program.statements {
@@ -273,71 +285,6 @@ pub fn analyze_program(
     (babalawo, ctx)
 }
 
-/// Check a program with custom taboos
-#[allow(dead_code)]
-pub fn check_program_with_taboos(
-    program: &Program,
-    filename: &str,
-    taboos: Vec<(&str, &str)>, // (source, target) forbidden pairs
-) -> Babalawo {
-    let mut babalawo = Babalawo::new();
-    let mut ctx = LintContext::new();
-
-    // Register taboos
-    for (source, target) in taboos {
-        ctx.taboo_enforcer.add_taboo(source, "", target, "", false);
-    }
-
-    // First pass: collect definitions
-    for stmt in &program.statements {
-        collect_definitions(stmt, &mut ctx);
-    }
-
-    // Second pass: check for issues
-    for stmt in &program.statements {
-        check_statement(stmt, &mut ctx, &mut babalawo, filename);
-    }
-
-    // Final checks
-    check_unused_vars(&ctx, &mut babalawo, filename);
-    check_iwa_balance(&mut ctx, &mut babalawo, filename);
-    check_taboo_violations(&ctx, &mut babalawo, filename);
-
-    babalawo
-}
-
-/// Check Ìwà Engine balance
-#[allow(dead_code)]
-fn check_iwa_balance(ctx: &mut LintContext, baba: &mut Babalawo, file: &str) {
-    if !ctx.iwa_engine.check_balance() {
-        for debt in ctx.iwa_engine.unclosed_resources() {
-            baba.error(
-                "UNCLOSED_RESOURCE",
-                &format!(
-                    "Resource '{}' was never closed (needs '{}')",
-                    debt.opener, debt.required
-                ),
-                file,
-                debt.line,
-                debt.column,
-            );
-        }
-    }
-}
-
-/// Check Èèwọ̀ taboo violations
-#[allow(dead_code)]
-fn check_taboo_violations(ctx: &LintContext, baba: &mut Babalawo, file: &str) {
-    for v in ctx.taboo_enforcer.get_violations() {
-        baba.error(
-            "TABOO_VIOLATION",
-            &format!("Èèwọ̀: '{}' cannot call '{}'", v.caller, v.callee),
-            file,
-            v.line,
-            v.column,
-        );
-    }
-}
 
 /// Collect variable and function definitions + Taboos and Opon directives
 fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
@@ -362,6 +309,15 @@ fn collect_definitions(stmt: &Statement, ctx: &mut LintContext) {
             span,
         } => {
             ctx.define_var(name, span.clone(), *visibility);
+        }
+        Statement::Alias {
+            name,
+            target,
+            span,
+        } => {
+            ctx.aliases.insert(name.clone(), target.clone());
+            // An alias also reserves a local name
+            ctx.define_var(name, span.clone(), Visibility::Private);
         }
         Statement::EseDef {
             name,
@@ -641,6 +597,10 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             check_expression(value, ctx, baba, file, span);
         }
 
+        Statement::Alias { target, span, .. } => {
+            check_expression(target, ctx, baba, file, span);
+        }
+
         Statement::Instruction { call, span } => {
             check_expression(&Expression::OduCall(call.clone()), ctx, baba, file, span);
         }
@@ -654,8 +614,20 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             effects,
         } => {
             // Register params as used (they are implicitly used by the caller)
+            let mut seen_optional = false;
             for param in params {
                 ctx.use_var(&param.name);
+                if param.default_value.is_some() {
+                    seen_optional = true;
+                } else if seen_optional {
+                    baba.error(
+                        "INVALID_PARAM_ORDER",
+                        &format!("Required parameter '{}' cannot follow optional parameters", param.name),
+                        file,
+                        span.line,
+                        span.column,
+                    );
+                }
             }
 
             let is_async = effects.contains(&ifa_types::ast::Effect::Async);
@@ -681,7 +653,13 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             }
 
             for err in &ctx.effect_checker.errors {
-                baba.error("EFFECT_VIOLATION", &err.to_string(), file, span.line, span.column);
+                baba.error(
+                    "EFFECT_VIOLATION",
+                    &err.to_string(),
+                    file,
+                    span.line,
+                    span.column,
+                );
             }
             ctx.effect_checker.errors.clear();
 
@@ -741,6 +719,34 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
 
             for s in body {
                 check_statement(s, ctx, baba, file);
+            }
+        }
+
+        Statement::Match {
+            condition,
+            arms,
+            span,
+        } => {
+            check_expression(condition, ctx, baba, file, span);
+
+            let mut has_wildcard = false;
+            for arm in arms {
+                if matches!(arm.pattern, ifa_types::ast::MatchPattern::Wildcard) {
+                    has_wildcard = true;
+                }
+                for s in &arm.body {
+                    check_statement(s, ctx, baba, file);
+                }
+            }
+
+            if !has_wildcard {
+                baba.warning(
+                    "NON_EXHAUSTIVE_MATCH",
+                    "Match block may not be exhaustive. Consider adding a '_' wildcard arm.",
+                    file,
+                    span.line,
+                    span.column,
+                );
             }
         }
 
@@ -885,8 +891,6 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
         Statement::Expr { expr, span } => {
             check_expression(expr, ctx, baba, file, span);
         }
-
-
 
         Statement::Throw { value, span } => {
             check_expression(value, ctx, baba, file, span);
@@ -1175,7 +1179,8 @@ fn check_expression(
 
             // Effect system check
             let callee_effects = crate::effects::domain_effects(call.domain);
-            ctx.effect_checker.check_call(&callee_effects, file, span.line, span.column);
+            ctx.effect_checker
+                .check_call(&callee_effects, file, span.line, span.column);
 
             // H1: Enforce explicit actor-boundary moves (Osa domain requires explicit move).
             if call.domain == ifa_types::domain::OduDomain::Osa {
@@ -1308,9 +1313,9 @@ fn check_expression(
             for param in params {
                 // If in parallel body, lambda params are parallel locals
                 if ctx.in_parallel_body {
-                    ctx.parallel_locals.insert(param.clone());
+                    ctx.parallel_locals.insert(param.name.clone());
                 }
-                ctx.define_var(param, span.clone(), Visibility::Private);
+                ctx.define_var(&param.name, span.clone(), Visibility::Private);
             }
             for stmt in body {
                 check_statement(stmt, ctx, baba, file);
@@ -1448,6 +1453,10 @@ fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<TypeHin
         Expression::Map(_) => Some(TypeHint::Map),
 
         Expression::Identifier(name) => {
+            // Check aliases first
+            if let Some(target) = ctx.aliases.get(name) {
+                return infer_expression_type(target, ctx);
+            }
             // Look up variable type in context
             ctx.get_var_type(name).cloned()
         }

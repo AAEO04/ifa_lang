@@ -95,6 +95,9 @@ impl Odi {
     pub fn ka_mmap(&self, path: &str) -> IfaResult<String> {
         let canonical = self.check_read(Path::new(path))?;
         let file = File::open(&canonical).map_err(|e| IfaError::IoError(e.to_string()))?;
+        // SAFETY: `MmapOptions::new().map` is unsafe because the underlying file can be truncated
+        // concurrently by another process, causing SIGBUS on access. In Ifá-Lang, file locks
+        // or capabilities should mitigate this, but it remains a known OS-level risk for memory maps.
         let mmap = unsafe {
             MmapOptions::new()
                 .map(&file)

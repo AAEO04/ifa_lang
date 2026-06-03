@@ -2,13 +2,10 @@
 //!
 //! Dependency resolution, lockfile generation, and sandboxed execution.
 //! Conforms to IFA_LANG_RUNTIME_SPEC §33.
-
-#![allow(dead_code, clippy::collapsible_if)]
-
+#![allow(clippy::collapsible_if)]
 use chrono::Local;
 use eyre::{Result, WrapErr, eyre};
 use flate2::read::GzDecoder;
-
 
 use ring::digest::{Context, SHA256};
 use serde::{Deserialize, Serialize};
@@ -1460,22 +1457,24 @@ opt-level = 3
 /// Until that exists this returns an explicit error so callers know nothing happened.
 pub fn update_cli() -> Result<()> {
     println!("🔄 Checking for updates...");
-    let exe_path = std::env::current_exe()
-        .wrap_err("Failed to get current executable path")?;
+    let exe_path = std::env::current_exe().wrap_err("Failed to get current executable path")?;
     let canonical_exe = std::fs::canonicalize(&exe_path).unwrap_or(exe_path);
-    
+
     let install_dir = canonical_exe
         .parent()
         .and_then(|p| p.parent())
-        .ok_or_else(|| eyre!("Could not determine installation directory from {}", canonical_exe.display()))?;
+        .ok_or_else(|| {
+            eyre!(
+                "Could not determine installation directory from {}",
+                canonical_exe.display()
+            )
+        })?;
 
     match ifa_installer_core::install::self_update(install_dir) {
         Ok(_) => {
             println!("✅ Update complete.");
             Ok(())
         }
-        Err(e) => {
-            Err(eyre!("Update failed: {}", e))
-        }
+        Err(e) => Err(eyre!("Update failed: {}", e)),
     }
 }

@@ -3,7 +3,7 @@
 //! This stub implements just enough of the JSON-RPC DAP to gracefully fail
 //! and tell VS Code what's going on, instead of crashing.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::io::{self, BufRead, Read, Write};
 
 pub fn run_debug_session(_file: std::path::PathBuf) -> color_eyre::Result<()> {
@@ -69,7 +69,7 @@ pub fn run_debug_session(_file: std::path::PathBuf) -> color_eyre::Result<()> {
                             }
                         });
                         send_message(&mut stdout, &response)?;
-                        
+
                         // Send initialized event
                         let event = json!({
                             "type": "event",
@@ -95,7 +95,10 @@ pub fn run_debug_session(_file: std::path::PathBuf) -> color_eyre::Result<()> {
                             "seq": 0
                         });
                         send_message(&mut stdout, &event)?;
-                    } else if command == "disconnect" || command == "terminate" || command == "configurationDone" {
+                    } else if command == "disconnect"
+                        || command == "terminate"
+                        || command == "configurationDone"
+                    {
                         let response = json!({
                             "type": "response",
                             "request_seq": seq,
@@ -127,6 +130,11 @@ pub fn run_debug_session(_file: std::path::PathBuf) -> color_eyre::Result<()> {
 
 fn send_message(stdout: &mut io::Stdout, message: &Value) -> io::Result<()> {
     let payload = serde_json::to_string(message)?;
-    write!(stdout, "Content-Length: {}\r\n\r\n{}", payload.len(), payload)?;
+    write!(
+        stdout,
+        "Content-Length: {}\r\n\r\n{}",
+        payload.len(),
+        payload
+    )?;
     stdout.flush()
 }

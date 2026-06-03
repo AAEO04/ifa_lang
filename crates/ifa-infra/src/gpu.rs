@@ -117,7 +117,10 @@ impl GpuContext {
     ) -> Arc<wgpu::ComputePipeline> {
         // Try read lock first
         {
-            let cache = self.pipeline_cache.read().unwrap();
+            let cache = self
+                .pipeline_cache
+                .read()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             if let Some(pipeline) = cache.get(name) {
                 return pipeline.clone();
             }
@@ -125,14 +128,20 @@ impl GpuContext {
 
         // Create and cache
         let pipeline = Arc::new(self.create_pipeline_uncached(name, shader_source, entry_point));
-        let mut cache = self.pipeline_cache.write().unwrap();
+        let mut cache = self
+            .pipeline_cache
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         cache.insert(name.to_string(), pipeline.clone());
         pipeline
     }
 
     /// Dispatch a cached pipeline by name
     pub fn dispatch_pipeline(&self, name: &str, x: u32, y: u32, z: u32) -> Result<(), String> {
-        let cache = self.pipeline_cache.read().unwrap();
+        let cache = self
+            .pipeline_cache
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let pipeline = cache
             .get(name)
             .ok_or_else(|| format!("Pipeline '{}' not found", name))?;
@@ -459,7 +468,10 @@ impl GpuContext {
     #[cfg(target_arch = "wasm32")]
     pub async fn read_buffer_async(&self, buffer: &wgpu::Buffer) -> Result<Vec<u8>, String> {
         let size = buffer.size();
-        let mut staging_guard = self.staging_buffer.write().unwrap();
+        let mut staging_guard = self
+            .staging_buffer
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         let need_recreate = match &*staging_guard {
             Some(b) => b.size() < size,
@@ -497,7 +509,10 @@ impl GpuContext {
 
         match rx.await {
             Ok(Ok(())) => {
-                let staging_guard_read = self.staging_buffer.read().unwrap();
+                let staging_guard_read = self
+                    .staging_buffer
+                    .read()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
                 let staging_buffer = staging_guard_read.as_ref().unwrap();
                 let slice = staging_buffer.slice(..size);
                 let data = slice.get_mapped_range();
@@ -516,7 +531,10 @@ impl GpuContext {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn read_buffer(&self, buffer: &wgpu::Buffer) -> Result<Vec<u8>, String> {
         let size = buffer.size();
-        let mut staging_guard = self.staging_buffer.write().unwrap();
+        let mut staging_guard = self
+            .staging_buffer
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         // Check if existing buffer is sufficient
         let need_recreate = match &*staging_guard {

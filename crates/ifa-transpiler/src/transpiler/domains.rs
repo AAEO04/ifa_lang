@@ -4,8 +4,8 @@
 
 use super::constants::matches_method;
 use super::constants::{
-    irete, irosu, iwori, odi, ofun, ogbe, ogunda, okanran, osa, ose, otura, owonrin, oyeku,
-    obara, ika, oturupon,
+    ika, irete, irosu, iwori, obara, odi, ofun, ogbe, ogunda, okanran, osa, ose, otura, oturupon,
+    owonrin, oyeku,
 };
 use super::core::RustTranspiler;
 use ifa_types::ast::OduCall;

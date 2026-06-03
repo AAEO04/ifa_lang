@@ -187,8 +187,6 @@ pub fn as_identifier(expr: &Expression) -> Option<&str> {
     }
 }
 
-
-
 /// Check an expression for uses of moved variables, reporting any violations.
 /// Returns a list of `MoveCheckResult` violations found.
 pub fn check_expr_for_moved_uses<'a>(

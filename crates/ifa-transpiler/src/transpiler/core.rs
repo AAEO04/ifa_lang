@@ -29,6 +29,8 @@ pub struct RustTranspiler {
     pub base_path: Option<std::path::PathBuf>,
     pub parsed_modules: std::collections::HashSet<String>,
     pub external_modules: std::collections::HashMap<String, String>,
+    pub fn_signatures: std::collections::HashMap<String, Vec<Param>>,
+    pub aliases: std::collections::HashMap<String, Box<Expression>>,
 }
 
 impl Default for RustTranspiler {
@@ -56,6 +58,8 @@ impl RustTranspiler {
             base_path: None,
             parsed_modules: std::collections::HashSet::new(),
             external_modules: std::collections::HashMap::new(),
+            fn_signatures: std::collections::HashMap::new(),
+            aliases: std::collections::HashMap::new(),
         }
     }
 

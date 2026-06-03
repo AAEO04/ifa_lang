@@ -122,6 +122,9 @@ impl Sandbox {
     pub fn set_process_limit(&mut self, _count: usize) {
         #[cfg(unix)]
         {
+            // SAFETY: `setrlimit` with `RLIMIT_NPROC` safely limits the number of processes
+            // the current user can create. The memory pointed to by `limit` is valid and
+            // locally owned. This is an OS-level capability constraint and memory safe.
             unsafe {
                 let limit = libc::rlimit {
                     rlim_cur: _count as libc::rlim_t,

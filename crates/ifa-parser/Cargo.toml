@@ -6,8 +6,12 @@ authors.workspace = true
 license.workspace = true
 description = "Parser and Lexer for Ifá-Lang"
 
+[features]
+default = ["compiler"]
+compiler = ["dep:logos", "dep:pest", "dep:pest_derive"]
+
 [dependencies]
 ifa-types = { path = "../ifa-types", features = ["vm"] }
-logos = "0.14"
-pest = "2.7"
-pest_derive = "2.7"
+logos = { version = "0.14", optional = true }
+pest = { version = "2.7", optional = true }
+pest_derive = { version = "2.7", optional = true }

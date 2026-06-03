@@ -89,6 +89,13 @@ pub enum Statement {
         span: Span,
     },
 
+    /// Alias declaration: alias X = Y;
+    Alias {
+        name: String,
+        target: Box<Expression>,
+        span: Span,
+    },
+
     /// Odù call: Obara.fikun(10);
     Instruction { call: OduCall, span: Span },
 
@@ -156,6 +163,13 @@ pub enum Statement {
     Ewo {
         condition: Expression,
         message: Option<String>,
+        span: Span,
+    },
+
+    /// AssertType: assert_type(expr, Int);
+    AssertType {
+        value: Box<Expression>,
+        type_hint: TypeHint,
         span: Span,
     },
 
@@ -277,6 +291,7 @@ pub enum UpdateOp {
 pub struct Param {
     pub name: String,
     pub type_hint: Option<TypeHint>,
+    pub default_value: Option<Expression>,
 }
 
 /// Type hints for optional static typing
@@ -456,6 +471,9 @@ pub enum Expression {
     /// Map literal: { "key": value }
     Map(Vec<(Expression, Expression)>),
 
+    /// Set literal: Set { 1, 2, 3 }
+    Set(Vec<Expression>),
+
     /// Index access: arr\[0\]
     Index {
         object: Box<Expression>,
@@ -474,7 +492,7 @@ pub enum Expression {
     /// Anonymous function (lambda): ese(params) { body }
     /// Captures enclosing scope as a closure.
     Lambda {
-        params: Vec<String>,
+        params: Vec<Param>,
         body: Vec<Statement>,
     },
 
@@ -570,6 +588,7 @@ impl Statement {
             | Statement::Assignment { span, .. }
             | Statement::Import { span, .. }
             | Statement::Const { span, .. }
+            | Statement::Alias { span, .. }
             | Statement::Instruction { span, .. }
             | Statement::OduDef { span, .. }
             | Statement::EseDef { span, .. }
@@ -581,6 +600,7 @@ impl Statement {
             | Statement::Abo { span }
             | Statement::Taboo { span, .. }
             | Statement::Ewo { span, .. }
+            | Statement::AssertType { span, .. }
             | Statement::Opon { span, .. }
             | Statement::Ebo { span, .. }
             | Statement::Defer { span, .. }

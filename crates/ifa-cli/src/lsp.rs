@@ -1,6 +1,8 @@
 #![allow(clippy::collapsible_if)]
 
-use ifa_babalawo::{BabalawoConfig, LintContext, Severity as IfaSeverity, analyze_program, list_methods_for_domain};
+use ifa_babalawo::{
+    BabalawoConfig, LintContext, Severity as IfaSeverity, analyze_program, list_methods_for_domain,
+};
 use ifa_vm::parse;
 use lsp_server::{Connection, Message, Notification, RequestId, Response};
 use lsp_types::{
@@ -67,9 +69,13 @@ fn main_loop(
                         "Got completion request for: {}",
                         params.text_document_position.text_document.uri
                     );
-                    let doc_text = documents.get(&params.text_document_position.text_document.uri).map(|s| s.as_str());
+                    let doc_text = documents
+                        .get(&params.text_document_position.text_document.uri)
+                        .map(|s| s.as_str());
                     let result = Some(lsp_types::CompletionResponse::Array(get_completions(
-                        &context, doc_text, params.text_document_position.position
+                        &context,
+                        doc_text,
+                        params.text_document_position.position,
                     )));
                     let result = serde_json::to_value(&result)
                         .map_err(|e| format!("Failed to serialize completion: {}", e))?;
@@ -147,7 +153,10 @@ fn main_loop(
                 ) {
                     Ok(params) => {
                         eprintln!("DidOpen: {}", params.text_document.uri);
-                        documents.insert(params.text_document.uri.clone(), params.text_document.text.clone());
+                        documents.insert(
+                            params.text_document.uri.clone(),
+                            params.text_document.text.clone(),
+                        );
                         if let Ok(Some(new_ctx)) = publish_diagnostics(
                             &connection,
                             params.text_document.uri,
@@ -163,7 +172,10 @@ fn main_loop(
                             Ok(params) => {
                                 eprintln!("DidChange: {}", params.text_document.uri);
                                 if let Some(change) = params.content_changes.into_iter().next() {
-                                    documents.insert(params.text_document.uri.clone(), change.text.clone());
+                                    documents.insert(
+                                        params.text_document.uri.clone(),
+                                        change.text.clone(),
+                                    );
                                     if let Ok(Some(new_ctx)) = publish_diagnostics(
                                         &connection,
                                         params.text_document.uri,
@@ -216,7 +228,7 @@ fn publish_diagnostics(
                     let start_line = span.line.saturating_sub(1);
                     let start_col = span.column.saturating_sub(1);
                     let len = (span.end as u32).saturating_sub(span.start as u32);
-                    
+
                     let max_col = if start_line < source_lines.len() {
                         source_lines[start_line].len() as u32
                     } else {
@@ -238,7 +250,7 @@ fn publish_diagnostics(
                 } else {
                     let start_line = (diag.error.line).saturating_sub(1);
                     let start_col = (diag.error.column).saturating_sub(1);
-                    
+
                     let max_col = if start_line < source_lines.len() {
                         source_lines[start_line].len() as u32
                     } else {
@@ -285,11 +297,11 @@ fn publish_diagnostics(
         }
         Err(e) => {
             let msg = e.to_string();
-            
+
             // Try to extract line and column from Pest error string
             let mut line = 0;
             let mut column = 0;
-            
+
             if let Some(idx) = msg.find("--> ") {
                 let rest = &msg[idx + 4..];
                 if let Some(nl) = rest.find('\n') {
@@ -314,8 +326,14 @@ fn publish_diagnostics(
 
             diagnostics.push(Diagnostic {
                 range: Range {
-                    start: Position { line, character: column },
-                    end: Position { line, character: end_col },
+                    start: Position {
+                        line,
+                        character: column,
+                    },
+                    end: Position {
+                        line,
+                        character: end_col,
+                    },
                 },
                 severity: Some(DiagnosticSeverity::ERROR),
                 code: None,
@@ -342,18 +360,25 @@ fn publish_diagnostics(
     Ok(context)
 }
 
-fn get_completions(context: &Option<LintContext>, doc_text: Option<&str>, pos: Position) -> Vec<CompletionItem> {
+fn get_completions(
+    context: &Option<LintContext>,
+    doc_text: Option<&str>,
+    pos: Position,
+) -> Vec<CompletionItem> {
     let mut items = Vec::new();
-    
+
     // Check if we are completing after a module (e.g. Obara.)
     if let Some(text) = doc_text {
         let lines: Vec<&str> = text.lines().collect();
         if (pos.line as usize) < lines.len() {
             let line = lines[pos.line as usize];
             let before_cursor = &line[..std::cmp::min(pos.character as usize, line.len())];
-            
+
             if let Some(dot_idx) = before_cursor.rfind('.') {
-                let domain_str = before_cursor[..dot_idx].trim().split(|c: char| !c.is_alphanumeric()).last();
+                let domain_str = before_cursor[..dot_idx]
+                    .trim()
+                    .split(|c: char| !c.is_alphanumeric())
+                    .last();
                 if let Some(domain_name) = domain_str {
                     let odu_opt = match domain_name {
                         "Ogbe" => Some(ifa_babalawo::Odu::Ogbe),
@@ -396,14 +421,31 @@ fn get_completions(context: &Option<LintContext>, doc_text: Option<&str>, pos: P
 
     // Yoruba Keywords
     let yoruba_keywords = [
-        ("gbiyanju", "Try block"), ("gba", "Catch block"), ("nipari", "Finally block"),
-        ("ayanfe", "Constant"), ("daro", "Async function"), ("reti", "Await"),
-        ("ta", "Throw error"), ("jowo", "Yield"), ("ofo", "Null"), ("ohunkohun", "Any"),
-        ("fun", "Function definition (fn)"), ("ninu", "Loop (in/for)"), ("ti", "Conditional (if)"),
-        ("tabi", "Else (else)"), ("pada", "Return values"), ("ailewu", "Unsafe block"),
-        ("da", "Break loop"), ("tesiwaju", "Continue loop"), ("lati", "From"), 
-        ("abo", "Strict module"), ("fi", "Export (pub)"), ("ikoko", "Private"),
-        ("gbangba", "Public"), ("ese", "Function definition"), ("ewo", "Assert/Taboo check")
+        ("gbiyanju", "Try block"),
+        ("gba", "Catch block"),
+        ("nipari", "Finally block"),
+        ("ayanfe", "Constant"),
+        ("daro", "Async function"),
+        ("reti", "Await"),
+        ("ta", "Throw error"),
+        ("jowo", "Yield"),
+        ("ofo", "Null"),
+        ("ohunkohun", "Any"),
+        ("fun", "Function definition (fn)"),
+        ("ninu", "Loop (in/for)"),
+        ("ti", "Conditional (if)"),
+        ("tabi", "Else (else)"),
+        ("pada", "Return values"),
+        ("ailewu", "Unsafe block"),
+        ("da", "Break loop"),
+        ("tesiwaju", "Continue loop"),
+        ("lati", "From"),
+        ("abo", "Strict module"),
+        ("fi", "Export (pub)"),
+        ("ikoko", "Private"),
+        ("gbangba", "Public"),
+        ("ese", "Function definition"),
+        ("ewo", "Assert/Taboo check"),
     ];
 
     for (k, desc) in yoruba_keywords.iter() {
@@ -412,27 +454,48 @@ fn get_completions(context: &Option<LintContext>, doc_text: Option<&str>, pos: P
 
     // English Keywords
     let english_keywords = [
-        ("try", "Try block"), ("catch", "Catch block"), ("finally", "Finally block"),
-        ("const", "Constant"), ("async", "Async function"), ("await", "Await"),
-        ("throw", "Throw error"), ("yield", "Yield"), ("null", "Null"), ("nil", "Nil"),
-        ("fn", "Function definition"), ("in", "Loop iterator"), ("if", "Conditional"),
-        ("else", "Else"), ("return", "Return values"), ("unsafe", "Unsafe block"),
-        ("break", "Break loop"), ("continue", "Continue loop"), ("from", "From"),
-        ("strict", "Strict module"), ("pub", "Export (pub)"), ("export", "Export"),
-        ("private", "Private"), ("public", "Public"), ("assert", "Assert check"),
-        ("taboo", "Taboo check"), ("defer", "Defer cleanup block"), ("let", "Variable declaration"),
-        ("while", "While loop"), ("for", "For loop"), ("import", "Import module"),
-        ("match", "Match expression")
+        ("try", "Try block"),
+        ("catch", "Catch block"),
+        ("finally", "Finally block"),
+        ("const", "Constant"),
+        ("async", "Async function"),
+        ("await", "Await"),
+        ("throw", "Throw error"),
+        ("yield", "Yield"),
+        ("null", "Null"),
+        ("nil", "Nil"),
+        ("fn", "Function definition"),
+        ("in", "Loop iterator"),
+        ("if", "Conditional"),
+        ("else", "Else"),
+        ("return", "Return values"),
+        ("unsafe", "Unsafe block"),
+        ("break", "Break loop"),
+        ("continue", "Continue loop"),
+        ("from", "From"),
+        ("strict", "Strict module"),
+        ("pub", "Export (pub)"),
+        ("export", "Export"),
+        ("private", "Private"),
+        ("public", "Public"),
+        ("assert", "Assert check"),
+        ("taboo", "Taboo check"),
+        ("defer", "Defer cleanup block"),
+        ("let", "Variable declaration"),
+        ("while", "While loop"),
+        ("for", "For loop"),
+        ("import", "Import module"),
+        ("match", "Match expression"),
     ];
-    
+
     for (k, desc) in english_keywords.iter() {
         items.push(ci(k, desc, CompletionItemKind::KEYWORD));
     }
 
     // Types
     let types = [
-        "Int", "Float", "Str", "Bool", "List", "Map", "Any", "void",
-        "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64"
+        "Int", "Float", "Str", "Bool", "List", "Map", "Any", "void", "i8", "i16", "i32", "i64",
+        "u8", "u16", "u32", "u64", "f32", "f64",
     ];
     for t in types.iter() {
         items.push(ci(t, "Type", CompletionItemKind::CLASS));
@@ -440,14 +503,22 @@ fn get_completions(context: &Option<LintContext>, doc_text: Option<&str>, pos: P
 
     // Modules (Odu) (Static)
     let modules = [
-        ("Ogbe", "The Light (System/Lifecycle)"), ("Oyeku", "The Darkness (Exit/Cleanup)"),
-        ("Iwori", "The Mirror (Time/Loops)"), ("Odi", "The Vessel (File I/O)"),
-        ("Irosu", "The Speaker (Log/Print)"), ("Owonrin", "The Chaotic (Random)"),
-        ("Obara", "The King (Math)"), ("Okanran", "The Troublemaker (Errors)"),
-        ("Ogunda", "The Cutter (Arrays)"), ("Osa", "The Wind (Flow/Concurrency)"),
-        ("Ika", "The Constrictor (Strings)"), ("Oturupon", "The Bearer (Reduce/Div)"),
-        ("Otura", "The Messenger (Network)"), ("Irete", "The Crusher (Crypto)"),
-        ("Ose", "The Beautifier (UI/Graphics)"), ("Ofun", "The Creator (Root/Perms)")
+        ("Ogbe", "The Light (System/Lifecycle)"),
+        ("Oyeku", "The Darkness (Exit/Cleanup)"),
+        ("Iwori", "The Mirror (Time/Loops)"),
+        ("Odi", "The Vessel (File I/O)"),
+        ("Irosu", "The Speaker (Log/Print)"),
+        ("Owonrin", "The Chaotic (Random)"),
+        ("Obara", "The King (Math)"),
+        ("Okanran", "The Troublemaker (Errors)"),
+        ("Ogunda", "The Cutter (Arrays)"),
+        ("Osa", "The Wind (Flow/Concurrency)"),
+        ("Ika", "The Constrictor (Strings)"),
+        ("Oturupon", "The Bearer (Reduce/Div)"),
+        ("Otura", "The Messenger (Network)"),
+        ("Irete", "The Crusher (Crypto)"),
+        ("Ose", "The Beautifier (UI/Graphics)"),
+        ("Ofun", "The Creator (Root/Perms)"),
     ];
     for (m, desc) in modules.iter() {
         items.push(ci(m, desc, CompletionItemKind::MODULE));
@@ -455,9 +526,15 @@ fn get_completions(context: &Option<LintContext>, doc_text: Option<&str>, pos: P
 
     // Std Functions (Static)
     let std_fns = [
-        ("ka", "Read (read)"), ("ko", "Write (write)"), ("so", "Speak/Print (print)"),
-        ("gbo", "Listen/Input (input)"), ("sun", "Sleep (sleep)"), ("ji", "Wake/Start"),
-        ("mo", "Clean/Clear"), ("ya", "Draw/Render"), ("pin", "Divide/Split")
+        ("ka", "Read (read)"),
+        ("ko", "Write (write)"),
+        ("so", "Speak/Print (print)"),
+        ("gbo", "Listen/Input (input)"),
+        ("sun", "Sleep (sleep)"),
+        ("ji", "Wake/Start"),
+        ("mo", "Clean/Clear"),
+        ("ya", "Draw/Render"),
+        ("pin", "Divide/Split"),
     ];
     for (f, desc) in std_fns.iter() {
         items.push(ci(f, desc, CompletionItemKind::FUNCTION));

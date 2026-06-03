@@ -20,6 +20,7 @@ statement = {
     | ailewu_stmt
     | var_decl
     | const_stmt
+    | alias_stmt
     | update_stmt
     | assignment_stmt
 
@@ -34,6 +35,7 @@ statement = {
     | throw_stmt
     | taboo_stmt
     | ewo_stmt
+    | assert_type_stmt
     | match_stmt
     | try_stmt
     | yield_stmt
@@ -102,11 +104,11 @@ odu_body = { (ese_def | var_decl)* }
 
 // Function: ese start() { } or daro ese start() -> effects(Network) { }
 ese_def = { public_mod? ~ async_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ effects_decl? ~ "{" ~ statement* ~ "}" }
-effects_decl = { "->" ~ effects_kw ~ "(" ~ effect_list? ~ ")" }
+effects_decl = { ("->" ~ effects_kw ~ "(" ~ effect_list? ~ ")") | ("pelu" ~ "Ipa") }
 effects_kw = { "effects" | "ipa" | "ipa_wiwole" }
 effect_list = { ident ~ ("," ~ ident)* }
 params = { param ~ ("," ~ param)* }
-param = { ident ~ (":" ~ type_name)? }
+param = { ident ~ (":" ~ type_name)? ~ ("=" ~ expression)? }
 
 // If statement — else clause can be a block or a chained else-if
 if_stmt = { if_kw ~ expression ~ "{" ~ statement* ~ "}" ~ else_clause? }
@@ -137,6 +139,14 @@ taboo_kw = { "èèwọ̀" | "ewọ" | "taboo" }
 // Assertion: ewo x > 0; or assert balance >= 0;
 ewo_stmt = { ewo_kw ~ expression ~ ("," ~ string)? ~ ";" }
 ewo_kw = { "ewo" | "ẹ̀wọ̀" | "assert" | "verify" }
+
+// AssertType: assert_type(x, Int);
+assert_type_stmt = { assert_type_kw ~ "(" ~ expression ~ "," ~ type_name ~ ")" ~ ";" }
+assert_type_kw = _{ "assert_type" }
+
+// Alias declaration: alias X = Y;
+alias_stmt = { alias_kw ~ ident ~ "=" ~ expression ~ ";" }
+alias_kw = { "alias" | "oruko" }
 
 // End: ase;
 ase_stmt = { ase_kw ~ ";"? }
@@ -217,6 +227,7 @@ atom = {
     | move_expr
     | list_literal
     | map_literal
+    | set_literal
     | number
     | interpolated_string
     | string
@@ -250,6 +261,10 @@ list_literal = { "[" ~ (expression ~ ("," ~ expression)*)? ~ "]" }
 // Map: { "key": value }
 map_literal = { "{" ~ (map_entry ~ ("," ~ map_entry)*)? ~ "}" }
 map_entry = { (string | ident) ~ ":" ~ expression }
+
+// Set: Set { 1, 2, 3 }
+set_literal = { set_kw ~ "{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
+set_kw = _{ "Set" | "set" }
 
 // Index: arr[0] or arr?.[0]
 index_access = { ident ~ "?."? ~ "[" ~ expression ~ "]" }

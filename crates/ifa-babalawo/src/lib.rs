@@ -4,19 +4,7 @@
 //! Ported from legacy/src/errors.py
 
 #![forbid(unsafe_code)]
-#![allow(
-    clippy::needless_range_loop,
-    clippy::useless_format,
-    clippy::if_same_then_else,
-    clippy::needless_lifetimes,
-    clippy::unused_enumerate_index,
-    clippy::new_without_default,
-    clippy::collapsible_if,
-    clippy::single_match,
-    clippy::collapsible_else_if,
-    unused_imports,
-    dead_code
-)]
+
 mod checks;
 mod diagnose;
 pub mod effects;

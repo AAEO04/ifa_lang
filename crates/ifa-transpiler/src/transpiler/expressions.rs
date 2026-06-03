@@ -15,6 +15,10 @@ impl RustTranspiler {
             Expression::Bool(b) => format!("IfaValue::Bool({})", b),
             Expression::Nil => "IfaValue::Nil".to_string(),
             Expression::Identifier(name) => {
+                if let Some(target) = self.aliases.get(name).cloned() {
+                    return self.transpile_expression(&target);
+                }
+
                 let m_name = self.mangle_identifier(name);
                 if self.global_vars.contains(name) {
                     format!("__IFA_GLOBAL_{}.with(|v| v.borrow().clone())", m_name)
@@ -137,10 +141,16 @@ impl RustTranspiler {
                     UnaryOperator::Neg => format!("(-{})", o),
                     UnaryOperator::Not => format!("(!{})", o),
                     UnaryOperator::AddressOf => {
-                        format!("IfaValue::Ptr(std::sync::Arc::new(std::sync::Mutex::new({})))", o)
+                        format!(
+                            "IfaValue::Ptr(std::sync::Arc::new(std::sync::Mutex::new({})))",
+                            o
+                        )
                     }
                     UnaryOperator::Dereference => {
-                        format!("(if let IfaValue::Ptr(p) = {} {{ p.lock().unwrap().clone() }} else {{ IfaValue::Nil }})", o)
+                        format!(
+                            "(if let IfaValue::Ptr(p) = {} {{ p.lock().unwrap().clone() }} else {{ IfaValue::Nil }})",
+                            o
+                        )
                     }
                 }
             }
@@ -162,7 +172,10 @@ impl RustTranspiler {
                         )
                     })
                     .collect();
-                format!("IfaValue::Map(std::collections::BTreeMap::from([{}]))", pairs_str.join(", "))
+                format!(
+                    "IfaValue::Map(std::collections::BTreeMap::from([{}]))",
+                    pairs_str.join(", ")
+                )
             }
 
             Expression::OduCall(call) => self.transpile_odu_call(call),
@@ -180,8 +193,22 @@ impl RustTranspiler {
                     };
                     return self.transpile_odu_call(&call);
                 }
-                let args_str: Vec<String> =
+                let mut args_str: Vec<String> =
                     args.iter().map(|a| self.transpile_expression(a)).collect();
+
+                // Inject default parameters if missing
+                if let Some(signature) = self.fn_signatures.get(name).cloned() {
+                    if args_str.len() < signature.len() {
+                        for param in signature.iter().skip(args_str.len()) {
+                            if let Some(default_expr) = &param.default_value {
+                                args_str.push(self.transpile_expression(default_expr));
+                            } else {
+                                args_str.push("IfaValue::Nil".to_string());
+                            }
+                        }
+                    }
+                }
+
                 format!("{}({})", name, args_str.join(", "))
             }
 
@@ -284,7 +311,7 @@ impl RustTranspiler {
 
             Expression::Lambda { params, body } => {
                 let params_str: Vec<String> =
-                    params.iter().map(|p| format!("{}: IfaValue", p)).collect();
+                    params.iter().map(|p| format!("{}: IfaValue", p.name)).collect();
                 let mut inner = String::new();
                 for s in body {
                     inner.push_str(&self.transpile_statement(s));
@@ -301,6 +328,11 @@ impl RustTranspiler {
                 // Rust's own move semantics or Arc cloning handles the rest,
                 // guided by Babalawo's static analysis.
                 self.transpile_expression(inner)
+            }
+            Expression::Set(items) => {
+                let items_str: Vec<String> =
+                    items.iter().map(|i| self.transpile_expression(i)).collect();
+                format!("IfaValue::Set(std::collections::HashSet::from([{}]))", items_str.join(", "))
             }
         }
     }

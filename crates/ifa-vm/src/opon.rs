@@ -127,6 +127,8 @@ impl OponSize {
 /// A recorded event in the flight recorder
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OponEvent {
+    /// Epoch ID during which this event occurred
+    pub epoch_id: Option<usize>,
     /// Which Odù domain (e.g., "Ìrosù")
     pub spirit: String,
     /// What action (e.g., "fọ̀ (spoke)")
@@ -189,7 +191,6 @@ pub struct Opon {
     /// Stack of active epochs (innermost is last)
     epochs: Vec<EboEpoch>,
     /// Next epoch ID
-    #[allow(dead_code)]
     next_epoch_id: usize,
     /// High water mark (highest address ever allocated)
     high_water: usize,
@@ -357,7 +358,10 @@ impl Opon {
 
     /// Record an event in the flight recorder
     pub fn record(&mut self, spirit: &str, action: &str, value: &IfaValue) {
+        let epoch_id = self.current_epoch().map(|e| e.id);
+        
         let event = OponEvent {
+            epoch_id,
             spirit: spirit.to_string(),
             action: action.to_string(),
             value: value.to_string(),

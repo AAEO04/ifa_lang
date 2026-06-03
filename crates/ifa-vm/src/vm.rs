@@ -663,51 +663,8 @@ impl IfaVM {
             self.frame_limit = frame_cap;
             self.opon_size = bytecode.opon_size;
             let return_addr = bytecode.code.len();
-            match func {
-                IfaValue::Fn(data) => {
-                    if args.len() != data.arity as usize {
-                        return Err(IfaError::ArityMismatch {
-                            expected: data.arity as usize,
-                            got: args.len(),
-                        });
-                    }
-                    self.push_frame(CallFrame::new(
-                        return_addr,
-                        self.ctx.stack.len(),
-                        None,
-                        false,
-                    ))?;
-                    for arg in args {
-                        self.push(arg)?;
-                    }
-                    self.ctx.ip = data.start_ip;
-                }
-                IfaValue::Closure(closure) => {
-                    let data = &closure.fn_data;
-                    if args.len() != data.arity as usize {
-                        return Err(IfaError::ArityMismatch {
-                            expected: data.arity as usize,
-                            got: args.len(),
-                        });
-                    }
-                    self.push_frame(CallFrame::new(
-                        return_addr,
-                        self.ctx.stack.len(),
-                        Some(closure.env.clone()),
-                        false,
-                    ))?;
-                    for arg in args {
-                        self.push(arg)?;
-                    }
-                    self.ctx.ip = data.start_ip;
-                }
-                other => {
-                    return Err(IfaError::TypeError {
-                        expected: "Function".into(),
-                        got: other.type_name().into(),
-                    });
-                }
-            }
+            self.ctx.ip = return_addr;
+            self.call_value(func, args, false, Some(&bytecode))?;
             self.resume_execution(&bytecode)
         })();
 
@@ -1011,22 +968,35 @@ impl IfaVM {
         std::mem::swap(&mut self.ctx, &mut task.ctx);
     }
 
-
-    fn call_value(&mut self, func: IfaValue, args: Vec<IfaValue>, is_tail_call: bool, bytecode: Option<&Bytecode>) -> IfaResult<()> {
+    fn call_value(
+        &mut self,
+        func: IfaValue,
+        args: Vec<IfaValue>,
+        is_tail_call: bool,
+        bytecode: Option<&Bytecode>,
+    ) -> IfaResult<()> {
         let (start_ip, arity, env, async_return, is_str) = match &func {
-            IfaValue::Fn(data) => (data.start_ip, data.arity as usize, None, data.is_async, false),
+            IfaValue::Fn(data) => (
+                data.start_ip,
+                data.arity as usize,
+                None,
+                data.is_async,
+                false,
+            ),
             IfaValue::Closure(closure) => (
                 closure.fn_data.start_ip,
                 closure.fn_data.arity as usize,
                 Some(closure.env.clone()),
                 closure.fn_data.is_async,
-                false
+                false,
             ),
             IfaValue::Str(_) => (0, 0, None, false, true),
-            _ => return Err(IfaError::TypeError {
-                expected: "Function".into(),
-                got: func.type_name().into(),
-            }),
+            _ => {
+                return Err(IfaError::TypeError {
+                    expected: "Function".into(),
+                    got: func.type_name().into(),
+                });
+            }
         };
 
         if is_str {
@@ -1040,14 +1010,19 @@ impl IfaVM {
                     self.push(result)?;
                     return Ok(());
                 } else {
-                    return Err(IfaError::Runtime("Cannot call registry without bytecode".into()));
+                    return Err(IfaError::Runtime(
+                        "Cannot call registry without bytecode".into(),
+                    ));
                 }
             } else if let Some((module_key, function_name)) = parse_module_fn_marker(&s) {
                 let result = self.invoke_module_function(&module_key, &function_name, args)?;
                 self.push(result)?;
                 return Ok(());
             } else {
-                return Err(IfaError::TypeError { expected: "Function".into(), got: "Str".into() });
+                return Err(IfaError::TypeError {
+                    expected: "Function".into(),
+                    got: "Str".into(),
+                });
             }
         }
 
@@ -1115,7 +1090,6 @@ impl IfaVM {
         self.ctx.ip = start_ip;
         Ok(())
     }
-
 
     fn run_task_slice(
         &mut self,
@@ -1240,7 +1214,11 @@ impl IfaVM {
 
         let cell = match IfaValue::future_pending() {
             IfaValue::Future(cell) => cell,
-            _ => return Err(IfaError::Runtime("Internal error: future_pending did not return a Future".into())),
+            _ => {
+                return Err(IfaError::Runtime(
+                    "Internal error: future_pending did not return a Future".into(),
+                ));
+            }
         };
         let task = Task {
             func,
@@ -1808,6 +1786,61 @@ impl IfaVM {
                 }
                 self.push(IfaValue::map(map))?;
             }
+
+            OpCode::BuildSet => {
+                let count = self.read_u8(bytecode)? as usize;
+                let mut set = std::collections::HashSet::with_capacity(count);
+                for _ in 0..count {
+                    set.insert(self.pop()?);
+                }
+                self.push(IfaValue::set(set))?;
+            }
+
+            OpCode::SetAdd => {
+                let value = self.pop()?;
+                let set_val = self.pop()?;
+                if let IfaValue::Set(set_arc) = &set_val {
+                    // We must mutate the set. Since it's in an Arc, we might need to clone if shared.
+                    // But for simple Set ops, maybe we should use Arc::make_mut.
+                    // Wait, IfaValue::Set holds an Arc.
+                    let mut new_set = (**set_arc).clone();
+                    new_set.insert(value);
+                    self.push(IfaValue::set(new_set))?;
+                } else {
+                    return Err(IfaError::TypeError {
+                        expected: "Set".into(),
+                        got: set_val.type_name().into(),
+                    });
+                }
+            }
+
+            OpCode::SetHas => {
+                let value = self.pop()?;
+                let set_val = self.pop()?;
+                if let IfaValue::Set(set_arc) = &set_val {
+                    self.push(IfaValue::Bool(set_arc.contains(&value)))?;
+                } else {
+                    return Err(IfaError::TypeError {
+                        expected: "Set".into(),
+                        got: set_val.type_name().into(),
+                    });
+                }
+            }
+
+            OpCode::SetRemove => {
+                let value = self.pop()?;
+                let set_val = self.pop()?;
+                if let IfaValue::Set(set_arc) = &set_val {
+                    let mut new_set = (**set_arc).clone();
+                    new_set.remove(&value);
+                    self.push(IfaValue::set(new_set))?;
+                } else {
+                    return Err(IfaError::TypeError {
+                        expected: "Set".into(),
+                        got: set_val.type_name().into(),
+                    });
+                }
+            }
             OpCode::Print => {
                 let value = self.pop()?;
                 self.opon.record("Ìrosù", "fọ̀ (spoke)", &value);
@@ -1892,8 +1925,7 @@ impl IfaVM {
                         if addr >= 0x4000_0000 {
                             self.opon.record("MMIO", "write", &val);
                         } else {
-                            let _ = self
-                                .opon
+                            self.opon
                                 .try_set(addr, val)
                                 .map_err(|e| IfaError::Runtime(e.to_string()))?;
                         }
@@ -1916,8 +1948,7 @@ impl IfaVM {
                         if addr >= 0x4000_0000 {
                             self.opon.record("MMIO", "write", &val);
                         } else {
-                            let _ = self
-                                .opon
+                            self.opon
                                 .try_set(addr, val)
                                 .map_err(|e| IfaError::Runtime(e.to_string()))?;
                         }
@@ -2003,8 +2034,7 @@ impl IfaVM {
                         if addr >= 0x4000_0000 {
                             self.opon.record("MMIO", "write", &val);
                         } else {
-                            let _ = self
-                                .opon
+                            self.opon
                                 .try_set(addr, val)
                                 .map_err(|e| IfaError::Runtime(e.to_string()))?;
                         }
@@ -2027,8 +2057,7 @@ impl IfaVM {
                         if addr >= 0x4000_0000 {
                             self.opon.record("MMIO", "write", &val);
                         } else {
-                            let _ = self
-                                .opon
+                            self.opon
                                 .try_set(addr, val)
                                 .map_err(|e| IfaError::Runtime(e.to_string()))?;
                         }
@@ -2183,7 +2212,11 @@ impl IfaVM {
                     (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
                 {
                     if let Some(res) = ba.add(bb) {
-                        return self.push(IfaValue::from_nan_boxed_primitive(res).unwrap());
+                        // SAFETY: Math operations strictly yield numeric NanBox primitives.
+                        return self.push(
+                            IfaValue::from_nan_boxed_primitive(res)
+                                .expect("Math operations must yield valid primitive"),
+                        );
                     }
                 }
                 match (a.clone(), b.clone()) {
@@ -2253,7 +2286,11 @@ impl IfaVM {
                     (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
                 {
                     if let Some(res) = ba.sub(bb) {
-                        return self.push(IfaValue::from_nan_boxed_primitive(res).unwrap());
+                        // SAFETY: Math operations strictly yield numeric NanBox primitives.
+                        return self.push(
+                            IfaValue::from_nan_boxed_primitive(res)
+                                .expect("Math operations must yield valid primitive"),
+                        );
                     }
                 }
                 match (a, b) {
@@ -2279,7 +2316,11 @@ impl IfaVM {
                     (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
                 {
                     if let Some(res) = ba.mul(bb) {
-                        return self.push(IfaValue::from_nan_boxed_primitive(res).unwrap());
+                        // SAFETY: Math operations strictly yield numeric NanBox primitives.
+                        return self.push(
+                            IfaValue::from_nan_boxed_primitive(res)
+                                .expect("Math operations must yield valid primitive"),
+                        );
                     }
                 }
                 match (a, b) {
@@ -2313,7 +2354,11 @@ impl IfaVM {
                             got: "Mismatch".into(),
                         },
                     })?;
-                    return self.push(IfaValue::from_nan_boxed_primitive(res).unwrap());
+                    // SAFETY: Math operations strictly yield numeric NanBox primitives.
+                    return self.push(
+                        IfaValue::from_nan_boxed_primitive(res)
+                            .expect("Math operations must yield valid primitive"),
+                    );
                 }
                 match (a, b) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => {
@@ -2350,20 +2395,37 @@ impl IfaVM {
             OpCode::Pow => {
                 let exp = self.pop()?;
                 let base = self.pop()?;
-                
-                let base_prim = base.to_nan_boxed_primitive().and_then(|n| n.to_primitive().ok()).ok_or_else(|| IfaError::Runtime("Invalid base for power".into()))?;
-                let exp_prim = exp.to_nan_boxed_primitive().and_then(|n| n.to_primitive().ok()).ok_or_else(|| IfaError::Runtime("Invalid exp for power".into()))?;
-                
+
+                let base_prim = base
+                    .to_nan_boxed_primitive()
+                    .and_then(|n| n.to_primitive().ok())
+                    .ok_or_else(|| IfaError::Runtime("Invalid base for power".into()))?;
+                let exp_prim = exp
+                    .to_nan_boxed_primitive()
+                    .and_then(|n| n.to_primitive().ok())
+                    .ok_or_else(|| IfaError::Runtime("Invalid exp for power".into()))?;
+
                 use ifa_types::nan_box::BoxedPrimitive;
                 let result = match (base_prim, exp_prim) {
                     (BoxedPrimitive::Int(b), BoxedPrimitive::Int(e)) => {
-                        let e_u32 = u32::try_from(e).map_err(|_| IfaError::Runtime("Pow: negative exponent with integer base".into()))?;
-                        IfaValue::int(b.checked_pow(e_u32).ok_or_else(|| IfaError::Runtime("Pow: Integer overflow".into()))?)
+                        let e_u32 = u32::try_from(e).map_err(|_| {
+                            IfaError::Runtime("Pow: negative exponent with integer base".into())
+                        })?;
+                        IfaValue::int(
+                            b.checked_pow(e_u32)
+                                .ok_or_else(|| IfaError::Runtime("Pow: Integer overflow".into()))?,
+                        )
                     }
-                    (BoxedPrimitive::Float(b), BoxedPrimitive::Float(e)) => IfaValue::float(b.powf(e)),
-                    (BoxedPrimitive::Int(b), BoxedPrimitive::Float(e)) => IfaValue::float((b as f64).powf(e)),
+                    (BoxedPrimitive::Float(b), BoxedPrimitive::Float(e)) => {
+                        IfaValue::float(b.powf(e))
+                    }
+                    (BoxedPrimitive::Int(b), BoxedPrimitive::Float(e)) => {
+                        IfaValue::float((b as f64).powf(e))
+                    }
                     (BoxedPrimitive::Float(b), BoxedPrimitive::Int(e)) => {
-                        let e_i32 = i32::try_from(e).map_err(|_| IfaError::Runtime("Pow: exponent out of bounds for float".into()))?;
+                        let e_i32 = i32::try_from(e).map_err(|_| {
+                            IfaError::Runtime("Pow: exponent out of bounds for float".into())
+                        })?;
                         IfaValue::float(b.powi(e_i32))
                     }
                     _ => return Err(IfaError::Runtime("Invalid types for power".into())),
@@ -2547,9 +2609,40 @@ impl IfaVM {
                     other => self.push(other)?,
                 }
             }
+            OpCode::AssertType => {
+                let type_id = self.read_u8(bytecode)?;
+                let value = self.peek()?;
+                let valid = match type_id {
+                    0 => matches!(value, IfaValue::Int(_)),
+                    1 => matches!(value, IfaValue::Float(_)),
+                    2 => matches!(value, IfaValue::Str(_)),
+                    3 => matches!(value, IfaValue::Bool(_)),
+                    4 => matches!(value, IfaValue::List(_)),
+                    5 => matches!(value, IfaValue::Map(_)),
+                    6 => matches!(value, IfaValue::Fn(_) | IfaValue::Closure(_)),
+                    255 => true, // Any
+                    _ => false,
+                };
+                if !valid {
+                    let expected_str = match type_id {
+                        0 => "Int",
+                        1 => "Float",
+                        2 => "Str",
+                        3 => "Bool",
+                        4 => "List",
+                        5 => "Map",
+                        6 => "Function",
+                        _ => "Any",
+                    };
+                    return Err(IfaError::TypeError {
+                        expected: expected_str.into(),
+                        got: value.type_name().to_string(),
+                    });
+                }
+            }
             _ => {
                 return Err(IfaError::Custom(
-                    format!("Unimplemented opcode: {:?}", opcode).into(),
+                    format!("Unimplemented opcode: {:?}", opcode),
                 ));
             }
         }
@@ -2705,11 +2798,7 @@ impl IfaVM {
             IfaValue::Map(map) => {
                 let key = ifa_types::CompactString::new(method_name.as_str());
                 if let Some(func) = map.get(&key) {
-                    match func {
-                        func => {
-                            self.call_value(func.clone(), args, false, Some(bytecode))?;
-                        }
-                    }
+                    self.call_value(func.clone(), args, false, Some(bytecode))?;
                 } else {
                     return Err(IfaError::Custom(format!(
                         "Map has no method '{}'",
@@ -2719,7 +2808,7 @@ impl IfaVM {
             }
             IfaValue::List(mut l) => {
                 if method_name == "fikun" || method_name == "append" || method_name == "push" {
-                    let val = args.get(0).ok_or_else(|| IfaError::ArityMismatch {
+                    let val = args.first().ok_or_else(|| IfaError::ArityMismatch {
                         expected: 1,
                         got: args.len(),
                     })?;

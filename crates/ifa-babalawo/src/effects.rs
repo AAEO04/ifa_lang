@@ -1,5 +1,5 @@
-use ifa_types::ast::Effect;
 use ifa_types::IfaError;
+use ifa_types::ast::Effect;
 
 #[derive(Debug)]
 pub struct EffectChecker {
@@ -27,7 +27,13 @@ impl EffectChecker {
         self.in_function = false;
     }
 
-    pub fn check_call(&mut self, callee_effects: &[Effect], file: &str, line: usize, column: usize) {
+    pub fn check_call(
+        &mut self,
+        callee_effects: &[Effect],
+        file: &str,
+        line: usize,
+        column: usize,
+    ) {
         if !self.in_function {
             return;
         }
@@ -46,7 +52,10 @@ impl EffectChecker {
 
         // More general effect containment rules can go here
         for effect in callee_effects {
-            if effect != &Effect::Pure && !self.current_effects.contains(effect) && !self.current_effects.contains(&Effect::Impure) {
+            if effect != &Effect::Pure
+                && !self.current_effects.contains(effect)
+                && !self.current_effects.contains(&Effect::Impure)
+            {
                 // Warning or error depending on strictness
                 // Let's record an error for unhandled effect
                 self.errors.push(IfaError::Custom(format!(
@@ -62,8 +71,18 @@ pub fn domain_effects(domain: ifa_types::domain::OduDomain) -> Vec<Effect> {
     match domain {
         ifa_types::domain::OduDomain::Osa => vec![Effect::Async],
         ifa_types::domain::OduDomain::Otura => vec![Effect::Network],
-        ifa_types::domain::OduDomain::Odi | ifa_types::domain::OduDomain::Storage => vec![Effect::FileIO],
-        ifa_types::domain::OduDomain::Ofun | ifa_types::domain::OduDomain::Sys | ifa_types::domain::OduDomain::Coop => vec![Effect::Impure],
-        _ => if domain.has_side_effects() { vec![Effect::Impure] } else { vec![Effect::Pure] },
+        ifa_types::domain::OduDomain::Odi | ifa_types::domain::OduDomain::Storage => {
+            vec![Effect::FileIO]
+        }
+        ifa_types::domain::OduDomain::Ofun
+        | ifa_types::domain::OduDomain::Sys
+        | ifa_types::domain::OduDomain::Coop => vec![Effect::Impure],
+        _ => {
+            if domain.has_side_effects() {
+                vec![Effect::Impure]
+            } else {
+                vec![Effect::Pure]
+            }
+        }
     }
 }

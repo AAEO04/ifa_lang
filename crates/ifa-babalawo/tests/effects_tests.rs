@@ -1,8 +1,11 @@
-use ifa_babalawo::{check_program, Diagnostic, Severity};
+use ifa_babalawo::{Diagnostic, Severity, check_program};
 use ifa_parser::parse;
 
 fn errors_only(diags: Vec<Diagnostic>) -> Vec<Diagnostic> {
-    diags.into_iter().filter(|d| d.severity == Severity::Error).collect()
+    diags
+        .into_iter()
+        .filter(|d| d.severity == Severity::Error)
+        .collect()
 }
 
 fn run_check(code: &str) -> Vec<Diagnostic> {
@@ -26,10 +29,13 @@ fn test_pure_function_cannot_call_async() {
         "Expected effect violation error for pure function calling async Osa.ran"
     );
     assert!(
-        errors.iter().any(|e| e.error.message.contains("EFFECT_VIOLATION")
-            || e.error.code == "EFFECT_VIOLATION"
-            || e.error.message.contains("missing effect")),
-        "Expected EFFECT_VIOLATION, got: {:?}", errors
+        errors
+            .iter()
+            .any(|e| e.error.message.contains("EFFECT_VIOLATION")
+                || e.error.code == "EFFECT_VIOLATION"
+                || e.error.message.contains("missing effect")),
+        "Expected EFFECT_VIOLATION, got: {:?}",
+        errors
     );
 }
 
@@ -45,7 +51,8 @@ fn test_async_function_can_call_async() {
     let errors = errors_only(run_check(code));
     assert!(
         errors.is_empty(),
-        "Expected no errors for async function calling async Osa.ran, got: {:?}", errors
+        "Expected no errors for async function calling async Osa.ran, got: {:?}",
+        errors
     );
 }
 
@@ -60,7 +67,8 @@ fn test_network_function_can_call_network() {
     let errors = errors_only(run_check(code));
     assert!(
         errors.is_empty(),
-        "Expected no errors for network function calling Otura.get, got: {:?}", errors
+        "Expected no errors for network function calling Otura.get, got: {:?}",
+        errors
     );
 }
 
@@ -79,6 +87,7 @@ fn test_pure_function_cannot_call_network() {
     );
     assert!(
         errors.iter().any(|e| e.error.code == "EFFECT_VIOLATION"),
-        "Expected EFFECT_VIOLATION, got: {:?}", errors
+        "Expected EFFECT_VIOLATION, got: {:?}",
+        errors
     );
 }

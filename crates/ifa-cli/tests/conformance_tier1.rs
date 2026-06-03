@@ -111,8 +111,10 @@ fn run_test_file(path: &Path, engine: &str) {
 fn discover_and_run(dir: &str, engines: Vec<&str>) {
     // Navigate to workspace root from crates/ifa-cli
     let base_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
-        .parent().unwrap() // goes to 'crates'
-        .parent().unwrap() // goes to 'ifa_lang'
+        .parent()
+        .unwrap() // goes to 'crates'
+        .parent()
+        .unwrap() // goes to 'ifa_lang'
         .to_path_buf();
 
     let base_path = base_path.join("tests").join("conformance").join(dir);

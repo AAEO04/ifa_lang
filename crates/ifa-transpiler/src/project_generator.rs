@@ -100,7 +100,7 @@ pub fn generate_project_with_types(
 
     // Write main.rs
     fs::write(src_dir.join("main.rs"), rust_code)?;
-    
+
     // Write external modules
     for (name, content) in transpiler.external_modules.iter() {
         fs::write(src_dir.join(name), content)?;

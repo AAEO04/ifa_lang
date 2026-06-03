@@ -210,6 +210,15 @@ pub enum OpCode {
     /// Set object field (followed by 2-byte name index)
     SetField = 0x79,
 
+    /// Build a set from stack items
+    BuildSet = 0x7A,
+    /// Add an item to a set
+    SetAdd = 0x7B,
+    /// Check if set contains an item
+    SetHas = 0x7C,
+    /// Remove an item from a set
+    SetRemove = 0x7D,
+
     // === IO & System (0x80-0x8F) ===
     /// Print to stdout
     Print = 0x80,
@@ -249,6 +258,8 @@ pub enum OpCode {
     /// Pops a value. If it is a `UserError`, re-raises it (propagating out of
     /// the current function). Otherwise pushes the value back unchanged.
     PropagateError = 0xA5,
+    /// Assert runtime type (followed by 1-byte type ID)
+    AssertType = 0xA6,
 }
 
 impl OpCode {
@@ -336,6 +347,10 @@ impl OpCode {
             0x77 => Some(OpCode::PushMap),
             0x78 => Some(OpCode::GetField),
             0x79 => Some(OpCode::SetField),
+            0x7A => Some(OpCode::BuildSet),
+            0x7B => Some(OpCode::SetAdd),
+            0x7C => Some(OpCode::SetHas),
+            0x7D => Some(OpCode::SetRemove),
 
             0x80 => Some(OpCode::Print),
             0x81 => Some(OpCode::PrintRaw),
@@ -354,6 +369,7 @@ impl OpCode {
             0xA3 => Some(OpCode::FinallyBegin),
             0xA4 => Some(OpCode::FinallyEnd),
             0xA5 => Some(OpCode::PropagateError),
+            0xA6 => Some(OpCode::AssertType),
 
             _ => None,
         }
@@ -444,6 +460,10 @@ impl OpCode {
             OpCode::PushMap => "push_map",
             OpCode::GetField => "get_field",
             OpCode::SetField => "set_field",
+            OpCode::BuildSet => "build_set",
+            OpCode::SetAdd => "set_add",
+            OpCode::SetHas => "set_has",
+            OpCode::SetRemove => "set_remove",
 
             OpCode::Print => "print",
             OpCode::PrintRaw => "print_raw",
@@ -462,6 +482,7 @@ impl OpCode {
             OpCode::FinallyBegin => "finally_begin",
             OpCode::FinallyEnd => "finally_end",
             OpCode::PropagateError => "propagate_error",
+            OpCode::AssertType => "assert_type",
             OpCode::CallOduFast => "call_odu_fast",
             OpCode::ParallelFor => "parallel_for",
             OpCode::EpochBegin => "epoch_begin",
@@ -529,6 +550,9 @@ impl OpCode {
             | OpCode::Yield
             | OpCode::Await
             | OpCode::ParallelFor
+            | OpCode::SetAdd
+            | OpCode::SetHas
+            | OpCode::SetRemove
             | OpCode::EpochBegin
             | OpCode::EpochEnd => Some(0),
 
@@ -541,7 +565,7 @@ impl OpCode {
             | OpCode::FinallyBegin
             | OpCode::Ref => Some(4),
             OpCode::PushInt | OpCode::PushFloat => Some(8),
-            OpCode::BuildList | OpCode::BuildMap | OpCode::Call | OpCode::TailCall => Some(1),
+            OpCode::BuildList | OpCode::BuildMap | OpCode::BuildSet | OpCode::Call | OpCode::TailCall | OpCode::AssertType => Some(1),
             OpCode::LoadLocal
             | OpCode::StoreLocal
             | OpCode::LoadGlobal
@@ -630,7 +654,11 @@ impl OpCode {
             OpCode::Len => Some((1, 1)),      // [val] -> [int]
             OpCode::Append => Some((2, 1)),   // [list, val] -> [list]
 
-            OpCode::BuildList | OpCode::BuildMap => None, // Variable input
+            OpCode::SetAdd => Some((2, 1)), // [set, val] -> [set]
+            OpCode::SetHas => Some((2, 1)), // [set, val] -> [bool]
+            OpCode::SetRemove => Some((2, 1)), // [set, val] -> [set]
+
+            OpCode::BuildList | OpCode::BuildMap | OpCode::BuildSet => None, // Variable input
 
             // IO
             OpCode::Print | OpCode::PrintRaw => Some((1, 0)),
@@ -649,6 +677,7 @@ impl OpCode {
             OpCode::ParallelFor => Some((2, 1)),
             OpCode::EpochBegin => Some((1, 0)), // Pops name from stack
             OpCode::EpochEnd => Some((0, 0)),
+            OpCode::AssertType => Some((1, 1)), // [val] -> [val] (validation only)
         }
     }
 

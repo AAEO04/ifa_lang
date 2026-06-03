@@ -30,12 +30,14 @@ pub struct Compiler {
     /// E5: ensures each unique string is emitted exactly once.
     string_index: HashMap<String, u16>,
     loop_stack: Vec<LoopContext>,
+    fn_signatures: HashMap<String, Vec<Param>>,
+    aliases: HashMap<String, Box<Expression>>,
 }
 
 #[derive(Debug)]
 struct LoopContext {
-    #[allow(dead_code)]
-    start_ip: usize,
+    // Note: `continue` jumps must be patched at the end of the loop block 
+    // because `for` loops require jumping to the increment phase, not the loop start.
     break_jumps: Vec<usize>,
     continue_jumps: Vec<usize>,
 }
@@ -103,6 +105,8 @@ impl Compiler {
             constants: HashMap::new(),
             string_index: HashMap::new(),
             loop_stack: Vec::new(),
+            fn_signatures: HashMap::new(),
+            aliases: HashMap::new(),
         }
     }
 
@@ -324,6 +328,10 @@ impl Compiler {
                 }
             }
 
+            Statement::Alias { name, target, .. } => {
+                self.aliases.insert(name.clone(), target.clone());
+            }
+
             Statement::Update {
                 target, op, value, ..
             } => {
@@ -430,7 +438,6 @@ impl Compiler {
             } => {
                 let loop_start = self.current_offset();
                 self.loop_stack.push(LoopContext {
-                    start_ip: loop_start,
                     break_jumps: Vec::new(),
                     continue_jumps: Vec::new(),
                 });
@@ -486,7 +493,6 @@ impl Compiler {
                 // 3. Loop Start
                 let loop_start = self.current_offset();
                 self.loop_stack.push(LoopContext {
-                    start_ip: loop_start,
                     break_jumps: Vec::new(),
                     continue_jumps: Vec::new(),
                 });
@@ -638,6 +644,7 @@ impl Compiler {
                 ..
             } => {
                 let is_async = effects.contains(&ifa_types::ast::Effect::Async);
+                self.fn_signatures.insert(name.clone(), params.clone());
                 self.compile_function(name, params, body, is_async)?;
 
                 // 8. Store in variable
@@ -978,6 +985,26 @@ impl Compiler {
                 self.compile_expression(value)?;
                 self.emit(OpCode::Throw);
             }
+
+            Statement::AssertType {
+                value,
+                type_hint,
+                ..
+            } => {
+                self.compile_expression(value)?;
+                self.emit(OpCode::AssertType);
+                let type_id = match type_hint {
+                    TypeHint::Int => 0,
+                    TypeHint::Float => 1,
+                    TypeHint::Str => 2,
+                    TypeHint::Bool => 3,
+                    TypeHint::List => 4,
+                    TypeHint::Map => 5,
+                    TypeHint::Function { .. } => 6,
+                    _ => 255, // Any/Dynamic
+                };
+                self.emit_byte(type_id);
+            }
         }
         Ok(())
     }
@@ -1267,6 +1294,12 @@ impl Compiler {
             }
 
             Expression::Identifier(name) => {
+                // Check aliases first
+                if let Some(expr) = self.aliases.get(name).cloned() {
+                    self.compile_expression(&expr)?;
+                    return Ok(());
+                }
+
                 // Check constants first (Inlining)
                 if let Some(expr) = self.constants.get(name).cloned() {
                     self.compile_expression(&expr)?;
@@ -1341,7 +1374,9 @@ impl Compiler {
                             BinaryOperator::And
                             | BinaryOperator::Or
                             | BinaryOperator::NullCoalesce => {
-                                return Err(IfaError::Compile("logical operator reached binary fallback".into()));
+                                return Err(IfaError::Compile(
+                                    "logical operator reached binary fallback".into(),
+                                ));
                             }
                         };
                         self.emit(opcode);
@@ -1398,6 +1433,14 @@ impl Compiler {
                 self.emit_byte(entries.len() as u8);
             }
 
+            Expression::Set(items) => {
+                for item in items {
+                    self.compile_expression(item)?;
+                }
+                self.emit(OpCode::BuildSet);
+                self.emit_byte(items.len() as u8);
+            }
+
             Expression::Index {
                 object,
                 index,
@@ -1428,7 +1471,9 @@ impl Compiler {
 
             Expression::Call { name, args } => {
                 // Push function
-                if let Some(slot) = self.resolve_local(name) {
+                if let Some(expr) = self.aliases.get(name).cloned() {
+                    self.compile_expression(&expr)?;
+                } else if let Some(slot) = self.resolve_local(name) {
                     self.emit(OpCode::LoadLocal);
                     let s = slot as u16;
                     self.emit_byte((s & 0xff) as u8);
@@ -1448,8 +1493,21 @@ impl Compiler {
                     self.compile_expression(arg)?;
                 }
 
+                let mut total_args = args.len();
+                if let Some(signature) = self.fn_signatures.get(name).cloned() {
+                    for param in signature.iter().skip(args.len()) {
+                        if let Some(default_expr) = &param.default_value {
+                            self.compile_expression(default_expr)?;
+                            total_args += 1;
+                        } else {
+                            // Missing required parameter, handled by babalawo or runtime
+                            break;
+                        }
+                    }
+                }
+
                 self.emit(OpCode::Call);
-                self.emit_byte(args.len() as u8);
+                self.emit_byte(total_args as u8);
             }
 
             Expression::Get {
@@ -1556,15 +1614,7 @@ impl Compiler {
                 // Compile as an anonymous function using the existing compile_function path.
                 // The synthetic name encodes the byte-offset so it is unique per compilation unit.
                 let anon_name = format!("<lambda@{}>", self.current_offset());
-                // Build a Param slice from the plain name vec.
-                let param_list: Vec<Param> = params
-                    .iter()
-                    .map(|n| Param {
-                        name: n.clone(),
-                        type_hint: None,
-                    })
-                    .collect();
-                self.compile_function(&anon_name, &param_list, body, false)?;
+                self.compile_function(&anon_name, params, body, false)?;
             }
         }
         Ok(())

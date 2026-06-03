@@ -57,7 +57,7 @@ base64 = "0.22"
 uuid = { workspace = true, optional = false }
 
 # Network for handlers (optional, blocking)
-ureq = { version = "3", optional = true }
+ureq = { version = "2.9", optional = true }
 
 # Parallel operations (used internally on primitives)
 rayon = { workspace = true, optional = true }

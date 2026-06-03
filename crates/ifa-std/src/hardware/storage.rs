@@ -87,7 +87,8 @@ impl StorageWorker {
                                 None => IfaValue::str("StorageError: Invalid store handle"),
                             };
                             // SAFETY: Resolving the future safely clears the poison flag implicitly for this assignment
-                            *cell.lock().unwrap_or_else(|e| e.into_inner()) = FutureState::Ready(val);
+                            *cell.lock().unwrap_or_else(|e| e.into_inner()) =
+                                FutureState::Ready(val);
                         }
                         StorageCmd::Set { id, key, val, cell } => {
                             let res_val = match stores.get_mut(&id) {
@@ -102,7 +103,8 @@ impl StorageWorker {
                             // SAFETY: If the receiver thread panicked, the lock is poisoned.
                             // We use into_inner() to force write the Ready state anyway,
                             // allowing any surviving handles to access the result safely.
-                            *cell.lock().unwrap_or_else(|e| e.into_inner()) = FutureState::Ready(res_val);
+                            *cell.lock().unwrap_or_else(|e| e.into_inner()) =
+                                FutureState::Ready(res_val);
                         }
                         StorageCmd::Delete { id, key, cell } => {
                             let val = match stores.get_mut(&id) {
@@ -115,7 +117,8 @@ impl StorageWorker {
                                 None => IfaValue::str("StorageError: Invalid store handle"),
                             };
                             // SAFETY: Resolving the future safely clears the poison flag implicitly for this assignment
-                            *cell.lock().unwrap_or_else(|e| e.into_inner()) = FutureState::Ready(val);
+                            *cell.lock().unwrap_or_else(|e| e.into_inner()) =
+                                FutureState::Ready(val);
                         }
                         StorageCmd::Compact { id, cell } => {
                             let val = match stores.get_mut(&id) {
@@ -126,7 +129,8 @@ impl StorageWorker {
                                 None => IfaValue::str("StorageError: Invalid store handle"),
                             };
                             // SAFETY: Resolving the future safely clears the poison flag implicitly for this assignment
-                            *cell.lock().unwrap_or_else(|e| e.into_inner()) = FutureState::Ready(val);
+                            *cell.lock().unwrap_or_else(|e| e.into_inner()) =
+                                FutureState::Ready(val);
                         }
                     }
                 }

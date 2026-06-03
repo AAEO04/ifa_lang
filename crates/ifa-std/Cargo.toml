@@ -47,7 +47,7 @@ uuid = { workspace = true }
 
 # Random (Ọ̀wọ́nrín)
 rand = { workspace = true, optional = true }
-rand_chacha.workspace = true
+rand_chacha = { workspace = true, optional = true }
 
 # Crypto (Ìrẹtẹ̀)
 ring = { workspace = true, optional = true }
@@ -142,6 +142,7 @@ wasm = [
 rsa_math = ["ndarray", "rand"]
 wgpu = ["dep:wgpu"]
 bytemuck = ["dep:bytemuck"]
+rand = ["dep:rand", "dep:rand_chacha"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4.42"

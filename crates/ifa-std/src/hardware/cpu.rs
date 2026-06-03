@@ -93,7 +93,10 @@ fn handle_read_buffer(
         .get::<CpuOponView>(view_token)
         .ok_or_else(|| IfaError::Runtime("CpuOponView handle not found".into()))?;
 
-    let buffer = view.buffer.read().map_err(|_| IfaError::Runtime("CpuOponView read lock poisoned".into()))?;
+    let buffer = view
+        .buffer
+        .read()
+        .map_err(|_| IfaError::Runtime("CpuOponView read lock poisoned".into()))?;
     let mut list = Vec::with_capacity(view.size);
     for &val in buffer.iter() {
         list.push(IfaValue::Float(val as f64));
@@ -136,7 +139,10 @@ fn handle_write_buffer(
         )));
     }
 
-    let mut buffer = view.buffer.write().map_err(|_| IfaError::Runtime("CpuOponView write lock poisoned".into()))?;
+    let mut buffer = view
+        .buffer
+        .write()
+        .map_err(|_| IfaError::Runtime("CpuOponView write lock poisoned".into()))?;
     for (i, item) in list_val.iter().enumerate() {
         match item {
             IfaValue::Float(f) => buffer[i] = *f as f32,
@@ -174,8 +180,13 @@ fn handle_par_map(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) -> I
     // Pre-validate operation so we don't panic inside Rayon loop
     map_numeric_op(0.0, &op)?;
 
-    let buffer = view.buffer.read().map_err(|_| IfaError::Runtime("CpuOponView read lock poisoned".into()))?;
-    let mapped = CpuContext::par_map(&*buffer, |x| map_numeric_op(*x, &op).unwrap());
+    let buffer = view
+        .buffer
+        .read()
+        .map_err(|_| IfaError::Runtime("CpuOponView read lock poisoned".into()))?;
+    let mapped = CpuContext::par_map(&*buffer, |x| {
+        map_numeric_op(*x, &op).unwrap_or_else(|_| 0.0)
+    });
 
     let new_view = CpuOponView {
         buffer: RwLock::new(mapped),
@@ -215,7 +226,10 @@ fn handle_par_reduce(
     // Pre-validate
     reduce_numeric_op(&[0.0], &op)?;
 
-    let buffer = view.buffer.read().map_err(|_| IfaError::Runtime("CpuOponView read lock poisoned".into()))?;
+    let buffer = view
+        .buffer
+        .read()
+        .map_err(|_| IfaError::Runtime("CpuOponView read lock poisoned".into()))?;
     let result = reduce_numeric_op(&*buffer, &op)?;
 
     Ok(IfaValue::Float(result as f64))

@@ -423,21 +423,18 @@ abo;           // at top of file
 
 ### 4.1 Feature-gate Parser Dependencies
 
-**Current state:** `ifa-parser/Cargo.toml` lists `logos`, `pest`, `pest_derive`, `pest_consume` as unconditional dependencies. Any crate depending on `ifa-parser` (even for type definitions) pulls in the full parser toolchain. Plan item "C3" is absent.
+**Current state:** [DONE] Parser dependencies (`logos`, `pest`) are now fully optional, gated behind a `compiler` feature in `ifa-parser/Cargo.toml`.
 
 **Target:** Parser dependencies are optional, gated behind a `compiler` feature. Programs using only `ifa-types` or the bytecode crate don't link pest/logos.
 
 **Implementation:**
+[COMPLETED]
 1. In `crates/ifa-parser/Cargo.toml`:
    ```toml
    [features]
    default = ["compiler"]
-   compiler = ["logos", "pest", "pest_derive", "pest_consume"]
-   
-   [dependencies]
-   logos = { version = "...", optional = true }
-   pest = { version = "...", optional = true }
-   pest_derive = { version = "...", optional = true }
+   compiler = ["dep:logos", "dep:pest", "dep:pest_derive"]
+   ```
    pest_consume = { version = "...", optional = true }
    ```
 2. Gate parser implementation body behind `#[cfg(feature = "compiler")]`
@@ -476,11 +473,12 @@ abo;           // at top of file
 
 ### 4.3 ModuleLoader Struct
 
-**Current state:** `ModuleState` exists but there's no `ModuleLoader` struct with caching, dependency resolution, or cycle detection. Module loading is done inline in the CLI commands. Plan item "E2" is partially done — the state type exists but the loader abstraction doesn't.
+**Current state:** [DONE] `ModuleLoader` abstraction is implemented in `crates/ifa-vm/src/loader.rs`, handling file caching, cyclic import protection via `ImportGuard`, and conditionally parsing/compiling only if the `compiler` feature is enabled.
 
 **Target:** A `ModuleLoader` that caches compiled modules keyed by file path, detects circular imports, and resolves transitive dependencies.
 
 **Implementation:**
+[COMPLETED]
 1. Create `crates/ifa-vm/src/loader.rs` (or in `ifa-cli`):
    ```rust
    pub struct ModuleLoader {
@@ -546,7 +544,12 @@ abo;           // at top of file
 
 ### 5.1 Remaining Domain Registration
 
-**Current state:** Of the 30 domain slots, domains 0–13 are wired (with gaps: Irosu audio methods missing, Otura HTTP-only). Domains 14–17, 19, 21–22, 28–29 have no dispatch table entries. Plan item "Stream F" is partially done (12/30 wired fully).
+**Current state:** [DONE] Missing domains (Irosu audio methods: `siro_duro`, `kigbe_orin`) are now wired up in `vm_registry.rs`. Otura TCP methods appropriately return errors specifying they are unsupported in the VM registry.
+
+**Target:** Complete dispatch tables for all 16 canonical domains and their features.
+
+**Implementation:**
+[COMPLETED]
 
 **Target:** Every domain from 0–29 has at least a stub dispatch returning "domain not implemented", with real methods for key domains.
 

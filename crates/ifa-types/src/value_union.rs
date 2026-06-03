@@ -46,6 +46,7 @@ pub enum IfaValue {
     Str(crate::CompactString),
     List(Arc<Vec<IfaValue>>),
     Map(Arc<HashMap<crate::CompactString, IfaValue>>),
+    Set(Arc<std::collections::HashSet<IfaValue>>),
 
     // 3. Special / VM Objects
     Fn(Arc<BytecodeFnData>),
@@ -195,6 +196,10 @@ impl IfaValue {
         IfaValue::Map(Arc::new(internal))
     }
 
+    pub fn set(s: std::collections::HashSet<IfaValue>) -> Self {
+        IfaValue::Set(Arc::new(s))
+    }
+
     #[cfg(feature = "vm")]
     pub fn bytecode_fn(
         name: impl Into<String>,
@@ -299,6 +304,7 @@ impl IfaValue {
             IfaValue::Str(_) => "Str",
             IfaValue::List(_) => "List",
             IfaValue::Map(_) => "Map",
+            IfaValue::Set(_) => "Set",
             IfaValue::Fn(_) => "Fn",
             #[cfg(feature = "vm")]
             IfaValue::AstFn(_) => "Fn",
@@ -324,6 +330,7 @@ impl IfaValue {
             IfaValue::Str(s) => !s.is_empty(),
             IfaValue::List(l) => !l.is_empty(),
             IfaValue::Map(m) => !m.is_empty(),
+            IfaValue::Set(s) => !s.is_empty(),
             IfaValue::Fn(_) => true,
             #[cfg(feature = "vm")]
             IfaValue::AstFn(_) => true,
@@ -355,7 +362,13 @@ impl IfaValue {
             (IfaValue::Null, IfaValue::Null) => true,
             (IfaValue::Bool(a), IfaValue::Bool(b)) => a == b,
             (IfaValue::Int(a), IfaValue::Int(b)) => a == b,
-            (IfaValue::Float(a), IfaValue::Float(b)) => (a - b).abs() < f64::EPSILON,
+            (IfaValue::Float(a), IfaValue::Float(b)) => {
+                if a.is_nan() && b.is_nan() {
+                    true
+                } else {
+                    a == b
+                }
+            }
             (IfaValue::Str(a), IfaValue::Str(b)) => a == b,
             (IfaValue::List(a), IfaValue::List(b)) => {
                 if Arc::ptr_eq(a, b) {
@@ -365,6 +378,15 @@ impl IfaValue {
                     return false;
                 }
                 a.iter().zip(b.iter()).all(|(x, y)| x.is_equal(y))
+            }
+            (IfaValue::Set(a), IfaValue::Set(b)) => {
+                if Arc::ptr_eq(a, b) {
+                    return true;
+                }
+                if a.len() != b.len() {
+                    return false;
+                }
+                a.iter().all(|x| b.contains(x))
             }
             (IfaValue::Map(a), IfaValue::Map(b)) => {
                 if Arc::ptr_eq(a, b) {
@@ -403,6 +425,10 @@ impl IfaValue {
                 }
                 Ok(IfaShared::List(frozen_list))
             }
+            IfaValue::Set(s) => {
+                // Shared sets not supported yet
+                Err(IfaError::Runtime("Cannot freeze Set".into()))
+            }
             IfaValue::Map(m) => {
                 let mut frozen_map = HashMap::new();
                 for (k, v) in m.iter() {
@@ -422,6 +448,64 @@ impl IfaValue {
 // ============================================================================
 // 3. Trait Impls
 // ============================================================================
+
+impl std::hash::Hash for IfaValue {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self).hash(state);
+        match self {
+            IfaValue::Null => {}
+            IfaValue::Bool(b) => b.hash(state),
+            IfaValue::Int(i) => i.hash(state),
+            IfaValue::Float(f) => {
+                if f.is_nan() {
+                    f64::NAN.to_bits().hash(state);
+                } else {
+                    f.to_bits().hash(state);
+                }
+            }
+            IfaValue::Str(s) => s.as_str().hash(state),
+            IfaValue::List(l) => l.hash(state),
+            IfaValue::Set(s) => {
+                // Elements in a hashset don't have a guaranteed order, so hashing the pointer
+                // is safer, similar to Maps.
+                Arc::as_ptr(s).hash(state);
+            }
+            IfaValue::Map(m) => {
+                Arc::as_ptr(m).hash(state);
+            }
+            IfaValue::Fn(f) => Arc::as_ptr(f).hash(state),
+            #[cfg(feature = "vm")]
+            IfaValue::AstFn(f) => Arc::as_ptr(f).hash(state),
+            #[cfg(feature = "vm")]
+            IfaValue::Upvalue(u) => Arc::as_ptr(u).hash(state),
+            #[cfg(feature = "vm")]
+            IfaValue::Closure(c) => Arc::as_ptr(c).hash(state),
+            #[cfg(feature = "vm")]
+            IfaValue::Future(f) => Arc::as_ptr(f).hash(state),
+            #[cfg(feature = "vm")]
+            IfaValue::Actor { id, .. } => id.hash(state),
+            IfaValue::Resource(r) => Arc::as_ptr(r).hash(state),
+            #[cfg(feature = "vm")]
+            IfaValue::Return(r) => r.hash(state),
+            #[cfg(feature = "vm")]
+            IfaValue::Break => {}
+            #[cfg(feature = "vm")]
+            IfaValue::Continue => {}
+            IfaValue::Result(r) => {
+                match r.as_ref() {
+                    ResultPayload::Ok(v) => {
+                        0u8.hash(state);
+                        v.hash(state);
+                    }
+                    ResultPayload::Err(v) => {
+                        1u8.hash(state);
+                        v.hash(state);
+                    }
+                }
+            }
+        }
+    }
+}
 
 impl PartialEq for IfaValue {
     fn eq(&self, other: &Self) -> bool {

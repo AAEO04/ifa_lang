@@ -122,6 +122,20 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                 span,
             }))
         }
+        Rule::alias_stmt => {
+            let mut inner = pair.into_inner();
+            inner.next(); // Skip alias keyword
+            let name = inner
+                .next()
+                .ok_or_else(|| IfaError::Parse("Alias missing name".to_string()))?
+                .as_str()
+                .to_string();
+            let target_pair = inner
+                .next()
+                .ok_or_else(|| IfaError::Parse("Alias missing target".to_string()))?;
+            let target = Box::new(parse_expression(target_pair)?);
+            Ok(Some(Statement::Alias { name, target, span }))
+        }
         Rule::assignment_stmt => {
             let mut inner = pair.into_inner();
             let lvalue_pair = inner
@@ -218,7 +232,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                     Rule::module_path => {
                         path = Some(p.into_inner().map(|seg| seg.as_str().to_string()).collect());
                     }
-                    _ => {}
+                    _ => return Err(IfaError::Parse("Unexpected token in PEG match".into())),
                 }
             }
 
@@ -268,7 +282,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                     Rule::else_clause => {
                         else_body = Some(parse_else_clause(p)?);
                     }
-                    _ => {}
+                    _ => return Err(IfaError::Parse("Unexpected token in PEG match".into())),
                 }
             }
 
@@ -490,28 +504,49 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                                 .ok_or(IfaError::Parse("Param missing name".into()))?
                                 .as_str()
                                 .to_string();
-                            let param_type = param_inner.next().map(parse_type_hint).transpose()?;
+                            let mut param_type = None;
+                            let mut default_value = None;
+                            for token in param_inner {
+                                match token.as_rule() {
+                                    Rule::type_name => param_type = Some(parse_type_hint(token)?),
+                                    Rule::expression => default_value = Some(parse_expression(token)?),
+                                    _ => {}
+                                }
+                            }
                             params.push(Param {
                                 name: param_name,
                                 type_hint: param_type,
+                                default_value,
                             });
                         }
                     }
                     Rule::effects_decl => {
-                        for decl_inner in p.into_inner() {
-                            if decl_inner.as_rule() == Rule::effect_list {
-                                for effect_ident in decl_inner.into_inner() {
-                                    let effect = match effect_ident.as_str() {
-                                        "Network" | "Otura" => ifa_types::ast::Effect::Network,
-                                        "Async" | "Osa" => ifa_types::ast::Effect::Async,
-                                        "FileIO" | "Odi" => ifa_types::ast::Effect::FileIO,
-                                        "State" => ifa_types::ast::Effect::State,
-                                        "Impure" => ifa_types::ast::Effect::Impure,
-                                        "Pure" => ifa_types::ast::Effect::Pure,
-                                        _ => return Err(IfaError::Parse(format!("Unknown effect: {}", effect_ident.as_str()))),
-                                    };
-                                    if !effects.contains(&effect) {
-                                        effects.push(effect);
+                        let decl_str = p.as_str();
+                        if decl_str == "pelu Ipa" {
+                            if !effects.contains(&ifa_types::ast::Effect::Impure) {
+                                effects.push(ifa_types::ast::Effect::Impure);
+                            }
+                        } else {
+                            for decl_inner in p.into_inner() {
+                                if decl_inner.as_rule() == Rule::effect_list {
+                                    for effect_ident in decl_inner.into_inner() {
+                                        let effect = match effect_ident.as_str() {
+                                            "Network" | "Otura" => ifa_types::ast::Effect::Network,
+                                            "Async" | "Osa" => ifa_types::ast::Effect::Async,
+                                            "FileIO" | "Odi" => ifa_types::ast::Effect::FileIO,
+                                            "State" => ifa_types::ast::Effect::State,
+                                            "Impure" => ifa_types::ast::Effect::Impure,
+                                            "Pure" => ifa_types::ast::Effect::Pure,
+                                            _ => {
+                                                return Err(IfaError::Parse(format!(
+                                                    "Unknown effect: {}",
+                                                    effect_ident.as_str()
+                                                )));
+                                            }
+                                        };
+                                        if !effects.contains(&effect) {
+                                            effects.push(effect);
+                                        }
                                     }
                                 }
                             }
@@ -522,7 +557,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                             body.push(stmt);
                         }
                     }
-                    _ => {}
+                    _ => return Err(IfaError::Parse("Unexpected token in PEG match".into())),
                 }
             }
 
@@ -652,7 +687,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                     Rule::nipari_clause => {
                         nipari_clause_pair = Some(p);
                     }
-                    _ => {}
+                    _ => return Err(IfaError::Parse("Unexpected token in PEG match".into())),
                 }
             }
 
@@ -748,7 +783,7 @@ fn parse_else_clause(pair: pest::iterators::Pair<Rule>) -> IfaResult<Vec<Stateme
                 Rule::else_clause => {
                     else_body = Some(parse_else_clause(p)?);
                 }
-                _ => {}
+                _ => return Err(IfaError::Parse("Unexpected token in PEG match".into())),
             }
         }
 
@@ -1166,6 +1201,14 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
             Ok(Expression::Map(entries))
         }
 
+        Rule::set_literal => {
+            let mut items = Vec::new();
+            for item in pair.into_inner() {
+                items.push(parse_expression(item)?);
+            }
+            Ok(Expression::Set(items))
+        }
+
         Rule::interpolated_string => {
             let mut parts = Vec::new();
             for part_pair in pair.into_inner() {
@@ -1183,7 +1226,7 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
                         let expr = parse_expression(expr_pair)?;
                         parts.push(InterpolatedPart::Expression(Box::new(expr)));
                     }
-                    _ => {}
+                    _ => return Err(IfaError::Parse("Unexpected token in PEG match".into())),
                 }
             }
             Ok(Expression::InterpolatedString { parts })
@@ -1191,19 +1234,32 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
 
         Rule::lambda_expr => {
             // lambda_expr = { ese_kw ~ "(" ~ params? ~ ")" ~ "{" ~ statement* ~ "}" }
-            let mut params: Vec<String> = Vec::new();
+            let mut params: Vec<Param> = Vec::new();
             let mut body: Vec<Statement> = Vec::new();
             for p in pair.into_inner() {
                 match p.as_rule() {
                     Rule::params => {
                         for param_pair in p.into_inner() {
-                            let mut pi = param_pair.into_inner();
-                            let name = pi
+                            let mut param_inner = param_pair.into_inner();
+                            let param_name = param_inner
                                 .next()
                                 .ok_or(IfaError::Parse("Lambda param missing name".into()))?
                                 .as_str()
                                 .to_string();
-                            params.push(name);
+                            let mut param_type = None;
+                            let mut default_value = None;
+                            for token in param_inner {
+                                match token.as_rule() {
+                                    Rule::type_name => param_type = Some(parse_type_hint(token)?),
+                                    Rule::expression => default_value = Some(parse_expression(token)?),
+                                    _ => {}
+                                }
+                            }
+                            params.push(Param {
+                                name: param_name,
+                                type_hint: param_type,
+                                default_value,
+                            });
                         }
                     }
                     Rule::statement => {
@@ -1211,7 +1267,7 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
                             body.push(s);
                         }
                     }
-                    _ => {}
+                    _ => return Err(IfaError::Parse("Unexpected token in PEG match".into())),
                 }
             }
             Ok(Expression::Lambda { params, body })
