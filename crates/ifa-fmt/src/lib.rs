@@ -67,10 +67,11 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
                 }
                 indent_level += 1;
                 if let Some(next) = iter.peek()
-                    && !matches!(next.value, Token::Newline) {
-                        formatted.push('\n');
-                        is_start_of_line = true;
-                    }
+                    && !matches!(next.value, Token::Newline)
+                {
+                    formatted.push('\n');
+                    is_start_of_line = true;
+                }
             }
             Token::RBrace => {
                 formatted.push('}');
@@ -94,10 +95,11 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
             Token::Semicolon => {
                 formatted.push(';');
                 if let Some(next) = iter.peek()
-                    && !matches!(next.value, Token::Newline | Token::Comment(_)) {
-                        formatted.push('\n');
-                        is_start_of_line = true;
-                    }
+                    && !matches!(next.value, Token::Newline | Token::Comment(_))
+                {
+                    formatted.push('\n');
+                    is_start_of_line = true;
+                }
             }
             Token::Comma => {
                 formatted.push(',');

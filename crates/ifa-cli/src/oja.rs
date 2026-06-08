@@ -656,20 +656,21 @@ opt-level = 3
         // Verify checksums against lockfile
         for pkg in &resolved {
             if let Some(expected) = locked_checksums.get(&pkg.name)
-                && &pkg.checksum != expected {
-                    return Err(eyre!(
-                        "OjaIntegrityError: checksum mismatch for '{}'\n  \
+                && &pkg.checksum != expected
+            {
+                return Err(eyre!(
+                    "OjaIntegrityError: checksum mismatch for '{}'\n  \
                          expected: {}\n  \
                          got:      {}\n  \
                          The lockfile does not match the downloaded artifact. \
                          This may indicate tampering or a version change. \
                          Run `ifa oja update {}` to re-resolve.",
-                        pkg.name,
-                        expected,
-                        pkg.checksum,
-                        pkg.name
-                    ));
-                }
+                    pkg.name,
+                    expected,
+                    pkg.checksum,
+                    pkg.name
+                ));
+            }
         }
 
         // Write oja.lock
@@ -786,14 +787,15 @@ opt-level = 3
             let dep_manifest_path = Self::find_manifest_in(&pkg_dir);
             if let Some(mp) = dep_manifest_path
                 && let Ok(content) = fs::read_to_string(&mp)
-                    && let Ok(dep_manifest) = toml::from_str::<IfaManifest>(&content) {
-                        for (tname, tdep) in &dep_manifest.dependencies {
-                            transitive_names.push(tname.clone());
-                            if !seen.contains(tname) {
-                                queue.push_back((tname.clone(), tdep.clone(), name.clone()));
-                            }
-                        }
+                && let Ok(dep_manifest) = toml::from_str::<IfaManifest>(&content)
+            {
+                for (tname, tdep) in &dep_manifest.dependencies {
+                    transitive_names.push(tname.clone());
+                    if !seen.contains(tname) {
+                        queue.push_back((tname.clone(), tdep.clone(), name.clone()));
                     }
+                }
+            }
 
             resolved.push(LockedPackage {
                 name,

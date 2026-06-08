@@ -668,8 +668,6 @@ impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SI
                     let addr_val = self.pop()?;
                     let val = self.pop()?;
 
-
-
                     if let EmbeddedValue::Ptr(addr) = addr_val {
                         // Check if MMIO
                         if addr >= self.config.mmio_base {
@@ -709,7 +707,6 @@ impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SI
                             self.opon[idx] = val;
                         }
                     } else {
-
                         return Err(EmbeddedError::HalError("StoreDeref requires Ptr".into()));
                     }
                 }

@@ -653,9 +653,10 @@ impl Ose {
         let mut table = Table::new(rows, widths).header(header).style(style);
 
         if let Some(title) = ui_map.get("title").map(|v| v.to_string())
-            && !title.is_empty() {
-                table = table.block(Block::default().title(title).borders(Borders::ALL));
-            }
+            && !title.is_empty()
+        {
+            table = table.block(Block::default().title(title).borders(Borders::ALL));
+        }
 
         f.render_widget(table, area);
     }

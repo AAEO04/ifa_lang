@@ -120,12 +120,13 @@ impl NetManager {
         if let Some(content_length) = response
             .header("Content-Length")
             .and_then(|h| h.parse::<u64>().ok())
-            && content_length > MAX_DOWNLOAD_SIZE {
-                return Err(NetError::FileTooLarge {
-                    size: content_length,
-                    limit: MAX_DOWNLOAD_SIZE,
-                });
-            }
+            && content_length > MAX_DOWNLOAD_SIZE
+        {
+            return Err(NetError::FileTooLarge {
+                size: content_length,
+                limit: MAX_DOWNLOAD_SIZE,
+            });
+        }
 
         // Stream download with size tracking
         let file = File::create(path)?;

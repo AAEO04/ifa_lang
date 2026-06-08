@@ -297,12 +297,13 @@ impl<S: Send + Sync + 'static, T: Send + Sync + 'static> Ajose<S, T> {
         for (src_weak, tgt_weak, transform) in &self.relationships {
             if let Some(src) = src_weak.upgrade()
                 && Arc::ptr_eq(&src, source)
-                    && let Some(tgt) = tgt_weak.upgrade() {
-                        transform(
-                            &src.read().unwrap_or_else(|e| e.into_inner()),
-                            &mut tgt.write().unwrap_or_else(|e| e.into_inner()),
-                        );
-                    }
+                && let Some(tgt) = tgt_weak.upgrade()
+            {
+                transform(
+                    &src.read().unwrap_or_else(|e| e.into_inner()),
+                    &mut tgt.write().unwrap_or_else(|e| e.into_inner()),
+                );
+            }
         }
     }
 

@@ -47,9 +47,10 @@ impl Drop for InstallTransaction {
             );
             for file in &self.files {
                 if file.exists()
-                    && let Err(e) = fs::remove_file(file) {
-                        eprintln!("[Rollback] Failed to remove {:?}: {}", file, e);
-                    }
+                    && let Err(e) = fs::remove_file(file)
+                {
+                    eprintln!("[Rollback] Failed to remove {:?}: {}", file, e);
+                }
             }
         }
     }
@@ -490,9 +491,10 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
 
         // Write version file if we know the installed version
         if let Some(tag) = release_tag
-            && let Err(e) = write_version_file(&config.install_dir, &tag) {
-                eprintln!("⚠ Could not write .ifa-version: {}", e);
-            }
+            && let Err(e) = write_version_file(&config.install_dir, &tag)
+        {
+            eprintln!("⚠ Could not write .ifa-version: {}", e);
+        }
 
         txn.commit();
         println!("✅ Installation complete.");

@@ -96,7 +96,9 @@ impl Okanran {
         note = "Use ko_le_de_bi() instead which returns Result"
     )]
     pub fn ko_le_de(&self) -> IfaResult<()> {
-        Err(IfaError::Custom("[Ọ̀kànràn] Unreachable code executed!".into()))
+        Err(IfaError::Custom(
+            "[Ọ̀kànràn] Unreachable code executed!".into(),
+        ))
     }
 
     /// Unreachable code (returns error)

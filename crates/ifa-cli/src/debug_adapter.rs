@@ -84,9 +84,10 @@ pub fn run_debug_session(file: std::path::PathBuf) -> color_eyre::Result<()> {
                     if line.to_lowercase().starts_with("content-length:") {
                         let parts: Vec<&str> = line.split(':').collect();
                         if parts.len() == 2
-                            && let Ok(len) = parts[1].trim().parse::<usize>() {
-                                content_length = len;
-                            }
+                            && let Ok(len) = parts[1].trim().parse::<usize>()
+                        {
+                            content_length = len;
+                        }
                     }
                 }
                 Err(_) => return Ok(()),
@@ -109,10 +110,11 @@ pub fn run_debug_session(file: std::path::PathBuf) -> color_eyre::Result<()> {
 
         if let Some(type_val) = request.get("type")
             && type_val == "request"
-                && let Some(command) = request.get("command").and_then(|v| v.as_str()) {
-                    let seq = request.get("seq").unwrap_or(&json!(0)).clone();
-                    handle_request(command, seq, &request, &mut stdout, &mut server)?;
-                }
+            && let Some(command) = request.get("command").and_then(|v| v.as_str())
+        {
+            let seq = request.get("seq").unwrap_or(&json!(0)).clone();
+            handle_request(command, seq, &request, &mut stdout, &mut server)?;
+        }
     }
 }
 
@@ -148,31 +150,31 @@ fn handle_request(
                     .get("source")
                     .and_then(|s| s.get("path"))
                     .and_then(|p| p.as_str())
-                {
-                    let mut bps = Vec::new();
-                    if let Some(arr) = args.get("breakpoints").and_then(|b| b.as_array()) {
-                        for bp in arr {
-                            if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
-                                bps.push(line as usize);
-                            }
+            {
+                let mut bps = Vec::new();
+                if let Some(arr) = args.get("breakpoints").and_then(|b| b.as_array()) {
+                    for bp in arr {
+                        if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
+                            bps.push(line as usize);
                         }
                     }
-                    server.breakpoints.insert(source.to_string(), bps.clone());
-
-                    let mut bp_responses = Vec::new();
-                    for bp in bps {
-                        bp_responses.push(json!({"verified": true, "line": bp}));
-                    }
-                    let response = json!({
-                        "type": "response",
-                        "request_seq": seq,
-                        "success": true,
-                        "command": "setBreakpoints",
-                        "body": { "breakpoints": bp_responses }
-                    });
-                    send_message(stdout, &response)?;
-                    return Ok(());
                 }
+                server.breakpoints.insert(source.to_string(), bps.clone());
+
+                let mut bp_responses = Vec::new();
+                for bp in bps {
+                    bp_responses.push(json!({"verified": true, "line": bp}));
+                }
+                let response = json!({
+                    "type": "response",
+                    "request_seq": seq,
+                    "success": true,
+                    "command": "setBreakpoints",
+                    "body": { "breakpoints": bp_responses }
+                });
+                send_message(stdout, &response)?;
+                return Ok(());
+            }
             let response = json!({ "type": "response", "request_seq": seq, "success": true, "command": "setBreakpoints" });
             send_message(stdout, &response)?;
         }

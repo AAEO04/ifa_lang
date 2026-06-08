@@ -1029,16 +1029,20 @@ fn ffi_to_py_value<'py>(val: &FfiValue, py: pyo3::Python<'py>) -> FfiResult<pyo3
     use pyo3::prelude::*;
     use pyo3::types::PyList;
     match val {
-        FfiValue::I32(v) => v.into_pyobject(py)
+        FfiValue::I32(v) => v
+            .into_pyobject(py)
             .map(|v| v.into_any().unbind())
             .map_err(|e| FfiError::CallFailed(format!("PyO3 error: {}", e))),
-        FfiValue::I64(v) => v.into_pyobject(py)
+        FfiValue::I64(v) => v
+            .into_pyobject(py)
             .map(|v| v.into_any().unbind())
             .map_err(|e| FfiError::CallFailed(format!("PyO3 error: {}", e))),
-        FfiValue::F64(v) => v.into_pyobject(py)
+        FfiValue::F64(v) => v
+            .into_pyobject(py)
             .map(|v| v.into_any().unbind())
             .map_err(|e| FfiError::CallFailed(format!("PyO3 error: {}", e))),
-        FfiValue::Str(s) => s.into_pyobject(py)
+        FfiValue::Str(s) => s
+            .into_pyobject(py)
             .map(|v| v.into_any().unbind())
             .map_err(|e| FfiError::CallFailed(format!("PyO3 error: {}", e))),
         FfiValue::List(l) => {

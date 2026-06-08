@@ -3,7 +3,6 @@
 //! This module implements `IfaValue` as a safe, reference-counted enum.
 //! No manual memory management. No unsafe unions. pure Rust.
 
-
 use crate::gc::{IfaGc, Trace};
 #[cfg(feature = "serde")]
 use serde::de::Error as DeError;

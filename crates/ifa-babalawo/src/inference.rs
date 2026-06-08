@@ -1,4 +1,3 @@
-
 use crate::checks::LintContext;
 use ifa_types::ast::{Expression, InterpolatedPart, TypeHint};
 use ifa_types::binary_ops::binary_op_result_type;
@@ -123,9 +122,10 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
 
         Expression::Call { name, args: _ } => {
             if let Some(ret_type) = ctx.var_types.get(name)
-                && let ifa_types::ast::TypeHint::Function { ret, .. } = ret_type {
-                    return Some(*ret.clone());
-                }
+                && let ifa_types::ast::TypeHint::Function { ret, .. } = ret_type
+            {
+                return Some(*ret.clone());
+            }
 
             if let Some(var_type) = ctx.get_var_type(name) {
                 if *var_type == TypeHint::Any || matches!(var_type, TypeHint::Custom(_)) {

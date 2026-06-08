@@ -197,9 +197,7 @@ fn handle_par_map(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) -> I
         .buffer
         .read()
         .map_err(|_| IfaError::Runtime("CpuOponView read lock poisoned".into()))?;
-    let mapped = CpuContext::par_map(&buffer, |x| {
-        map_numeric_op(*x, &op).unwrap_or(0.0)
-    });
+    let mapped = CpuContext::par_map(&buffer, |x| map_numeric_op(*x, &op).unwrap_or(0.0));
 
     let new_view = CpuOponView {
         buffer: RwLock::new(mapped),

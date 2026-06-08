@@ -3,7 +3,6 @@
 //!
 //! Provides task parallelism, async TaskGraph with dependencies, and parallel iterators.
 
-
 use rayon::ThreadPoolBuilder;
 use std::collections::HashMap;
 use std::future::Future;
@@ -286,7 +285,6 @@ pub struct TaskResult {
     pub duration_ms: u64,
 }
 
-
 /// Synchronous task type
 type SyncTask = Box<dyn Fn() -> Result<(), String> + Send + Sync>;
 
@@ -340,8 +338,7 @@ impl TaskGraph {
     {
         let id = TaskId(self.next_id);
         self.next_id += 1;
-        self.tasks
-            .insert(id, TaskFn::Async(()));
+        self.tasks.insert(id, TaskFn::Async(()));
         self.dependencies.insert(id, Vec::new());
         id
     }

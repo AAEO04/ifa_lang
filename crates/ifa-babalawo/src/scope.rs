@@ -1,4 +1,3 @@
-
 use ifa_types::ast::{Span, TypeHint, Visibility};
 use std::collections::HashMap;
 

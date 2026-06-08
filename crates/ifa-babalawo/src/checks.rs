@@ -439,9 +439,10 @@ fn check_iwa_compliance(
                                 map_keys.insert(k_str.clone());
                             }
                         } else if let Expression::Identifier(k_id) = k
-                            && matches!(v, Expression::Lambda { .. } | Expression::Identifier(_)) {
-                                map_keys.insert(k_id.clone());
-                            }
+                            && matches!(v, Expression::Lambda { .. } | Expression::Identifier(_))
+                        {
+                            map_keys.insert(k_id.clone());
+                        }
                     }
 
                     for method in &iwa_def.methods {
@@ -553,18 +554,19 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
 
                 // Check expression type matches declared type (basic check)
                 if let Some(inferred) = infer_expression_type(value, ctx)
-                    && !types_compatible(th, &inferred) {
-                        baba.error(
-                            "TYPE_MISMATCH",
-                            &format!(
-                                "Type mismatch: variable '{}' declared as '{:?}' but assigned '{:?}'",
-                                name, th, inferred
-                            ),
-                            file,
-                            span.line,
-                            span.column,
-                        );
-                    }
+                    && !types_compatible(th, &inferred)
+                {
+                    baba.error(
+                        "TYPE_MISMATCH",
+                        &format!(
+                            "Type mismatch: variable '{}' declared as '{:?}' but assigned '{:?}'",
+                            name, th, inferred
+                        ),
+                        file,
+                        span.line,
+                        span.column,
+                    );
+                }
 
                 check_iwa_compliance(th, value, ctx, baba, file, span);
             }
@@ -582,18 +584,19 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
                 // Check type compatibility for static types
                 if let Some(declared_type) = ctx.get_var_type(name) {
                     if let Some(inferred_type) = infer_expression_type(value, ctx)
-                        && !types_compatible(declared_type, &inferred_type) {
-                            baba.error(
-                                "TYPE_MISMATCH",
-                                &format!(
-                                    "Type mismatch: variable '{}' is type '{:?}' but assigned '{:?}'",
-                                    name, declared_type, inferred_type
-                                ),
-                                file,
-                                span.line,
-                                span.column,
-                            );
-                        }
+                        && !types_compatible(declared_type, &inferred_type)
+                    {
+                        baba.error(
+                            "TYPE_MISMATCH",
+                            &format!(
+                                "Type mismatch: variable '{}' is type '{:?}' but assigned '{:?}'",
+                                name, declared_type, inferred_type
+                            ),
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
                     check_iwa_compliance(declared_type, value, ctx, baba, file, span);
                 }
 
@@ -1010,11 +1013,19 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             // These are top-level declarations handled during scan_statement_for_defs
         }
 
-        Statement::Ewo { condition, message: _, span } => {
+        Statement::Ewo {
+            condition,
+            message: _,
+            span,
+        } => {
             check_expression(condition, ctx, baba, file, span);
         }
 
-        Statement::AssertType { value, type_hint: _, span } => {
+        Statement::AssertType {
+            value,
+            type_hint: _,
+            span,
+        } => {
             check_expression(value, ctx, baba, file, span);
         }
 
@@ -1022,7 +1033,13 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
             check_expression(duration, ctx, baba, file, span);
         }
 
-        Statement::Try { try_body, catch_var: _, catch_body, finally_body, span: _ } => {
+        Statement::Try {
+            try_body,
+            catch_var: _,
+            catch_body,
+            finally_body,
+            span: _,
+        } => {
             for s in try_body {
                 check_statement(s, ctx, baba, file);
             }
@@ -1038,9 +1055,7 @@ fn check_statement(stmt: &Statement, ctx: &mut LintContext, baba: &mut Babalawo,
 
         Statement::Break { .. } | Statement::Continue { .. } => {
             // Should be validated to be inside loops
-        }
-
-        // Catch-all removed. All statement types must be explicitly handled.
+        } // Catch-all removed. All statement types must be explicitly handled.
     }
 }
 
@@ -1261,15 +1276,16 @@ fn check_expression(
 
             // H2: Enforce acyclic uniquely-owned data for yanda
             if let Some(inferred_type) = infer_expression_type(inner, ctx)
-                && inferred_type.is_pointer_like() {
-                    baba.error(
+                && inferred_type.is_pointer_like()
+            {
+                baba.error(
                         "YANDA_SHARED_STATE",
                         "Cannot 'yanda' a shared pointer, reference, or channel. Only acyclic, uniquely-owned data can be transferred.",
                         file,
                         span.line,
                         span.column,
                     );
-                }
+            }
         }
 
         Expression::MethodCall {
@@ -1289,18 +1305,15 @@ fn check_expression(
                     let domain_str = n.strip_prefix("std.").unwrap();
                     if let Ok(domain) = domain_str.parse::<ifa_types::domain::OduDomain>()
                         && let Some(_err_msg) = crate::metadata::validate_odu_call(&domain, method)
-                        {
-                            baba.error(
-                                "UNKNOWN_MODULE_METHOD",
-                                &format!(
-                                    "Èèwọ̀: Method '{}' does not exist in domain '{}'",
-                                    method, n
-                                ),
-                                file,
-                                span.line,
-                                span.column,
-                            );
-                        }
+                    {
+                        baba.error(
+                            "UNKNOWN_MODULE_METHOD",
+                            &format!("Èèwọ̀: Method '{}' does not exist in domain '{}'", method, n),
+                            file,
+                            span.line,
+                            span.column,
+                        );
+                    }
                 }
                 Some(n.clone())
             } else {
@@ -1309,10 +1322,11 @@ fn check_expression(
 
             // Process yanda (move)
             if method == "yanda"
-                && let Some(ref name) = var_name_opt {
-                    ctx.iwa_engine.resolve_debt_by_move(name);
-                    ctx.move_tracker.record_move(name, span.line, span.column);
-                }
+                && let Some(ref name) = var_name_opt
+            {
+                ctx.iwa_engine.resolve_debt_by_move(name);
+                ctx.move_tracker.record_move(name, span.line, span.column);
+            }
 
             // iwa_pele lifecycle tracking
             let obj_type = infer_expression_type(object, ctx);
@@ -1331,33 +1345,34 @@ fn check_expression(
 
                 // Open new debt if the method has the attribute
                 if let Some(iwa_def) = ctx.iwa_defs.get(&iwa_name)
-                    && let Some(iwa_method) = iwa_def.methods.iter().find(|m| m.name == *method) {
-                        for attr in &iwa_method.attributes {
-                            if attr.starts_with("#[iwa_pele_pair(") {
-                                let inner = attr
-                                    .trim_start_matches("#[iwa_pele_pair(")
-                                    .trim_end_matches(")]");
-                                let parts: Vec<&str> = inner.split(',').map(|s| s.trim()).collect();
-                                if parts.len() == 2 {
-                                    let opener = parts[0];
-                                    let closer = parts[1];
+                    && let Some(iwa_method) = iwa_def.methods.iter().find(|m| m.name == *method)
+                {
+                    for attr in &iwa_method.attributes {
+                        if attr.starts_with("#[iwa_pele_pair(") {
+                            let inner = attr
+                                .trim_start_matches("#[iwa_pele_pair(")
+                                .trim_end_matches(")]");
+                            let parts: Vec<&str> = inner.split(',').map(|s| s.trim()).collect();
+                            if parts.len() == 2 {
+                                let opener = parts[0];
+                                let closer = parts[1];
 
-                                    let key = format!("{}.{}", iwa_name, method);
-                                    let req = format!("{}.{}", iwa_name, closer);
+                                let key = format!("{}.{}", iwa_name, method);
+                                let req = format!("{}.{}", iwa_name, closer);
 
-                                    if method == opener {
-                                        ctx.iwa_engine.debt_ledger.push(crate::iwa::ResourceDebt {
-                                            var_name: var_name_opt.clone(),
-                                            opener: key,
-                                            required: req,
-                                            line: span.line,
-                                            column: span.column,
-                                        });
-                                    }
+                                if method == opener {
+                                    ctx.iwa_engine.debt_ledger.push(crate::iwa::ResourceDebt {
+                                        var_name: var_name_opt.clone(),
+                                        opener: key,
+                                        required: req,
+                                        line: span.line,
+                                        column: span.column,
+                                    });
                                 }
                             }
                         }
                     }
+                }
             }
         }
 
@@ -1446,15 +1461,16 @@ fn check_expression(
                     };
                     if is_payload
                         && let Expression::Identifier(_) = arg
-                            && !crate::movement::is_copy_eligible(arg) {
-                                baba.error(
+                        && !crate::movement::is_copy_eligible(arg)
+                    {
+                        baba.error(
                                     "EXPLICIT_MOVE_REQUIRED",
                                     "Cannot pass non-scalar variable to actor boundary. Use 'yanda' (or 'move') to explicitly transfer ownership.",
                                     file,
                                     call.span.line,
                                     call.span.column,
                                 );
-                            }
+                    }
                 }
             }
 

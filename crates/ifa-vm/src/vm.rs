@@ -339,9 +339,10 @@ impl IfaVM {
             module_paths.push(cwd);
         }
         if let Ok(exe) = std::env::current_exe()
-            && let Some(dir) = exe.parent() {
-                module_paths.push(dir.join("lib"));
-            }
+            && let Some(dir) = exe.parent()
+        {
+            module_paths.push(dir.join("lib"));
+        }
         IfaVM {
             ctx: ExecutionContext {
                 stack: Vec::new(),
@@ -403,9 +404,10 @@ impl IfaVM {
             module_paths.push(cwd);
         }
         if let Ok(exe) = std::env::current_exe()
-            && let Some(dir) = exe.parent() {
-                module_paths.push(dir.join("lib"));
-            }
+            && let Some(dir) = exe.parent()
+        {
+            module_paths.push(dir.join("lib"));
+        }
         IfaVM {
             ctx: ExecutionContext {
                 stack: Vec::new(),
@@ -505,12 +507,13 @@ impl IfaVM {
     /// Push value onto stack
     pub fn push(&mut self, value: IfaValue) -> IfaResult<()> {
         if let Some(limit) = self.stack_limit
-            && self.ctx.stack.len() >= limit {
-                return Err(IfaError::StackOverflow {
-                    limit,
-                    directive: self.opon_size,
-                });
-            }
+            && self.ctx.stack.len() >= limit
+        {
+            return Err(IfaError::StackOverflow {
+                limit,
+                directive: self.opon_size,
+            });
+        }
         self.ctx.stack.push(value);
         Ok(())
     }
@@ -518,12 +521,13 @@ impl IfaVM {
     /// Push CallFrame onto execution stack
     pub fn push_frame(&mut self, frame: CallFrame) -> IfaResult<()> {
         if let Some(limit) = self.frame_limit
-            && self.ctx.frames.len() >= limit {
-                return Err(IfaError::StackOverflow {
-                    limit,
-                    directive: self.opon_size,
-                });
-            }
+            && self.ctx.frames.len() >= limit
+        {
+            return Err(IfaError::StackOverflow {
+                limit,
+                directive: self.opon_size,
+            });
+        }
         self.ctx.frames.push(frame);
         Ok(())
     }
@@ -565,9 +569,10 @@ impl IfaVM {
         self.opon_size = bytecode.opon_size;
 
         if let Some(cap) = stack_cap
-            && self.ctx.stack.capacity() < cap {
-                self.ctx.stack.reserve(cap - self.ctx.stack.len());
-            }
+            && self.ctx.stack.capacity() < cap
+        {
+            self.ctx.stack.reserve(cap - self.ctx.stack.len());
+        }
 
         self.resume_execution(bytecode)
     }
@@ -582,12 +587,12 @@ impl IfaVM {
                     .search_paths
                     .iter()
                     .any(|p| p == parent)
-                {
-                    self.module
-                        .resolver
-                        .search_paths
-                        .insert(0, parent.to_path_buf());
-                }
+            {
+                self.module
+                    .resolver
+                    .search_paths
+                    .insert(0, parent.to_path_buf());
+            }
             self.module.current_file = Some(path.to_path_buf());
         }
     }
@@ -842,11 +847,13 @@ impl IfaVM {
             false
         };
 
-        if self.module.imported.contains(&module_key) && metadata_matches
-            && let Some(exports) = self.module.module_exports.get(&module_key) {
-                self.module.import_guard.exit(&module_key);
-                return Ok(exports.clone());
-            }
+        if self.module.imported.contains(&module_key)
+            && metadata_matches
+            && let Some(exports) = self.module.module_exports.get(&module_key)
+        {
+            self.module.import_guard.exit(&module_key);
+            return Ok(exports.clone());
+        }
 
         let prev_file = self.module.current_file.take();
         let prev_paths = self.module.resolver.search_paths.clone();
@@ -857,12 +864,12 @@ impl IfaVM {
                 .search_paths
                 .iter()
                 .any(|p| p == parent)
-            {
-                self.module
-                    .resolver
-                    .search_paths
-                    .insert(0, parent.to_path_buf());
-            }
+        {
+            self.module
+                .resolver
+                .search_paths
+                .insert(0, parent.to_path_buf());
+        }
         self.module.current_file = Some(file_path.clone());
 
         let prev_globals = std::mem::take(&mut self.globals);
@@ -1261,12 +1268,10 @@ impl IfaVM {
                     ));
                 }
             },
-            other => {
-                Err(IfaError::TypeError {
-                    expected: "Future".into(),
-                    got: other.type_name().into(),
-                })
-            }
+            other => Err(IfaError::TypeError {
+                expected: "Future".into(),
+                got: other.type_name().into(),
+            }),
         }
     }
 
@@ -2396,13 +2401,13 @@ impl IfaVM {
                 let a = self.pop()?;
                 if let (Some(ba), Some(bb)) =
                     (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                    && let Some(res) = ba.add(bb) {
-                        // SAFETY: Math operations strictly yield numeric NanBox primitives.
-                        return self.push(
-                            IfaValue::from_nan_boxed_primitive(res)
-                                .ok_or_else(|| IfaError::Custom("Math operations yielded invalid primitive".into()))?,
-                        );
-                    }
+                    && let Some(res) = ba.add(bb)
+                {
+                    // SAFETY: Math operations strictly yield numeric NanBox primitives.
+                    return self.push(IfaValue::from_nan_boxed_primitive(res).ok_or_else(
+                        || IfaError::Custom("Math operations yielded invalid primitive".into()),
+                    )?);
+                }
                 match (a.clone(), b.clone()) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => match ia.checked_add(ib) {
                         Some(r) => self.push(IfaValue::int(r))?,
@@ -2468,13 +2473,13 @@ impl IfaVM {
                 let a = self.pop()?;
                 if let (Some(ba), Some(bb)) =
                     (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                    && let Some(res) = ba.sub(bb) {
-                        // SAFETY: Math operations strictly yield numeric NanBox primitives.
-                        return self.push(
-                            IfaValue::from_nan_boxed_primitive(res)
-                                .ok_or_else(|| IfaError::Custom("Math operations yielded invalid primitive".into()))?,
-                        );
-                    }
+                    && let Some(res) = ba.sub(bb)
+                {
+                    // SAFETY: Math operations strictly yield numeric NanBox primitives.
+                    return self.push(IfaValue::from_nan_boxed_primitive(res).ok_or_else(
+                        || IfaError::Custom("Math operations yielded invalid primitive".into()),
+                    )?);
+                }
                 match (a, b) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => match ia.checked_sub(ib) {
                         Some(r) => self.push(IfaValue::int(r))?,
@@ -2496,13 +2501,13 @@ impl IfaVM {
                 let a = self.pop()?;
                 if let (Some(ba), Some(bb)) =
                     (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                    && let Some(res) = ba.mul(bb) {
-                        // SAFETY: Math operations strictly yield numeric NanBox primitives.
-                        return self.push(
-                            IfaValue::from_nan_boxed_primitive(res)
-                                .ok_or_else(|| IfaError::Custom("Math operations yielded invalid primitive".into()))?,
-                        );
-                    }
+                    && let Some(res) = ba.mul(bb)
+                {
+                    // SAFETY: Math operations strictly yield numeric NanBox primitives.
+                    return self.push(IfaValue::from_nan_boxed_primitive(res).ok_or_else(
+                        || IfaError::Custom("Math operations yielded invalid primitive".into()),
+                    )?);
+                }
                 match (a, b) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => match ia.checked_mul(ib) {
                         Some(r) => self.push(IfaValue::int(r))?,
@@ -2950,11 +2955,12 @@ impl IfaVM {
             })?;
 
         if let IfaValue::Str(s) = &object
-            && let Some(domain_id) = parse_odu_mod_marker(s) {
-                let result = self.call_registry(domain_id, &method_name, args, bytecode)?;
-                self.push(result)?;
-                return Ok(());
-            }
+            && let Some(domain_id) = parse_odu_mod_marker(s)
+        {
+            let result = self.call_registry(domain_id, &method_name, args, bytecode)?;
+            self.push(result)?;
+            return Ok(());
+        }
 
         match object {
             IfaValue::Map(map) => {

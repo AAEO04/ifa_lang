@@ -93,36 +93,34 @@ fn main_loop(
                                 "UNUSED_VARIABLE".to_string(),
                             ))
                             && let Some(data) = &diagnostic.data
-                                && let Some(context_val) = data.get("context")
-                                    && let Some(name) = context_val.as_str() {
-                                        let new_name = format!("_{}", name);
+                            && let Some(context_val) = data.get("context")
+                            && let Some(name) = context_val.as_str()
+                        {
+                            let new_name = format!("_{}", name);
 
-                                        let mut changes = std::collections::HashMap::new();
-                                        changes.insert(
-                                            params.text_document.uri.clone(),
-                                            vec![lsp_types::TextEdit {
-                                                range: diagnostic.range,
-                                                new_text: new_name.clone(),
-                                            }],
-                                        );
+                            let mut changes = std::collections::HashMap::new();
+                            changes.insert(
+                                params.text_document.uri.clone(),
+                                vec![lsp_types::TextEdit {
+                                    range: diagnostic.range,
+                                    new_text: new_name.clone(),
+                                }],
+                            );
 
-                                        actions.push(lsp_types::CodeActionOrCommand::CodeAction(
-                                            lsp_types::CodeAction {
-                                                title: format!(
-                                                    "Sanctify (prefix with _): {}",
-                                                    new_name
-                                                ),
-                                                kind: Some(lsp_types::CodeActionKind::QUICKFIX),
-                                                diagnostics: Some(vec![diagnostic]),
-                                                edit: Some(lsp_types::WorkspaceEdit {
-                                                    changes: Some(changes),
-                                                    ..Default::default()
-                                                }),
-                                                is_preferred: Some(true),
-                                                ..Default::default()
-                                            },
-                                        ));
-                                    }
+                            actions.push(lsp_types::CodeActionOrCommand::CodeAction(
+                                lsp_types::CodeAction {
+                                    title: format!("Sanctify (prefix with _): {}", new_name),
+                                    kind: Some(lsp_types::CodeActionKind::QUICKFIX),
+                                    diagnostics: Some(vec![diagnostic]),
+                                    edit: Some(lsp_types::WorkspaceEdit {
+                                        changes: Some(changes),
+                                        ..Default::default()
+                                    }),
+                                    is_preferred: Some(true),
+                                    ..Default::default()
+                                },
+                            ));
+                        }
                     }
                     let result = serde_json::to_value(&actions).unwrap_or(serde_json::Value::Null);
                     let resp = Response {
@@ -270,7 +268,10 @@ fn publish_diagnostics(
                     format!("[{}] {}", diag.odu, diag.error.message)
                 };
 
-                let data = diag.error.context.map(|ctx_val| serde_json::json!({ "context": ctx_val }));
+                let data = diag
+                    .error
+                    .context
+                    .map(|ctx_val| serde_json::json!({ "context": ctx_val }));
 
                 diagnostics.push(Diagnostic {
                     range,

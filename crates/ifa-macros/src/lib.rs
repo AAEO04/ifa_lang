@@ -35,16 +35,18 @@ pub fn derive_ebo(input: TokenStream) -> TokenStream {
     let mut cleanup_method = None;
     for attr in &input.attrs {
         if attr.path().is_ident("ebo")
-            && let Ok(meta) = attr.meta.require_list() {
-                let tokens = meta.tokens.to_string();
-                if tokens.contains("cleanup") {
-                    // Extract method name from cleanup = "method"
-                    if let Some(start) = tokens.find('"')
-                        && let Some(end) = tokens.rfind('"') {
-                            cleanup_method = Some(tokens[start + 1..end].to_string());
-                        }
+            && let Ok(meta) = attr.meta.require_list()
+        {
+            let tokens = meta.tokens.to_string();
+            if tokens.contains("cleanup") {
+                // Extract method name from cleanup = "method"
+                if let Some(start) = tokens.find('"')
+                    && let Some(end) = tokens.rfind('"')
+                {
+                    cleanup_method = Some(tokens[start + 1..end].to_string());
                 }
             }
+        }
     }
 
     let drop_impl = if let Some(method) = cleanup_method {

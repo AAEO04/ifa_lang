@@ -3,7 +3,6 @@
 //! This module intentionally exposes only a safe API. Bit layout knowledge
 //! stays here so the VM can migrate opcode handlers without open-coding masks.
 
-
 const QUIET_NAN_BITS: u64 = 0x7ff8_0000_0000_0000;
 const TAG_MASK: u64 = 0x0007_0000_0000_0000;
 const PAYLOAD_MASK: u64 = 0x0000_ffff_ffff_ffff;

@@ -930,9 +930,7 @@ impl StdRegistry {
             #[cfg(feature = "audio")]
             "siro_duro" | "play_blocking" => {
                 let path = args.first().map(|v| v.to_string()).unwrap_or_default();
-                self.irosu()
-                    .siro_duro(&path)
-                    .map_err(IfaError::Custom)?;
+                self.irosu().siro_duro(&path).map_err(IfaError::Custom)?;
                 Ok(IfaValue::null())
             }
             #[cfg(feature = "audio")]
@@ -1714,9 +1712,7 @@ fn dispatch_ose(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaRe
             "ipinro" | "section" => Ok(IfaValue::null()),
             "ya" | "draw" => Ok(IfaValue::null()),
             "nu" | "clear" => Ok(IfaValue::null()),
-            "wo" | "debug" => {
-                Ok(args.first().cloned().unwrap_or(IfaValue::Null))
-            }
+            "wo" | "debug" => Ok(args.first().cloned().unwrap_or(IfaValue::Null)),
             "gboran" | "listen" => Ok(IfaValue::null()),
             "ipile" | "layout" => {
                 let mut m = std::collections::HashMap::new();
@@ -2039,8 +2035,7 @@ impl StdRegistry {
                     .first()
                     .ok_or_else(|| IfaError::ArgumentError("items expects a map".into()))?;
                 let items = ogunda.awon_nkan(map)?;
-                let list_items: Vec<IfaValue> =
-                    items.into_iter().map(IfaValue::list).collect();
+                let list_items: Vec<IfaValue> = items.into_iter().map(IfaValue::list).collect();
                 Ok(IfaValue::list(list_items))
             }
             "yo" | "remove" => {
