@@ -28,8 +28,7 @@
 //! `MAYBE_USE_AFTER_MOVE` warning (not an error) because we cannot prove
 //! which branch runs at compile time.
 
-use ifa_types::OduDomain;
-use ifa_types::ast::{Expression, OduCall, TypeHint};
+use ifa_types::ast::Expression;
 use std::collections::{HashMap, HashSet};
 
 /// Per-variable move state.
@@ -176,88 +175,6 @@ pub fn is_copy_eligible(expr: &Expression) -> bool {
         expr,
         Expression::Int(_) | Expression::Float(_) | Expression::Bool(_) | Expression::Nil
     )
-}
-
-/// Returns true if an expression is a bare identifier (a potential move source).
-pub fn as_identifier(expr: &Expression) -> Option<&str> {
-    if let Expression::Identifier(name) = expr {
-        Some(name.as_str())
-    } else {
-        None
-    }
-}
-
-/// Check an expression for uses of moved variables, reporting any violations.
-/// Returns a list of `MoveCheckResult` violations found.
-pub fn check_expr_for_moved_uses<'a>(
-    expr: &'a Expression,
-    tracker: &MoveTracker,
-) -> Vec<MoveCheckResult> {
-    let mut violations = Vec::new();
-    collect_expr_violations(expr, tracker, &mut violations);
-    violations
-}
-
-fn collect_expr_violations(
-    expr: &Expression,
-    tracker: &MoveTracker,
-    out: &mut Vec<MoveCheckResult>,
-) {
-    match expr {
-        Expression::Identifier(name) => {
-            if let Some(v) = tracker.check_use(name) {
-                out.push(v);
-            }
-        }
-        Expression::BinaryOp { left, right, .. } => {
-            collect_expr_violations(left, tracker, out);
-            collect_expr_violations(right, tracker, out);
-        }
-        Expression::UnaryOp { expr, .. } => collect_expr_violations(expr, tracker, out),
-        Expression::OduCall(call) => {
-            for arg in &call.args {
-                collect_expr_violations(arg, tracker, out);
-            }
-        }
-        Expression::Call { args, .. } => {
-            for arg in args {
-                collect_expr_violations(arg, tracker, out);
-            }
-        }
-        Expression::MethodCall { object, args, .. } => {
-            collect_expr_violations(object, tracker, out);
-            for arg in args {
-                collect_expr_violations(arg, tracker, out);
-            }
-        }
-        Expression::Get { object, .. } => collect_expr_violations(object, tracker, out),
-        Expression::Index { object, index, .. } => {
-            collect_expr_violations(object, tracker, out);
-            collect_expr_violations(index, tracker, out);
-        }
-        Expression::List(items) => {
-            for item in items {
-                collect_expr_violations(item, tracker, out);
-            }
-        }
-        Expression::Map(entries) => {
-            for (k, v) in entries {
-                collect_expr_violations(k, tracker, out);
-                collect_expr_violations(v, tracker, out);
-            }
-        }
-        Expression::Await(inner) => collect_expr_violations(inner, tracker, out),
-        Expression::Try(inner) => collect_expr_violations(inner, tracker, out),
-        Expression::InterpolatedString { parts } => {
-            for part in parts {
-                if let ifa_types::ast::InterpolatedPart::Expression(e) = part {
-                    collect_expr_violations(e, tracker, out);
-                }
-            }
-        }
-        Expression::MoveExpr(inner) => collect_expr_violations(inner, tracker, out),
-        _ => {}
-    }
 }
 
 #[cfg(test)]

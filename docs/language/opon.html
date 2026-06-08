@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Opon Memory System — Ifá-Lang Language Reference</title>
+    <style>
+        .diagram { background: var(--bg-code); border: 1px solid var(--border); padding: 1rem; margin: 1rem 0; font-size: 0.8rem; line-height: 1.6; }
+        .diagram .arrow { color: var(--amber); }
+        .tag-fact { display: inline-block; background: #1a3a1a; color: #5ae65a; padding: 0.1rem 0.4rem; font-size: 0.65rem; border-radius: 3px; font-weight: 600; }
+        .tag-note { display: inline-block; background: #3a3a1a; color: #facc15; padding: 0.1rem 0.4rem; font-size: 0.65rem; border-radius: 3px; font-weight: 600; }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">opon.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Opon — The Memory System</h1>
+            <p class="subtitle">Slot-based memory store, scoped allocation epochs, and flight recorder</p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified.</strong> This page documents the Opon implementation at
+            <code>crates/ifa-vm/src/opon.rs</code> and its integration in the compiler, parser, and VM.
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="step">
+            <h2>What is Opon?</h2>
+
+            <p>Opon (the divination tray / calabash) is Ifá-Lang's deterministic memory subsystem.
+            It is a <code>Vec&lt;IfaValue&gt;</code>-based slot store with configurable sizing,
+            limit enforcement, scoped allocation epochs, and a built-in flight recorder for debugging.</p>
+
+            <p>Opon serves two distinct roles:</p>
+            <ul>
+                <li><strong>Slot memory store</strong> — a fixed-capacity array of <code>IfaValue</code> slots
+                    for Load/Store bytecode operations. The size determines how many values can be
+                    stored at addressed memory locations.</li>
+                <li><strong>Stack and frame limit governor</strong> — the chosen <code>OponSize</code>
+                    sets caps on the execution stack depth and call-frame nesting, preventing runaway
+                    recursion or deep call chains from exhausting host memory.</li>
+            </ul>
+
+            <div class="diagram">
+                ┌─ Opon (calabash) ──────────────────────────────────┐<br>
+                │  memory: Vec&lt;IfaValue&gt;  ← slot storage          │<br>
+                │  max_slots: usize        ← hard ceiling            │<br>
+                │  epochs: Vec&lt;EboEpoch&gt;  ← scoped allocation      │<br>
+                │  history: Vec&lt;OponEvent&gt; ← flight recorder       │<br>
+                │  cursor: usize           ← circular buffer pos     │<br>
+                │  high_water: usize       ← peak usage tracker      │<br>
+                └────────────────────────────────────────────────────┘<br>
+                <span class="arrow">▲</span>                                        <span class="arrow">▲</span><br>
+                Load8-64 / Store8-64 opcodes                     EpochBegin / EpochEnd
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="step">
+            <h2>OponSize Variants</h2>
+
+            <p>Four memory profiles control the slot capacity, execution limits, and GC tuning.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Directive</th>
+                        <th>Slots</th>
+                        <th>Memory</th>
+                        <th>Stack Cap</th>
+                        <th>Frame Cap</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>#opon kekere</code></td>
+                        <td>256</td>
+                        <td>~4 KB</td>
+                        <td>256</td>
+                        <td>64</td>
+                        <td>Embedded (ESP32, STM32, RP2040)</td>
+                    </tr>
+                    <tr>
+                        <td><code>#opon arinrin</code></td>
+                        <td>4,096</td>
+                        <td>~64 KB</td>
+                        <td>4,096</td>
+                        <td>512</td>
+                        <td><span class="tag-fact">DEFAULT</span> General purpose</td>
+                    </tr>
+                    <tr>
+                        <td><code>#opon nla</code></td>
+                        <td>65,536</td>
+                        <td>~1 MB</td>
+                        <td>65,536</td>
+                        <td>4,096</td>
+                        <td>Data-intensive workloads</td>
+                    </tr>
+                    <tr>
+                        <td><code>#opon ailopin</code></td>
+                        <td>Dynamic (up to 1,048,576)</td>
+                        <td>Dynamic</td>
+                        <td>None</td>
+                        <td>None</td>
+                        <td>Development / no limits</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <p>English aliases are also accepted: <code>small</code> / <code>tiny</code> / <code>embedded</code>
+            for kekere; <code>medium</code> / <code>standard</code> / <code>default</code> for arinrin;
+            <code>large</code> / <code>big</code> / <code>mega</code> for nla;
+            <code>unlimited</code> / <code>dynamic</code> / <code>infinite</code> / <code>max</code> for ailopin.</p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="step">
+            <h2>Syntax</h2>
+
+            <p>Place the directive at the top of your file. Multiple forms are accepted:</p>
+
+            <div class="code-example">
+                <div class="code-header"><span class="code-title">Directive Forms</span></div>
+                <pre><code>// Hash-prefix (recommended)
+#opon kekere;
+#opon nla;
+
+// Colon syntax
+opon: arinrin;
+opon: ailopin;
+
+// English aliases
+#mem small;
+mem: unlimited;
+
+// No semicolon (also accepted)
+#opon nla
+opon: arinrin</code></pre>
+            </div>
+
+            <div class="warning">
+                <strong>Compiler metadata only.</strong> The <code>#opon</code> directive is a
+                compile-time annotation that sets the <code>Bytecode.opon_size</code> field.
+                No bytecode is emitted for the directive itself. The VM reads the field during
+                <code>execute()</code> to derive stack and frame limits.
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="step">
+            <h2>What Opon Controls</h2>
+
+            <h3>1. Slot Memory</h3>
+            <p>The internal <code>Vec&lt;IfaValue&gt;</code> is pre-allocated to the slot count
+            for <code>Kekere</code>, <code>Arinrin</code>, and <code>Nla</code>. In
+            <code>Ailopin</code> mode, it starts at 1,024 slots and grows dynamically as
+            allocations are made, up to a hard ceiling of 1,048,576 slots
+            (<code>AILOPIN_HARD_LIMIT</code>).</p>
+
+            <p>Slot operations are exposed through Load/Store bytecode opcodes:</p>
+            <ul>
+                <li><code>get(addr: usize) -> Option&lt;&amp;IfaValue&gt;</code> — read from slot.
+                    Returns <code>Null</code> if address is out of bounds.</li>
+                <li><code>try_set(addr, value) -> OponResult&lt;()&gt;</code> — write to slot.
+                    Auto-grows in <code>Ailopin</code> mode; returns <code>OponExhausted</code>
+                    if at capacity and not unlimited.</li>
+                <li><code>allocate(value) -> OponResult&lt;usize&gt;</code> — allocate the next
+                    free slot and return its address.</li>
+            </ul>
+
+            <h3>2. Stack & Frame Limits</h3>
+            <p>The chosen <code>OponSize</code> determines execution safety limits:</p>
+            <ul>
+                <li><strong>Stack limit</strong> — max depth of the operand stack. Exceeding it
+                    raises <code>IfaError::StackOverflow</code> with a message like
+                    <code>"program declared #opon arinrin (limit: 4096 slots)"</code>.</li>
+                <li><strong>Frame limit</strong> — max depth of call-frame nesting. Prevents
+                    runaway recursion from consuming host memory.</li>
+            </ul>
+
+            <h3>3. GC Tuning <span class="tag-note">ASPIRATIONAL</span></h3>
+            <p>Each <code>OponSize</code> defines a <code>gc_policy()</code> that returns
+            tuning parameters for the cycle collector:</p>
+
+            <table>
+                <thead>
+                    <tr><th>Size</th><th>Check Interval (ticks)</th><th>Suspect Threshold</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Kekere</td><td>128</td><td>8</td></tr>
+                    <tr><td>Arinrin</td><td>512</td><td>32</td></tr>
+                    <tr><td>Nla</td><td>2,048</td><td>128</td></tr>
+                    <tr><td>Ailopin</td><td>4,096</td><td>256</td></tr>
+                </tbody>
+            </table>
+
+            <p>Currently the VM uses a hardcoded 1,024-tick interval for cycle collection
+            — the <code>gc_policy()</code> values are not yet wired into the GC loop.
+            The Ebo epoch system provides the primary deterministic memory release;
+            the cycle collector is a fallback for cyclic <code>List</code>/<code>Map</code>
+            structures that cannot be freed by reference counting alone.</p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="step">
+            <h2>Ebo Epoch System</h2>
+
+            <p>Opon supports scoped allocation regions called <strong>epochs</strong>, created
+            by the <code>ebo</code> statement with a body:</p>
+
+            <div class="code-example">
+                <div class="code-header"><span class="code-title">Scoped Epoch</span></div>
+                <pre><code>ebo "request" {
+    // All allocations within this block are tracked
+    ayanmo data = fetch_data();
+    process(data);
+}  // ← epoch ends here: memory truncated back to epoch start</code></pre>
+            </div>
+
+            <p>Internally, <code>begin_epoch(name)</code> takes a snapshot of the current
+            memory length, and <code>end_epoch()</code> calls <code>memory.truncate(start_addr)</code>
+            to release all allocations in one shot. Epochs support nesting (stack-like):</p>
+
+            <div class="code-block">
+<pre>ebo "connection" {            // epoch id=1, start at slot 100
+    ayanmo conn = open();
+    ebo "query" {             // epoch id=2, start at slot 110
+        ayanmo result = run(conn);
+    }                         // truncated back to slot 110
+    // result is gone, conn still valid at slot 102
+}                             // truncated back to slot 100</pre>
+            </div>
+
+            <p>Each epoch records: <code>id</code> (monotonically increasing),
+            <code>name</code> (human-readable), <code>start_addr</code> (first allocation),
+            <code>alloc_count</code>, and an <code>active</code> flag.</p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="step">
+            <h2>Flight Recorder (Spirit Log)</h2>
+
+            <p>Opon includes a 256-event circular buffer that records domain operations.
+            Every <code>Print</code>, <code>PrintRaw</code>, <code>Input</code>, and
+            <code>Store*</code> operation is logged with:</p>
+
+            <ul>
+                <li><strong>Spirit</strong> — the domain name (e.g., <code>"Ìrosù"</code>,
+                    <code>"Ogbè"</code>, <code>"MMIO"</code>)</li>
+                <li><strong>Action</strong> — the operation (e.g., <code>"fọ (spoke)"</code>,
+                    <code>"gbà (received)"</code>, <code>"write"</code>)</li>
+                <li><strong>Value</strong> — the value involved (string representation)</li>
+                <li><strong>Epoch ID</strong> — which epoch was active when the event occurred</li>
+            </ul>
+
+            <div class="code-block">
+<pre># Retrieve flight recorder data
+ayanmo log = opon.get_history();
+// Returns events ordered chronologically, oldest first</pre>
+            </div>
+
+            <p>The flight recorder is used by the WASM bindings to stream "Spirit Logs"
+            to the browser playground UI. The capacity of 256 events is a sacred number
+            (16 × 16). Oldest events are overwritten when the buffer wraps.</p>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="step">
+            <h2>Errors & Troubleshooting</h2>
+
+            <h3>OponExhausted</h3>
+            <p>Raised when an allocation exceeds the slot capacity for the chosen size:</p>
+            <div class="code-block">
+<pre>Opon (memory) exhausted: requested 257, available 256
+→ Hint: Use '#opon nla' or '#opon ailopin' for more capacity.</pre>
+            </div>
+            <p><strong>What to do:</strong></p>
+            <ul>
+                <li>Switch to a larger <code>#opon</code> size (<code>nla</code> gives 65,536 slots)</li>
+                <li>Use <code>ebo</code> epochs to release memory between phases</li>
+                <li>Use <code>#opon ailopin</code> during development, then profile and choose the
+                    tightest size that works for your production workload</li>
+                <li>Check for unbounded allocation in loops — you may have a leak</li>
+            </ul>
+
+            <h3>StackOverflow</h3>
+            <p>Raised when the operand stack or call-frame nesting exceeds the limit:</p>
+            <div class="code-block">
+<pre>stack overflow — program declared #opon arinrin (limit: 4096 slots)</pre>
+            </div>
+            <p><strong>What to do:</strong></p>
+            <ul>
+                <li>Increase <code>#opon</code> size (<code>nla</code> lifts stack cap to 65,536)</li>
+                <li>Use <code>#opon ailopin</code> to remove limits entirely</li>
+                <li>Check for infinite recursion or deeply nested match statements</li>
+            </ul>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="step">
+            <h2>Relationship with the Cycle Collector</h2>
+
+            <p>Ifá-Lang has two memory management mechanisms that work independently:</p>
+
+            <table>
+                <thead>
+                    <tr><th></th><th>Opon (deterministic)</th><th>Cycle Collector (tracing)</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>What it manages</strong></td><td>Slot store (addressed memory)</td>
+                        <td>IfaGc heap (List, Map, Closure)</td></tr>
+                    <tr><td><strong>Release trigger</strong></td><td>Epoch end (scope exit)</td>
+                        <td>Every 1,024 VM ticks</td></tr>
+                    <tr><td><strong>Frees cycles?</strong></td><td>No (linear truncation)</td>
+                        <td>Yes (Bacon-Rajan algorithm)</td></tr>
+                    <tr><td><strong>Deterministic?</strong></td><td>Yes</td>
+                        <td>No (runs at fixed intervals)</td></tr>
+                    <tr><td><strong>Interaction</strong></td><td colspan="2">The Opon epoch reduces GC
+                        pressure by freeing memory before the cycle collector runs.
+                        Fewer live objects → faster GC sweeps.</td></tr>
+                </tbody>
+            </table>
+
+            <div class="warning">
+                <strong>Note on "opon as GC hint":</strong> Some tutorial sections describe
+                <code>opon kekere</code> as "collect often" and <code>opon nla</code> as
+                "collect rarely". While <code>OponSize::gc_policy()</code> does define
+                tuning parameters for this purpose, the VM currently uses a hardcoded
+                1,024-tick interval regardless of the <code>#opon</code> setting. The
+                primary role of Opon is slot memory and limit enforcement, not GC tuning.
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="step">
+            <h2>CpuOponView — Not the Same Thing</h2>
+
+            <p><code>CpuOponView</code> is a zero-copy GPU/CPU compute buffer defined in
+            <code>crates/ifa-std/src/hardware/cpu.rs</code>. Despite the shared "Opon"
+            naming (calabash = container), it is a <strong>completely separate concept</strong>
+            from the VM's Opon memory subsystem:</p>
+
+            <table>
+                <thead>
+                    <tr><th></th><th>Opon (VM)</th><th>CpuOponView (hardware)</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Defined in</td><td><code>ifa-vm/src/opon.rs</code></td>
+                        <td><code>ifa-std/src/hardware/cpu.rs</code></td></tr>
+                    <tr><td>Purpose</td><td>Slot-based memory store</td>
+                        <td>GPU/CPU compute buffer</td></tr>
+                    <tr><td>Storage</td><td><code>Vec&lt;IfaValue&gt;</code></td>
+                        <td><code>Vec&lt;f32&gt;</code></td></tr>
+                    <tr><td>Access</td><td>Load/Store bytecode opcodes</td>
+                        <td><code>IfaValue::Resource(token)</code></td></tr>
+                    <tr><td>Scope</td><td>Every program</td>
+                        <td>Only when using hardware acceleration features</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════ -->
+        <div class="step">
+            <h2>Best Practices</h2>
+
+            <h3>Choosing a Size</h3>
+            <ul>
+                <li><strong>Embedded targets</strong> → <code>#opon kekere</code> (256 slots, ~4KB)</li>
+                <li><strong>CLI tools, scripts</strong> → <code>#opon arinrin</code> (4K slots, default)</li>
+                <li><strong>Data processing, servers</strong> → <code>#opon nla</code> (65K slots)</li>
+                <li><strong>Development / unsure</strong> → <code>#opon ailopin</code> (no limits,
+                    but capped at ~1M slots as safety net)</li>
+            </ul>
+
+            <h3>Memory Discipline</h3>
+            <ul>
+                <li>Use <code>ebo "name" { ... }</code> to scope allocations — memory is freed
+                    at epoch end regardless of GC timing</li>
+                <li>Nest epochs for phases of computation (e.g., one epoch per request handler)</li>
+                <li>Monitor <code>memory_used()</code> during development to choose the right size</li>
+                <li>Avoid unbounded allocation in tight loops — use epochs to bound lifetime</li>
+            </ul>
+
+            <h3>When to Use Ailopin</h3>
+            <p><code>#opon ailopin</code> removes all slot and stack limits, which is useful for:
+            prototyping, one-shot scripts, and programs with unpredictable allocation patterns.
+            However, consider that unlimited mode prevents the VM from catching runaway
+            memory use early. For production, prefer a bounded size and test under load.</p>
+        </div>
+
+        <footer>
+            <p><a href="index.html">← Language Reference</a> · <a href="../reference/memory.html">Memory Reference</a></p>
+        </footer>
+    </div>
+    </div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

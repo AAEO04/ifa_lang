@@ -18,6 +18,7 @@
 </head>
 
 <body>
+    <div id="nav-placeholder"></div>
     <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
     <div class="container">
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">values.ifa</span></div><div class="terminal-body">
@@ -47,16 +48,21 @@
             <tr><td><code>Int(i64)</code></td><td>8 bytes</td><td>No</td><td>Values 0–255 cached in <code>OnceLock</code> pool</td></tr>
             <tr><td><code>Float(f64)</code></td><td>8 bytes</td><td>No</td><td></td></tr>
             <tr><td><code>Str(CompactString)</code></td><td>24 bytes (Inline) or 8 bytes (Heap pointer)</td><td>Small: No; Large: Yes (Arc)</td><td>≤21 bytes inline, else Arc&lt;str&gt;</td></tr>
-            <tr><td><code>List(Arc&lt;Vec&lt;IfaValue&gt;&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>COW via Arc::make_mut</td></tr>
-            <tr><td><code>Map(Arc&lt;HashMap&lt;CompactString, IfaValue&gt;&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>Keys are CompactString, COW</td></tr>
+            <tr><td><code>List(IfaGc&lt;Vec&lt;IfaValue&gt;&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (IfaGc)</td><td>Cycle-collected — Bacon-Rajan</td></tr>
+            <tr><td><code>Map(IfaGc&lt;HashMap&lt;CompactString, IfaValue&gt;&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (IfaGc)</td><td>Cycle-collected — Bacon-Rajan</td></tr>
             <tr><td><code>Fn(Arc&lt;BytecodeFnData&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>name, start_ip, arity, is_async</td></tr>
-            <tr><td><code>Closure(Arc&lt;ClosureData&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>fn_data + captured env</td></tr>
-            <tr><td><code>Upvalue(UpvalueCell)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc&lt;Mutex&gt;)</td><td>Mutable binding cell</td></tr>
+            <tr><td><code>Closure(IfaGc&lt;ClosureData&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (IfaGc)</td><td>Cycle-collected — fn_data + captured env</td></tr>
+            <tr><td><code>Upvalue(UpvalueCell)</code></td><td>8 bytes (pointer)</td><td>Yes (IfaGc&lt;Mutex&gt;)</td><td>Cycle-collected — mutable binding cell</td></tr>
             <tr><td><code>Future(FutureCell)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc&lt;Mutex&gt;)</td><td>async task state</td></tr>
             <tr><td><code>Actor { id, handle }</code></td><td>u64 + pointer</td><td>Yes (Arc&lt;dyn Any&gt;)</td><td>Type-erased actor handle</td></tr>
             <tr><td><code>Return(Arc&lt;IfaValue&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>Return signal with value</td></tr>
             <tr><td><code>Result(Box&lt;ResultPayload&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Box)</td><td>ok/err discriminated</td></tr>
             <tr><td><code>Break / Continue</code></td><td>0 bytes (unit variants)</td><td>No</td><td>Loop control signals</td></tr>
+            <tr><td><code>Set(Arc&lt;HashSet&lt;IfaValue&gt;&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>Ordered set — Arc-backed (not yet cycle-collected)</td></tr>
+            <tr><td><code>NativeFuture(NativeFutureBox)</code></td><td>8 bytes (pointer)</td><td>Yes (Box)</td><td>Rust async operation (Storage, Gpu, etc.)</td></tr>
+            <tr><td><code>Resource(IfaShared&lt;dyn Any + Send&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>Opaque handle to external Rust resource (CpuOponView, etc.)</td></tr>
+            <tr><td><code>AstFn(Arc&lt;AstFnData&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>Interpreted function (interpreter path)</td></tr>
+            <tr><td><code>BytecodeFn(Arc&lt;BytecodeFnData&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>Compiled function (VM path) — alias of Fn</td></tr>
         </table>
 
         <h2 class="section-header">2. Small-Int Pool</h2>
@@ -125,16 +131,54 @@
 
         <h2 class="section-header">6. Send + Sync Design</h2>
 
-        <p>All <code>IfaValue</code> variants use <code>Arc</code> or scalars —
-        never <code>Rc</code> or <code>RefCell</code>. The enum is
-        <code>Send + Sync</code>, enabling:</p>
+        <p><code>IfaValue</code> is <strong>no longer <code>Send</code></strong> — heap variants
+        (<code>List</code>, <code>Map</code>, <code>Closure</code>, <code>Upvalue</code>) use
+        <code>IfaGc&lt;T&gt;</code> which is <code>!Send</code> (per-actor heap isolation).
+        Cross-thread communication goes through serialization (<code>bincode</code>) instead.</p>
+
         <ul>
-            <li>Actor threads sharing values across OS thread boundaries</li>
-            <li><code>IfaShared</code> using <code>Arc&lt;RwLock&gt;</code> / <code>DashMap</code></li>
-            <li>Async task queue with <code>VecDeque&lt;Task&gt;</code></li>
+            <li><strong>Actor messages</strong> are serialized <code>Vec&lt;u8&gt;</code> — always deep copy</li>
+            <li><code>IfaShared</code> uses <code>Arc&lt;RwLock&gt;</code> / <code>DashMap</code>
+            for VM infrastructure, never for user-visible <code>IfaValue</code></li>
+            <li>Scalar variants (<code>Null</code>, <code>Bool</code>, <code>Int</code>, <code>Float</code>,
+            <code>Str</code>) are still trivially <code>Send</code></li>
+            <li><code>Bytecode</code> constant pool is <code>unsafe impl Send/Sync</code> — only primitives
+            and strings, no <code>IfaGc</code> pointers</li>
         </ul>
 
-        <h2 class="section-header">7. Legacy IfaValue (value.rs)</h2>
+        <h2 class="section-header">7. IfaValueSurrogate — Serialization Bridge</h2>
+
+        <p><code>IfaValueSurrogate</code> (<code>value_union.rs:597</code>) is the intermediate representation
+        between <code>IfaValue</code> and <code>bincode</code> bytes. Used by <strong>both</strong> the
+        <code>yanda</code> deep-copy transfer and the <code>Storage</code> persistence engine.</p>
+
+        <pre><code>enum IfaValueSurrogate {
+    Null,
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    Str(String),
+    List(Vec&lt;IfaValue&gt;),           // values remain as IfaValue for recursive serialization
+    Map(HashMap&lt;String, IfaValue&gt;),
+    Set(HashSet&lt;IfaValue&gt;),
+}</code></pre>
+
+        <p>Conversion is a two-step process:</p>
+        <ol>
+            <li><strong><code>IfaValue → IfaValueSurrogate</code></strong> — Replaces GC-backed heap types
+            (<code>IfaGc&lt;Vec&gt;</code>, <code>IfaGc&lt;HashMap&gt;</code>, <code>IfaGc&lt;HashSet&gt;</code>)
+            with their owned equivalents. Non-serializable variants (<code>Fn</code>, <code>Closure</code>,
+            <code>Actor</code>, <code>Future</code>) raise an error.</li>
+            <li><strong><code>IfaValueSurrogate → bincode bytes</code></strong> — Standard serde serialization
+            to <code>Vec&lt;u8&gt;</code>.</li>
+        </ol>
+
+        <p>Deserialization goes the reverse direction, allocating fresh <code>IfaGc</code> handles on the
+        receiving actor's heap. The <code>Set</code> variant was added specifically to enable cross-cutting
+        serialization between <code>yanda</code> and <code>Storage</code> — if a value can be sent across
+        actors, it can also be persisted to disk.</p>
+
+        <h2 class="section-header">8. Legacy IfaValue (value.rs)</h2>
 
         <p>An older <code>IfaValue</code> definition exists at <code>value.rs</code>,
         used when <code>feature = "vm"</code> is not enabled. Differences:</p>

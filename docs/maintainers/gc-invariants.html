@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>GC Invariants — Ifá-Lang Maintainer Docs</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .warn { border-left: 3px solid var(--amber); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+        .good { border-left: 3px solid var(--green); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+        .bad { border-left: 3px solid var(--red); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">gc.ifa</span></div><div class="terminal-body"><header>
+            <h1>GC Invariants &amp; Thread Safety</h1>
+            <p class="subtitle">Architectural rules every maintainer must know</p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified.</strong> Extracted from
+            <code>crates/ifa-types/src/gc.rs</code>,
+            <code>crates/ifa-vm/src/actor.rs</code>,
+            <code>crates/ifa-types/src/bytecode.rs</code>,
+            <code>crates/ifa-types/src/lib.rs</code>.
+        </div>
+
+        <h2 class="section-header">1. Non-Negotiable Invariants</h2>
+
+        <div class="warn">
+            <strong>Violating any of these causes undefined behavior.</strong> No exceptions.
+        </div>
+
+        <ol>
+            <li>
+                <strong>IfaGc is !Send and !Sync.</strong>
+                <code>gc.rs:62</code> — <code>PhantomData&lt;*mut ()&gt;</code> enforces this at the type level.
+                Never add <code>unsafe impl Send</code> to <code>IfaGc</code>. Threads must use serialized
+                <code>Vec&lt;u8&gt;</code> to communicate.
+            </li>
+            <li>
+                <strong>Every actor has its own suspect buffer.</strong>
+                <code>gc.rs:47-49</code> — <code>thread_local! { SUSPECT_BUFFER: RefCell&lt;Vec&lt;...&gt;&gt; }</code>.
+                The Bacon-Rajan collector runs in the actor's own thread and only drains that actor's suspects.
+            </li>
+            <li>
+                <strong>Drop returns early for Color::Red.</strong>
+                <code>gc.rs:136-138</code> — When the collector is dismantling a cycle, it sets color to Red.
+                The <code>Drop</code> impl checks this and returns immediately to prevent double-free.
+            </li>
+            <li>
+                <strong>Buffered invariant.</strong> A node in the suspect buffer always has <code>strong &gt;= 1</code>
+                (the buffer holds its own reference). A node at <code>strong == 0</code> can never be in the buffer.
+            </li>
+            <li>
+                <strong>The prev == 1 fast path must never clone.</strong>
+                <code>gc.rs:143-150</code> — When strong count drops to 0 and the node is not buffered,
+                it is freed immediately. This path must not interact with the suspect buffer.
+            </li>
+            <li>
+                <strong>Clone resets color to Black.</strong>
+                <code>gc.rs:123</code> — <code>h.color.set(Color::Black)</code>. When an <code>IfaGc</code> is cloned,
+                the new reference makes the node externally reachable again, cancelling any pending cycle suspicion.
+            </li>
+        </ol>
+
+        <h2 class="section-header">2. Bytecode Shared Constant Pool</h2>
+
+        <p><code>bytecode.rs:82-85</code>:</p>
+
+        <div class="code-block">
+<pre>// SAFETY: Bytecode constants only contain primitives and strings (no IfaGc cycles).
+unsafe impl Send for Bytecode {}
+unsafe impl Sync for Bytecode {}</pre></div>
+
+        <div class="bad">
+            <strong>Loaded gun.</strong> This is safe today because the compiler never emits <code>IfaGc</code> into the constant pool — only <code>Int</code>, <code>Float</code>, <code>Bool</code>, <code>Null</code>, and <code>Str</code>.
+            If the constant pool ever gains closures or pre-baked <code>List</code>/<code>Map</code> literals,
+            this <code>unsafe impl</code> becomes unsound and must be removed.
+        </div>
+
+        <h2 class="section-header">3. Thread Boundary Architecture</h2>
+
+        <p>There are exactly <strong>three</strong> threading contexts in the native runtime:</p>
+
+        <table class="field-table">
+            <tr><th>Thread</th><th>Has IfaGc?</th><th>Has IfaValue?</th><th>Communication</th></tr>
+            <tr><td>VM (actor)</td><td>Yes — per-actor heap</td><td>Yes — full value system</td><td><code>bincode::serialize</code> → channel</td></tr>
+            <tr><td>Storage worker</td><td>No</td><td>No (only <code>Vec&lt;u8&gt;</code>)</td><td><code>mpsc::SyncSender&lt;StorageCmd&gt;</code></td></tr>
+            <tr><td>GPU worker</td><td>No</td><td>No (only <code>Vec&lt;u8&gt;</code>)</td><td><code>oneshot&lt;Vec&lt;u8&gt;&gt;</code></td></tr>
+        </table>
+
+        <div class="good">
+            <strong>Hardware workers never hold GC pointers.</strong> If you add a new hardware module, follow the
+            <code>crates/ifa-std/src/hardware/storage.rs</code> pattern: serialize at the VM boundary, deserialize on the worker, pass results back through a response channel.
+        </div>
+
+        <h2 class="section-header">4. Feature Gating</h2>
+
+        <p>The <code>IfaGc</code> module is always compiled in <code>ifa-types</code>. There is no feature gate — the GC is a core architectural invariant, not an optional component.</p>
+
+        <ul>
+            <li><code>gc.rs</code> is <code>pub mod gc</code> at <code>lib.rs:37</code> — always available</li>
+            <li><code>IfaGc</code> variants in <code>IfaValue</code> (List, Map, Closure, Upvalue) are always present</li>
+            <li>The <code>gc</code> feature was considered but rejected — gating the collector would require duplicating <code>IfaValue</code> variants, which is worse than the minimal code size of the compiled-but-idle collector</li>
+        </ul>
+
+        <h2 class="section-header">5. Testing GC Code</h2>
+
+        <p>GC tests live in <code>crates/ifa-vm/tests/</code>:</p>
+
+        <ul>
+            <li><code>conformance_tier1.rs</code> — runs <code>ifa</code> binary against <code>.ifa</code> files with <code># expect:</code> comments</li>
+            <li>Cycle-specific test files in <code>tests/</code> exercise cycle formation and reclamation</li>
+            <li>The <code>collect_cycles()</code> function returns the count of freed nodes — assert on this in unit tests</li>
+        </ul>
+
+        <div class="code-block">
+<pre>// Example assertion pattern:
+let freed = ifa_types::gc::collect_cycles();
+assert!(freed &gt; 0, "should have collected the cycle");</pre></div>
+
+        <h2 class="section-header">6. Common Mistakes</h2>
+
+        <table class="field-table">
+            <tr><th>Mistake</th><th>Consequence</th><th>Fix</th></tr>
+            <tr><td>Putting <code>IfaGc</code> in a channel</td><td>Compile error (<code>!Send</code>)</td><td>Serialize to <code>Vec&lt;u8&gt;</code> first</td></tr>
+            <tr><td>Adding closures to constant pool</td><td>UB (Bytecode is <code>unsafe impl Send/Sync</code>)</td><td>Remove <code>unsafe impl</code> and redesign</td></tr>
+            <tr><td>Calling <code>collect_cycles()</code> from non-actor thread</td><td>Panic (thread_local access on wrong thread)</td><td>Only call from actor VM threads</td></tr>
+            <tr><td>Recursive <code>Drop</code> for cycle nodes</td><td>Stack overflow</td><td>Red guard in <code>Drop</code> prevents this — verified</td></tr>
+            <tr><td>Cross-actor <code>IfaShared</code> holding <code>IfaGc</code></td><td>Compile error (<code>!Send</code>)</td><td>Use <code>IfaShared&lt;Vec&lt;u8&gt;&gt;</code> or redesign</td></tr>
+        </table>
+
+        <footer>
+            <p><a href="index.html">← Back to Maintainer Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

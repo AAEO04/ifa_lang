@@ -9,6 +9,7 @@
 </head>
 
 <body>
+    <div id="nav-placeholder"></div>
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list"></ul>
@@ -66,6 +67,14 @@
             <div class="sig">Odi.pa_iwe(path: Str)</div>
             <p>Delete a file.</p>
         </div>
+
+        <h2>Example</h2>
+        <pre class="code-yoruba"><code>ayanmo content = Odi.ka("hello.txt");
+Irosu.fo(content);
+Odi.ko("output.txt", "Ifá-Lang");</code></pre>
+        <pre class="code-english" style="display:none"><code>let content = Odi.read("hello.txt");
+Irosu.println(content);
+Odi.write("output.txt", "Ifá-Lang");</code></pre>
 
         <footer>
             <p><a href="../index.html">← Back to Documentation</a></p>

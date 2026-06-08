@@ -7,7 +7,7 @@
     <title>Language Internals - Ifa-Lang</title>
     <meta name="description" content="Internal architecture of Ifa-Lang for contributors and advanced users">
     <link rel="stylesheet" href="../../js/common.css">
-    <script src="../../js/nav.js" defer></script>
+    <script src="../../js/nav.js"></script>
 </head>
 
 <body>
@@ -29,7 +29,7 @@
 
         <div class="step">
             <h2>Runtime Architecture</h2>
-            <p>Ifa-Lang implements a compilation pipeline: parser (ifa-parser, pest grammar + logos lexer) to AST to bytecode (ifa-compiler) executed by IfaVM (ifa-vm). Two execution paths exist: tree-walking interpreter (ifa-interpreter) and bytecode VM (ifa-vm). Both parse and compile via the same pipeline.</p>
+            <p>Ifa-Lang implements a compilation pipeline: parser (ifa-parser, pest grammar + logos lexer) to AST to bytecode (ifa-compiler) executed by IfaVM (ifa-vm). The tree-walking interpreter (ifa-interpreter) has been archived — all execution goes through the bytecode VM pipeline.</p>
 
             <div class="runtime-diagram">
                 <div class="tier">
@@ -46,11 +46,6 @@
                     <h3>IfaVM</h3>
                     <p>Bytecode VM with step() dispatch loop, Opon epoch memory system.</p>
                     <p><strong>Source:</strong> <code>crates/ifa-vm/</code></p>
-                </div>
-                <div class="tier">
-                    <h3>IfaInterpreter</h3>
-                    <p>Tree-walking AST interpreter (alternative execution path).</p>
-                    <p><strong>Source:</strong> <code>crates/ifa-interpreter/</code></p>
                 </div>
                 <div class="tier">
                     <h3>IfaTranspiler</h3>
@@ -100,15 +95,15 @@
                 <li>13 = Irete (crypto), 14 = Ose (game), 15 = Ofun</li>
                 <li>18 = CPU, 19 = GPU, 20 = Storage, 29 = Sys</li>
             </ul>
-            <p>Each domain has a dispatch function matching method names (with aliases) to handlers. Stateless dispatchers exist for Ogbe, Oyeku, Iwori, Owonrin, Obara, Okanran, Ogunda, Osa, Ika, Oturupon, Ofun. Stateful dispatchers (needing Esu/Esu) exist for Odi, Irosu, Otura, Irete.</p>
+            <p>Each domain has a dispatch function matching method names (with aliases) to handlers. All dispatchers follow the same pattern, with some domains requiring additional runtime context for file/network operations.</p>
         </div>
 
         <div class="step">
             <h2>Feature Flag System</h2>
             <p>Granular feature flags control domain availability:</p>
             <ul>
-                <li>Always-available: ogbe, oyeku, iwori, irosu, owonrin, obara, okanran, ogunda, ika, oturupon, ofun</li>
-                <li>Gated: odi/osa/otura (backend), ose (game), irete (crypto)</li>
+                <li>Always-available: ogbe, oyeku, iwori, odi, irosu, owonrin, obara, okanran, ogunda, ika, oturupon, ofun</li>
+                <li>Gated: osa (async_runtime), otura (network), ose (tui), irete (crypto)</li>
                 <li>Stacks: crypto, backend, frontend, gamedev, ml, iot, fusion</li>
                 <li>Infra: ffi (polyglot), cpu (parallel), gpu (wgpu), storage (tokio+persistence), sys (sysinfo)</li>
             </ul>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Alias, AssertType & Visibility — Ifá-Lang Tutorial</title>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">tutorial.37.ifa</span></div><div class="terminal-body"><header>
+            <h1>37. Alias, AssertType & Visibility</h1>
+            <p class="subtitle">Type aliases, runtime type checks, and access control</p>
+        </header>
+
+        <h2 class="section-header">1. Alias — Type Aliases</h2>
+
+        <p><code>alias</code> / <code>oruko</code> creates a type alias — a new name for an existing type. This is purely a compile-time concept; no code is generated:</p>
+
+        <div class="code-block">
+<pre>// Create type aliases
+alias UserId = Int;
+alias JsonString = Str;
+alias Callback = fn(Int) -> Str;
+
+// Use them in type annotations
+ayanmo uid: UserId = 42;
+ayanmo json: JsonString = '{"key": "value"}';
+
+// Aliases are transparent — UserId and Int are the same type
+ayanmo sum: Int = uid + 8;  // 50</pre></div>
+
+        <p>Aliases improve code readability without runtime overhead:</p>
+
+        <div class="code-block">
+<pre>// Without alias — hard to read
+ese find_user(id: Int, db: Map) -> Map { ... }
+
+// With alias — self-documenting
+alias UserId = Int;
+alias Database = Map;
+alias UserRecord = Map;
+
+ese find_user(id: UserId, db: Database) -> UserRecord { ... }</pre></div>
+
+        <h2 class="section-header">2. AssertType — Runtime Type Checks</h2>
+
+        <p><code>assert_type(value, TypeName)</code> checks at runtime that a value has the expected type. It throws if the check fails:</p>
+
+        <div class="code-block">
+<pre>ayanmo value = Ogunda.yan([1, "two", 3], random_selector);
+assert_type(value, Int);  // Throws if value is not an Int
+
+// Works with all type names
+assert_type(42, Int);
+assert_type(3.14, Float);
+assert_type("hello", Str);
+assert_type(true, Bool);
+assert_type([1, 2, 3], List);
+assert_type({"a": 1}, Map);</pre></div>
+
+        <p>This is useful at API boundaries where you want to validate inputs:</p>
+
+        <div class="code-block">
+<pre>ese process_config(raw) {
+    assert_type(raw, Map);
+    
+    ayanmo port = raw["port"];
+    assert_type(port, Int);
+    
+    ayanmo host = raw["host"];
+    assert_type(host, Str);
+    
+    Irosu.fo($"Connecting to {host}:{port}");
+}</pre></div>
+
+        <h2 class="section-header">3. Visibility — Public and Private</h2>
+
+        <p>By default, all items are <strong>private</strong> — accessible only within the same module. Use <code>gbangba</code> / <code>public</code> / <code>pub</code> to expose them:</p>
+
+        <div class="code-block">
+<pre>// Private function — internal to this module
+ese helper() {
+    Irosu.fo("internal");
+}
+
+// Public function — part of the module API
+gbangba ese run() {
+    helper();  // Can call private items within the same module
+    Irosu.fo("running");
+}
+
+// Public constant
+gbangba const VERSION = "2.0.0";</pre></div>
+
+        <h2 class="section-header">4. Visibility on Odù Methods</h2>
+
+        <p>Class methods also support visibility:</p>
+
+        <div class="code-block">
+<pre>odu Server {
+    // Public — callable from outside
+    gbangba ese start() {
+        init_socket();
+    }
+    
+    // Private — internal only
+    ese init_socket() {
+        Irosu.fo("Socket initialized");
+    }
+}</pre></div>
+
+        <div class="warn" style="border-left: 3px solid var(--amber); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem;">
+            <strong>Note:</strong> Ifá-Lang also supports <code>ikoko</code> / <code>adani</code> / <code>private</code> for explicit private declarations, though private is the default.
+        </div>
+
+        <p><a href="index.html">← Back to Tutorial Index</a></p>
+    </div></div>
+    <script src="../../js/nav.js"></script>
+    <script src="../../js/common.js"></script>
+</body>
+</html>

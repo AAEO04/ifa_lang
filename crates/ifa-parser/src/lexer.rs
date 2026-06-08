@@ -204,6 +204,12 @@ pub enum Token {
     #[token("class")]
     Class,
 
+    #[token("iwa")]
+    #[token("ìwà")]
+    #[token("protocol")]
+    #[token("interface")]
+    Iwa,
+
     // Async
     #[token("daro")]
     #[token("dàrò")]

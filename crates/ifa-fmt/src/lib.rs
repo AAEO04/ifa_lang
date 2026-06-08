@@ -4,27 +4,21 @@
 //! Uses a Token Stream approach to preserve comments.
 
 #![forbid(unsafe_code)]
-
 use ifa_parser::{Token, tokenize};
 
 /// Formatting configuration
 #[derive(Debug, Clone)]
 pub struct FormatterConfig {
     pub indent_size: usize,
-    pub max_width: usize,
 }
 
 impl Default for FormatterConfig {
     fn default() -> Self {
-        Self {
-            indent_size: 4,
-            max_width: 100,
-        }
+        Self { indent_size: 4 }
     }
 }
 
 /// Format Ifá-Lang source code
-#[allow(clippy::collapsible_if)]
 pub fn format(source: &str, config: FormatterConfig) -> String {
     let tokens = tokenize(source);
     let mut formatted = String::with_capacity(source.len() * 2);
@@ -72,12 +66,11 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
                     formatted.push_str(" {");
                 }
                 indent_level += 1;
-                if let Some(next) = iter.peek() {
-                    if !matches!(next.value, Token::Newline) {
+                if let Some(next) = iter.peek()
+                    && !matches!(next.value, Token::Newline) {
                         formatted.push('\n');
                         is_start_of_line = true;
                     }
-                }
             }
             Token::RBrace => {
                 formatted.push('}');
@@ -100,12 +93,11 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
             }
             Token::Semicolon => {
                 formatted.push(';');
-                if let Some(next) = iter.peek() {
-                    if !matches!(next.value, Token::Newline | Token::Comment(_)) {
+                if let Some(next) = iter.peek()
+                    && !matches!(next.value, Token::Newline | Token::Comment(_)) {
                         formatted.push('\n');
                         is_start_of_line = true;
                     }
-                }
             }
             Token::Comma => {
                 formatted.push(',');
@@ -131,10 +123,9 @@ pub fn format(source: &str, config: FormatterConfig) -> String {
             Token::And => formatted.push_str(" && "),
             Token::Or => formatted.push_str(" || "),
             Token::Plus | Token::Minus | Token::Star | Token::Slash | Token::Percent => {
-                // Spacing around math operators? "x+y" vs "x + y".
-                // Linus prefers space.
+                // Spacing around math operators? "x + y"
                 formatted.push(' ');
-                formatted.push_str(original_text);
+                formatted.push_str(original_text.trim());
                 formatted.push(' ');
             }
             Token::FatArrow => formatted.push_str(" => "),

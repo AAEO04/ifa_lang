@@ -142,26 +142,10 @@ impl Odi {
 
     /// Check if file exists (wà)
     pub fn wa(&self, path: &str) -> bool {
-        // Checking existence requires read perm on parent or file
-        let path_obj = Path::new(path);
-        let parent = path_obj.parent().unwrap_or(Path::new(""));
-        let parent_canon = parent
-            .canonicalize()
-            .unwrap_or_else(|_| parent.to_path_buf());
-        let canonical = parent_canon.join(path_obj.file_name().unwrap_or_default());
-        if self
-            .esu
-            .enforce_crossroads(
-                &Ofun::ReadFiles {
-                    root: canonical.clone(),
-                },
-                "Odi::wa",
-            )
-            .is_err()
-        {
-            return false;
+        match self.check_read(Path::new(path)) {
+            Ok(canonical) => canonical.exists(),
+            Err(_) => false,
         }
-        canonical.exists()
     }
 
     /// Delete file (pa fáìlì)

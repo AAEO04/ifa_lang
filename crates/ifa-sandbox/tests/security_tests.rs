@@ -1,6 +1,5 @@
 //! Comprehensive security tests for ifa-sandbox
 
-#![allow(unused_variables)]
 use ifa_sandbox::*;
 use std::path::PathBuf;
 use std::time::Duration;

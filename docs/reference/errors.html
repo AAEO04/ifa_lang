@@ -7,7 +7,7 @@
     <title>Error Reference - Ifa-Lang</title>
     <meta name="description" content="Complete error reference for Ifa-Lang with Yoruba proverbs and error codes">
     <link rel="stylesheet" href="../js/common.css">
-    <script src="../js/nav.js" defer></script>
+    <script src="../js/nav.js"></script>
 </head>
 
 <body>
@@ -215,7 +215,20 @@ ayanmo age = map["age"];</code></pre>
                 <div class="error-card">
                     <h4>OponExhausted</h4>
                     <p><strong>Proverb:</strong> "Igba meji ki i wo inu awo kan. (Two times cannot fit in one calabash.)"</p>
+                    <p><strong>Message:</strong> "Opon (memory) exhausted: requested {requested}, available {available}"</p>
                     <p><strong>Code:</strong> OutOfMemory</p>
+                    <div class="code-example">
+                        <pre><code>// Raised when slot allocation exceeds the #opon capacity
+#opon arinrin;    // 4,096 slots
+ayanmo data = allocate_large_dataset();  // tries >4,096 → OponExhausted</code></pre>
+                    </div>
+                    <p><strong>Troubleshooting:</strong></p>
+                    <ul>
+                        <li>Switch to a larger size: <code>#opon nla</code> (65,536 slots) or <code>#opon ailopin</code> (dynamic)</li>
+                        <li>Use <code>ebo { ... }</code> epochs to release memory between phases</li>
+                        <li>Check for unbounded allocation in loops</li>
+                        <li>During development, prefer <code>#opon ailopin</code> then profile to choose the tightest size for production</li>
+                    </ul>
                 </div>
 
                 <div class="error-card">

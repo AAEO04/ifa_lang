@@ -11,13 +11,14 @@ name = "ifa"
 path = "src/main.rs"
 
 [dependencies]
-ifa-vm = { path = "../ifa-vm", features = ["std", "sysinfo", "parallel", "gpu", "compiler"] }
+ifa-vm = { path = "../ifa-vm", default-features = false }
 ifa-parser = { path = "../ifa-parser" }
-ifa-std = { path = "../ifa-std", features = ["kernel", "sysinfo", "gpu", "parallel", "persistence", "network", "database", "async_runtime", "tui"] }
+ifa-std = { path = "../ifa-std", default-features = false }
 ifa-babalawo = { path = "../ifa-babalawo" }
 ifa-fmt = { path = "../ifa-fmt" }
 ifa-sandbox = { path = "../ifa-sandbox" }
 ifa-types = { path = "../ifa-types", features = ["vm"] }
+ifa-infra = { path = "../ifa-infra", features = ["persistence"] }
 
 # CLI
 clap.workspace = true
@@ -49,5 +50,22 @@ ring.workspace = true
 
 # System info for memory tracking
 sysinfo = "0.30"
+ifa-compiler = { version = "1.3.0", path = "../ifa-compiler" }
 
 
+dirs = "5.0"
+rayon.workspace = true
+
+
+[features]
+default = ["full"]
+full = [
+    "ifa-std/full", 
+    "ifa-vm/std", "ifa-vm/sysinfo", "ifa-vm/parallel", "ifa-vm/gpu", "ifa-vm/compiler", 
+    "ifa-types/vm", 
+    "ifa-infra/persistence"
+]
+minimal = [
+    "ifa-vm/std", "ifa-vm/compiler", 
+    "ifa-types/vm"
+]

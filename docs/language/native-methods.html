@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Native Array Methods — Ifá-Lang</title>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">native-methods.ifa</span></div><div class="terminal-body"><header>
+            <h1>Native Array Methods</h1>
+            <p class="subtitle">Ergonomic method-call syntax for arrays, coexisting with Ogunda and Cpu</p>
+        </header>
+
+        <p>Ifá-Lang now supports native methods directly on array values — <code>my_array.map(closure)</code>, <code>my_array.sort()</code>, and more. These coexist with the existing Ogunda domain procedures and the Cpu infrastructure domain, each serving a different paradigm.</p>
+
+        <h2 class="section-header">Available Methods</h2>
+
+        <p>These methods are implemented directly in the VM (<code>vm.rs</code>) and work on any <code>List</code> / <code>Array</code> value:</p>
+
+        <div class="code-block">
+<pre>ayanmo numbers = [3, 1, 4, 1, 5, 9];
+
+// Map — apply a closure to each element
+ayanmo doubled = numbers.map(fn(x) { x * 2 });
+// [6, 2, 8, 2, 10, 18]
+
+// Sort — in-place mutation
+numbers.sort();
+// [1, 1, 3, 4, 5, 9]
+
+// Filter — keep elements matching a predicate
+ayanmo evens = numbers.filter(fn(x) { x % 2 == 0 });
+// [4]
+
+// Reduce — fold over elements
+ayanmo sum = numbers.reduce(fn(acc, x) { acc + x }, 0);
+// 23
+
+// Find — first match
+ayanmo first = numbers.find(fn(x) { x > 5 });
+// 9
+
+// Every / Some — boolean checks
+ayanmo all_positive = numbers.every(fn(x) { x > 0 });
+ayanmo has_zero = numbers.some(fn(x) { x == 0 });</pre></div>
+
+        <h2 class="section-header">Relationship with Ogunda</h2>
+
+        <p>The <code>Ogunda</code> domain (<code>docs/domains/ogunda.html</code>) is <strong>unaffected</strong> by native methods, but for many cases the new syntax is more ergonomic:</p>
+
+        <table class="field-table">
+            <tr><th>Approach</th><th>Syntax</th><th>Mechanism</th></tr>
+            <tr>
+                <td>Native method</td>
+                <td><code>my_array.map(fn(x) { x * 2 })</code></td>
+                <td>Direct VM dispatch via <code>vm.rs</code> — executes bytecode closures in an isolated context</td>
+            </tr>
+            <tr>
+                <td>Ogunda</td>
+                <td><code>Ogunda.map(my_array, my_closure)</code></td>
+                <td>Uses <code>ctx.call_value</code> → <code>spawn_task / await_future</code> in <code>vm_registry.rs</code></td>
+            </tr>
+        </table>
+
+        <p>Both use the <strong>same isolated execution mechanism</strong> under the hood. There is no performance penalty for choosing one over the other. Ogunda continues to work perfectly as a pure functional library — choose whichever style fits your code.</p>
+
+        <h2 class="section-header">Relationship with Cpu</h2>
+
+        <p>The <code>Cpu</code> domain (<code>docs/infrastructure/infra/cpu.html</code>) is also <strong>unaffected</strong>. It operates on a completely different tier of data:</p>
+
+        <table class="field-table">
+            <tr><th>Aspect</th><th>Native .map()</th><th>Cpu.par_map()</th></tr>
+            <tr><td>Data</td><td>Any <code>IfaValue</code> — strings, nested maps, objects, mixed types</td><td>Exclusively <code>CpuOponView</code> — a zero-copy <code>f32</code> hardware buffer wrapped in a Resource token</td></tr>
+            <tr><td>Closures</td><td>Arbitrary Ifá-Lang bytecode closures</td><td>String identifiers for pre-compiled Rust math kernels (<code>"square"</code>, <code>"double"</code>, <code>"abs"</code>)</td></tr>
+            <tr><td>Execution</td><td>VM interpreter loop (per-element)</td><td>Rayon parallel iterator over native CPU vectors</td></tr>
+            <tr><td>Sorting</td><td>Generic dynamic sort via <code>IfaValue::partial_cmp</code> — handles mixed types safely</td><td>Strips VM boxing, converts to raw <code>f64</code>/<code>i64</code> vectors, sorts with native CPU SIMD</td></tr>
+        </table>
+
+        <h2 class="section-header">When to Use Which</h2>
+
+        <ul style="margin-left: 1.5rem;">
+            <li><strong>Day-to-day scripting:</strong> Use <code>my_array.map()</code> — modern, ergonomic, works with any data type.</li>
+            <li><strong>Functional pipelines:</strong> Use <code>Ogunda.map()</code> when you prefer a procedural style or are already in an Ogunda-heavy codebase.</li>
+            <li><strong>High-performance numerical computation:</strong> Use <code>Cpu.par_map()</code> and <code>Cpu.par_sort()</code> — they bypass the VM interpreter loop entirely and operate on native hardware buffers in parallel.</li>
+        </ul>
+
+        <footer>
+            <p><a href="index.html">Language Documentation</a> · <a href="../domains/ogunda.html">Ogunda Domain</a> · <a href="../infrastructure/infra/cpu.html">Cpu Infrastructure</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+
+</html>

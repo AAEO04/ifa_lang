@@ -8,6 +8,12 @@ pub struct EffectChecker {
     pub in_function: bool,
 }
 
+impl Default for EffectChecker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EffectChecker {
     pub fn new() -> Self {
         Self {

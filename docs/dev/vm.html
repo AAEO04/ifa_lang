@@ -18,6 +18,7 @@
 </head>
 
 <body>
+    <div id="nav-placeholder"></div>
     <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
     <div class="container">
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">vm.ifa</span></div><div class="terminal-body">
@@ -108,7 +109,7 @@ pub fn tap(vm: &mut IfaVM, bytecode: &Bytecode) -> IfaResult&lt;OpCode&gt; {
         <ul>
             <li>Fuel decremented in chunks of 1024 — amortized, not per-opcode</li>
             <li>Bounds-check on instruction fetch (safe for interpreter, would omit in JIT)</li>
-            <li>~80 opcode variants defined in <code>ifa-bytecode/src/lib.rs:42</code></li>
+            <li>93 opcode variants defined in <code>ifa-bytecode/src/lib.rs:42</code></li>
             <li>Each variant has: mnemonic, operand_bytes, stack_effect (defined inline)</li>
         </ul>
 

@@ -138,5 +138,5 @@ pub mod irosu {
 /// Check if a method name matches any of the aliases
 #[inline]
 pub fn matches_method(method: &str, aliases: &[&str]) -> bool {
-    aliases.iter().any(|&alias| method == alias)
+    aliases.contains(&method)
 }

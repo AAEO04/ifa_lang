@@ -76,3 +76,32 @@ pub struct MemoryStats {
     pub available: u64,
     pub used: u64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_num_cores() {
+        let cores = num_cores();
+        assert!(cores > 0, "Number of cores must be greater than zero");
+    }
+
+    #[cfg(feature = "sysinfo")]
+    #[test]
+    fn test_memory_stats() {
+        let stats = memory_stats();
+        assert!(stats.total > 0, "Total memory must be greater than zero");
+        assert!(
+            stats.available > 0 || stats.used > 0,
+            "Must have some memory usage or availability recorded"
+        );
+    }
+
+    #[cfg(feature = "sysinfo")]
+    #[test]
+    fn test_uptime() {
+        let up = uptime();
+        assert!(up >= 0);
+    }
+}

@@ -107,13 +107,16 @@ The compilation pipeline is:
 Source text → pest PEG parser → AST (Program) → Compiler → Bytecode
 ```
 
-No intermediate representation (IR). No optimization passes. No monomorphization.
+No intermediate representation (IR). Limited targeted optimizations. No monomorphization.
 
 From `ifa-compiler/src/lib.rs`:
 
 - Single `compile()` function that iterates statements once (`line 115+`)
 - String deduplication via `HashMap<String, u16>` for the string table
-- No inlining, no constant folding, no dead code elimination
+- Constant folding (`fold_expression`, line 1775): binary ops on literal ints/floats/bools/strings evaluated at compile time; "E6: Constant Divination" folds `Obara.fikun`, `Obara.isodipupo`, `Ika.gigun`/`Ika.len`/`Ika.upper`/`Ika.lower` calls with constant arguments (lines 1937-2036)
+- Tail-call optimization: `return f(x)` → emits `TailCall` instead of `Call+Return` (lines 601-623)
+- Static Odu method resolution: emits `CallOduFast` with integer IDs instead of string-based `CallOdu` (line 1633)
+- No inlining, no dead code elimination
 
 From `ifa-parser/src/parser.rs` (indirectly via `pest`):
 
@@ -125,7 +128,7 @@ From `ifa-parser/src/parser.rs` (indirectly via `pest`):
 | Feature | Status |
 |---------|--------|
 | IR (intermediate representation) | ❌ Source → bytecode directly |
-| Optimization passes | ❌ None |
+| Full optimization pipeline | ❌ Only targeted passes |
 | Lazy/modular compilation | ❌ Full parse every time |
 | Incremental parsing | ❌ Full text re-parsed |
 | Parallel compilation | ❌ No rayon/threading |

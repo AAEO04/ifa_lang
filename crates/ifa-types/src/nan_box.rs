@@ -3,6 +3,7 @@
 //! This module intentionally exposes only a safe API. Bit layout knowledge
 //! stays here so the VM can migrate opcode handlers without open-coding masks.
 
+
 const QUIET_NAN_BITS: u64 = 0x7ff8_0000_0000_0000;
 const TAG_MASK: u64 = 0x0007_0000_0000_0000;
 const PAYLOAD_MASK: u64 = 0x0000_ffff_ffff_ffff;
@@ -38,8 +39,6 @@ pub enum NanBoxError {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct NanBox(u64);
-
-#[allow(clippy::should_implement_trait)]
 impl NanBox {
     #[inline(always)]
     pub const fn from_null() -> Self {
@@ -182,6 +181,7 @@ impl NanBox {
 
     // --- Arithmetic ---
 
+    #[allow(clippy::should_implement_trait)]
     pub fn add(self, other: Self) -> Option<Self> {
         let pa = self.to_primitive().ok()?;
         let pb = other.to_primitive().ok()?;
@@ -201,6 +201,7 @@ impl NanBox {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn sub(self, other: Self) -> Option<Self> {
         let pa = self.to_primitive().ok()?;
         let pb = other.to_primitive().ok()?;
@@ -220,6 +221,7 @@ impl NanBox {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn mul(self, other: Self) -> Option<Self> {
         let pa = self.to_primitive().ok()?;
         let pb = other.to_primitive().ok()?;
@@ -239,6 +241,7 @@ impl NanBox {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn div(self, other: Self) -> Result<NanBox, NanBoxError> {
         let pa = self.to_primitive().map_err(|_| NanBoxError::TypeMismatch)?;
         let pb = other

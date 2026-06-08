@@ -11,7 +11,7 @@
 
         // GitHub Pages: aaeo04.github.io/ifa_lang/...
         // The /ifa_lang/ folder IS the docs root
-        if (host.includes('github.io')) {
+        if (host === 'github.io' || host.endsWith('.github.io')) {
             // Count depth from the repo root (first segment after host)
             const segments = path.split('/').filter(s => s && !s.endsWith('.html'));
             // segments[0] is 'ifa_lang', so depth = segments.length - 1
@@ -68,9 +68,10 @@
                 { href: 'language/types-crate.html', label: '🏗️ Types' },
                 { href: 'language/macros.html', label: '⚙️ Macros' },
                 { href: 'language/philosophy.html', label: '🔮 Philosophy' },
-                { href: 'ajose.html', label: '🔄 Àjọṣe (Reactivity)' },
-                { href: 'ebo.html', label: '🛡️ Ebo (Resources)' },
-                { href: 'ewo.html', label: '🚫 Ewo (Assertions)' }
+                { href: 'language/ajose.html', label: '🔄 Àjọṣe (Reactivity)' },
+                { href: 'language/ebo.html', label: '🛡️ Ebo (Resources)' },
+                { href: 'language/ewo.html', label: '🚫 Ewo (Assertions)' },
+                { href: 'language/native-methods.html', label: '📊 Native Methods' }
             ]
         },
         {
@@ -97,7 +98,7 @@
             label: '💡 Examples',
             items: [
                 { href: 'examples/examples.html', label: '📚 Examples Gallery' },
-                { href: 'playground.html', label: '🎮 Playground' },
+                { href: 'examples/playground.html', label: '🎮 Playground' },
                 { href: 'examples/use-cases/index.html', label: '🔧 Use Cases' },
                 { href: 'examples/showcase-life.html', label: '🧬 Life Simulation' }
             ]
@@ -167,7 +168,7 @@
                 { href: 'community/contributing.html', label: '🤝 Contributing' },
                 { href: 'community/babalawo.html', label: '🧙‍♂️ Babalawo' },
                 { href: 'community/changelog.html', label: '📋 Changelog' },
-                { href: 'faq.html', label: '❓ FAQ' }
+                { href: 'community/faq.html', label: '❓ FAQ' }
             ]
         },
         {
@@ -274,6 +275,72 @@
         }
     };
 
+    // Build breadcrumbs from path
+    function buildBreadcrumbs() {
+        const list = document.querySelector('.breadcrumb-list');
+        if (!list) return;
+
+        const path = window.location.pathname;
+        const segments = path.replace(/\.html$/, '').split('/').filter(Boolean);
+
+        // Find the docs root segment index
+        const docsIdx = segments.indexOf('docs');
+        if (docsIdx === -1) return;
+
+        // Extract path segments after 'docs/' (exclude the filename itself)
+        const dirSegments = segments.slice(docsIdx + 1, -1);
+        const fileName = segments[segments.length - 1];
+
+        // Build breadcrumb HTML
+        const crumbs = [{ label: '🏠 Home', href: ROOT + 'index.html' }];
+
+        // Accumulate path for intermediate crumbs
+        let accumulated = '';
+        for (const seg of dirSegments) {
+            accumulated += seg + '/';
+            const label = breadcrumbLabel(seg);
+            crumbs.push({ label, href: ROOT + accumulated + 'index.html' });
+        }
+
+        // Current page — get title from h1 or document
+        const h1 = document.querySelector('h1');
+        const pageLabel = h1 ? h1.textContent.trim() : (fileName || 'Page');
+        crumbs.push({ label: pageLabel, href: null });
+
+        // Render
+        list.innerHTML = crumbs.map((c, i) => {
+            const sep = i > 0 ? '<span class="breadcrumb-sep">›</span>' : '';
+            if (c.href) {
+                return `<li>${sep}<a href="${c.href}">${c.label}</a></li>`;
+            }
+            return `<li>${sep}<span class="current">${c.label}</span></li>`;
+        }).join('');
+    }
+
+    function breadcrumbLabel(seg) {
+        const map = {
+            'language': 'Language Reference',
+            'domains': 'Domains',
+            'infrastructure': 'Infrastructure',
+            'infra': 'Infrastructure',
+            'internals': 'Internals',
+            'tutorials': 'Tutorials',
+            'tour': 'Tour',
+            'advanced': 'Advanced',
+            'dev': 'Dev Docs',
+            'maintainers': 'Maintainers',
+            'community': 'Community',
+            'examples': 'Examples',
+            'use-cases': 'Use Cases',
+            'deployment': 'Deployment',
+            'reference': 'Reference',
+            'tools': 'Tools',
+            'getting-started': 'Getting Started',
+            'api': 'API'
+        };
+        return map[seg] || seg.charAt(0).toUpperCase() + seg.slice(1);
+    }
+
     // Insert navigation
     document.addEventListener('DOMContentLoaded', function () {
         const navPlaceholder = document.getElementById('nav-placeholder');
@@ -290,30 +357,17 @@
             document.body.appendChild(highlightScript);
         }
 
+        buildBreadcrumbs();
+
         // Load universal language switcher (for all pages with code)
-        // Guard: only inject if not already present as a static <script> tag
         const langSwitcherStyle = document.createElement('link');
         langSwitcherStyle.rel = 'stylesheet';
         langSwitcherStyle.href = ROOT + 'js/language-switcher.css';
         document.head.appendChild(langSwitcherStyle);
 
-        const alreadyLoaded =
-            typeof wordMappings !== 'undefined' ||
-            document.querySelector('script[src*="language-switcher.js"]');
-
-        if (!alreadyLoaded) {
-            const langSwitcherScript = document.createElement('script');
-            langSwitcherScript.src = ROOT + 'js/language-switcher.js';
-            langSwitcherScript.onload = function () {
-                if (typeof enhanceAllCodeExamples === 'function') {
-                    enhanceAllCodeExamples();
-                }
-            };
-            document.head.appendChild(langSwitcherScript);
-        } else if (typeof enhanceAllCodeExamples === 'function') {
-            // Script already present — just initialize
-            enhanceAllCodeExamples();
-        }
+        const langSwitcherScript = document.createElement('script');
+        langSwitcherScript.src = ROOT + 'js/language-switcher.js';
+        document.head.appendChild(langSwitcherScript);
     });
 
     // Export for use in other scripts

@@ -8,6 +8,7 @@ description = "Infrastructure layer for Ifá-Lang (CPU, GPU, Storage, Kernel)"
 
 [dependencies]
 ifa-types = { path = "../ifa-types" }
+ifa-embedded = { path = "../ifa-embedded", features = ["alloc"] }
 
 tokio = { workspace = true, optional = true }
 sysinfo = { workspace = true, optional = true }
@@ -46,4 +47,3 @@ gpu_native = ["gpu", "tokio", "pollster"]
 persistence = ["bincode", "tokio/fs", "tokio/io-util"]
 kernel = ["sysinfo"]
 sysinfo = ["dep:sysinfo"]
-profiling = []

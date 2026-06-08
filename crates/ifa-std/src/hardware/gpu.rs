@@ -2,9 +2,9 @@
 
 #[cfg(feature = "gpu")]
 use ifa_infra::gpu::GpuContext;
-use ifa_types::value_union::{FutureCell, FutureState, IfaValue};
+use ifa_types::value_union::{IfaValue, NativeFutureCell, NativeFutureState};
 use ifa_types::{IfaError, IfaResult};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use wgpu;
 
 #[cfg(target_arch = "wasm32")]
@@ -26,18 +26,18 @@ unsafe impl Send for GpuBufferView {}
 #[cfg(all(feature = "gpu", target_arch = "wasm32"))]
 unsafe impl Sync for GpuBufferView {}
 
-fn pending_cell() -> FutureCell {
-    Arc::new(Mutex::new(FutureState::Pending))
+fn pending_cell() -> NativeFutureCell {
+    Arc::new(std::sync::RwLock::new(NativeFutureState::Pending))
 }
 
-fn resolve_cell(cell: &FutureCell, value: IfaValue) {
-    if let Ok(mut lock) = cell.lock() {
-        *lock = FutureState::Ready(value);
+fn resolve_cell(cell: &NativeFutureCell, value: IfaValue) {
+    if let Ok(mut lock) = cell.write() {
+        *lock = NativeFutureState::Ready(bincode::serialize(&value).unwrap());
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn spawn_native_task<F>(name: &str, cell: FutureCell, task: F) -> IfaResult<IfaValue>
+fn spawn_native_task<F>(name: &str, cell: NativeFutureCell, task: F) -> IfaResult<IfaValue>
 where
     F: FnOnce() -> IfaValue + Send + 'static,
 {
@@ -47,11 +47,11 @@ where
         .spawn(move || resolve_cell(&future_cell, task()))
         .map_err(|e| IfaError::Runtime(format!("{name} thread spawn failed: {e}")))?;
 
-    Ok(IfaValue::Future(cell))
+    Ok(IfaValue::NativeFuture(cell))
 }
 
 #[cfg(target_arch = "wasm32")]
-fn spawn_wasm_task<F>(cell: FutureCell, task: F) -> IfaValue
+fn spawn_wasm_task<F>(cell: NativeFutureCell, task: F) -> IfaValue
 where
     F: std::future::Future<Output = IfaValue> + 'static,
 {
@@ -60,7 +60,7 @@ where
         let value = task.await;
         resolve_cell(&cell_clone, value);
     });
-    IfaValue::Future(cell)
+    IfaValue::NativeFuture(cell)
 }
 
 #[cfg(feature = "gpu")]
@@ -344,5 +344,5 @@ fn bytes_to_ifa_list(bytes: &[u8], size_in_floats: usize) -> IfaValue {
     for &f in floats.iter().take(size_in_floats) {
         list.push(IfaValue::Float(f as f64));
     }
-    IfaValue::List(Arc::new(list))
+    IfaValue::List(ifa_types::gc::IfaGc::new(list))
 }

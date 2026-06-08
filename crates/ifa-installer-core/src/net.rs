@@ -1,3 +1,4 @@
+#![allow(clippy::result_large_err)]
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::fs::File;
@@ -17,6 +18,7 @@ const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 
 #[derive(Error, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum NetError {
     #[error("Network error: {0}")]
     Request(#[from] ureq::Error),
@@ -118,14 +120,12 @@ impl NetManager {
         if let Some(content_length) = response
             .header("Content-Length")
             .and_then(|h| h.parse::<u64>().ok())
-        {
-            if content_length > MAX_DOWNLOAD_SIZE {
+            && content_length > MAX_DOWNLOAD_SIZE {
                 return Err(NetError::FileTooLarge {
                     size: content_length,
                     limit: MAX_DOWNLOAD_SIZE,
                 });
             }
-        }
 
         // Stream download with size tracking
         let file = File::create(path)?;

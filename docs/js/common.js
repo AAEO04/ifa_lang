@@ -1,16 +1,8 @@
 /**
  * Ifá-Lang Documentation Common JavaScript
- * Version: 1.3.0
+ * Version: 1.4.0
+ * Language switching lives in language-switcher.js (single source of truth).
  */
-
-// Initialize language switcher universally
-function initLanguageSwitcher() {
-    // Only initialize if language switcher is available
-    if (typeof enhanceAllCodeExamples === 'function') {
-        enhanceAllCodeExamples();
-        console.log('Language switcher initialized for this page');
-    }
-}
 
 // Add copy and run buttons to all pre/code blocks
 function initCodeActions() {
@@ -74,8 +66,8 @@ function initCodeActions() {
         runBtn.className = 'action-btn run-btn';
         runBtn.textContent = '▶ Run';
         runBtn.style.background = 'var(--bg-card)';
-        runBtn.style.color = 'var(--success)';
-        runBtn.style.border = '1px solid var(--success)';
+        runBtn.style.color = '#4af626';
+        runBtn.style.border = '1px solid #4af626';
 
         runBtn.onclick = () => {
             const code = pre.querySelector('code') || pre;
@@ -107,24 +99,6 @@ function initCodeActions() {
             }
         });
 
-        // --- Language Toggle Button ---
-        const langBtn = document.createElement('button');
-        langBtn.className = 'action-btn lang-btn';
-        langBtn.textContent = '🌍 EN';
-        langBtn.title = 'Toggle Yoruba/English';
-        langBtn.style.background = 'rgba(255,215,0,0.2)';
-        langBtn.style.color = 'var(--gold)';
-        langBtn.style.border = '1px solid var(--gold)';
-        langBtn.onclick = () => {
-            const newLang = currentLang === 'yoruba' ? 'english' : 'yoruba';
-            translateCode(newLang);
-            // Update all toggle buttons
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.textContent = newLang === 'yoruba' ? '🌍 EN' : '🌍 YO';
-            });
-        };
-
-        btnContainer.appendChild(langBtn);
         btnContainer.appendChild(runBtn);
         btnContainer.appendChild(copyBtn);
 
@@ -163,104 +137,12 @@ function initSearch() {
     });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// BILINGUAL CODE TRANSLATION SYSTEM
-// Integration with language-switcher.js for comprehensive word mappings
-// ═══════════════════════════════════════════════════════════════════════════
-
-// Import wordMappings and functions from language-switcher.js if not already loaded
-// The language-switcher.js file provides:
-// - wordMappings: comprehensive Yoruba/English word mappings (200+ words)
-// - reverseLookup: efficient reverse lookup table
-// - initializeSwitchableWords(): wraps keywords in clickable spans
-// - setLang(lang): switches all words to target language
-// - switchWord(element): toggle individual word on click
-
-// Current language state (shared with language-switcher.js)
-let currentLang = 'yoruba';
-
-// Check if language-switcher.js is loaded
-function isLanguageSwitcherLoaded() {
-    return typeof wordMappings !== 'undefined' && typeof reverseLookup !== 'undefined';
-}
-
-// Fallback simple keyword map if language-switcher.js not loaded
-const FALLBACK_MAP = {
-    'ayanmo': 'let', 'ti': 'if', 'bibẹkọ': 'else', 'fun': 'for',
-    'nigba': 'while', 'padapọ': 'return', 'ise': 'fn', 'otito': 'true',
-    'iro': 'false', 'Irosu': 'Fmt', 'Ogunda': 'List', 'Ika': 'String',
-    '.fo(': '.println(', '.so(': '.print('
-};
-
-/**
- * Toggle language using language-switcher.js if available, otherwise use fallback
- */
-function translateCode(targetLang) {
-    if (targetLang === currentLang) return;
-
-    if (isLanguageSwitcherLoaded()) {
-        // Use the comprehensive language-switcher.js system
-        if (typeof setLang === 'function') {
-            setLang(targetLang);
-        }
-    } else {
-        // Fallback: simple regex replacement
-        document.querySelectorAll('pre code, pre').forEach(codeEl => {
-            if (!codeEl._originalText) {
-                codeEl._originalText = codeEl.textContent;
-            }
-
-            let text = codeEl._originalText;
-            if (targetLang === 'english') {
-                for (const [yoruba, english] of Object.entries(FALLBACK_MAP)) {
-                    if (yoruba.startsWith('.')) {
-                        text = text.split(yoruba).join(english);
-                    } else {
-                        text = text.replace(new RegExp(`\\b${yoruba}\\b`, 'g'), english);
-                    }
-                }
-            }
-            codeEl.textContent = text;
-        });
-    }
-
-    currentLang = targetLang;
-    localStorage.setItem('ifa-lang-pref', targetLang);
-    updateLangButtons(targetLang);
-}
-
-function updateLangButtons(lang) {
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-        btn.textContent = lang === 'yoruba' ? '🌍 EN' : '🌍 YO';
-    });
-    document.querySelectorAll('.toggle-yoruba').forEach(btn => {
-        btn.classList.toggle('active', lang === 'yoruba');
-    });
-    document.querySelectorAll('.toggle-english').forEach(btn => {
-        btn.classList.toggle('active', lang === 'english');
-    });
-}
-
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
     initCodeActions();
     addVersionFooter();
     initSearch();
     addAnchorLinks();
-
-    // Load preference
-    const pref = localStorage.getItem('ifa-lang-pref') || 'yoruba';
-    currentLang = pref;
-
-    // Initialize language-switcher.js if loaded
-    if (isLanguageSwitcherLoaded() && typeof enhanceAllCodeExamples === 'function') {
-        enhanceAllCodeExamples();
-    }
-
-    // Apply saved preference
-    if (pref === 'english') {
-        setTimeout(() => translateCode('english'), 100);
-    }
 });
 
 // Add anchor links to headings
@@ -283,7 +165,7 @@ function addAnchorLinks() {
             anchor.style.opacity = '0';
             anchor.style.marginLeft = '0.5rem';
             anchor.style.textDecoration = 'none';
-            anchor.style.color = 'var(--text-dim)';
+            anchor.style.color = 'var(--dim)';
             anchor.style.fontSize = '0.8em';
 
             heading.appendChild(anchor);

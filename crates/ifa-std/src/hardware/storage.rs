@@ -1,34 +1,34 @@
 //! Storage Domain (Domain 20) wrapper
 //! Bridges the VM dispatch to the async OduStore persistence layer.
 
-use ifa_types::value_union::{FutureState, IfaValue};
+use ifa_types::value_union::IfaValue;
 use ifa_types::{IfaError, IfaResult};
 
 #[cfg(all(feature = "tokio", feature = "persistence"))]
 pub enum StorageCmd {
     Open {
         path: String,
-        cell: ifa_types::value_union::FutureCell,
+        cell: ifa_types::value_union::NativeFutureCell,
     },
     Set {
         id: u64,
         key: String,
-        val: IfaValue,
-        cell: ifa_types::value_union::FutureCell,
+        val: Vec<u8>,
+        cell: ifa_types::value_union::NativeFutureCell,
     },
     Get {
         id: u64,
         key: String,
-        cell: ifa_types::value_union::FutureCell,
+        cell: ifa_types::value_union::NativeFutureCell,
     },
     Delete {
         id: u64,
         key: String,
-        cell: ifa_types::value_union::FutureCell,
+        cell: ifa_types::value_union::NativeFutureCell,
     },
     Compact {
         id: u64,
-        cell: ifa_types::value_union::FutureCell,
+        cell: ifa_types::value_union::NativeFutureCell,
     },
 }
 
@@ -39,6 +39,12 @@ pub struct StorageWorker {
 }
 
 #[cfg(all(feature = "tokio", feature = "persistence"))]
+impl Default for StorageWorker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StorageWorker {
     pub fn new() -> Self {
         let (tx, rx) = std::sync::mpsc::sync_channel::<StorageCmd>(64);
@@ -69,8 +75,10 @@ impl StorageWorker {
                                 }
                                 Err(e) => IfaValue::str(format!("StorageError: {e}")),
                             };
-                            if let Ok(mut lock) = cell.lock() {
-                                *lock = FutureState::Ready(val);
+                            if let Ok(mut lock) = cell.write() {
+                                *lock = ifa_types::value_union::NativeFutureState::Ready(
+                                    bincode::serialize(&bincode::serialize(&val).unwrap()).unwrap(),
+                                );
                             }
                         }
                         StorageCmd::Get { id, key, cell } => {
@@ -87,8 +95,10 @@ impl StorageWorker {
                                 None => IfaValue::str("StorageError: Invalid store handle"),
                             };
                             // SAFETY: Resolving the future safely clears the poison flag implicitly for this assignment
-                            *cell.lock().unwrap_or_else(|e| e.into_inner()) =
-                                FutureState::Ready(val);
+                            *cell.write().unwrap_or_else(|e| e.into_inner()) =
+                                ifa_types::value_union::NativeFutureState::Ready(
+                                    bincode::serialize(&val).unwrap(),
+                                );
                         }
                         StorageCmd::Set { id, key, val, cell } => {
                             let res_val = match stores.get_mut(&id) {
@@ -103,8 +113,10 @@ impl StorageWorker {
                             // SAFETY: If the receiver thread panicked, the lock is poisoned.
                             // We use into_inner() to force write the Ready state anyway,
                             // allowing any surviving handles to access the result safely.
-                            *cell.lock().unwrap_or_else(|e| e.into_inner()) =
-                                FutureState::Ready(res_val);
+                            *cell.write().unwrap_or_else(|e| e.into_inner()) =
+                                ifa_types::value_union::NativeFutureState::Ready(
+                                    bincode::serialize(&res_val).unwrap(),
+                                );
                         }
                         StorageCmd::Delete { id, key, cell } => {
                             let val = match stores.get_mut(&id) {
@@ -117,8 +129,10 @@ impl StorageWorker {
                                 None => IfaValue::str("StorageError: Invalid store handle"),
                             };
                             // SAFETY: Resolving the future safely clears the poison flag implicitly for this assignment
-                            *cell.lock().unwrap_or_else(|e| e.into_inner()) =
-                                FutureState::Ready(val);
+                            *cell.write().unwrap_or_else(|e| e.into_inner()) =
+                                ifa_types::value_union::NativeFutureState::Ready(
+                                    bincode::serialize(&val).unwrap(),
+                                );
                         }
                         StorageCmd::Compact { id, cell } => {
                             let val = match stores.get_mut(&id) {
@@ -129,8 +143,10 @@ impl StorageWorker {
                                 None => IfaValue::str("StorageError: Invalid store handle"),
                             };
                             // SAFETY: Resolving the future safely clears the poison flag implicitly for this assignment
-                            *cell.lock().unwrap_or_else(|e| e.into_inner()) =
-                                FutureState::Ready(val);
+                            *cell.write().unwrap_or_else(|e| e.into_inner()) =
+                                ifa_types::value_union::NativeFutureState::Ready(
+                                    bincode::serialize(&val).unwrap(),
+                                );
                         }
                     }
                 }
@@ -144,9 +160,9 @@ impl StorageWorker {
 pub fn dispatch(worker: &StorageWorker, method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
     #[cfg(all(feature = "tokio", feature = "persistence"))]
     {
-        use std::sync::{Arc, Mutex};
-
-        let cell = Arc::new(Mutex::new(FutureState::Pending));
+        let cell = std::sync::Arc::new(std::sync::RwLock::new(
+            ifa_types::value_union::NativeFutureState::Pending,
+        ));
 
         let cmd = match method {
             "open" => {
@@ -183,10 +199,19 @@ pub fn dispatch(worker: &StorageWorker, method: &str, args: Vec<IfaValue>) -> If
                 };
                 let key = args.get(1).map(|v| v.to_string()).unwrap_or_default();
                 let val = args.into_iter().nth(2).unwrap_or(IfaValue::null());
+                let serialized_val = match bincode::serialize(&val) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return Err(IfaError::Runtime(format!(
+                            "Serialization failed (ensure acyclic, uniquely-owned data): {}",
+                            e
+                        )));
+                    }
+                };
                 StorageCmd::Set {
                     id,
                     key,
-                    val,
+                    val: serialized_val,
                     cell: cell.clone(),
                 }
             }
@@ -233,7 +258,7 @@ pub fn dispatch(worker: &StorageWorker, method: &str, args: Vec<IfaValue>) -> If
             .send(cmd)
             .map_err(|_| IfaError::Runtime("Storage worker channel closed".into()))?;
 
-        Ok(IfaValue::Future(cell))
+        Ok(IfaValue::NativeFuture(cell))
     }
 
     #[cfg(not(all(feature = "tokio", feature = "persistence")))]

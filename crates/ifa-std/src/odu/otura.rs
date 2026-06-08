@@ -166,6 +166,16 @@ impl Otura {
     }
 }
 
+#[cfg(feature = "network")]
+pub struct TcpListenerResource {
+    pub listener: tokio::net::TcpListener,
+}
+
+#[cfg(feature = "network")]
+pub struct TcpStreamResource {
+    pub stream: std::sync::Mutex<tokio::net::TcpStream>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

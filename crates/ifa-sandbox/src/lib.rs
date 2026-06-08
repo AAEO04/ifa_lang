@@ -26,7 +26,7 @@ pub mod sandbox;
 
 pub use capability::{CapabilitySet, Ofun};
 pub use config::{SandboxConfig, SecurityProfile};
-pub use igbale::{demo as igbale_demo, Igbale, SandboxResult};
+pub use igbale::{Igbale, SandboxResult, demo as igbale_demo};
 pub use monitor::ResourceMonitor;
 pub use omnibox::OmniBox;
 pub use sandbox::Sandbox;

@@ -9,6 +9,7 @@
 </head>
 
 <body>
+    <div id="nav-placeholder"></div>
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list"></ul>
@@ -31,7 +32,8 @@
             <h3>le / can</h3>
             <div class="sig">Ofun.le(cap: Str) → Bool</div>
             <p>Check if a capability is granted.</p>
-            <pre><code>Ofun.le("write");  // true or false</code></pre>
+            <pre class="code-yoruba"><code>Ofun.le("write");  // true or false</code></pre>
+            <pre class="code-english" style="display:none"><code>Ofun.can("write");  // true or false</code></pre>
         </div>
 
         <div class="method">
@@ -64,7 +66,8 @@
             <h3>ju / drop</h3>
             <div class="sig">Ofun.ju(cap: Str)</div>
             <p>Drop (revoke) a capability. Can only remove, never add.</p>
-            <pre><code>Ofun.ju("write");  // revoke write access</code></pre>
+            <pre class="code-yoruba"><code>Ofun.ju("write");  // revoke write access</code></pre>
+            <pre class="code-english" style="display:none"><code>Ofun.drop("write");  // revoke write access</code></pre>
         </div>
 
         <div class="method">
@@ -79,7 +82,8 @@
             <h3>je / is_type</h3>
             <div class="sig">Ofun.je(value: Any, type_name: Str) → Bool</div>
             <p>Check if a value is of a given type (case-insensitive).</p>
-            <pre><code>Ofun.je(42, "Int");     // true</code></pre>
+            <pre class="code-yoruba"><code>Ofun.je(42, "Int");     // true</code></pre>
+            <pre class="code-english" style="display:none"><code>Ofun.is_type(42, "Int");     // true</code></pre>
         </div>
 
         <div class="method">

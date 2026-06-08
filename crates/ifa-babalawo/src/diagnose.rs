@@ -322,6 +322,7 @@ impl Babalawo {
 
     /// Format with source-code snippets, carets, and ANSI colors.
     /// Pass the original source text to render the offending lines.
+    #[allow(clippy::needless_range_loop)]
     pub fn format_with_source(&self, source: &str) -> String {
         let source_lines: Vec<&str> = source.lines().collect();
         let mut output = String::new();
@@ -411,7 +412,7 @@ impl Babalawo {
                         output.push_str(&format!("{}\n", caret));
                     }
                 }
-                output.push_str(&format!("   \x1b[36m|\x1b[0m\n"));
+                output.push_str("   \x1b[36m|\x1b[0m\n");
             }
 
             // Notes

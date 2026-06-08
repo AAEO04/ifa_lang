@@ -19,14 +19,13 @@ audio = ["rodio"]
 parallel = ["rayon"]
 sysinfo = ["dep:sysinfo"]
 gpu = ["dep:wgpu"]
-persistence = []
 compiler = ["dep:ifa-parser", "dep:ifa-compiler", "dep:ifa-transpiler"]
 
 [dependencies]
 
 # Shared types (IfaValue, IfaError, OduDomain)
 ifa-types = { path = "../ifa-types", features = ["vm"] }
-ifa-bytecode = { path = "../ifa-bytecode" }
+ifa-bytecode = { path = "../ifa-bytecode", features = ["serde"] }
 ifa-parser = { path = "../ifa-parser", optional = true }
 ifa-compiler = { path = "../ifa-compiler", optional = true }
 ifa-transpiler = { path = "../ifa-transpiler", optional = true }

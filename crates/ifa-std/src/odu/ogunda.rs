@@ -160,7 +160,7 @@ impl Ogunda {
         match map {
             IfaValue::Map(map_arc) => {
                 // Clone-on-Write for Map mutation
-                let map = std::sync::Arc::make_mut(map_arc);
+                let map = ifa_types::gc::IfaGc::make_mut(map_arc);
                 // Need to handle key type (Arc<str>)
                 // This is tricky if we don't have the exact key instance.
                 // We iterate to find matching key string? Efficient? No.

@@ -33,6 +33,7 @@ pub struct CallFrame {
     /// Local variable count
     pub local_count: usize,
     /// Captured closure environment for this frame (if executing a closure).
+    #[serde(skip)]
     pub closure_env: Option<Arc<Vec<UpvalueCell>>>,
     /// Whether this frame returns an async value (wrap in Future)
     pub async_return: bool,
@@ -87,6 +88,11 @@ pub enum FinallyResumption {
 use crate::vm_ikin::Ikin;
 use crate::vm_iroke;
 
+pub trait BytecodeCache: Send + Sync {
+    fn get_bytecode(&self, cache_key: &str) -> Option<(u64, Bytecode)>;
+    fn put_bytecode(&self, cache_key: &str, hash: u64, bytecode: &Bytecode);
+}
+
 const MAX_SNAPSHOT_BYTES: u64 = 64 * 1024 * 1024;
 /// E2: Linker/module state extracted from hot IfaVM body for cache locality.
 pub struct ModuleState {
@@ -98,6 +104,7 @@ pub struct ModuleState {
     pub module_bytecode: std::collections::HashMap<String, Bytecode>,
     pub module_globals: std::collections::HashMap<String, GlobalState>,
     pub current_file: Option<std::path::PathBuf>,
+    pub external_cache: Option<std::sync::Arc<dyn BytecodeCache>>,
 }
 
 impl Default for ModuleState {
@@ -111,15 +118,17 @@ impl Default for ModuleState {
             module_bytecode: std::collections::HashMap::new(),
             module_globals: std::collections::HashMap::new(),
             current_file: None,
+            external_cache: None,
         }
     }
 }
 
-#[allow(dead_code)]
 #[derive(Clone)]
 pub struct CachedModule {
-    hash: u64,
+    mtime: std::time::SystemTime,
+    size: u64,
     bytecode: Bytecode,
+    export_names: Vec<String>,
 }
 
 /// The Ifá Virtual Machine
@@ -329,11 +338,10 @@ impl IfaVM {
         if let Ok(cwd) = std::env::current_dir() {
             module_paths.push(cwd);
         }
-        if let Ok(exe) = std::env::current_exe() {
-            if let Some(dir) = exe.parent() {
+        if let Ok(exe) = std::env::current_exe()
+            && let Some(dir) = exe.parent() {
                 module_paths.push(dir.join("lib"));
             }
-        }
         IfaVM {
             ctx: ExecutionContext {
                 stack: Vec::new(),
@@ -366,6 +374,7 @@ impl IfaVM {
                 module_globals: std::collections::HashMap::new(),
                 resolver: crate::module_resolver::ModuleResolver::new(module_paths),
                 current_file: None,
+                external_cache: None,
             },
             actor_id: None,
             pending_finally: None,
@@ -393,11 +402,10 @@ impl IfaVM {
         if let Ok(cwd) = std::env::current_dir() {
             module_paths.push(cwd);
         }
-        if let Ok(exe) = std::env::current_exe() {
-            if let Some(dir) = exe.parent() {
+        if let Ok(exe) = std::env::current_exe()
+            && let Some(dir) = exe.parent() {
                 module_paths.push(dir.join("lib"));
             }
-        }
         IfaVM {
             ctx: ExecutionContext {
                 stack: Vec::new(),
@@ -430,6 +438,7 @@ impl IfaVM {
                 module_globals: std::collections::HashMap::new(),
                 resolver: crate::module_resolver::ModuleResolver::new(module_paths),
                 current_file: None,
+                external_cache: None,
             },
             actor_id: None,
             pending_finally: None,
@@ -495,28 +504,26 @@ impl IfaVM {
 
     /// Push value onto stack
     pub fn push(&mut self, value: IfaValue) -> IfaResult<()> {
-        if let Some(limit) = self.stack_limit {
-            if self.ctx.stack.len() >= limit {
+        if let Some(limit) = self.stack_limit
+            && self.ctx.stack.len() >= limit {
                 return Err(IfaError::StackOverflow {
                     limit,
                     directive: self.opon_size,
                 });
             }
-        }
         self.ctx.stack.push(value);
         Ok(())
     }
 
     /// Push CallFrame onto execution stack
     pub fn push_frame(&mut self, frame: CallFrame) -> IfaResult<()> {
-        if let Some(limit) = self.frame_limit {
-            if self.ctx.frames.len() >= limit {
+        if let Some(limit) = self.frame_limit
+            && self.ctx.frames.len() >= limit {
                 return Err(IfaError::StackOverflow {
                     limit,
                     directive: self.opon_size,
                 });
             }
-        }
         self.ctx.frames.push(frame);
         Ok(())
     }
@@ -531,7 +538,7 @@ impl IfaVM {
         self.ctx.stack.last().ok_or(IfaError::StackUnderflow)
     }
 
-    /// Pop an integer from the stack
+    // /// Pop an integer from the stack
 
     // =========================================================================
     // BYTECODE EXECUTION
@@ -539,6 +546,10 @@ impl IfaVM {
 
     /// Execute bytecode
     pub fn execute(&mut self, bytecode: &Bytecode) -> IfaResult<IfaValue> {
+        // Phase 0: Validate bytecode integrity
+        ifa_bytecode::validate_bytecode(&bytecode.code)
+            .map_err(|e| IfaError::Compile(format!("Invalid Bytecode: {:?}", e)))?;
+
         self.set_current_file_from_source(&bytecode.source_name);
         self.ctx.ip = 0;
         self.ctx.halted = false;
@@ -553,11 +564,10 @@ impl IfaVM {
         self.frame_limit = frame_cap;
         self.opon_size = bytecode.opon_size;
 
-        if let Some(cap) = stack_cap {
-            if self.ctx.stack.capacity() < cap {
+        if let Some(cap) = stack_cap
+            && self.ctx.stack.capacity() < cap {
                 self.ctx.stack.reserve(cap - self.ctx.stack.len());
             }
-        }
 
         self.resume_execution(bytecode)
     }
@@ -565,8 +575,8 @@ impl IfaVM {
     fn set_current_file_from_source(&mut self, source_name: &str) {
         let path = std::path::Path::new(source_name);
         if path.exists() {
-            if let Some(parent) = path.parent() {
-                if !self
+            if let Some(parent) = path.parent()
+                && !self
                     .module
                     .resolver
                     .search_paths
@@ -578,24 +588,8 @@ impl IfaVM {
                         .search_paths
                         .insert(0, parent.to_path_buf());
                 }
-            }
             self.module.current_file = Some(path.to_path_buf());
         }
-    }
-
-    #[cfg(feature = "compiler")]
-    fn hash_source(source: &str) -> u64 {
-        use std::hash::{Hash, Hasher};
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        source.hash(&mut hasher);
-        hasher.finish()
-    }
-
-    fn hash_bytes(bytes: &[u8]) -> u64 {
-        use std::hash::{Hash, Hasher};
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        bytes.hash(&mut hasher);
-        hasher.finish()
     }
 
     fn module_fn_marker(module_key: &str, name: &str) -> String {
@@ -664,7 +658,11 @@ impl IfaVM {
             self.opon_size = bytecode.opon_size;
             let return_addr = bytecode.code.len();
             self.ctx.ip = return_addr;
-            self.call_value(func, args, false, Some(&bytecode))?;
+            let arg_count = args.len();
+            for arg in args {
+                self.push(arg)?;
+            }
+            self.call_value(func, arg_count, false, Some(&bytecode))?;
             self.resume_execution(&bytecode)
         })();
 
@@ -708,62 +706,126 @@ impl IfaVM {
         let is_ifab = resolved.is_binary;
 
         let cache_key = file_path.to_string_lossy().to_string();
-        let cached_hash_before = self
-            .module
-            .module_cache
-            .get(&cache_key)
-            .map(|cached| cached.hash);
+        let mut cached_mtime_before = None;
+        let mut cached_size_before = None;
+        if let Some(cached) = self.module.module_cache.get(&cache_key) {
+            cached_mtime_before = Some(cached.mtime);
+            cached_size_before = Some(cached.size);
+        }
 
-        let (bytecode, export_names, content_hash) = if is_ifab {
-            let bytes = std::fs::read(&file_path).map_err(|e| {
-                IfaError::IoError(format!("Cannot read module '{}': {}", module_key, e))
+        let (bytecode, export_names) = if is_ifab {
+            let metadata = std::fs::metadata(&file_path).map_err(|e| {
+                IfaError::IoError(format!(
+                    "Cannot read module metadata '{}': {}",
+                    module_key, e
+                ))
             })?;
-            let hash = Self::hash_bytes(&bytes);
-            let bc = Bytecode::from_bytes(&bytes)?;
-            let exports = bc.exports.clone();
-            (bc, exports, hash)
+            let mtime = metadata
+                .modified()
+                .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+            let size = metadata.len();
+
+            if let Some(cached) = self.module.module_cache.get(&cache_key) {
+                if cached.mtime == mtime && cached.size == size {
+                    (cached.bytecode.clone(), cached.export_names.clone())
+                } else {
+                    let bytes = std::fs::read(&file_path).map_err(|e| {
+                        IfaError::IoError(format!("Cannot read module '{}': {}", module_key, e))
+                    })?;
+                    let bc = Bytecode::from_bytes(&bytes)?;
+                    let exports = bc.exports.clone();
+                    self.module.module_cache.insert(
+                        cache_key.clone(),
+                        CachedModule {
+                            mtime,
+                            size,
+                            bytecode: bc.clone(),
+                            export_names: exports.clone(),
+                        },
+                    );
+                    (bc, exports)
+                }
+            } else {
+                let bytes = std::fs::read(&file_path).map_err(|e| {
+                    IfaError::IoError(format!("Cannot read module '{}': {}", module_key, e))
+                })?;
+                let bc = Bytecode::from_bytes(&bytes)?;
+                let exports = bc.exports.clone();
+                self.module.module_cache.insert(
+                    cache_key.clone(),
+                    CachedModule {
+                        mtime,
+                        size,
+                        bytecode: bc.clone(),
+                        export_names: exports.clone(),
+                    },
+                );
+                (bc, exports)
+            }
         } else {
             #[cfg(feature = "compiler")]
             {
-                let source = std::fs::read_to_string(&file_path).map_err(|e| {
-                    IfaError::IoError(format!("Cannot read module '{}': {}", module_key, e))
+                let metadata = std::fs::metadata(&file_path).map_err(|e| {
+                    IfaError::IoError(format!(
+                        "Cannot read module metadata '{}': {}",
+                        module_key, e
+                    ))
                 })?;
-                let source_hash = Self::hash_source(&source);
-                let program = ifa_parser::parse(&source).map_err(|e| {
-                    IfaError::Runtime(format!("Parse error in module '{}': {}", module_key, e))
-                })?;
-                let export_names = collect_exports_vm(&program);
+                let mtime = metadata
+                    .modified()
+                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                let size = metadata.len();
 
-                let bytecode = if let Some(cached) = self.module.module_cache.get(&cache_key) {
-                    if cached.hash == source_hash {
-                        cached.bytecode.clone()
+                if let Some(cached) = self.module.module_cache.get(&cache_key) {
+                    if cached.mtime == mtime && cached.size == size {
+                        (cached.bytecode.clone(), cached.export_names.clone())
                     } else {
+                        let source = std::fs::read_to_string(&file_path).map_err(|e| {
+                            IfaError::IoError(format!("Cannot read module '{}': {}", module_key, e))
+                        })?;
+                        let program = ifa_parser::parse(&source).map_err(|e| {
+                            IfaError::Runtime(format!(
+                                "Parse error in module '{}': {}",
+                                module_key, e
+                            ))
+                        })?;
+                        let export_names = collect_exports_vm(&program);
                         let compiler =
                             ifa_compiler::Compiler::new(file_path.to_string_lossy().as_ref());
                         let bytecode = compiler.compile(&program)?;
                         self.module.module_cache.insert(
                             cache_key.clone(),
                             CachedModule {
-                                hash: source_hash,
+                                mtime,
+                                size,
                                 bytecode: bytecode.clone(),
+                                export_names: export_names.clone(),
                             },
                         );
-                        bytecode
+                        (bytecode, export_names)
                     }
                 } else {
+                    let source = std::fs::read_to_string(&file_path).map_err(|e| {
+                        IfaError::IoError(format!("Cannot read module '{}': {}", module_key, e))
+                    })?;
+                    let program = ifa_parser::parse(&source).map_err(|e| {
+                        IfaError::Runtime(format!("Parse error in module '{}': {}", module_key, e))
+                    })?;
+                    let export_names = collect_exports_vm(&program);
                     let compiler =
                         ifa_compiler::Compiler::new(file_path.to_string_lossy().as_ref());
                     let bytecode = compiler.compile(&program)?;
                     self.module.module_cache.insert(
                         cache_key.clone(),
                         CachedModule {
-                            hash: source_hash,
+                            mtime,
+                            size,
                             bytecode: bytecode.clone(),
+                            export_names: export_names.clone(),
                         },
                     );
-                    bytecode
-                };
-                (bytecode, export_names, source_hash)
+                    (bytecode, export_names)
+                }
             }
             #[cfg(not(feature = "compiler"))]
             {
@@ -774,17 +836,22 @@ impl IfaVM {
             }
         };
 
-        if self.module.imported.contains(&module_key) && cached_hash_before == Some(content_hash) {
-            if let Some(exports) = self.module.module_exports.get(&module_key) {
+        let metadata_matches = if let Some(cached) = self.module.module_cache.get(&cache_key) {
+            Some(cached.mtime) == cached_mtime_before && Some(cached.size) == cached_size_before
+        } else {
+            false
+        };
+
+        if self.module.imported.contains(&module_key) && metadata_matches
+            && let Some(exports) = self.module.module_exports.get(&module_key) {
                 self.module.import_guard.exit(&module_key);
                 return Ok(exports.clone());
             }
-        }
 
         let prev_file = self.module.current_file.take();
         let prev_paths = self.module.resolver.search_paths.clone();
-        if let Some(parent) = file_path.parent() {
-            if !self
+        if let Some(parent) = file_path.parent()
+            && !self
                 .module
                 .resolver
                 .search_paths
@@ -796,7 +863,6 @@ impl IfaVM {
                     .search_paths
                     .insert(0, parent.to_path_buf());
             }
-        }
         self.module.current_file = Some(file_path.clone());
 
         let prev_globals = std::mem::take(&mut self.globals);
@@ -835,13 +901,7 @@ impl IfaVM {
             self.module
                 .module_globals
                 .insert(module_key.clone(), module_globals);
-            self.module.module_cache.insert(
-                cache_key,
-                CachedModule {
-                    hash: content_hash,
-                    bytecode: bytecode.clone(),
-                },
-            );
+            // Note: module_cache was already updated during bytecode loading above.
         }
         result.map(|_| exports_val)
     }
@@ -889,6 +949,11 @@ impl IfaVM {
 
         let mut ip = self.ctx.ip;
         while !self.ctx.halted && ip < bytecode.code.len() {
+            self.ticks = self.ticks.wrapping_add(1);
+            if self.ticks.is_multiple_of(1024) {
+                ifa_types::gc::collect_cycles();
+            }
+
             self.ctx.ip = ip;
             if let Err(e) = self.step(bytecode) {
                 if matches!(e, IfaError::Yielded) {
@@ -971,7 +1036,7 @@ impl IfaVM {
     fn call_value(
         &mut self,
         func: IfaValue,
-        args: Vec<IfaValue>,
+        arg_count: usize,
         is_tail_call: bool,
         bytecode: Option<&Bytecode>,
     ) -> IfaResult<()> {
@@ -1006,6 +1071,7 @@ impl IfaVM {
             };
             if let Some((domain_id, method)) = parse_odu_fn_marker(&s) {
                 if let Some(bc) = bytecode {
+                    let args = self.ctx.stack.split_off(self.ctx.stack.len() - arg_count);
                     let result = self.call_registry(domain_id, &method, args, bc)?;
                     self.push(result)?;
                     return Ok(());
@@ -1015,6 +1081,7 @@ impl IfaVM {
                     ));
                 }
             } else if let Some((module_key, function_name)) = parse_module_fn_marker(&s) {
+                let args = self.ctx.stack.split_off(self.ctx.stack.len() - arg_count);
                 let result = self.invoke_module_function(&module_key, &function_name, args)?;
                 self.push(result)?;
                 return Ok(());
@@ -1026,14 +1093,15 @@ impl IfaVM {
             }
         }
 
-        if args.len() != arity {
+        if arg_count != arity {
             return Err(IfaError::ArityMismatch {
                 expected: arity,
-                got: args.len(),
+                got: arg_count,
             });
         }
 
         if async_return {
+            let args = self.ctx.stack.split_off(self.ctx.stack.len() - arg_count);
             let future = self.spawn_task(func, args)?;
             if is_tail_call {
                 if let Some(frame) = self.ctx.frames.pop() {
@@ -1054,37 +1122,34 @@ impl IfaVM {
 
         if is_tail_call {
             if let Some(frame) = self.ctx.frames.last_mut() {
-                if self.ctx.stack.len() > frame.base_ptr {
-                    self.ctx.stack.truncate(frame.base_ptr);
+                let base_ptr = frame.base_ptr;
+                let stack_len = self.ctx.stack.len();
+
+                // Shift arguments down to base_ptr
+                for i in 0..arg_count {
+                    self.ctx.stack[base_ptr + i] =
+                        self.ctx.stack[stack_len - arg_count + i].clone();
                 }
+                self.ctx.stack.truncate(base_ptr + arg_count);
+
                 frame.local_count = 0;
                 frame.closure_env = env;
                 frame.async_return = async_return;
-
-                for arg in args {
-                    self.push(arg)?;
-                }
             } else {
                 self.push_frame(CallFrame::new(
                     self.ctx.ip,
-                    self.ctx.stack.len(),
+                    self.ctx.stack.len() - arg_count,
                     env,
                     async_return,
                 ))?;
-                for arg in args {
-                    self.push(arg)?;
-                }
             }
         } else {
             self.push_frame(CallFrame::new(
                 self.ctx.ip,
-                self.ctx.stack.len(),
+                self.ctx.stack.len() - arg_count,
                 env,
                 async_return,
             ))?;
-            for arg in args {
-                self.push(arg)?;
-            }
         }
 
         self.ctx.ip = start_ip;
@@ -1100,7 +1165,11 @@ impl IfaVM {
 
         if !task.started {
             task.base_depth = self.ctx.frames.len();
-            self.call_value(task.func.clone(), task.args.clone(), false, Some(bytecode))?;
+            let arg_count = task.args.len();
+            for arg in &task.args {
+                self.push(arg.clone())?;
+            }
+            self.call_value(task.func.clone(), arg_count, false, Some(bytecode))?;
             task.started = true;
         }
 
@@ -1134,7 +1203,7 @@ impl IfaVM {
         if let Some(result) = maybe_result {
             let mut state = task
                 .future
-                .lock()
+                .write()
                 .map_err(|_| IfaError::Runtime("Future lock poisoned".into()))?;
             *state = FutureState::Ready(result);
         } else {
@@ -1145,26 +1214,58 @@ impl IfaVM {
 
     pub(crate) fn await_future(
         &mut self,
-        cell: &ifa_types::value_union::FutureCell,
+        val: &IfaValue,
         bytecode: &Bytecode,
     ) -> IfaResult<IfaValue> {
-        loop {
-            let ready = {
-                let state = cell
-                    .lock()
-                    .map_err(|_| IfaError::Runtime("Future lock poisoned".into()))?;
-                match &*state {
-                    FutureState::Ready(v) => Some(v.clone()),
-                    FutureState::Pending => None,
+        match val {
+            IfaValue::Future(cell) => loop {
+                let ready = {
+                    let state = cell
+                        .read()
+                        .map_err(|_| IfaError::Runtime("Future lock poisoned".into()))?;
+                    match &*state {
+                        ifa_types::value_union::FutureState::Ready(v) => Some(v.clone()),
+                        ifa_types::value_union::FutureState::Pending => None,
+                    }
+                };
+                if let Some(v) = ready {
+                    return Ok(v);
                 }
-            };
-            if let Some(v) = ready {
-                return Ok(v);
-            }
-            if !self.poll_one_task(bytecode)? {
-                return Err(IfaError::Runtime(
-                    "Future pending with no runnable tasks".into(),
-                ));
+                if !self.poll_one_task(bytecode)? {
+                    return Err(IfaError::Runtime(
+                        "Future pending with no runnable tasks".into(),
+                    ));
+                }
+            },
+            IfaValue::NativeFuture(cell) => loop {
+                let ready = {
+                    let state = cell
+                        .read()
+                        .map_err(|_| IfaError::Runtime("Native future lock poisoned".into()))?;
+                    state.clone()
+                };
+                match ready {
+                    ifa_types::value_union::NativeFutureState::Ready(bytes) => {
+                        return bincode::deserialize(&bytes).map_err(|e| {
+                            IfaError::Runtime(format!("NativeFuture deserialize failed: {}", e))
+                        });
+                    }
+                    ifa_types::value_union::NativeFutureState::Error(err) => {
+                        return Err(IfaError::Runtime(err));
+                    }
+                    _ => {}
+                }
+                if !self.poll_one_task(bytecode)? {
+                    return Err(IfaError::Runtime(
+                        "Future pending with no runnable tasks".into(),
+                    ));
+                }
+            },
+            other => {
+                Err(IfaError::TypeError {
+                    expected: "Future".into(),
+                    got: other.type_name().into(),
+                })
             }
         }
     }
@@ -1303,7 +1404,7 @@ impl IfaVM {
     }
 
     /// Execute single instruction (The Step of Iroke)
-    fn step(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
+    pub fn step(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
         let opcode = vm_iroke::tap(self, bytecode)?;
 
         match opcode {
@@ -1527,7 +1628,8 @@ impl IfaVM {
                             let cell = match slot {
                                 IfaValue::Upvalue(cell) => cell,
                                 value => {
-                                    let cell: UpvalueCell = Arc::new(Mutex::new(value));
+                                    let cell: UpvalueCell =
+                                        ifa_types::gc::IfaGc::new(Mutex::new(value));
                                     if slot_index < self.ctx.stack.len() {
                                         self.ctx.stack[slot_index] =
                                             IfaValue::Upvalue(cell.clone());
@@ -1559,7 +1661,7 @@ impl IfaVM {
                     }
                 }
 
-                self.push(IfaValue::Closure(Arc::new(ClosureData {
+                self.push(IfaValue::Closure(ifa_types::gc::IfaGc::new(ClosureData {
                     fn_data,
                     env: Arc::new(env),
                 })))?;
@@ -1580,8 +1682,8 @@ impl IfaVM {
             OpCode::Await => {
                 let value = self.pop()?;
                 match value {
-                    IfaValue::Future(cell) => {
-                        let v = self.await_future(&cell, bytecode)?;
+                    IfaValue::Future(_) | IfaValue::NativeFuture(_) => {
+                        let v = self.await_future(&value, bytecode)?;
                         self.push(v)?;
                     }
                     other => {
@@ -1736,7 +1838,7 @@ impl IfaVM {
                                 });
                             }
                         };
-                        let vec = std::sync::Arc::make_mut(vec_arc);
+                        let vec = ifa_types::gc::IfaGc::make_mut(vec_arc);
                         if i >= vec.len() {
                             return Err(IfaError::Runtime("Index out of bounds".into()));
                         }
@@ -1752,7 +1854,7 @@ impl IfaVM {
                                 });
                             }
                         };
-                        let map = std::sync::Arc::make_mut(map_arc);
+                        let map = ifa_types::gc::IfaGc::make_mut(map_arc);
                         map.insert(k, val);
                     }
                     _ => {
@@ -1789,6 +1891,7 @@ impl IfaVM {
 
             OpCode::BuildSet => {
                 let count = self.read_u8(bytecode)? as usize;
+                #[allow(clippy::mutable_key_type)]
                 let mut set = std::collections::HashSet::with_capacity(count);
                 for _ in 0..count {
                     set.insert(self.pop()?);
@@ -1803,6 +1906,7 @@ impl IfaVM {
                     // We must mutate the set. Since it's in an Arc, we might need to clone if shared.
                     // But for simple Set ops, maybe we should use Arc::make_mut.
                     // Wait, IfaValue::Set holds an Arc.
+                    #[allow(clippy::mutable_key_type)]
                     let mut new_set = (**set_arc).clone();
                     new_set.insert(value);
                     self.push(IfaValue::set(new_set))?;
@@ -1831,6 +1935,7 @@ impl IfaVM {
                 let value = self.pop()?;
                 let set_val = self.pop()?;
                 if let IfaValue::Set(set_arc) = &set_val {
+                    #[allow(clippy::mutable_key_type)]
                     let mut new_set = (**set_arc).clone();
                     new_set.remove(&value);
                     self.push(IfaValue::set(new_set))?;
@@ -2175,6 +2280,87 @@ impl IfaVM {
                     });
                 }
             }
+            // Arithmetic (signed) right shift: preserves sign bit, unlike logical Shr.
+            // Stack: [a: Int, b: Int] -> [a >> b: Int]
+            OpCode::Sar => {
+                let b = self.pop()?;
+                let a = self.pop()?;
+                if let (Some(val), Some(shift)) = (Self::boxed_i64(&a), Self::boxed_i64(&b)) {
+                    // Rust's >> on i64 is already arithmetic (sign-extending), so this is correct.
+                    let shift = shift.clamp(0, 63) as u32;
+                    self.push(IfaValue::int(val >> shift))?;
+                } else {
+                    return Err(IfaError::TypeError {
+                        expected: "Int".into(),
+                        got: a.type_name().into(),
+                    });
+                }
+            }
+            // Append: in-place CoW push onto a List.
+            // Stack: [list, val] -> [list]  (same list reference, mutated via CoW)
+            OpCode::Append => {
+                let val = self.pop()?;
+                let mut list = self.pop()?;
+                match list {
+                    IfaValue::List(ref mut arc) => {
+                        ifa_types::gc::IfaGc::make_mut(arc).push(val);
+                        self.push(list)?;
+                    }
+                    _ => {
+                        return Err(IfaError::TypeError {
+                            expected: "List".into(),
+                            got: list.type_name().into(),
+                        });
+                    }
+                }
+            }
+            // GetField: load a named field from a Map-as-object.
+            // Encoding: [2-byte string-pool index]
+            // Stack: [obj: Map] -> [val]
+            OpCode::GetField => {
+                let name_idx = self.read_u16(bytecode)? as usize;
+                let field_name = bytecode.strings.get(name_idx).cloned().ok_or_else(|| {
+                    IfaError::Custom(format!("GetField: invalid string pool index {}", name_idx))
+                })?;
+                let obj = self.pop()?;
+                match obj {
+                    IfaValue::Map(ref m) => {
+                        let key = ifa_types::CompactString::new(&field_name);
+                        let v = m.get(&key).cloned().unwrap_or(IfaValue::null());
+                        self.push(v)?;
+                    }
+                    _ => {
+                        return Err(IfaError::TypeError {
+                            expected: "Map (object)".into(),
+                            got: obj.type_name().into(),
+                        });
+                    }
+                }
+            }
+            // SetField: store a named field on a Map-as-object (CoW).
+            // Encoding: [2-byte string-pool index]
+            // Stack: [obj: Map, val] -> [obj]  (obj re-pushed for chaining)
+            OpCode::SetField => {
+                let name_idx = self.read_u16(bytecode)? as usize;
+                let field_name = bytecode.strings.get(name_idx).cloned().ok_or_else(|| {
+                    IfaError::Custom(format!("SetField: invalid string pool index {}", name_idx))
+                })?;
+                let val = self.pop()?;
+                let mut obj = self.pop()?;
+                match obj {
+                    IfaValue::Map(ref mut arc) => {
+                        let key = ifa_types::CompactString::new(&field_name);
+                        ifa_types::gc::IfaGc::make_mut(arc).insert(key, val);
+                        self.push(obj)?;
+                    }
+                    _ => {
+                        return Err(IfaError::TypeError {
+                            expected: "Map (object)".into(),
+                            got: obj.type_name().into(),
+                        });
+                    }
+                }
+            }
             OpCode::ToInt => {
                 let val = self.pop()?;
                 if let Some(i) = Self::boxed_i64(&val) {
@@ -2210,15 +2396,13 @@ impl IfaVM {
                 let a = self.pop()?;
                 if let (Some(ba), Some(bb)) =
                     (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                {
-                    if let Some(res) = ba.add(bb) {
+                    && let Some(res) = ba.add(bb) {
                         // SAFETY: Math operations strictly yield numeric NanBox primitives.
                         return self.push(
                             IfaValue::from_nan_boxed_primitive(res)
-                                .expect("Math operations must yield valid primitive"),
+                                .ok_or_else(|| IfaError::Custom("Math operations yielded invalid primitive".into()))?,
                         );
                     }
-                }
                 match (a.clone(), b.clone()) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => match ia.checked_add(ib) {
                         Some(r) => self.push(IfaValue::int(r))?,
@@ -2284,15 +2468,13 @@ impl IfaVM {
                 let a = self.pop()?;
                 if let (Some(ba), Some(bb)) =
                     (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                {
-                    if let Some(res) = ba.sub(bb) {
+                    && let Some(res) = ba.sub(bb) {
                         // SAFETY: Math operations strictly yield numeric NanBox primitives.
                         return self.push(
                             IfaValue::from_nan_boxed_primitive(res)
-                                .expect("Math operations must yield valid primitive"),
+                                .ok_or_else(|| IfaError::Custom("Math operations yielded invalid primitive".into()))?,
                         );
                     }
-                }
                 match (a, b) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => match ia.checked_sub(ib) {
                         Some(r) => self.push(IfaValue::int(r))?,
@@ -2314,15 +2496,13 @@ impl IfaVM {
                 let a = self.pop()?;
                 if let (Some(ba), Some(bb)) =
                     (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                {
-                    if let Some(res) = ba.mul(bb) {
+                    && let Some(res) = ba.mul(bb) {
                         // SAFETY: Math operations strictly yield numeric NanBox primitives.
                         return self.push(
                             IfaValue::from_nan_boxed_primitive(res)
-                                .expect("Math operations must yield valid primitive"),
+                                .ok_or_else(|| IfaError::Custom("Math operations yielded invalid primitive".into()))?,
                         );
                     }
-                }
                 match (a, b) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => match ia.checked_mul(ib) {
                         Some(r) => self.push(IfaValue::int(r))?,
@@ -2640,35 +2820,30 @@ impl IfaVM {
                     });
                 }
             }
-            _ => {
-                return Err(IfaError::Custom(
-                    format!("Unimplemented opcode: {:?}", opcode),
-                ));
-            }
         }
         Ok(())
     }
 
     fn dispatch_call(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
         let arg_count = self.read_u8(bytecode)? as usize;
-        let mut args = Vec::with_capacity(arg_count);
-        for _ in 0..arg_count {
-            args.push(self.pop()?);
+        let stack_len = self.ctx.stack.len();
+        if stack_len < arg_count + 1 {
+            return Err(IfaError::Runtime("Stack underflow in dispatch_call".into()));
         }
-        args.reverse();
-        let func = self.pop()?;
-        self.call_value(func, args, false, Some(bytecode))
+        let func = self.ctx.stack.remove(stack_len - arg_count - 1);
+        self.call_value(func, arg_count, false, Some(bytecode))
     }
 
     fn dispatch_tail_call(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
         let arg_count = self.read_u8(bytecode)? as usize;
-        let mut args = Vec::with_capacity(arg_count);
-        for _ in 0..arg_count {
-            args.push(self.pop()?);
+        let stack_len = self.ctx.stack.len();
+        if stack_len < arg_count + 1 {
+            return Err(IfaError::Runtime(
+                "Stack underflow in dispatch_tail_call".into(),
+            ));
         }
-        args.reverse();
-        let func = self.pop()?;
-        self.call_value(func, args, true, Some(bytecode))
+        let func = self.ctx.stack.remove(stack_len - arg_count - 1);
+        self.call_value(func, arg_count, true, Some(bytecode))
     }
 
     fn dispatch_return(&mut self) -> IfaResult<()> {
@@ -2721,31 +2896,19 @@ impl IfaVM {
 
         #[cfg(feature = "parallel")]
         {
-            use rayon::prelude::*;
-            let globals = self.globals.clone();
-
-            let results: Result<Vec<IfaValue>, IfaError> = items_vec
-                .as_ref()
-                .par_iter()
-                .map_init(
-                    || {
-                        let mut worker_vm = IfaVM::new();
-                        // Share globals
-                        worker_vm.globals = globals.clone();
-                        worker_vm
-                    },
-                    |worker_vm: &mut IfaVM, item: &IfaValue| -> Result<IfaValue, IfaError> {
-                        let val = worker_vm.spawn_task(closure_val.clone(), vec![item.clone()])?;
-                        if let IfaValue::Future(cell) = val {
-                            worker_vm.await_future(&cell, bytecode)
-                        } else {
-                            Ok(val)
-                        }
-                    },
-                )
-                .collect();
-
-            self.push(IfaValue::List(std::sync::Arc::new(results?)))?;
+            let mut worker_vm = IfaVM::new();
+            worker_vm.globals = self.globals.clone();
+            let mut results_vec = Vec::with_capacity(items_vec.len());
+            for item in items_vec.iter() {
+                let val = worker_vm.spawn_task(closure_val.clone(), vec![item.clone()])?;
+                let final_val = if matches!(val, IfaValue::Future(_) | IfaValue::NativeFuture(_)) {
+                    worker_vm.await_future(&val, bytecode)?
+                } else {
+                    val
+                };
+                results_vec.push(final_val);
+            }
+            self.push(IfaValue::List(ifa_types::gc::IfaGc::new(results_vec)))?;
         }
 
         #[cfg(not(feature = "parallel"))]
@@ -2753,14 +2916,14 @@ impl IfaVM {
             let mut results = Vec::with_capacity(items_vec.len());
             for item in items_vec.as_ref().iter() {
                 let val = self.spawn_task(closure_val.clone(), vec![item.clone()])?;
-                let res = if let IfaValue::Future(cell) = val {
-                    self.await_future(&cell, bytecode)?
+                let res = if matches!(val, IfaValue::Future(_) | IfaValue::NativeFuture(_)) {
+                    self.await_future(&val, bytecode)?
                 } else {
                     val
                 };
                 results.push(res);
             }
-            self.push(IfaValue::List(std::sync::Arc::new(results)))?;
+            self.push(IfaValue::list(results))?;
         }
 
         Ok(())
@@ -2786,19 +2949,22 @@ impl IfaVM {
                 IfaError::Custom(format!("Invalid method name index: {}", method_idx))
             })?;
 
-        if let IfaValue::Str(s) = &object {
-            if let Some(domain_id) = parse_odu_mod_marker(s) {
+        if let IfaValue::Str(s) = &object
+            && let Some(domain_id) = parse_odu_mod_marker(s) {
                 let result = self.call_registry(domain_id, &method_name, args, bytecode)?;
                 self.push(result)?;
                 return Ok(());
             }
-        }
 
         match object {
             IfaValue::Map(map) => {
                 let key = ifa_types::CompactString::new(method_name.as_str());
                 if let Some(func) = map.get(&key) {
-                    self.call_value(func.clone(), args, false, Some(bytecode))?;
+                    let arg_count = args.len();
+                    for arg in args {
+                        self.push(arg)?;
+                    }
+                    self.call_value(func.clone(), arg_count, false, Some(bytecode))?;
                 } else {
                     return Err(IfaError::Custom(format!(
                         "Map has no method '{}'",
@@ -2812,9 +2978,54 @@ impl IfaVM {
                         expected: 1,
                         got: args.len(),
                     })?;
-                    let vec = Arc::make_mut(&mut l);
+                    let vec = ifa_types::gc::IfaGc::make_mut(&mut l);
                     vec.push(val.clone());
                     self.push(IfaValue::null())?;
+                    return Ok(());
+                } else if method_name == "yi_pada"
+                    || method_name == "yipada"
+                    || method_name == "map"
+                    || method_name == "maapu"
+                {
+                    let closure = args.first().ok_or_else(|| IfaError::ArityMismatch {
+                        expected: 1,
+                        got: args.len(),
+                    })?;
+                    let mut results = Vec::with_capacity(l.len());
+                    for item in l.iter() {
+                        let task_val = self.spawn_task(closure.clone(), vec![item.clone()])?;
+                        let mapped = if let IfaValue::Future(_cell) = &task_val {
+                            self.await_future(&task_val, bytecode)?
+                        } else {
+                            task_val
+                        };
+                        results.push(mapped);
+                    }
+                    self.push(IfaValue::List(ifa_types::gc::IfaGc::new(results)))?;
+                    return Ok(());
+                } else if method_name == "to" || method_name == "sort" {
+                    let mut sorted = l.to_vec();
+                    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+                    self.push(IfaValue::List(ifa_types::gc::IfaGc::new(sorted)))?;
+                    return Ok(());
+                } else if method_name == "gbogbo" || method_name == "all" {
+                    let closure = args.first().ok_or_else(|| IfaError::ArityMismatch {
+                        expected: 1,
+                        got: args.len(),
+                    })?;
+                    for item in l.iter() {
+                        let task_val = self.spawn_task(closure.clone(), vec![item.clone()])?;
+                        let keep = if let IfaValue::Future(_cell) = &task_val {
+                            self.await_future(&task_val, bytecode)?
+                        } else {
+                            task_val
+                        };
+                        if !keep.is_truthy() {
+                            self.push(IfaValue::bool(false))?;
+                            return Ok(());
+                        }
+                    }
+                    self.push(IfaValue::bool(true))?;
                     return Ok(());
                 } else {
                     return Err(IfaError::Custom(format!(

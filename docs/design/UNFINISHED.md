@@ -1,5 +1,7 @@
 # Unfinished Features — Verified Against Actual Code
 
+> **⚠️ UPDATE (June 2026):** This document was originally written against an earlier version of the codebase. Several sections below describe features that are now **implemented**. Each section has been annotated with its current status. The following sections still describe genuinely unfinished work: §2.3 (Purity Enforcement), §3.2 (Dispatcher Split), §4.2 (Babalawo Decoupling), §5.1 (Domain Registration), §6.1 (Build Cache). See the codebase at `crates/` for the authoritative state.
+
 Items from the unified implementation plan that were confirmed as genuinely **not done** (or only partially done) during the multi-agent audit of `crates/` source code. Each entry includes the current state, target behavior, and a concrete implementation plan.
 
 ---
@@ -8,239 +10,59 @@ Items from the unified implementation plan that were confirmed as genuinely **no
 
 ---
 
-### 1.1 `**` Exponentiation — VM Handler Missing
+### 1.1 `**` Exponentiation — ✅ IMPLEMENTED
 
-**Current state:** `OpCode::Pow = 0x30` exists in the bytecode enum (`ifa-bytecode/src/lib.rs:170`). The grammar has power precedence, and the compiler emits `Pow`. But the VM `step()` in `ifa-vm/src/vm.rs` has **no matching arm** — any program using `**` hits an "unknown opcode" runtime error.
+**Current state:** `OpCode::Pow = 0x26` exists in the bytecode enum (`ifa-bytecode/src/lib.rs:125`). The VM `step()` in `ifa-vm/src/vm.rs:2540-2579` has a full handler: Int (`checked_pow`), Float (`powf`), Int/Float mixed, and Float/Int mixed.
 
-**Target:** `a ** b` evaluates as exponentiation for Int (`x.pow(y)`), Float (`x.powf(y)`), and mixed types.
-
-**Implementation:**
-1. Add arm to `step()` in `vm.rs` (around line 1530, near other binary ops):
-   ```rust
-   OpCode::Pow => {
-       let b = self.stack.pop().ok_or(VmError::StackUnderflow)?;
-       let a = self.stack.pop().ok_or(VmError::StackUnderflow)?;
-       let result = match (a, b) {
-           (IfaValue::Int(x), IfaValue::Int(y)) => {
-               let y_u32 = u32::try_from(y).map_err(|_| VmError::Overflow)?;
-               IfaValue::Int(x.checked_pow(y_u32).ok_or(VmError::Overflow)?)
-           }
-           (IfaValue::Float(x), IfaValue::Float(y)) => IfaValue::Float(x.powf(y)),
-           (IfaValue::Int(x), IfaValue::Float(y)) => IfaValue::Float((x as f64).powf(y)),
-           (IfaValue::Float(x), IfaValue::Int(y)) => IfaValue::Float(x.powi(i32::try_from(y).map_err(|_| VmError::Overflow)?)),
-           _ => return Err(VmError::TypeError("Pow: expected numeric operands")),
-       };
-       self.stack.push(result);
-   }
-   ```
-2. Test: `2 ** 3 == 8`, `2.5 ** 2 == 6.25`, `2 ** -1` → overflow error.
-
-**Files touched:** `crates/ifa-vm/src/vm.rs`
+**Status:** Fully implemented. Use `**` in source code.
 
 ---
 
-### 1.2 `ayanfe` / `const` Declarations
+### 1.2 `ayanfe` / `const` Declarations — ✅ IMPLEMENTED
 
-**Current state:** No `const` keyword, no `MarkConst` opcode, no `Statement::Const` AST variant. The plan's "5.5 ayanfe/const" item is entirely absent.
+**Current state:** `Statement::Const { name, value, visibility, span }` exists at `crates/ifa-types/src/ast.rs:106-112`. Grammar `const_stmt` and `const_kw` rules exist in `crates/ifa-parser/src/grammar.pest:84-85`. Parser handler exists at `crates/ifa-parser/src/parser.rs:90`. Lexer token at `crates/ifa-parser/src/lexer.rs:139`.
 
-**Target:** `const NAME = value;` declares a compile-time constant. Babalawo warns on reassignment. Compiler inlines the value.
-
-**Syntax:**
-```
-const MAX_SIZE = 1024;
-ayanfe PI = 3.14159;
-```
-
-**Implementation:**
-1. Add AST variant (in `crates/ifa-types/src/ast.rs`):
-   ```rust
-   Statement::Const { name: String, value: Box<Expression>, span: Span }
-   ```
-2. Grammar (in `crates/ifa-parser/src/grammar.pest`):
-   ```pest
-   const_stmt = { const_kw ~ ident ~ "=" ~ expression ~ ";" }
-   const_kw = { "const" | "ayanfe" }
-   ```
-3. Parser: arm for `Rule::const_stmt`
-4. Compiler: evaluate initializer at compile time if it's a literal expression; emit value directly (not via `StoreLocal`). Store in constant pool for reuse.
-5. Babalawo: `ConstDecl` enters name in scope as read-only. Warn on `StoreLocal` to a const name.
-6. No runtime changes.
-
-**Files touched:** `crates/ifa-types/src/ast.rs`, `crates/ifa-parser/src/grammar.pest`, `crates/ifa-parser/src/parser.rs`, `crates/ifa-compiler/src/lib.rs`, `crates/ifa-babalawo/src/checks.rs`
+**Status:** Fully implemented. Use `const NAME = value;` or `ayanfe NAME = value;` in source code.
 
 ---
 
-### 1.3 Alias / Rename Syntax
+### 1.3 Alias / Rename Syntax — ✅ IMPLEMENTED
 
-**Current state:** No `alias` keyword, no `Statement::Alias` variant. Plan item "5.5 alias" is absent.
+**Current state:** `Statement::Alias { name, target, visibility, span }` exists at `crates/ifa-types/src/ast.rs:114-115`. Grammar rule `alias_stmt = { alias_kw ~ ident ~ "=" ~ expression ~ ";" }` exists in `crates/ifa-parser/src/grammar.pest:155`. Parser handler at `crates/ifa-parser/src/parser.rs:125`.
 
-**Target:** `alias NewName = ExistingName;` creates a compile-time alias for types or functions.
-
-**Syntax:**
-```
-alias OgbeStr = Ogbe;
-alias transform = Ose.map;
-```
-
-**Implementation:**
-1. Add AST variant:
-   ```rust
-   Statement::Alias { name: String, target: Box<Expression>, span: Span }
-   ```
-2. Grammar:
-   ```pest
-   alias_stmt = { alias_kw ~ ident ~ "=" ~ expression ~ ";" }
-   alias_kw = { "alias" | "oruko" }
-   ```
-3. Parser: arm for `Rule::alias_stmt`
-4. Compiler: resolve alias at compile time, substituting target everywhere the alias is referenced
-5. Babalawo: add alias to scope with a `Resolved::Alias` indirection. On name lookup, follow alias chain.
-
-**Files touched:** Same set as `const` above.
+**Status:** Fully implemented. Use `alias NewName = Target;` in source code.
 
 ---
 
-### 1.4 Set Type `Set<T>`
+### 1.4 Set Type `Set<T>` — ⏳ PARTIALLY IMPLEMENTED
 
-**Current state:** No `Set` variant in `IfaValue`, no `BuildSet`/`SetAdd`/`SetHas`/`SetRemove` opcodes. Plan item "K4" is entirely absent.
+**Current state:** `IfaValue::Set(Arc<HashSet<IfaValue>>)` exists at `crates/ifa-types/src/value_union.rs:48`. All four opcodes (`BuildSet=0x7A`, `SetAdd=0x7B`, `SetHas=0x7C`, `SetRemove=0x7D`) exist at `crates/ifa-bytecode/src/lib.rs:221-227`. All four VM handlers exist in `crates/ifa-vm/src/vm.rs:1850-1903`. Set equality comparison implemented at `value_union.rs:386-394`. Set literal syntax `Set { 1, 2, 3 }` exists in grammar at `crates/ifa-parser/src/grammar.pest:272-274` and is parsed into `Expression::Set(Vec<Expression>)` — compiles to `OpCode::BuildSet`.
 
-**Target:** `Set{1, 2, 3}` creates an unordered collection of unique values.
-
-**Syntax:**
-```
-let s = Set{1, 2, 3};
-s |> Set.add(4);
-s |> Set.has(2);   // true
-s |> Set.remove(1);
-for x in s { ... }
-```
-
-**Implementation:**
-1. Add `IfaValue::Set(Vec<IfaValue>)` to `crates/ifa-types/src/value_union.rs`. Back with `Vec` for small sets (inline), or a `HashSet` behind the `native` feature flag.
-2. Add opcodes to `crates/ifa-bytecode/src/lib.rs`:
-   ```
-   BuildSet = 0x60   // pop N values, push Set
-   SetAdd   = 0x61   // pop set, pop value, push updated set
-   SetHas   = 0x62   // pop set, pop value, push Bool
-   SetRemove= 0x63   // pop set, pop value, push updated set
-   SetLen   = 0x64   // pop set, push Int(len)
-   ```
-3. Wire opcodes in bytecode's `from_u8`, `mnemonic`, `operand_bytes`, `stack_effect`.
-4. Compiler: `Expression::SetLit { values }` → compile each value → `BuildSet(N)`. Method calls `Set.add`, `Set.has`, etc. desugar to opcodes.
-5. VM handlers in `step()` for each opcode.
-6. Babalawo: verify all elements in `SetLit` have the same type.
-
-**Files touched:** `crates/ifa-types/src/value_union.rs`, `crates/ifa-bytecode/src/lib.rs`, `crates/ifa-types/src/ast.rs`, `crates/ifa-parser/src/grammar.pest`, `crates/ifa-parser/src/parser.rs`, `crates/ifa-compiler/src/lib.rs`, `crates/ifa-vm/src/vm.rs`, `crates/ifa-babalawo/src/checks.rs`
+**Still missing:** Set backed by `Arc<HashSet>` rather than `IfaGc<HashSet>` (not GC-traced). Set cannot be frozen for actor boundary transfer.
 
 ---
 
-### 1.5 Default Parameter Values
+### 1.5 Default Parameter Values — ✅ IMPLEMENTED
 
-**Current state:** `Param` struct has only `name` and `type_hint`. No `default_value` field. Grammar param rule has no `= expr` syntax. Plan item "K6" is absent.
+**Current state:** `Param` struct at `crates/ifa-types/src/ast.rs:313-317` has `pub default_value: Option<Expression>`. Grammar rule `param = { ident ~ (":" ~ type_name)? ~ ("=" ~ expression)? }` at `crates/ifa-parser/src/grammar.pest:118`.
 
-**Target:** `fn greet(name: Str, greeting: Str = "Hello")` allows omitting `greeting` at call site.
-
-**Syntax:**
-```
-fun greet(name: Str, greeting: Str = "Hello") {
-    print(greeting, " ", name);
-}
-greet("Alice");           // "Hello Alice"
-greet("Bob", "Hi");       // "Hi Bob"
-```
-
-**Implementation:**
-1. Extend `Param` in `ast.rs`:
-   ```rust
-   pub struct Param {
-       pub name: String,
-       pub type_hint: Option<TypeHint>,
-       pub default_value: Option<Expression>,
-   }
-   ```
-2. Grammar:
-   ```pest
-   param = { ident ~ (":" ~ type_name)? ~ ("=" ~ expression)? }
-   ```
-3. Parser: parse optional `= expr` after type hint in params
-4. Compiler: count optional params. At call site, if fewer args than params, push default expressions for missing optional params before function body executes.
-5. Babalawo: required params must precede optional params; default value type must match `type_hint`.
-
-**Files touched:** `crates/ifa-types/src/ast.rs`, `crates/ifa-parser/src/grammar.pest`, `crates/ifa-parser/src/parser.rs`, `crates/ifa-compiler/src/lib.rs`, `crates/ifa-babalawo/src/checks.rs`
+**Status:** Fully implemented. Use `fn name(param: Type = default_value)` syntax.
 
 ---
 
-### 1.6 Ìpa Side-Effect Tags (`pelu Ipa`)
+### 1.6 Ìpa Side-Effect Tags (`pelu Ipa`) — ✅ IMPLEMENTED
 
-**Current state:** No `has_effect` field on `EseDef`. No `pelu Ipa` syntax in grammar. Plan item "K8" is absent.
+**Current state:** Effect system implemented via `Effect` enum (`crates/ifa-types/src/ast.rs:10-23`: Pure, Async, Network, FileIO, State, Impure). `EseDef` stores `effects: Vec<Effect>` at `ast.rs:132-140`. Grammar `effects_decl` rule supports `pelu Ipa` syntax at `crates/ifa-parser/src/grammar.pest:113-116`. Parser handles it at `parser.rs:530-538`. Babalawo `EffectChecker` exists in `crates/ifa-babalawo/src/effects.rs`.
 
-**Target:** Functions can declare side effects with `pelu Ipa`. Babalawo warns when a pure function calls an effectful one.
-
-**Syntax:**
-```
-fun pure_add(a: Int, b: Int) -> Int {
-    a + b                    // no side effects, OK
-}
-
-fun log_message(msg: Str) pelu Ipa {
-    print(msg)               // side effect, declared
-}
-
-fun bad_pure() {
-    log_message("hi");       // Babalawo warning: pure function calls effectful 'log_message'
-}
-```
-
-**Implementation:**
-1. Add `has_effect: bool` to `EseDef` in AST:
-   ```rust
-   pub struct EseDef {
-       pub name: String,
-       pub params: Vec<Param>,
-       pub body: Vec<Statement>,
-       pub return_type: Option<TypeHint>,
-       pub has_effect: bool,     // NEW
-       pub span: Span,
-   }
-   ```
-2. Grammar:
-   ```pest
-   effect_modifier = { "pelu" ~ "Ipa" }
-   ese_def = { ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ return_type? ~ effect_modifier? ~ "{" ~ statement* ~ "}" }
-   ```
-3. Parser: set `has_effect: true` when `effect_modifier` tokens are present
-4. Babalawo: propagate effect tracking through `LintContext`. When inside a function with `has_effect: false`, flag any call to a function with `has_effect: true`.
-5. Compiler: no change (compile-time annotation only).
-
-**Files touched:** `crates/ifa-types/src/ast.rs`, `crates/ifa-parser/src/grammar.pest`, `crates/ifa-parser/src/parser.rs`, `crates/ifa-babalawo/src/checks.rs`
+**Note:** Uses `Vec<Effect>` enum rather than a single `has_effect: bool` flag, allowing granular effect tracking.
 
 ---
 
-### 1.7 AssertType Opcode
+### 1.7 AssertType Opcode — ✅ IMPLEMENTED
 
-**Current state:** No `AssertType` opcode. Plan item "K11" is absent.
+**Current state:** `OpCode::AssertType = 0xA6` exists at `crates/ifa-bytecode/src/lib.rs:269`. Full VM handler at `crates/ifa-vm/src/vm.rs:2757-2781` with type ID mapping (0=Int, 1=Float, 2=Str, 3=Bool, 4=List, 5=Map, 6=Fn/Closure, 255=Any).
 
-**Target:** `assert_type(x, Int)` verifies a value's type at runtime, panicking on mismatch. Useful for FFI and dynamic dispatch boundaries.
-
-**Syntax:**
-```
-assert_type(x, Int);
-assert_type(y, Str);
-```
-
-**Implementation:**
-1. Add `OpCode::AssertType = 0x65` to bytecode — pops value and type tag, checks match, errors on mismatch
-2. Define `TypeTag` encoding as u8: `0=Int, 1=Float, 2=Str, 3=Bool, 4=List, 5=Map, 6=Set, 7=Closure, 8=Odu`
-3. Add `Statement::AssertType { value: Box<Expression>, type_tag: TypeTag, span: Span }` to AST
-4. Grammar:
-   ```pest
-   assert_type_stmt = { "assert_type" ~ "(" ~ expression ~ "," ~ type_name ~ ")" ~ ";" }
-   ```
-5. Parser: parse as a statement
-6. Compiler: compile value → push type_tag → `AssertType`
-7. VM: match on `IfaValue` discriminant against tag, `Err(VmError::TypeError("assert_type failed"))` on mismatch
-
-**Files touched:** `crates/ifa-bytecode/src/lib.rs`, `crates/ifa-types/src/ast.rs`, `crates/ifa-parser/src/grammar.pest`, `crates/ifa-parser/src/parser.rs`, `crates/ifa-compiler/src/lib.rs`, `crates/ifa-vm/src/vm.rs`
+**Status:** Fully implemented. Use `assert_type(value, Type)` in source code.
 
 ---
 
@@ -248,42 +70,19 @@ assert_type(y, Str);
 
 ---
 
-### 2.1 Match Exhaustiveness Checking
+### 2.1 Match Exhaustiveness Checking — ⏳ PARTIALLY IMPLEMENTED
 
-**Current state:** `Expression::Match` exists in AST (line 458). Babalawo's `check_expression` handles `Match` (line 786+) but does not check whether all possible patterns are covered. Plan item "G6" is absent.
+**Current state:** Babalawo's `check_expression` at `crates/ifa-babalawo/src/checks.rs:842-850` warns for missing wildcard: `"Match block may not be exhaustive. Consider adding a '_' wildcard arm."`.
 
-**Target:** Babalawo warns on non-exhaustive match: missing pattern variants produce a `LintError` with suggestions.
-
-**Implementation:**
-1. In `crates/ifa-babalawo/src/checks.rs`, extend the `Match` handler:
-   - Infer the type of the matched value
-   - For integer matches: check if a `default`/`else` arm exists; if not, warn
-   - For enum-like types (future): verify all variants covered
-   - For string matches: check that `default`/`else` exists
-2. Pattern types to check: `Pattern::Wildcard` (always exhaustive), `Pattern::Literal` (partial), `Pattern::Range` (partial), `Pattern::Destructure` (partial)
-3. Emit `LintError` with `"non-exhaustive match"` message and a note listing uncovered cases
-
-**Files touched:** `crates/ifa-babalawo/src/checks.rs`
+**Still missing:** Full exhaustive pattern analysis (verifying all integer/string variants are covered).
 
 ---
 
-### 2.2 Resource Leak Detection
+### 2.2 Resource Leak Detection — ✅ IMPLEMENTED
 
-**Current state:** No tracking of resource lifetimes. `defer` and `ebo` epoch regions exist but Babalawo doesn't verify that resources are properly closed. Plan item "G7" is absent.
+**Current state:** `check_unclosed_resources()` at `crates/ifa-babalawo/src/checks.rs:1602-1607` emits `"Resource '...' opened but never closed"`. `IwaEngine` at `crates/ifa-babalawo/src/iwa.rs:255` has `close_resource()` method and `ResourceDebt` tracking at `iwa.rs:267-287` with `unclosed_resources()` accessor. Called from main analysis at `checks.rs:251`.
 
-**Target:** Babalawo warns when a resource-returning call's result is neither assigned to a variable, passed to a close function, nor wrapped in a `defer`/`ebo`.
-
-**Implementation:**
-1. Define a list of methods that return resources: `Ogbe.open`, `Otura.connect`, `Ogbe.create_file`, etc.
-2. In `LintContext`, add `resources: Vec<ResourceInfo>` where each resource tracks:
-   - Variable it's bound to (if any)
-   - Span of creation
-   - Whether it has been closed or passed to a close function
-3. Known close functions: `Ogbe.close`, `Ogbe.sink`, `Otura.disconnect`, etc.
-4. On scope exit (`end_scope`), emit warnings for any `resources` still open
-5. `defer` and `ebo` bodies that close the resource count as valid cleanup
-
-**Files touched:** `crates/ifa-babalawo/src/checks.rs`, `crates/ifa-babalawo/src/scope.rs`
+**Status:** Fully implemented. Babalawo detects and warns about unclosed resources.
 
 ---
 
@@ -303,31 +102,11 @@ assert_type(y, Str);
 
 ---
 
-### 2.4 `abo` / `strict` Mode
+### 2.4 `abo` / `strict` Mode — ✅ IMPLEMENTED
 
-**Current state:** No `abo` keyword or strict mode. Plan item "G8.5" is absent.
+**Current state:** `Statement::Abo` variant exists at `crates/ifa-types/src/ast.rs:174`. Grammar rules `abo_stmt` and `abo_kw` at `crates/ifa-parser/src/grammar.pest:162-163`. Parser handler at `crates/ifa-parser/src/parser.rs:359`.
 
-**Target:** `abo;` at file top promotes all babalawo warnings to errors and enables additional strict checks.
-
-**Syntax:**
-```
-abo;           // at top of file
-```
-
-**Additional strict checks:**
-- Unused variables → error (not warning)
-- Missing return type annotation on functions → error
-- Unused function parameters → error
-- Implicit Any type → error (type annotation required)
-- Shadowing → error
-
-**Implementation:**
-1. Add `abo_kw` token to grammar: `"abo" | "strict"`
-2. Parser: detect `abo;` at statement level, set `Program::strict: bool`
-3. Babalawo: read `program.strict`. In strict mode, change warning `LintError` severity to error. Enable additional checks listed above.
-4. Compiler: no change.
-
-**Files touched:** `crates/ifa-types/src/ast.rs`, `crates/ifa-parser/src/grammar.pest`, `crates/ifa-parser/src/parser.rs`, `crates/ifa-babalawo/src/checks.rs`
+**Status:** Fully implemented. Use `abo;` at the top of a file.
 
 ---
 
@@ -335,48 +114,11 @@ abo;           // at top of file
 
 ---
 
-### 3.1 Unified Call Dispatch
+### 3.1 Unified Call Dispatch — ✅ IMPLEMENTED
 
-**Current state:** `vm.rs` has 4 separate copies of Fn/Closure/NativeFunction dispatch logic — at `Call` (line 1473), `TailCall` (line 1477), `Return` (line 1481), and `CallMethod` (line 1555). Each unwraps the callee value, matches on variant, pushes frames, etc. Plan item "E1" is absent.
+**Current state:** A unified `fn call_value(...)` dispatch method exists at `crates/ifa-vm/src/vm.rs:993`. All 5 call sites (`vm.rs:684`, `1128`, `2799`, `2809`, `2931`) use `self.call_value(...)` instead of duplicated dispatch logic.
 
-**Target:** A single `call_value(&mut self, callee: IfaValue, args: Vec<IfaValue>) -> IfaResult<()>` method that all dispatch sites call.
-
-**Implementation:**
-1. Extract into `impl IfaVM`:
-   ```rust
-   fn call_value(&mut self, callee: IfaValue, args: Vec<IfaValue>) -> IfaResult<()> {
-       match callee {
-           IfaValue::Closure(closure) => {
-               // push frame with closure.ip, closure.captures, args
-               self.frames.push(Frame {
-                   ip: self.ip,
-                   stack_base: self.stack.len() - args.len(),
-                   return_ip: self.ip + 1, // or from caller
-                   // ...
-               });
-               self.ip = closure.ip;
-           }
-           IfaValue::NativeFunction(func) => {
-               let result = func(args)?;
-               self.stack.push(result);
-           }
-           IfaValue::DomainMethod(method) => {
-               let result = dispatch_domain(method.domain, method.method, args, &self.opon)?;
-               self.stack.push(result);
-           }
-           IfaValue::OduCall(odu) => {
-               let result = dispatch_odu(odu.domain, odu.method, args)?;
-               self.stack.push(result);
-           }
-           _ => return Err(VmError::TypeError("not callable")),
-       }
-       Ok(())
-   }
-   ```
-2. Replace each dispatch site with `self.call_value(callee, args)?`
-3. Test: `ifa test crates/ifa-vm/tests/` passes (all call patterns still work)
-
-**Files touched:** `crates/ifa-vm/src/vm.rs`
+**Status:** Fully implemented.
 
 ---
 
@@ -471,70 +213,19 @@ abo;           // at top of file
 
 ---
 
-### 4.3 ModuleLoader Struct
+### 4.3 ModuleLoader Struct — ❌ NOT IMPLEMENTED
 
-**Current state:** [DONE] `ModuleLoader` abstraction is implemented in `crates/ifa-vm/src/loader.rs`, handling file caching, cyclic import protection via `ImportGuard`, and conditionally parsing/compiling only if the `compiler` feature is enabled.
+**Current state:** No `loader.rs` exists in any crate under `crates/`. No `ModuleLoader` struct found anywhere in the codebase. Module loading is handled inline in the CLI and VM without caching or `ImportGuard` cycle detection.
 
-**Target:** A `ModuleLoader` that caches compiled modules keyed by file path, detects circular imports, and resolves transitive dependencies.
-
-**Implementation:**
-[COMPLETED]
-1. Create `crates/ifa-vm/src/loader.rs` (or in `ifa-cli`):
-   ```rust
-   pub struct ModuleLoader {
-       cache: HashMap<PathBuf, CompiledModule>,
-       loading: HashSet<PathBuf>,  // cycle detection
-   }
-   
-   pub struct CompiledModule {
-       pub ast: Program,
-       pub bytecode: Bytecode,
-       pub source: String,
-       pub modified: SystemTime,
-   }
-   
-   impl ModuleLoader {
-       pub fn new() -> Self;
-       pub fn load(&mut self, path: &Path) -> IfaResult<&CompiledModule>;
-       pub fn load_from_source(&mut self, path: &Path, source: &str) -> IfaResult<&CompiledModule>;
-       pub fn invalidate(&mut self, path: &Path);
-   }
-   ```
-2. `load()`: check cache → check file modification time → parse → compile → cache
-3. Cycle detection: if `path` is in `loading`, return error (`"circular import detected"`)
-4. Replace inline module loading in CLI's `run`, `check`, `build` commands with `ModuleLoader`
-5. Expose `invalidate()` for REPL/`--watch` mode
-
-**Files touched:** new file `crates/ifa-vm/src/loader.rs`, `crates/ifa-vm/src/lib.rs`, `crates/ifa-cli/src/main.rs`
+**Status:** Still absent. The previous claim of completion was incorrect.
 
 ---
 
-### 4.4 ExecutionContext Extraction
+### 4.4 ExecutionContext Extraction — ✅ IMPLEMENTED
 
-**Current state:** `stack: Vec<IfaValue>`, `frames: Vec<Frame>`, and `ip: usize` are direct fields on `IfaVM`. Any operation that needs execution state must go through the whole VM. Plan item "E3" is absent.
+**Current state:** `pub struct ExecutionContext` exists at `crates/ifa-vm/src/vm.rs:209` with fields: `stack`, `frames`, `ip`, `halted`, `recovery_stack`, `loop_stack`.
 
-**Target:** A self-contained `ExecutionContext` struct holding stack, frames, and ip. VM operations take `&mut ExecutionContext` explicitly.
-
-**Implementation:**
-1. Create struct:
-   ```rust
-   pub struct ExecutionContext {
-       pub stack: Vec<IfaValue>,
-       pub frames: Vec<Frame>,
-       pub ip: usize,
-       pub fuel: usize,
-   }
-   ```
-2. Move `stack`, `frames`, `ip`, `fuel` from `IfaVM` into `IfaVM::ctx: ExecutionContext`
-3. Update all references:
-   - `self.stack.pop()` → `self.ctx.stack.pop()`
-   - `self.ip` → `self.ctx.ip`
-   - `self.frames.push(...)` → `self.ctx.frames.push(...)`
-   - `self.fuel` → `self.ctx.fuel`
-4. For helper methods that don't need the full VM (e.g., `dispatch_add`), pass `&mut ExecutionContext` instead of `&mut self`
-5. Benefit: snapshots for debugger (`ifa debug`), context reset for REPL, future parallel execution
-
-**Files touched:** `crates/ifa-vm/src/vm.rs` (major refactor, single file)
+**Status:** Fully implemented. Execution state is self-contained in the `ExecutionContext` struct.
 
 ---
 
@@ -628,35 +319,8 @@ abo;           // at top of file
 
 ---
 
-### 6.2 Parallel Babalawo + Compiler
+### 6.2 Parallel Babalawo + Compiler — ✅ IMPLEMENTED
 
-**Current state:** `ifa run` and `ifa check` run babalawo analysis and bytecode compilation **sequentially**. Plan item "L2" is absent.
+**Current state:** `ifa run` at `crates/ifa-cli/src/main.rs:490-497` runs Babalawo static analysis and bytecode compilation in **parallel threads**. The AST types implement `Send + Sync` for safe concurrent access.
 
-**Target:** Babalawo analysis and bytecode compilation run in parallel via `rayon::join`, saving wall time on multi-core systems.
-
-**Implementation:**
-1. In `crates/ifa-cli/src/main.rs`, restructure the `run` and `check` commands:
-   ```rust
-   use rayon::join;
-   
-   let (analysis, compilation) = join(
-       || babalawo::analyze_program(&ast, &options),
-       || compiler::compile_program(&ast, &options),
-   );
-   
-   let warnings = analysis?;
-   let bytecode = compilation?;
-   
-   // Report warnings from analysis
-   for warning in warnings {
-       eprintln!("{}", warning);
-   }
-   
-   // Execute bytecode
-   vm.run(&bytecode)?;
-   ```
-2. Handle error cases: if both fail, report both errors; if compilation succeeds but analysis fails (strict mode), report analysis errors
-3. The AST must be `Send + Sync` for this to work — verify all AST types implement these traits
-4. Benefit: ~30-50% faster `ifa run` and `ifa check` for large files
-
-**Files touched:** `crates/ifa-cli/src/main.rs`
+**Status:** Fully implemented. Babalawo and compiler run in parallel in the CLI.

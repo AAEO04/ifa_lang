@@ -2,6 +2,7 @@
 //!
 //! Command-line interface for Ifá-Lang - The Yoruba Programming Language.
 
+mod cache;
 mod debug_adapter;
 mod deploy;
 mod docgen;
@@ -336,6 +337,7 @@ fn run_babalawo(
 ) -> Option<ifa_babalawo::LintContext> {
     let filename = filepath.display().to_string();
     let config = ifa_babalawo::BabalawoConfig {
+        target: ifa_types::target::Target::Native,
         include_wisdom: true,
         taboos: Vec::new(),
     };
@@ -489,7 +491,10 @@ fn main() -> Result<()> {
                     let compiler = ifa_vm::Compiler::new(&file.display().to_string());
                     compiler.compile(&program)
                 });
-                (babalawo_handle.join().unwrap(), compile_handle.join().unwrap())
+                (
+                    babalawo_handle.join().unwrap(),
+                    compile_handle.join().unwrap(),
+                )
             });
 
             // 5-Layer Integrity Defence (Babalawo Static Analysis)
@@ -497,7 +502,8 @@ fn main() -> Result<()> {
                 std::process::exit(1);
             }
 
-            let bytecode = compile_res.map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
+            let bytecode =
+                compile_res.map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
 
             let mut registry = ifa_std::vm_registry::StdRegistry::new();
             registry.set_capabilities(caps.clone());
@@ -577,7 +583,10 @@ fn main() -> Result<()> {
                     let compiler = ifa_vm::Compiler::new(&file.display().to_string());
                     compiler.compile(&program)
                 });
-                (babalawo_handle.join().unwrap(), compile_handle.join().unwrap())
+                (
+                    babalawo_handle.join().unwrap(),
+                    compile_handle.join().unwrap(),
+                )
             });
 
             // 5-Layer Integrity Defence (Babalawo Static Analysis)
@@ -585,7 +594,8 @@ fn main() -> Result<()> {
                 std::process::exit(1);
             }
 
-            let bytecode = compile_res.map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
+            let bytecode =
+                compile_res.map_err(|e| color_eyre::eyre::eyre!("Compilation error: {}", e))?;
 
             // Write .ifab file
             let bytes = bytecode.to_bytes();
@@ -1005,9 +1015,10 @@ lto = true
             match command {
                 SandboxCommands::Run { file, timeout } => {
                     use std::time::Duration;
-                    let mut config = ifa_sandbox::SandboxConfig::new(ifa_sandbox::SecurityProfile::Standard);
+                    let mut config =
+                        ifa_sandbox::SandboxConfig::new(ifa_sandbox::SecurityProfile::Standard);
                     config.limits.max_execution_time = Duration::from_secs(timeout);
-                    
+
                     let sb = ifa_sandbox::Igbale::new(config);
                     let result = sb.run(&file)?;
 
@@ -1083,6 +1094,15 @@ lto = true
 
         Commands::Check { file } => {
             println!("🔍 Checking syntax of {}...", file.display());
+            let cache_manager = cache::CacheManager::new();
+            if let Some(true) = cache_manager.check_cache("check", &file) {
+                println!(
+                    "✅ No syntax or static analysis errors found in {} (cached)",
+                    file.display()
+                );
+                return Ok(());
+            }
+
             let source = std::fs::read_to_string(&file).wrap_err("Failed to read file")?;
             match ifa_vm::parse(&source) {
                 Ok(program) => {
@@ -1091,11 +1111,14 @@ lto = true
                             "✅ No syntax or static analysis errors found in {}",
                             file.display()
                         );
+                        cache_manager.update_cache("check", &file, true);
                     } else {
+                        cache_manager.update_cache("check", &file, false);
                         std::process::exit(1);
                     }
                 }
                 Err(e) => {
+                    cache_manager.update_cache("check", &file, false);
                     eprintln!("❌ Syntax Error: {}", e);
                     std::process::exit(1);
                 }
@@ -1366,11 +1389,15 @@ lto = true
                             if let Some((caller, callee)) = t.split_once(':') {
                                 parsed_taboos.push((caller.to_string(), callee.to_string()));
                             } else {
-                                println!("Warning: invalid taboo format '{}'. Expected 'caller:callee'", t);
+                                println!(
+                                    "Warning: invalid taboo format '{}'. Expected 'caller:callee'",
+                                    t
+                                );
                             }
                         }
 
                         let config = BabalawoConfig {
+                            target: ifa_types::target::Target::Native,
                             include_wisdom: !fast,
                             taboos: parsed_taboos,
                         };
@@ -1442,6 +1469,8 @@ lto = true
             println!("idanwo: Running tests...");
             println!();
 
+            let cache_manager = cache::CacheManager::new();
+
             // Find test files
             let start_dir = path.unwrap_or_else(|| PathBuf::from("."));
             let test_files: Vec<PathBuf> = walkdir(&start_dir)
@@ -1476,11 +1505,23 @@ lto = true
                 let name = file.display().to_string();
                 print!("  {} ... ", name);
 
+                if let Some(passed_cached) = cache_manager.check_cache("test", file) {
+                    if passed_cached {
+                        println!("ok (cached)");
+                        passed += 1;
+                    } else {
+                        println!("FAIL (cached)");
+                        failed += 1;
+                    }
+                    continue;
+                }
+
                 let source = match std::fs::read_to_string(file) {
                     Ok(s) => s,
                     Err(e) => {
                         println!("FAIL (read error: {})", e);
                         failed += 1;
+                        cache_manager.update_cache("test", file, false);
                         continue;
                     }
                 };
@@ -1491,6 +1532,7 @@ lto = true
                         if run_babalawo(&program, file).is_none() {
                             println!("FAIL (Babalawo)");
                             failed += 1;
+                            cache_manager.update_cache("test", file, false);
                             continue;
                         }
 
@@ -1508,6 +1550,7 @@ lto = true
                                     Ok(_) => {
                                         println!("ok");
                                         passed += 1;
+                                        cache_manager.update_cache("test", file, true);
                                     }
                                     Err(e) => {
                                         println!("FAIL");
@@ -1515,6 +1558,7 @@ lto = true
                                             println!("    {}", e);
                                         }
                                         failed += 1;
+                                        cache_manager.update_cache("test", file, false);
                                     }
                                 }
                             }
@@ -1524,6 +1568,7 @@ lto = true
                                     println!("    {}", e);
                                 }
                                 failed += 1;
+                                cache_manager.update_cache("test", file, false);
                             }
                         }
                     }
@@ -1533,6 +1578,7 @@ lto = true
                             println!("    {}", e);
                         }
                         failed += 1;
+                        cache_manager.update_cache("test", file, false);
                     }
                 }
             }

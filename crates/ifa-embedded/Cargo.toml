@@ -36,6 +36,7 @@ force_64bit = [] # Evaluate as i64 even on 32-bit (software emulation)
 heapless = "0.8"
 # Interrupt-safe critical sections
 critical-section = "1.1"
+ifa-bytecode = { path = "../ifa-bytecode", default-features = false }
 
 # --- Optional Dependencies (Tier 1/IoT) ---
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"], optional = true }

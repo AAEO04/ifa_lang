@@ -24,6 +24,7 @@ extern crate alloc;
 use alloc::string::String;
 use core::fmt;
 use heapless::Vec as HVec;
+use ifa_bytecode::embedded::EmbeddedOpCode;
 
 // Embedded optimizations with Ikin & Iroke
 // Embedded optimizations with Ikin & Iroke
@@ -36,6 +37,8 @@ pub mod iot;
 
 #[cfg(feature = "storage")]
 pub mod storage;
+
+pub mod slab;
 
 // =============================================================================
 // ERRORS
@@ -77,7 +80,8 @@ impl fmt::Display for EmbeddedError {
 pub type EmbeddedResult<T> = Result<T, EmbeddedError>;
 
 /// VM Exit Status
-#[derive(Debug, Clone, Copy, PartialEq)] // Added PartialEq for tests
+#[derive(Debug, Clone, PartialEq)] // Added PartialEq for tests
+#[cfg_attr(not(feature = "alloc"), derive(Copy))]
 pub enum VmExit {
     /// Program halted normally
     Halted(EmbeddedValue),
@@ -289,119 +293,7 @@ impl EmbeddedValue {
 // OPCODES (Subset for embedded)
 // =============================================================================
 
-/// Embedded opcodes - minimal subset for constrained devices
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum EmbeddedOpCode {
-    /// Push null
-    PushNull = 0x05,
-    /// Push integer (followed by 4 bytes, little-endian)
-    PushInt = 0x08,
-    /// Push float (followed by 4 bytes, little-endian)
-    PushFloat = 0x09,
-    /// Push true
-    PushTrue = 0x06,
-    /// Push false
-    PushFalse = 0x07,
-
-    /// Pop and discard
-    Pop = 0x02,
-    /// Duplicate top
-    Dup = 0x03,
-
-    /// Add
-    Add = 0x20,
-    /// Subtract
-    Sub = 0x21,
-    /// Multiply
-    Mul = 0x22,
-    /// Divide
-    Div = 0x23,
-
-    /// Equal
-    Eq = 0x40,
-    /// Less than
-    Lt = 0x42,
-    /// Greater than
-    Gt = 0x44,
-
-    /// Logical NOT
-    Not = 0x33,
-
-    /// Load local variable (followed by 1-byte index)
-    LoadLocal = 0x18,
-    /// Store local variable (followed by 1-byte index)
-    StoreLocal = 0x19,
-
-    /// Jump (followed by 2-byte offset, little-endian)
-    Jump = 0x50,
-    /// Jump if false
-    JumpIfFalse = 0x52,
-
-    /// Halt execution
-    Halt = 0x55,
-
-    // ===================================
-    // POINTER OPS (Address 0xA0 base)
-    // ===================================
-    /// Push Ref/Address (followed by 4 byte address/index)
-    Ref = 0x1C,
-    /// Dereference (Read): Pop addr -> Push value (32-bit load)
-    Deref = 0x12,
-    /// Store Dereference (Write): Pop addr, Pop val -> Write val to address (32-bit store)
-    StoreDeref = 0x16,
-
-    // Sized pointer ops
-    /// Store 8-bit value to address
-    Store8 = 0x14,
-    /// Store 16-bit value to address
-    Store16 = 0x15,
-    /// Read 8-bit value from address
-    Load8 = 0x10,
-    /// Read 16-bit value from address
-    Load16 = 0x11,
-
-    /// Yield execution (pause without resetting)
-    /// Followed by 4 byte duration hint (u32 microseconds), or 0 for indefinite
-    Yield = 0x56,
-}
-
-impl EmbeddedOpCode {
-    /// Parse opcode from byte
-    pub fn from_byte(byte: u8) -> EmbeddedResult<Self> {
-        match byte {
-            0x05 => Ok(EmbeddedOpCode::PushNull),
-            0x08 => Ok(EmbeddedOpCode::PushInt),
-            0x09 => Ok(EmbeddedOpCode::PushFloat),
-            0x06 => Ok(EmbeddedOpCode::PushTrue),
-            0x07 => Ok(EmbeddedOpCode::PushFalse),
-            0x02 => Ok(EmbeddedOpCode::Pop),
-            0x03 => Ok(EmbeddedOpCode::Dup),
-            0x20 => Ok(EmbeddedOpCode::Add),
-            0x21 => Ok(EmbeddedOpCode::Sub),
-            0x22 => Ok(EmbeddedOpCode::Mul),
-            0x23 => Ok(EmbeddedOpCode::Div),
-            0x40 => Ok(EmbeddedOpCode::Eq),
-            0x42 => Ok(EmbeddedOpCode::Lt),
-            0x44 => Ok(EmbeddedOpCode::Gt),
-            0x33 => Ok(EmbeddedOpCode::Not),
-            0x18 => Ok(EmbeddedOpCode::LoadLocal),
-            0x19 => Ok(EmbeddedOpCode::StoreLocal),
-            0x50 => Ok(EmbeddedOpCode::Jump),
-            0x52 => Ok(EmbeddedOpCode::JumpIfFalse),
-            0x55 => Ok(EmbeddedOpCode::Halt),
-            0x1C => Ok(EmbeddedOpCode::Ref),
-            0x12 => Ok(EmbeddedOpCode::Deref),
-            0x16 => Ok(EmbeddedOpCode::StoreDeref),
-            0x14 => Ok(EmbeddedOpCode::Store8),
-            0x15 => Ok(EmbeddedOpCode::Store16),
-            0x10 => Ok(EmbeddedOpCode::Load8),
-            0x11 => Ok(EmbeddedOpCode::Load16),
-            0x56 => Ok(EmbeddedOpCode::Yield),
-            _ => Err(EmbeddedError::UnknownOpcode(byte)),
-        }
-    }
-}
+// Moved to `ifa-bytecode::embedded::EmbeddedOpCode`.
 
 // =============================================================================
 // EMBEDDED VM
@@ -583,7 +475,8 @@ impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SI
             }
 
             let opcode_byte = self.read_u8(code)?;
-            let opcode = EmbeddedOpCode::from_byte(opcode_byte)?;
+            let opcode = EmbeddedOpCode::from_byte(opcode_byte)
+                .ok_or(EmbeddedError::UnknownOpcode(opcode_byte))?;
 
             match opcode {
                 EmbeddedOpCode::PushNull => {
@@ -775,14 +668,7 @@ impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SI
                     let addr_val = self.pop()?;
                     let val = self.pop()?;
 
-                    #[cfg(test)]
-                    {
-                        use std::println;
-                        println!("StoreDeref Debug:");
-                        println!("  Stack Top (Addr): {:?}", addr_val);
-                        println!("  Stack Next (Val): {:?}", val);
-                        println!("  Remaining Stack: {:?}", self.stack);
-                    }
+
 
                     if let EmbeddedValue::Ptr(addr) = addr_val {
                         // Check if MMIO
@@ -823,11 +709,7 @@ impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SI
                             self.opon[idx] = val;
                         }
                     } else {
-                        #[cfg(test)]
-                        {
-                            use std::println;
-                            println!("ERROR: StoreDeref expected Ptr, got {:?}", addr_val);
-                        }
+
                         return Err(EmbeddedError::HalError("StoreDeref requires Ptr".into()));
                     }
                 }

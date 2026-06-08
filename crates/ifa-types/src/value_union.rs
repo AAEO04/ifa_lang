@@ -3,6 +3,8 @@
 //! This module implements `IfaValue` as a safe, reference-counted enum.
 //! No manual memory management. No unsafe unions. pure Rust.
 
+
+use crate::gc::{IfaGc, Trace};
 #[cfg(feature = "serde")]
 use serde::de::Error as DeError;
 #[cfg(feature = "serde")]
@@ -13,8 +15,6 @@ use std::fmt;
 use std::sync::Arc;
 #[cfg(feature = "vm")]
 use std::sync::Mutex;
-#[cfg(feature = "std")]
-use std::sync::OnceLock;
 
 #[cfg(feature = "std")]
 // Dashmap removed for PR-28 / I-Stream (No global caching)
@@ -44,8 +44,8 @@ pub enum IfaValue {
 
     // 2. Heap Objects (Ref-Counted, Shared)
     Str(crate::CompactString),
-    List(Arc<Vec<IfaValue>>),
-    Map(Arc<HashMap<crate::CompactString, IfaValue>>),
+    List(IfaGc<Vec<IfaValue>>),
+    Map(IfaGc<HashMap<crate::CompactString, IfaValue>>),
     Set(Arc<std::collections::HashSet<IfaValue>>),
 
     // 3. Special / VM Objects
@@ -61,10 +61,12 @@ pub enum IfaValue {
 
     /// Bytecode closure: function template + captured environment.
     #[cfg(feature = "vm")]
-    Closure(Arc<ClosureData>),
+    Closure(IfaGc<ClosureData>),
     /// Async future value (VM/AST only).
     #[cfg(feature = "vm")]
     Future(FutureCell),
+    #[cfg(feature = "vm")]
+    NativeFuture(NativeFutureCell),
     /// H2: Actor handle — a reference to a running isolated VM thread.
     /// Uses type-erased Arc so ifa-types has no dependency on ifa-vm's ActorHandle.
     /// Callers in ifa-vm downcast via `Arc::downcast` after cloning.
@@ -77,7 +79,6 @@ pub enum IfaValue {
     },
 
     // Legacy / Other
-    #[allow(dead_code)]
     Resource(Arc<ResourceToken>),
 
     // VM Specific
@@ -100,7 +101,7 @@ pub enum IfaValue {
 
 /// Shared mutable cell used for closure capture (by-reference semantics).
 #[cfg(feature = "vm")]
-pub type UpvalueCell = Arc<Mutex<IfaValue>>;
+pub type UpvalueCell = IfaGc<Mutex<IfaValue>>;
 
 /// Closure payload for the bytecode VM.
 #[cfg(feature = "vm")]
@@ -122,7 +123,18 @@ pub enum FutureState {
 }
 
 #[cfg(feature = "vm")]
-pub type FutureCell = Arc<Mutex<FutureState>>;
+pub type FutureCell = Arc<std::sync::RwLock<FutureState>>;
+
+#[cfg(feature = "vm")]
+#[derive(Clone, Debug)]
+pub enum NativeFutureState {
+    Pending,
+    Ready(Vec<u8>), // bincode serialized IfaValue
+    Error(String),
+}
+
+#[cfg(feature = "vm")]
+pub type NativeFutureCell = std::sync::Arc<std::sync::RwLock<NativeFutureState>>;
 
 #[derive(Clone, Debug)]
 pub enum ResultPayload {
@@ -160,17 +172,6 @@ impl IfaValue {
 
     #[inline(always)]
     pub fn int(n: i64) -> Self {
-        #[cfg(feature = "std")]
-        {
-            static SMALL_INT_POOL: OnceLock<[IfaValue; 256]> = OnceLock::new();
-
-            if (0..=255).contains(&n) {
-                let pool =
-                    SMALL_INT_POOL.get_or_init(|| std::array::from_fn(|i| IfaValue::Int(i as i64)));
-                return pool[n as usize].clone();
-            }
-        }
-
         IfaValue::Int(n)
     }
 
@@ -185,7 +186,7 @@ impl IfaValue {
     }
 
     pub fn list(items: Vec<IfaValue>) -> Self {
-        IfaValue::List(Arc::new(items))
+        IfaValue::List(IfaGc::new(items))
     }
 
     pub fn map(m: HashMap<String, IfaValue>) -> Self {
@@ -193,9 +194,10 @@ impl IfaValue {
         for (k, v) in m {
             internal.insert(crate::CompactString::new(&k), v);
         }
-        IfaValue::Map(Arc::new(internal))
+        IfaValue::Map(IfaGc::new(internal))
     }
 
+    #[allow(clippy::mutable_key_type)]
     pub fn set(s: std::collections::HashSet<IfaValue>) -> Self {
         IfaValue::Set(Arc::new(s))
     }
@@ -222,12 +224,12 @@ impl IfaValue {
 
     #[cfg(feature = "vm")]
     pub fn future_ready(val: IfaValue) -> Self {
-        IfaValue::Future(Arc::new(Mutex::new(FutureState::Ready(val))))
+        IfaValue::Future(Arc::new(std::sync::RwLock::new(FutureState::Ready(val))))
     }
 
     #[cfg(feature = "vm")]
     pub fn future_pending() -> Self {
-        IfaValue::Future(Arc::new(Mutex::new(FutureState::Pending)))
+        IfaValue::Future(Arc::new(std::sync::RwLock::new(FutureState::Pending)))
     }
 
     pub fn ok(val: IfaValue) -> Self {
@@ -314,7 +316,8 @@ impl IfaValue {
             #[cfg(feature = "vm")]
             IfaValue::Closure(_) => "Closure",
             #[cfg(feature = "vm")]
-            IfaValue::Future(_) => "Future",
+            #[cfg(feature = "vm")]
+            IfaValue::NativeFuture(_) => "NativeFuture",
             #[cfg(feature = "vm")]
             IfaValue::Actor { .. } => "Actor",
             _ => "Unknown",
@@ -371,7 +374,8 @@ impl IfaValue {
             }
             (IfaValue::Str(a), IfaValue::Str(b)) => a == b,
             (IfaValue::List(a), IfaValue::List(b)) => {
-                if Arc::ptr_eq(a, b) {
+                // IfaGc eq fast paths ptr eq
+                if IfaGc::ptr_eq(a, b) {
                     return true;
                 }
                 if a.len() != b.len() {
@@ -389,7 +393,7 @@ impl IfaValue {
                 a.iter().all(|x| b.contains(x))
             }
             (IfaValue::Map(a), IfaValue::Map(b)) => {
-                if Arc::ptr_eq(a, b) {
+                if IfaGc::ptr_eq(a, b) {
                     return true;
                 }
                 if a.len() != b.len() {
@@ -404,7 +408,7 @@ impl IfaValue {
                 _ => false,
             },
             #[cfg(feature = "vm")]
-            (IfaValue::Upvalue(a), IfaValue::Upvalue(b)) => Arc::ptr_eq(a, b),
+            (IfaValue::Upvalue(a), IfaValue::Upvalue(b)) => IfaGc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -425,7 +429,7 @@ impl IfaValue {
                 }
                 Ok(IfaShared::List(frozen_list))
             }
-            IfaValue::Set(s) => {
+            IfaValue::Set(_s) => {
                 // Shared sets not supported yet
                 Err(IfaError::Runtime("Cannot freeze Set".into()))
             }
@@ -471,17 +475,19 @@ impl std::hash::Hash for IfaValue {
                 Arc::as_ptr(s).hash(state);
             }
             IfaValue::Map(m) => {
-                Arc::as_ptr(m).hash(state);
+                m.ptr.as_ptr().hash(state);
             }
             IfaValue::Fn(f) => Arc::as_ptr(f).hash(state),
             #[cfg(feature = "vm")]
             IfaValue::AstFn(f) => Arc::as_ptr(f).hash(state),
             #[cfg(feature = "vm")]
-            IfaValue::Upvalue(u) => Arc::as_ptr(u).hash(state),
+            IfaValue::Upvalue(u) => u.ptr.as_ptr().hash(state),
             #[cfg(feature = "vm")]
-            IfaValue::Closure(c) => Arc::as_ptr(c).hash(state),
+            IfaValue::Closure(c) => c.ptr.as_ptr().hash(state),
             #[cfg(feature = "vm")]
             IfaValue::Future(f) => Arc::as_ptr(f).hash(state),
+            #[cfg(feature = "vm")]
+            IfaValue::NativeFuture(f) => Arc::as_ptr(f).hash(state),
             #[cfg(feature = "vm")]
             IfaValue::Actor { id, .. } => id.hash(state),
             IfaValue::Resource(r) => Arc::as_ptr(r).hash(state),
@@ -491,18 +497,16 @@ impl std::hash::Hash for IfaValue {
             IfaValue::Break => {}
             #[cfg(feature = "vm")]
             IfaValue::Continue => {}
-            IfaValue::Result(r) => {
-                match r.as_ref() {
-                    ResultPayload::Ok(v) => {
-                        0u8.hash(state);
-                        v.hash(state);
-                    }
-                    ResultPayload::Err(v) => {
-                        1u8.hash(state);
-                        v.hash(state);
-                    }
+            IfaValue::Result(r) => match r.as_ref() {
+                ResultPayload::Ok(v) => {
+                    0u8.hash(state);
+                    v.hash(state);
                 }
-            }
+                ResultPayload::Err(v) => {
+                    1u8.hash(state);
+                    v.hash(state);
+                }
+            },
         }
     }
 }
@@ -562,6 +566,8 @@ impl fmt::Display for IfaValue {
             #[cfg(feature = "vm")]
             IfaValue::Future(_) => write!(f, "<future>"),
             #[cfg(feature = "vm")]
+            IfaValue::NativeFuture(_) => write!(f, "<native_future>"),
+            #[cfg(feature = "vm")]
             IfaValue::Actor { id, .. } => write!(f, "<actor:{id}>"),
             _ => write!(f, "<?>"),
         }
@@ -592,6 +598,11 @@ enum IfaValueSurrogate {
     Float(f64),
     Str(String),
     List(Vec<IfaValue>),
+    Map(HashMap<String, IfaValue>),
+    /// Set is serialized as a Vec to avoid HashSet's non-deterministic ordering
+    /// issues with some serialization formats. Order is not preserved, but
+    /// correctness is: all elements survive a round-trip.
+    Set(Vec<IfaValue>),
     /// Placeholder for non-serializable variants (Fn, Closure, Class, etc.)
     Unsupported,
 }
@@ -611,6 +622,19 @@ impl Serialize for IfaValue {
             IfaValue::List(l) => {
                 let inner = l.iter().cloned().collect();
                 IfaValueSurrogate::List(inner)
+            }
+            IfaValue::Map(m) => {
+                let mut inner = HashMap::new();
+                for (k, v) in m.iter() {
+                    inner.insert(k.to_string(), v.clone());
+                }
+                IfaValueSurrogate::Map(inner)
+            }
+            IfaValue::Set(s) => {
+                // Serialize as a stable Vec; order is non-deterministic but all
+                // elements survive the round-trip intact.
+                let inner = s.iter().cloned().collect();
+                IfaValueSurrogate::Set(inner)
             }
             other => {
                 return Err(S::Error::custom(format!(
@@ -637,6 +661,11 @@ impl<'de> Deserialize<'de> for IfaValue {
             IfaValueSurrogate::Float(f) => IfaValue::Float(f),
             IfaValueSurrogate::Str(s) => IfaValue::str(s),
             IfaValueSurrogate::List(l) => IfaValue::list(l),
+            IfaValueSurrogate::Map(m) => IfaValue::map(m),
+            IfaValueSurrogate::Set(v) => {
+                // Reconstruct the HashSet from the serialized Vec.
+                IfaValue::set(v.into_iter().collect())
+            }
             IfaValueSurrogate::Unsupported => {
                 return Err(D::Error::custom(
                     "unsupported IfaValue surrogate in serialized data",
@@ -722,4 +751,64 @@ pub struct AstFnData {
     pub body: Vec<Statement>,
     pub closure_id: u64,
     pub is_async: bool,
+}
+
+// ============================================================================
+// 6. Trace Implementations
+// ============================================================================
+
+impl Trace for IfaValue {
+    fn trace(&self, cb: crate::gc::TraceCallback) {
+        match self {
+            IfaValue::List(l) => {
+                cb(l.ptr.cast());
+            }
+            IfaValue::Map(m) => {
+                cb(m.ptr.cast());
+            }
+            #[cfg(feature = "vm")]
+            IfaValue::Closure(c) => {
+                cb(c.ptr.cast());
+            }
+            #[cfg(feature = "vm")]
+            IfaValue::Upvalue(u) => {
+                cb(u.ptr.cast());
+            }
+            _ => {}
+        }
+    }
+}
+
+impl Trace for Vec<IfaValue> {
+    fn trace(&self, cb: crate::gc::TraceCallback) {
+        for v in self {
+            v.trace(cb);
+        }
+    }
+}
+
+impl Trace for HashMap<crate::CompactString, IfaValue> {
+    fn trace(&self, cb: crate::gc::TraceCallback) {
+        for v in self.values() {
+            v.trace(cb);
+        }
+    }
+}
+
+#[cfg(feature = "vm")]
+impl Trace for ClosureData {
+    fn trace(&self, cb: crate::gc::TraceCallback) {
+        for upvalue in self.env.iter() {
+            cb(upvalue.ptr.cast());
+        }
+    }
+}
+
+#[cfg(feature = "vm")]
+impl Trace for std::sync::Mutex<IfaValue> {
+    fn trace(&self, cb: crate::gc::TraceCallback) {
+        if let Ok(guard) = self.try_lock() {
+            guard.trace(cb);
+        }
+    }
 }

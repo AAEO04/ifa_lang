@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Exceptions — Ifá-Lang Tutorial</title>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">tutorial.33.ifa</span></div><div class="terminal-body"><header>
+            <h1>33. Exceptions</h1>
+            <p class="subtitle">Try, Catch, Finally, and Throw</p>
+        </header>
+
+        <p>While Okanran provides assertion methods, Ifá-Lang also has full exception handling with <code>try</code> / <code>catch</code> / <code>finally</code> blocks and the <code>throw</code> statement for raising errors.</p>
+
+        <h2 class="section-header">1. Throwing Exceptions</h2>
+
+        <p>Use <code>ta</code> / <code>throw</code> to raise an exception. The value can be any type — typically a string message:</p>
+
+        <div class="code-block">
+<pre>// Throw a string error
+ta "Something went wrong";
+
+// Throw with an integer code
+ta 404;
+
+// Throw inside a condition
+ti (file_not_found) {
+    ta "File not found: " + path;
+}</pre></div>
+
+        <p>When thrown, the exception unwinds the call stack until a matching <code>catch</code> is found. If none is found, the program halts with an error message.</p>
+
+        <h2 class="section-header">2. Try / Catch</h2>
+
+        <p>Wrap risky code in <code>gbiyanju</code> / <code>try</code> and handle errors in <code>gba</code> / <code>catch</code>:</p>
+
+        <div class="code-block">
+<pre>gbiyanju {
+    ayanmo data = Odi.ka("/etc/config.ifa");
+    Irosu.fo("Config loaded: " + data);
+} gba (err) {
+    Irosu.kigbe("Failed to load config: " + err);
+}</pre></div>
+
+        <p>The catch variable (<code>err</code>) captures the thrown value. You can inspect it and recover:</p>
+
+        <div class="code-block">
+<pre>gbiyanju {
+    ayanmo result = risky_operation();
+    Irosu.fo("Result: " + result);
+} gba (e) {
+    // Inspect error type
+    ti (Okanran.dogba(e, "timeout")) {
+        Irosu.fo("Retrying...");
+        // Retry logic here
+    } bibeko {
+        Irosu.kigbe("Unhandled error: " + e);
+        ta e;  // Re-throw
+    }
+}</pre></div>
+
+        <h2 class="section-header">3. Finally — Cleanup That Always Runs</h2>
+
+        <p><code>nipari</code> / <code>finally</code> blocks execute regardless of whether the try block succeeded or threw:</p>
+
+        <div class="code-block">
+<pre>ayanmo file = Odi.si("data.txt");
+gbiyanju {
+    ayanmo content = Odi.ka_file(file);
+    Irosu.fo(content);
+} nipari {
+    Odi.pa(file);  // Always close the file
+}</pre></div>
+
+        <p>Finally runs after the try block completes, or after the catch block if one exists. It runs even if the catch block re-throws.</p>
+
+        <h2 class="section-header">4. Try / Catch / Finally Together</h2>
+
+        <div class="code-block">
+<pre>gbiyanju {
+    ayanmo server = Otura.de(":8080");
+    Irosu.fo("Server started");
+} gba (err) {
+    Irosu.kigbe("Server error: " + err);
+    ta err;
+} nipari {
+    Irosu.fo("Server attempt finished");
+}</pre></div>
+
+        <h2 class="section-header">5. Error Propagation with <code>?</code></h2>
+
+        <p>Use the <code>?</code> operator (try operator) to propagate errors up the call stack:</p>
+
+        <div class="code-block">
+<pre>ese load_config(path) {
+    // If read fails, the error propagates to the caller
+    ayanmo content = Odi.ka(path)?;
+    pada parse_config(content);
+}
+
+ese main() {
+    gbiyanju {
+        ayanmo cfg = load_config("/etc/config.ifa")?;
+        Irosu.fo("Config: " + cfg);
+    } gba (e) {
+        Irosu.kigbe("Error: " + e);
+    }
+}</pre></div>
+
+        <p>When a function call is followed by <code>?</code>, an error return is automatically converted to a <code>throw</code> in the calling context.</p>
+
+        <p><a href="index.html">← Back to Tutorial Index</a></p>
+    </div></div>
+    <script src="../../js/nav.js"></script>
+    <script src="../../js/common.js"></script>
+</body>
+</html>

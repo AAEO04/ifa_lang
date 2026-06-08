@@ -1,19 +1,15 @@
-
 //! # Ifá-Core
 //!
 //! Core VM and runtime for Ifá-Lang - The Yoruba Programming Language.
 //!
 //! ### 🚀 ARCHITECTURAL STATUS
 //! Current release focus is **Tier 1 Conformance** and **Symmetric String Interpolation**.
-//! The implementation utilizes an overloaded `Add` opcode as a TEMPORARY architecture.
+//! The implementation utilizes a dedicated `Concat` opcode (`0x27`) for string concatenation, resolving the temporary overloaded `Add` architecture.
 //! Refer to `patch.md` for the Phase 7 Hardening Roadmap.
 //!
 //! ## Modules
 //!
-//! - `lexer` - Tokenization with logos
 //! - `ast` - Abstract Syntax Tree types
-//! - `parser` - Parsing with pest
-//! - `interpreter` - Tree-walking interpreter
 //! - `compiler` - AST to bytecode compilation
 //! - `transpiler` - AST to Rust source for native builds
 //! - `value` - IfaValue type system

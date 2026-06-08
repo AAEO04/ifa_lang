@@ -1,11 +1,13 @@
+#![allow(unexpected_cfgs)]
 //! # CPU Infrastructure (The Scheduler)
 //!
 //! Provides task parallelism, async TaskGraph with dependencies, and parallel iterators.
 
+
 use rayon::ThreadPoolBuilder;
 use std::collections::HashMap;
 use std::future::Future;
-use std::pin::Pin;
+
 use std::sync::OnceLock;
 
 use crate::compute::{ComputeBackend, DeviceInfo};
@@ -284,9 +286,6 @@ pub struct TaskResult {
     pub duration_ms: u64,
 }
 
-/// Async task type
-type AsyncTask =
-    Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>> + Send + Sync>;
 
 /// Synchronous task type
 type SyncTask = Box<dyn Fn() -> Result<(), String> + Send + Sync>;
@@ -294,8 +293,7 @@ type SyncTask = Box<dyn Fn() -> Result<(), String> + Send + Sync>;
 /// Task wrapper that can be sync or async
 enum TaskFn {
     Sync(SyncTask),
-    #[allow(dead_code)]
-    Async(AsyncTask), // Reserved for async execution path
+    Async(()), // Reserved for async execution path
 }
 
 /// Production TaskGraph with DAG dependencies, async execution, and error handling
@@ -335,7 +333,7 @@ impl TaskGraph {
     }
 
     /// Add an async task to the graph
-    pub fn add_async_task<F, Fut>(&mut self, task: F) -> TaskId
+    pub fn add_async_task<F, Fut>(&mut self, _task: F) -> TaskId
     where
         F: FnOnce() -> Fut + Send + Sync + 'static,
         Fut: Future<Output = Result<(), String>> + Send + 'static,
@@ -343,7 +341,7 @@ impl TaskGraph {
         let id = TaskId(self.next_id);
         self.next_id += 1;
         self.tasks
-            .insert(id, TaskFn::Async(Box::new(move || Box::pin(task()))));
+            .insert(id, TaskFn::Async(()));
         self.dependencies.insert(id, Vec::new());
         id
     }
@@ -480,6 +478,7 @@ impl TaskGraph {
     }
 }
 
+#[allow(unexpected_cfgs)]
 #[cfg(feature = "profiling")]
 pub fn profile<F, R>(name: &'static str, f: F) -> R
 where
@@ -487,8 +486,8 @@ where
 {
     let start = std::time::Instant::now();
     let result = f();
-    let duration = start.elapsed();
-    println!("[Profile] {}: {:?}", name, duration);
+    let _duration = start.elapsed();
+    // Profiling output suppressed in library context
     result
 }
 

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Memory Management — Ifá-Lang Tutorial</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .good { border-left: 3px solid var(--green); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+        .warn { border-left: 3px solid var(--amber); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">tutorial.31.ifa</span></div><div class="terminal-body"><header>
+            <h1>31. Memory Management</h1>
+            <p class="subtitle">Ebo epochs, cycle collection, and cross-actor yanda</p>
+        </header>
+
+        <p>Ifá-Lang manages memory automatically. You don't need to <code>free</code> or <code>drop</code> — but understanding <em>how</em> memory is managed helps you write efficient, leak-free programs.</p>
+
+        <h2 class="section-header">Three Memory Tools</h2>
+
+        <table class="field-table">
+            <tr><th>Tool</th><th>When to Use</th><th>Automatic?</th></tr>
+            <tr><td><code>ebo { ... }</code></td><td>Short-lived work (iterations, requests, file processing)</td><td>No — you write <code>ebo</code> explicitly</td></tr>
+            <tr><td>Cycle collector</td><td>Long-lived cyclic data (graphs, caches, reactive networks)</td><td>Yes — runs every 1024 VM ticks</td></tr>
+            <tr><td><code>yanda</code></td><td>Sending values across actors</td><td>No — you write <code>yanda</code> explicitly</td></tr>
+        </table>
+
+        <h2 class="section-header">1. Ebo — Your First Memory Tool</h2>
+
+        <p>Always start with <code>ebo</code>. It is the most efficient memory management strategy. All allocations inside an <code>ebo</code> block are freed when the block exits.</p>
+
+        <div class="code-block">
+<pre>// Bad: memory accumulates
+ayanmo results = [];
+fun i = 0; i &lt; 10000; i++ {
+    ayanmo chunk = fetch_chunk(i);   // allocated each iteration
+    Ogbontarigi.wo(results, chunk);  // chunk stays alive
+}
+// 10,000 allocations waiting for GC
+
+// Good: memory freed each iteration
+ayanmo results = [];
+fun i = 0; i &lt; 10000; i++ {
+    ebo "chunk" {
+        ayanmo chunk = fetch_chunk(i);
+        Ogbontarigi.wo(results, chunk);
+    }  // chunk freed here, but results keeps its reference
+}
+// results has 10,000 entries but intermediate copies are freed</pre></div>
+
+        <div class="warn">
+            <strong>Note:</strong> Values appended to <code>results</code> survive the <code>ebo</code> block because the outer scope still references them. The <code>IfaGc</code> reference count keeps them alive.
+        </div>
+
+        <h2 class="section-header">2. Cycle Collection — Invisible Safety Net</h2>
+
+        <p>The cycle collector runs automatically every 1024 VM ticks. You usually don't need to think about it — but if you're building cyclic data structures, it prevents leaks.</p>
+
+        <div class="code-block">
+<pre>// A self-referential cycle — would leak in reference counting alone
+ayanmo node = {
+    "name": "root",
+    "children": []
+};
+
+// Create cycle: node.children includes node itself
+ayanmo children = node["children"];
+Ogbontarigi.wo(children, node);
+// node holds children holds node — refcount never drops to 0
+
+// Without cycle collector: memory leak
+// With cycle collector (every 1024 ticks): detected and freed</pre></div>
+
+        <p>You can hint at collection frequency with <code>opon</code> <span style="color:var(--amber);">(aspirational — VM uses hardcoded 1024-ticks regardless)</span>:</p>
+
+        <div class="code-block">
+<pre>opon kekere;   // Aspirational: many small objects — collect often
+opon nla;      // Aspirational: few large objects — collect rarely</pre></div>
+
+        <div class="warn">
+            <strong>Note:</strong> The GC tuning parameters from <code>OponSize::gc_policy()</code> are not yet
+            wired into the VM's cycle collector. Opon's primary roles are (1) slot memory capacity,
+            (2) stack/frame limit enforcement, and (3) the ebo epoch system. See the
+            <a href="../../language/opon.html">Opon Reference</a> for details.
+        </div>
+
+        <h2 class="section-header">3. Yanda — Cross-Actor Ownership</h2>
+
+        <p>When you send a value to another actor, it is <strong>deep-copied</strong> via serialization. The receiving actor gets a fresh copy on its own heap, isolated from the sender's GC.</p>
+
+        <div class="code-block">
+<pre>// Spawn a worker actor
+ayanmo worker = ajose "worker" {
+    reti msg from inbox {
+        Irosu.fo("Received: " + msg);
+    }
+};
+
+// Send data — deep copy across the boundary
+ayanmo data = [1, 2, {"key": "value"}];
+yanda data to worker;
+// data is still valid here (native VM keeps the original)
+// data_2 still valid here (non-destructive for native target)
+
+// The worker operates on its own copy
+// Modifications on one side don't affect the other</pre></div>
+
+        <h2 class="section-header">4. Putting It Together</h2>
+
+        <p>Here's a complete example showing all three tools:</p>
+
+        <div class="code-block">
+<pre>// A web server with proper memory management
+ese start_server() {
+    opon nla;  // Expect large allocations
+    
+    ebo "server-lifecycle" {
+        ayanmo server = Otura.de(":8080");
+        
+        fun i = 0; i &lt; 100; i++ {
+            ebo "request" {
+                ayanmo conn = reti server.accept();
+                ayanmo result = process_request(conn);
+                
+                // Spawn actor for heavy work
+                ayanmo worker = ajose "worker" {
+                    ayanmo data = reti msg;
+                    Irosu.fo("Processed: " + data);
+                };
+                
+                yanda result to worker;
+            }  // conn and request allocations freed
+        }
+        
+        defer { Otura.pa(server); };
+    }  // server freed
+}</pre></div>
+
+        <div class="good">
+            <strong>Rule of thumb:</strong> Use <code>ebo</code> for scoped work. Trust the collector for cycles. Use <code>yanda</code> for actor messages. You rarely need to think about memory beyond that.
+        </div>
+
+        <p><a href="index.html">← Back to Tutorial Index</a></p>
+    </div></div>
+    <script src="../../js/nav.js"></script>
+    <script src="../../js/common.js"></script>
+</body>
+</html>

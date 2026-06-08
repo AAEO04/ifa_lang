@@ -21,9 +21,17 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-/// Error types
+/// Error types and handling for bytecode execution.
 pub mod error;
 pub use error::{ErrorCode, InvalidOpCode};
+
+/// Bytecode validation
+pub mod validator;
+#[cfg(feature = "alloc")]
+pub use validator::validate_bytecode;
+
+/// Embedded Opcode Definition
+pub mod embedded;
 
 /// Binary file format
 #[cfg(feature = "alloc")]
@@ -565,7 +573,12 @@ impl OpCode {
             | OpCode::FinallyBegin
             | OpCode::Ref => Some(4),
             OpCode::PushInt | OpCode::PushFloat => Some(8),
-            OpCode::BuildList | OpCode::BuildMap | OpCode::BuildSet | OpCode::Call | OpCode::TailCall | OpCode::AssertType => Some(1),
+            OpCode::BuildList
+            | OpCode::BuildMap
+            | OpCode::BuildSet
+            | OpCode::Call
+            | OpCode::TailCall
+            | OpCode::AssertType => Some(1),
             OpCode::LoadLocal
             | OpCode::StoreLocal
             | OpCode::LoadGlobal
@@ -654,8 +667,8 @@ impl OpCode {
             OpCode::Len => Some((1, 1)),      // [val] -> [int]
             OpCode::Append => Some((2, 1)),   // [list, val] -> [list]
 
-            OpCode::SetAdd => Some((2, 1)), // [set, val] -> [set]
-            OpCode::SetHas => Some((2, 1)), // [set, val] -> [bool]
+            OpCode::SetAdd => Some((2, 1)),    // [set, val] -> [set]
+            OpCode::SetHas => Some((2, 1)),    // [set, val] -> [bool]
             OpCode::SetRemove => Some((2, 1)), // [set, val] -> [set]
 
             OpCode::BuildList | OpCode::BuildMap | OpCode::BuildSet => None, // Variable input
@@ -689,7 +702,7 @@ impl OpCode {
                 "[addr, value] → []"
             }
             OpCode::Add => "[a, b] → [a+b]",
-            OpCode::Concat => "[lhs, rhs] â†’ [lhs++rhs]",
+            OpCode::Concat => "[lhs, rhs] → [lhs++rhs]",
             _ => "Refer to stack_effect() values",
         }
     }

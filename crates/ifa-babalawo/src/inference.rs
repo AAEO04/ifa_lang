@@ -1,3 +1,4 @@
+
 use crate::checks::LintContext;
 use ifa_types::ast::{Expression, InterpolatedPart, TypeHint};
 use ifa_types::binary_ops::binary_op_result_type;
@@ -83,9 +84,10 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
                 || call.method == "timestamp"
                 || call.method == "bayi_ms"
                 || call.method == "now_ms"
+                || call.method == "nọmba"
+                || call.method == "random"
+                || call.method == "rand"
             {
-                Some(TypeHint::Int)
-            } else if call.method == "nọmba" || call.method == "random" || call.method == "rand" {
                 Some(TypeHint::Int)
             } else if call.method.ends_with("_json") || call.method.ends_with("Json") {
                 Some(TypeHint::Map)
@@ -102,12 +104,8 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
             args: _,
             is_optional: _,
         } => {
-            let obj_type = infer_expression_type(object, ctx);
-            if obj_type == Some(TypeHint::Map) {
-                Some(TypeHint::Any)
-            } else {
-                Some(TypeHint::Any)
-            }
+            let _obj_type = infer_expression_type(object, ctx);
+            Some(TypeHint::Any)
         }
 
         Expression::Get {
@@ -124,6 +122,11 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
         }
 
         Expression::Call { name, args: _ } => {
+            if let Some(ret_type) = ctx.var_types.get(name)
+                && let ifa_types::ast::TypeHint::Function { ret, .. } = ret_type {
+                    return Some(*ret.clone());
+                }
+
             if let Some(var_type) = ctx.get_var_type(name) {
                 if *var_type == TypeHint::Any || matches!(var_type, TypeHint::Custom(_)) {
                     Some(TypeHint::Any)
@@ -172,5 +175,6 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
         Expression::MoveExpr(inner) => infer_expression_type(inner, ctx),
 
         Expression::Set(_) => Some(TypeHint::Any),
+        Expression::Spanned { expr, span: _ } => infer_expression_type(expr, ctx),
     }
 }

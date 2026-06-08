@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Defer & Yield — Ifá-Lang Tutorial</title>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">tutorial.34.ifa</span></div><div class="terminal-body"><header>
+            <h1>34. Defer & Yield</h1>
+            <p class="subtitle">Guaranteed cleanup and cooperative multitasking</p>
+        </header>
+
+        <h2 class="section-header">1. Defer — Guaranteed Cleanup</h2>
+
+        <p><code>defer</code> / <code>gbe</code> schedules a block of code to run when the enclosing function returns — regardless of how it returns (normal return, throw, or early exit):</p>
+
+        <div class="code-block">
+<pre>ese read_file(path) {
+    ayanmo file = Odi.si(path);
+    defer { Odi.pa(file); }  // Always closes the file
+    
+    ti (Odi.wa(path) == false) {
+        pada null;  // defer still runs
+    }
+    
+    ayanmo content = Odi.ka(file);
+    pada content;  // defer still runs
+}</pre></div>
+
+        <p>Unlike <code>finally</code> which attaches to a <code>try</code> block, <code>defer</code> attaches to the entire function. Multiple defers run in last-in-first-out order (stack-like):</p>
+
+        <div class="code-block">
+<pre>ese multi_resource() {
+    ayanmo db = connect_db();
+    defer { db.close(); }
+    
+    ayanmo file = Odi.si("log.txt");
+    defer { Odi.pa(file); }
+    
+    ayanmo lock = acquire_lock();
+    defer { release(lock); }
+    
+    // Work with resources
+    // When function exits: lock released, file closed, db closed
+}</pre></div>
+
+        <h2 class="section-header">2. Defer vs Ebo vs Finally</h2>
+
+        <table class="field-table">
+            <tr><th>Feature</th><th>Scope</th><th>Runs On</th><th>Use Case</th></tr>
+            <tr><td><code>defer</code></td><td>Function</td><td>Any exit</td><td>Single cleanup action near allocation</td></tr>
+            <tr><td><code>ebo { }</code></td><td>Block</td><td>Block exit</td><td>Scoped memory, batches of allocations</td></tr>
+            <tr><td><code>finally { }</code></td><td>Try block</td><td>Try exit (success or catch)</td><td>Cleanup tied to error handling</td></tr>
+        </table>
+
+        <h2 class="section-header">3. Yield — Cooperative Multitasking</h2>
+
+        <p><code>jowo</code> / <code>yield</code> pauses the current execution and yields control back to the scheduler for a specified duration (in milliseconds). This enables cooperative multitasking without spawning full actors:</p>
+
+        <div class="code-block">
+<pre>ese blink_led() {
+    nigba (true) {
+        Irosu.fo("LED ON");
+        jowo 500;    // Yield for 500ms
+        Irosu.fo("LED OFF");
+        jowo 500;
+    }
+}</pre></div>
+
+        <p>During the yield, other tasks can run. The scheduler resumes this function after the specified duration.</p>
+
+        <h2 class="section-header">4. Yield in Loops</h2>
+
+        <p>Use yield inside long-running loops to avoid starving other tasks:</p>
+
+        <div class="code-block">
+<pre>ese process_batch(items) {
+    fun (i, item) ninu Ogunda.awon_nkan(items) {
+        process(item);
+        
+        // Yield every 100 items to keep the system responsive
+        ti (i % 100 == 0) {
+            jowo 10;  // 10ms breather
+        }
+    }
+}</pre></div>
+
+        <h2 class="section-header">5. Defer + Yield Patterns</h2>
+
+        <div class="code-block">
+<pre>ese server_loop() {
+    ayanmo server = Otura.de(":8080");
+    defer { Otura.pa(server); }
+    
+    nigba (true) {
+        ayanmo conn = reti Otura.gba_handle(server);
+        ebo "request" {
+            handle_request(conn);
+        }
+        jowo 1;  // Yield between requests
+    }
+}</pre></div>
+
+        <p><a href="index.html">← Back to Tutorial Index</a></p>
+    </div></div>
+    <script src="../../js/nav.js"></script>
+    <script src="../../js/common.js"></script>
+</body>
+</html>

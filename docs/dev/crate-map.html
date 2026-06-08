@@ -86,6 +86,7 @@
 </head>
 
 <body>
+    <div id="nav-placeholder"></div>
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list"></ul>
@@ -278,9 +279,9 @@
             (<code>domain.rs:14-17</code>). Custom functionality goes through external
             packages imported via <code>iba</code> and distributed via <code>oja</code>
             (<code>ifa-cli/src/oja.rs</code>).</p>
-            <p>Always-available: ogbe, oyeku, iwori, irosu, owonrin, obara, okanran,
-            ogunda, ika, oturupon, ofun. Gated: odi/osa/otura (<code>backend</code>),
-            ose (<code>game</code>), irete (<code>crypto</code>).
+            <p>Always-available: ogbe, oyeku, iwori, odi, irosu, owonrin, obara, okanran,
+            ogunda, ika, oturupon, ofun. Gated: osa (<code>async_runtime</code>),
+            otura (<code>network</code>), ose (<code>tui</code>), irete (<code>crypto</code>).
             Also: ffi (polyglot), infra/{cpu,gpu,storage,kernel,shaders,runtime}.</p>
             <div class="crate-deps">
                 <strong>Internal deps:</strong> ifa-types, ifa-vm (for domain registry)

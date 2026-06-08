@@ -1,4 +1,5 @@
-use ifa_embedded::{EmbeddedConfig, EmbeddedOpCode, EmbeddedValue, EmbeddedVm, VmExit};
+use ifa_bytecode::embedded::EmbeddedOpCode;
+use ifa_embedded::{EmbeddedConfig, EmbeddedValue, EmbeddedVm, VmExit};
 use ifa_vm::{Bytecode, IfaVM, IfaValue, OpCode};
 
 fn transpile_for_embedded(bc: &Bytecode) -> Vec<u8> {

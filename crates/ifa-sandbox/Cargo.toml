@@ -5,8 +5,8 @@ edition.workspace = true
 
 [dependencies]
 # Core sandbox dependencies - updated to latest
-wasmtime = "40.0.3"
-wasmtime-wasi = "40.0.3"
+wasmtime = "43.0.1"
+wasmtime-wasi = "43.0.1"
 wat = "1.0"
 ifa-types = { path = "../ifa-types", features = ["std"] }
 
@@ -26,7 +26,15 @@ tempfile = "3.0"
 [features]
 default = []
 # Enable network capabilities (requires wasmtime with network support)
-network = []
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+    "Win32_Security",
+    "Win32_System_Diagnostics_ToolHelp"
+] }

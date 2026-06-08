@@ -1,4 +1,5 @@
-use ifa_embedded::{EmbeddedOpCode, EmbeddedValue, EmbeddedVm, VmExit};
+use ifa_bytecode::embedded::EmbeddedOpCode;
+use ifa_embedded::{EmbeddedValue, EmbeddedVm, VmExit};
 
 #[test]
 fn test_yield_resume() {

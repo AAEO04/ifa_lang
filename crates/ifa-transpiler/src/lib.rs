@@ -1,4 +1,3 @@
-#![allow(clippy::manual_contains, clippy::useless_format)]
 pub mod project_generator;
 pub mod transpiler;
 

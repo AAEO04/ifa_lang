@@ -31,8 +31,7 @@ mod tests {
 
         let program = parse(source).unwrap();
         let rust_code = transpile_to_rust(&program);
-
-        assert!(rust_code.contains("let mut x"));
+        assert!(rust_code.contains("__IFA_GLOBAL_x"));
         assert!(rust_code.contains("fn main()"));
     }
 
@@ -59,7 +58,6 @@ mod tests {
         "#;
         let program = parse(source).unwrap();
         let rust_code = transpile_to_rust(&program);
-        println!("RUST CODE EXP:\n{}", rust_code);
         assert!(rust_code.contains(".pow(&"));
     }
 

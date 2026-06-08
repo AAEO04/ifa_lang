@@ -1,4 +1,5 @@
-use ifa_embedded::{EmbeddedOpCode, EmbeddedValue, EmbeddedVm, MmioBus};
+use ifa_bytecode::embedded::EmbeddedOpCode;
+use ifa_embedded::{EmbeddedValue, EmbeddedVm, MmioBus};
 
 /// Mock MMIO implementation
 struct MockMmio {

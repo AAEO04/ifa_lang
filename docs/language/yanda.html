@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Yanda - Ownership &amp; Memory — Ifá-Lang</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .good { border-left: 3px solid var(--green); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+        .warn { border-left: 3px solid var(--amber); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">yanda.ifa</span></div><div class="terminal-body"><header>
+            <h1>Yanda — Ownership Transfer &amp; Memory Model</h1>
+            <p class="subtitle">Deep-copy semantics for cross-actor messaging (Yoruba: yanda = surrender/release)</p>
+        </header>
+
+        <h2 class="section-header">1. Memory Management Overview</h2>
+
+        <p>Ifá-Lang uses automatic memory management with <strong>two complementary strategies</strong>:</p>
+
+        <table class="field-table">
+            <tr><th>Strategy</th><th>Keyword</th><th>Scope</th><th>Description</th></tr>
+            <tr><td>Epoch reclamation</td><td><code>ebo { ... }</code></td><td>Block-scoped</td><td>Allocations released at scope exit — primary strategy</td></tr>
+            <tr><td>Cycle collection</td><td><em>Automatic</em></td><td>VM-wide</td><td>Bacon-Rajan collector handles long-lived cycles every 1024 VM ticks</td></tr>
+            <tr><td>Ownership transfer</td><td><code>yanda</code></td><td>Cross-actor</td><td>Deep-copy serialization at actor boundaries</td></tr>
+        </table>
+
+        <p>Memory is managed per-actor (Orí model). Each actor VM has an isolated heap. GC pointers never cross thread boundaries.</p>
+
+        <h2 class="section-header">2. Yanda — Deep-Copy Transfer</h2>
+
+        <p>The <code>yanda</code> keyword (Yoruba: "surrender/release") explicitly transfers ownership of a value across an actor boundary. Unlike Rust's <code>move</code> (which is zero-copy pointer handoff), Ifá-Lang's <code>yanda</code> is always a <strong>deep copy</strong> — the value is serialized, sent, and deserialized on the receiving actor's heap.</p>
+
+        <div class="code-block">
+<pre>// Spawn an actor
+ayanmo worker = ajose "worker" {
+    reti msg from inbox {
+        Irosu.fo("Got: " + msg);
+    }
+};
+
+// Send a value — deep-copied via serialization
+ayanmo data = [1, 2, 3, [4, 5]];
+yanda data to worker;
+// data is still usable here (yanda is a copy for cross-actor,
+// not a destructive move like Rust's)
+// But for embedded targets without GC, yanda IS destructive:
+// data becomes null after yanda</pre></div>
+
+        <div class="good">
+            <strong>Why deep copy?</strong> Each actor has its own cycle collector heap. A zero-copy pointer handoff would require cross-thread GC coordination, defeating the purpose of per-actor isolation. Serialization is the clean boundary.
+        </div>
+
+        <h3>2.1 How It Works</h3>
+
+        <ol>
+            <li>Sender calls <code>bincode::serialize(&amp;value)</code> — converts <code>IfaValue</code> to <code>Vec&lt;u8&gt;</code></li>
+            <li>Serialized bytes are sent through a bounded <code>SyncSender</code> channel</li>
+            <li>Receiver calls <code>bincode::deserialize(&amp;bytes)</code> — allocates fresh <code>IfaGc</code> handles on the receiver's heap</li>
+            <li>Original value remains valid on the sender (in the native VM)</li>
+        </ol>
+
+        <p>Variants that cannot be serialized (<code>Fn</code>, <code>Closure</code>, <code>Actor</code>, <code>Future</code>) are rejected at serialization time — you can't <code>yanda</code> a closure to another actor.</p>
+
+        <h3>2.2 The Serialization Bridge: IfaValueSurrogate</h3>
+
+        <p><code>yanda</code> uses <code>IfaValueSurrogate</code> (<code>value_union.rs</code>) as the intermediate representation between <code>IfaValue</code> and <code>bincode</code> bytes. The surrogate enum mirrors the serializable subset of <code>IfaValue</code>:</p>
+
+        <table class="field-table">
+            <tr><th>Surrogate Variant</th><th>Corresponding IfaValue</th><th>Serializable?</th></tr>
+            <tr><td><code>Null</code></td><td><code>Null</code></td><td>Yes</td></tr>
+            <tr><td><code>Bool(bool)</code></td><td><code>Bool</code></td><td>Yes</td></tr>
+            <tr><td><code>Int(i64)</code></td><td><code>Int</code></td><td>Yes</td></tr>
+            <tr><td><code>Float(f64)</code></td><td><code>Float</code></td><td>Yes</td></tr>
+            <tr><td><code>Str(String)</code></td><td><code>Str</code></td><td>Yes</td></tr>
+            <tr><td><code>List(Vec&lt;IfaValue&gt;)</code></td><td><code>List</code></td><td>Yes</td></tr>
+            <tr><td><code>Map(HashMap&lt;String, IfaValue&gt;)</code></td><td><code>Map</code></td><td>Yes</td></tr>
+            <tr><td><code>Set(HashSet&lt;IfaValue&gt;)</code></td><td><code>Set</code></td><td>Yes (added)</td></tr>
+        </table>
+
+        <h3>2.3 Yanda and Storage — Same Serialization Path</h3>
+
+        <p>The <code>Storage</code> domain (<code>infrastructure/infra/storage.html</code>) uses the <strong>exact same</strong> <code>bincode</code> / <code>IfaValueSurrogate</code> serialization as <code>yanda</code>:</p>
+
+        <div class="code-block">
+<pre>// Both use the same serialization mechanism:
+//
+// yanda:   IfaValue → IfaValueSurrogate → bincode → Vec&lt;u8&gt; → channel
+// Storage: IfaValue → IfaValueSurrogate → bincode → Vec&lt;u8&gt; → append-only log
+//
+// The same variant restrictions apply to both:
+//   ✅ Serializable: Null, Bool, Int, Float, Str, List, Map, Set
+//   ❌ Rejected:    Fn, Closure, Actor, Future
+
+// yanda sends an actor message
+yanda data to worker;
+
+// Storage persists the same data
+reti Storage.set(store, "cache:key", data);</pre></div>
+
+        <p>This means if a value can be <code>yanda</code>'d, it can also be stored in Storage, and vice versa. The <code>Set</code> variant was added to the surrogate specifically to enable this cross-cutting serialization.</p>
+
+        <h2 class="section-header">3. Ebo — Memory Epochs</h2>
+
+        <p>The <code>ebo</code> keyword creates a scoped memory region. All allocations within an <code>ebo</code> block are released when the block exits. This is the <strong>primary memory management strategy</strong> — far more efficient than cycle collection for short-lived data.</p>
+
+        <div class="code-block">
+<pre>// Without ebo: allocations live until the GC collects them
+fun process_requests() {
+    fun i = 0; i &lt; 1000; i++ {
+        ayanmo data = fetch_data();   // New allocation each iteration
+        process(data);
+        // data stays alive until GC runs
+    }
+}
+
+// With ebo: allocations released at scope exit
+fun process_requests() {
+    fun i = 0; i &lt; 1000; i++ {
+        ebo "iteration" {
+            ayanmo data = fetch_data();
+            process(data);
+        }  // ← data freed here
+    }
+}</pre></div>
+
+        <h2 class="section-header">4. Opon — Memory Subsystem</h2>
+
+        <p>The <code>#opon</code> directive (the divination tray) configures Ifá-Lang's slot-based
+        memory store. Opon controls <strong>slot capacity, stack depth, and frame nesting limits</strong>.
+        It also powers the <code>ebo</code> epoch system and the flight recorder. See the
+        <a href="../language/opon.html">dedicated Opon reference</a> for full details.</p>
+
+        <p>The <code>OponSize::gc_policy()</code> method defines GC tuning parameters, but these
+        are <span style="color:var(--amber);">aspirational</span> — the VM currently uses a hardcoded
+        1,024-tick collector interval regardless of the <code>#opon</code> setting. The primary
+        role of <code>#opon</code> is memory capacity and limit enforcement, not GC tuning:</p>
+
+        <table class="field-table">
+            <tr><th>Directive</th><th>Slots</th><th>Stack Cap</th><th>Frame Cap</th><th>GC Policy</th></tr>
+            <tr><td><code>opon kekere</code></td><td>256</td><td>256</td><td>64</td><td>Check every 128 ticks <span style="color:var(--amber);">(unwired)</span></td></tr>
+            <tr><td><code>opon arinrin</code></td><td>4,096</td><td>4,096</td><td>512</td><td>Check every 512 ticks <span style="color:var(--amber);">(unwired)</span></td></tr>
+            <tr><td><code>opon nla</code></td><td>65,536</td><td>65,536</td><td>4,096</td><td>Check every 2,048 ticks <span style="color:var(--amber);">(unwired)</span></td></tr>
+            <tr><td><code>opon ailopin</code></td><td>Dynamic up to ~1M</td><td>None</td><td>None</td><td>Check every 4,096 ticks <span style="color:var(--amber);">(unwired)</span></td></tr>
+        </table>
+
+        <div class="warn">
+            <strong>Note:</strong> The <code>gc_policy()</code> values are defined but not wired into
+            the VM's cycle collector loop. For deterministic memory release, use
+            <code>ebo</code> epochs — they always work regardless of GC tuning status.
+        </div>
+
+        <h2 class="section-header">5. Embedded Targets (.yanda() method)</h2>
+
+        <p>When transpiling to embedded targets (no_std, no alloc), the <code>yanda</code> keyword generates a <code>.yanda()</code> method call. On embedded, <code>yanda</code> is destructive — the source value becomes null to prevent use-after-free.</p>
+
+        <div class="code-block">
+<pre>// Ifá-Lang source:
+yanda data to worker;
+
+// Transpiled to Rust (embedded target):
+worker.send(data.yanda());  // yanda() consumes self, returns serialized bytes
+// data is no longer valid here</pre></div>
+
+        <p>See the <a href="../tutorials/tour/31-memory.html">Memory Management Tutorial</a> for hands-on examples.</p>
+
+        <footer>
+            <p><a href="index.html">← Back to Language Reference</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

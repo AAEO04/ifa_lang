@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Type System Deep Dive — Ifá-Lang Tutorial</title>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">tutorial.36.ifa</span></div><div class="terminal-body"><header>
+            <h1>36. Type System Deep Dive</h1>
+            <p class="subtitle">Low-level types, Ptr/Ref/RefMut, Array, Void, and the effects system</p>
+        </header>
+
+        <p>Beyond the dynamic types (<code>Int</code>, <code>Float</code>, <code>Str</code>, <code>Bool</code>, <code>List</code>, <code>Map</code>), Ifá-Lang has an optional static type system for performance-critical and FFI code.</p>
+
+        <h2 class="section-header">1. Sized Integer Types</h2>
+
+        <p>When you need exact bit widths — for networking, binary formats, or embedded targets:</p>
+
+        <div class="code-block">
+<pre>// Signed integers
+ayanmo a: I8 = -128;
+ayanmo b: I16 = -32768;
+ayanmo c: I32 = -2_147_483_648;
+ayanmo d: I64 = -9_223_372_036_854_775_808;
+
+// Unsigned integers
+ayanmo e: U8 = 255;
+ayanmo f: U16 = 65535;
+ayanmo g: U32 = 4_294_967_295;
+ayanmo h: U64 = 18_446_744_073_709_551_615;</pre></div>
+
+        <h2 class="section-header">2. Sized Float Types</h2>
+
+        <div class="code-block">
+<pre>ayanmo x: F32 = 3.14;  // 32-bit float (single precision)
+ayanmo y: F64 = 3.14;  // 64-bit float (double precision, default)</pre></div>
+
+        <h2 class="section-header">3. Ptr, Ref, RefMut</h2>
+
+        <p>Pointer types for low-level memory access. These are primarily used in FFI and embedded contexts:</p>
+
+        <div class="code-block">
+<pre>// Ptr — opaque pointer (for FFI)
+ayanmo handle: Ptr = get_ffi_handle();
+
+// Ref — immutable reference
+ayanmo data: Ref(Str) = &greeting;
+
+// RefMut — mutable reference
+ayanmo buffer: RefMut(List) = &mut items;</pre></div>
+
+        <div class="warn" style="border-left: 3px solid var(--amber); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem;">
+            <strong>Safety:</strong> <code>Ptr</code> operations are unchecked. Use <code>ailewu</code> / <code>unsafe</code> blocks when working with raw pointers.
+        </div>
+
+        <h2 class="section-header">4. Array Type</h2>
+
+        <p>The <code>Array</code> type is a fixed-size, stack-allocated sequence of elements. Unlike <code>List</code>, the size is known at compile time:</p>
+
+        <div class="code-block">
+<pre>// Array of 5 integers
+ayanmo buffer: Array { element: U8, size: 256 } = init_buffer();
+
+// Array access
+ayanmo first = buffer[0];</pre></div>
+
+        <h2 class="section-header">5. Void Type</h2>
+
+        <p><code>Void</code> represents the absence of a value. Used as a return type for functions that perform side effects without returning data:</p>
+
+        <div class="code-block">
+<pre>ese log_message(msg: Str) -> Void {
+    Irosu.fo(msg);
+    // No return value needed
+}</pre></div>
+
+        <div class="warn" style="border-left: 3px solid var(--green); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem;">
+            <strong>Note:</strong> Ifá-Lang also supports <code>nil</code> / <code>null</code> / <code>ofo</code> as the unit value. <code>Void</code> is for strict type annotations.
+        </div>
+
+        <h2 class="section-header">6. The Effects System</h2>
+
+        <p>Functions can declare their side effects. This is used by Babalawo for static analysis:</p>
+
+        <div class="code-block">
+<pre>// Pure function — no side effects
+ese add(a, b) -> Pure {
+    pada a + b;
+}
+
+// Async function
+ese fetch_data(url) -> effects Async {
+    ayanmo response = reti Otura.gba(url);
+    pada response;
+}
+
+// Network effect
+ese send_request(url) -> effects Network {
+    ayanmo result = Otura.gba(url);
+    pada result;
+}
+
+// File I/O effect
+ese read_config() -> effects FileIO {
+    ayanmo data = Odi.ka("config.ifa");
+    pada data;
+}
+
+// State mutation
+ese increment() -> effects State {
+    counter = counter + 1;
+    pada counter;
+}
+
+// Impure (FFI / opaque)
+ese call_native() -> effects Impure {
+    // Calls into C/FFI
+}</pre></div>
+
+        <p>Effects can be combined:</p>
+
+        <div class="code-block">
+<pre>// Multiple effects
+ese read_and_send() -> effects FileIO, Network {
+    ayanmo data = Odi.ka("/tmp/data")?;
+    ayanmo result = Otura.ran("https://api.example.com", data)?;
+    pada result;
+}</pre></div>
+
+        <p>The default effect (when undeclared) is <code>Pure</code>. Babalawo warns when a function with undeclared effects performs side-effect operations.</p>
+
+        <p><a href="index.html">← Back to Tutorial Index</a></p>
+    </div></div>
+    <script src="../../js/nav.js"></script>
+    <script src="../../js/common.js"></script>
+</body>
+</html>

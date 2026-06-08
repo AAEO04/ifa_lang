@@ -9,6 +9,7 @@
 </head>
 
 <body>
+    <div id="nav-placeholder"></div>
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list"></ul>
@@ -146,6 +147,14 @@
             <div class="sig">Irete.iwon_funpo(data: Bytes, compressed: Bytes) → Float</div>
             <p>Compute compression ratio.</p>
         </div>
+
+        <h2>Example</h2>
+        <pre class="code-yoruba"><code>ayanmo hash = Irete.hash("data");
+ayanmo sig = Irete.ed25519_sign(secret, data);
+Irete.ed25519_verify(public, data, sig);  // true</code></pre>
+        <pre class="code-english" style="display:none"><code>let hash = Irete.sha256("data");
+let sig = Irete.ed25519_sign(secret, data);
+Irete.ed25519_verify(public, data, sig);  // true</code></pre>
 
         <footer>
             <p><a href="../index.html">← Back to Documentation</a></p>

@@ -189,6 +189,38 @@ pub const ODU_DOMAINS: &[OduInfo] = &[
         meaning: "The Creator",
         description: "Object creation, inheritance",
     },
+    OduInfo {
+        name: "Cpu",
+        slug: "cpu",
+        alias: "Parallel",
+        binary: "10010",
+        meaning: "The Multitasker",
+        description: "Parallel computing via rayon",
+    },
+    OduInfo {
+        name: "Gpu",
+        slug: "gpu",
+        alias: "Compute",
+        binary: "10011",
+        meaning: "The Accelerator",
+        description: "GPU compute via wgpu",
+    },
+    OduInfo {
+        name: "Storage",
+        slug: "storage",
+        alias: "DB",
+        binary: "10100",
+        meaning: "The Vault",
+        description: "Key-value persistence",
+    },
+    OduInfo {
+        name: "Sys",
+        slug: "sys",
+        alias: "Kernel",
+        binary: "11101",
+        meaning: "The Core",
+        description: "Kernel/OS interface",
+    },
 ];
 
 /// CSS for the documentation site
@@ -927,136 +959,179 @@ fn walk_dir(dir: &Path, files: &mut Vec<PathBuf>) -> Result<()> {
     Ok(())
 }
 
+fn extract_docs_before(source: &str, span_start: usize) -> String {
+    let _docs = String::new();
+    let prefix = &source[..span_start];
+    let lines = prefix.lines().rev();
+    let mut doc_lines = Vec::new();
+
+    for line in lines {
+        let trimmed = line.trim();
+        if trimmed.starts_with("///") {
+            doc_lines.push(trimmed.strip_prefix("///").unwrap().trim());
+        } else if trimmed.is_empty() {
+            continue;
+        } else {
+            break;
+        }
+    }
+
+    doc_lines.reverse();
+    doc_lines.join(" ")
+}
+
 /// Parse a single file for Oríkì
 fn parse_file(path: &Path, doc: &mut UserDoc) -> Result<()> {
     let content = fs::read_to_string(path)?;
-    let mut current_docs = String::new();
 
-    // Simple state machine
-    for line in content.lines() {
-        let trimmed = line.trim();
-
-        if let Some(stripped) = trimmed.strip_prefix("///") {
-            let doc_line = stripped.trim();
-            if !current_docs.is_empty() {
-                current_docs.push(' '); // join lines with space
-            }
-            current_docs.push_str(doc_line);
-            continue;
+    let program = match ifa_parser::parser::parse(&content) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!(
+                "Docgen warning: Failed to parse AST for {}: {:?}",
+                path.display(),
+                e
+            );
+            return Ok(());
         }
+    };
 
-        // Ignore empty lines between docs and definition?
-        // For now, strict adjacency or single empty line.
-        if trimmed.is_empty() {
-            // Keep docs for one empty line? No, let's reset to avoid wrong attribution
-            // Actually, usually doc comments must immediately precede.
-            if !current_docs.is_empty() {
-                // allow one blank line? Let's strictly require adjacency for V1
-                // current_docs.clear();
+    use ifa_types::ast::Statement;
+    for stmt in program.statements {
+        let span = stmt.span();
+        let docs = extract_docs_before(&content, span.start);
+
+        match stmt {
+            Statement::OduDef { name, .. } => {
+                doc.add_odu(name, docs);
             }
-            continue;
-        }
-
-        // Check for definitions
-        if !current_docs.is_empty() {
-            // ODÙ Definition
-            // odu Calculator {
-            if trimmed.starts_with("odu ")
-                || trimmed.starts_with("odù ")
-                || trimmed.starts_with("class ")
-            {
-                let parts: Vec<&str> = trimmed.split_whitespace().collect();
-                if parts.len() >= 2 {
-                    let name = parts[1].trim_matches('{');
-                    doc.add_odu(name.to_string(), current_docs.clone());
-                }
-                current_docs.clear();
-                continue;
-            }
-
-            // ESE Definition
-            // ese add(a, b) {
-            if trimmed.starts_with("ese ")
-                || trimmed.starts_with("ẹsẹ ")
-                || trimmed.starts_with("fn ")
-            {
-                // Extract name and signature
-                let open_paren = trimmed.find('(');
-                let name_end = open_paren.unwrap_or(trimmed.len());
-                // "ese add"
-                let decl_part = &trimmed[0..name_end];
-                let parts: Vec<&str> = decl_part.split_whitespace().collect();
-                let name = if parts.len() >= 2 {
-                    parts[1]
-                } else {
-                    "unknown"
-                };
-
-                let signature = if let Some(idx) = open_paren {
-                    let close_paren = trimmed.find(')').unwrap_or(trimmed.len());
-                    if close_paren > idx {
-                        let params = &trimmed[idx..=close_paren];
-                        format!("{}{}", name, params)
-                    } else {
-                        name.to_string()
-                    }
-                } else {
-                    name.to_string()
-                };
-
+            Statement::EseDef {
+                name,
+                params,
+                return_type: _,
+                ..
+            } => {
+                let params_str = params
+                    .iter()
+                    .map(|p| p.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 let item = DocItem {
-                    name: name.to_string(),
+                    name: name.clone(),
                     kind: "ese".to_string(),
-                    signature,
-                    description: current_docs.clone(),
+                    signature: format!("{}({})", name, params_str),
+                    description: docs,
                 };
-
-                // If we have a current Odù (from context), we should add to it.
-                // But we are parsing line-by-line without full context stack here (simple parser).
-                // For V1, let's just add to last added Odù if exists, or orphans.
                 if let Some(last_odu) = doc.odus.last_mut() {
                     last_odu.items.push(item);
                 } else {
                     doc.orphans.push(item);
                 }
-
-                current_docs.clear();
-                continue;
             }
+            Statement::VarDecl { name, .. } => {
+                let item = DocItem {
+                    name: name.clone(),
+                    kind: "ayanmo".to_string(),
+                    signature: format!("ayanmo {}", name),
+                    description: docs,
+                };
+                if let Some(last_odu) = doc.odus.last_mut() {
+                    last_odu.items.push(item);
+                } else {
+                    doc.orphans.push(item);
+                }
+            }
+            Statement::Const { name, .. } => {
+                let item = DocItem {
+                    name: name.clone(),
+                    kind: "const".to_string(),
+                    signature: format!("const {}", name),
+                    description: docs,
+                };
+                if let Some(last_odu) = doc.odus.last_mut() {
+                    last_odu.items.push(item);
+                } else {
+                    doc.orphans.push(item);
+                }
+            }
+            Statement::IwaDef(iwa) => {
+                doc.add_odu(iwa.name.clone(), docs);
+                for method in iwa.methods {
+                    let mut sig = format!("{}(", method.name);
+                    let params_str = method
+                        .params
+                        .iter()
+                        .map(|p| p.name.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    sig.push_str(&params_str);
+                    sig.push(')');
 
-            // CONST/AYANMO Definition
-            // const PI = 3.14; or loruko PI = 3.14; or ka PI = ...
-            let is_const = trimmed.starts_with("const ")
-                || trimmed.starts_with("loruko ")
-                || trimmed.starts_with("ka ");
-            if is_const || trimmed.starts_with("ayanmo ") || trimmed.starts_with("let ") {
-                let kind = if is_const { "const" } else { "ayanmo" };
-                let parts: Vec<&str> = trimmed.split_whitespace().collect();
-                // const Name = ...
-                if parts.len() >= 2 {
-                    let name = parts[1];
-                    // signature is the whole line up to semicolon
-                    let signature = trimmed.trim_matches(';').to_string();
+                    let mut attrs = method.attributes.join(" ");
+                    if !attrs.is_empty() {
+                        attrs = format!(" [{}]", attrs);
+                    }
 
+                    let method_docs = extract_docs_before(&content, method.span.start);
                     let item = DocItem {
-                        name: name.to_string(),
-                        kind: kind.to_string(),
-                        signature,
-                        description: current_docs.clone(),
+                        name: method.name,
+                        kind: format!("iwa_method{}", attrs),
+                        signature: sig,
+                        description: method_docs,
                     };
-
                     if let Some(last_odu) = doc.odus.last_mut() {
                         last_odu.items.push(item);
-                    } else {
-                        doc.orphans.push(item);
                     }
                 }
-                current_docs.clear();
-                continue;
             }
-
-            // If unrelated line, clear docs
-            current_docs.clear();
+            Statement::Alias {
+                name, target: _, ..
+            } => {
+                let item = DocItem {
+                    name: name.clone(),
+                    kind: "alias".to_string(),
+                    signature: format!("alias {}", name),
+                    description: docs,
+                };
+                doc.orphans.push(item);
+            }
+            Statement::Taboo { source, target, .. } => {
+                let item = DocItem {
+                    name: format!("{} -> {}", source, target),
+                    kind: "taboo".to_string(),
+                    signature: format!("èèwọ̀: {} -> {}", source, target),
+                    description: docs,
+                };
+                doc.orphans.push(item);
+            }
+            Statement::Abo { .. } => {
+                let item = DocItem {
+                    name: "abo".to_string(),
+                    kind: "abo".to_string(),
+                    signature: "abo;".to_string(),
+                    description: docs,
+                };
+                doc.orphans.push(item);
+            }
+            Statement::Ewo { .. } => {
+                let item = DocItem {
+                    name: "ewo".to_string(),
+                    kind: "ewo".to_string(),
+                    signature: "ewo ...".to_string(),
+                    description: docs,
+                };
+                doc.orphans.push(item);
+            }
+            Statement::Ebo { .. } => {
+                let item = DocItem {
+                    name: "ebo".to_string(),
+                    kind: "ebo".to_string(),
+                    signature: "ebo ...".to_string(),
+                    description: docs,
+                };
+                doc.orphans.push(item);
+            }
+            _ => {}
         }
     }
 
@@ -1121,6 +1196,10 @@ pub fn generate_docs(input_path: &Path, output_dir: &Path) -> Result<()> {
             "irete" => Some(OduDomain::Irete),
             "ose" => Some(OduDomain::Ose),
             "ofun" => Some(OduDomain::Ofun),
+            "cpu" => Some(OduDomain::Cpu),
+            "gpu" => Some(OduDomain::Gpu),
+            "storage" => Some(OduDomain::Storage),
+            "sys" => Some(OduDomain::Sys),
             _ => None,
         };
 

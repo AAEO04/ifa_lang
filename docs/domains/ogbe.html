@@ -7,7 +7,7 @@
     <title>Ogbe - System Domain</title>
     <meta name="description" content="Ogbe system domain for CLI arguments, environment variables, and system information in Ifa-Lang">
     <link rel="stylesheet" href="../js/common.css">
-    <script src="../js/nav.js" defer></script>
+    <script src="../js/nav.js"></script>
 </head>
 
 <body>
@@ -68,9 +68,13 @@
         </div>
 
         <h2>Example</h2>
-        <pre><code>ese main() {
+        <pre class="code-yoruba"><code>ese main() {
     ayanmo args = Ogbe.args();
     Irosu.fo("Version: " + Ogbe.bere());
+}</code></pre>
+        <pre class="code-english" style="display:none"><code>fn main() {
+    let args = Ogbe.args();
+    Irosu.println("Version: " + Ogbe.version());
 }</code></pre>
 
         <footer>

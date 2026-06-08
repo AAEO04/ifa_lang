@@ -7,7 +7,7 @@
     <title>Irosu - Console Domain</title>
     <meta name="description" content="Irosu console domain for print, input, and terminal operations in Ifa-Lang">
     <link rel="stylesheet" href="../js/common.css">
-    <script src="../js/nav.js" defer></script>
+    <script src="../js/nav.js"></script>
 </head>
 
 <body>
@@ -37,21 +37,24 @@
             <h3>fo / println</h3>
             <div class="sig">Irosu.fo(value: Any)</div>
             <p>Print value with newline.</p>
-            <pre><code>Irosu.fo("Hello, Ifa!");</code></pre>
+            <pre class="code-yoruba"><code>Irosu.fo("Hello, Ifa!");</code></pre>
+            <pre class="code-english" style="display:none"><code>Irosu.println("Hello, Ifa!");</code></pre>
         </div>
 
         <div class="method">
             <h3>so / print</h3>
             <div class="sig">Irosu.so(value: Any)</div>
             <p>Print value without newline.</p>
-            <pre><code>Irosu.so("Enter name: ");</code></pre>
+            <pre class="code-yoruba"><code>Irosu.so("Enter name: ");</code></pre>
+            <pre class="code-english" style="display:none"><code>Irosu.print("Enter name: ");</code></pre>
         </div>
 
         <div class="method">
             <h3>kigbe / error</h3>
             <div class="sig">Irosu.kigbe(text: Str)</div>
             <p>Print to stderr with <code>[ERROR]</code> prefix.</p>
-            <pre><code>Irosu.kigbe("Something went wrong");</code></pre>
+            <pre class="code-yoruba"><code>Irosu.kigbe("Something went wrong");</code></pre>
+            <pre class="code-english" style="display:none"><code>Irosu.error("Something went wrong");</code></pre>
         </div>
 
         <h2>Input</h2>
@@ -60,14 +63,16 @@
             <h3>gbo / listen</h3>
             <div class="sig">Irosu.gbo(prompt: Str) → Str</div>
             <p>Read line from stdin with optional prompt. Returns trimmed string.</p>
-            <pre><code>ayanmo name = Irosu.gbo("Enter your name: ");</code></pre>
+            <pre class="code-yoruba"><code>ayanmo name = Irosu.gbo("Enter your name: ");</code></pre>
+            <pre class="code-english" style="display:none"><code>let name = Irosu.listen("Enter your name: ");</code></pre>
         </div>
 
         <div class="method">
             <h3>gbo_nomba</h3>
             <div class="sig">Irosu.gbo_nomba(prompt: Str) → Int</div>
             <p>Read integer from stdin. Returns 0 on parse failure.</p>
-            <pre><code>ayanmo age = Irosu.gbo_nomba("Age: ");</code></pre>
+            <pre class="code-yoruba"><code>ayanmo age = Irosu.gbo_nomba("Age: ");</code></pre>
+            <pre class="code-english" style="display:none"><code>let age = Irosu.read_int("Age: ");</code></pre>
         </div>
 
         <div class="method">

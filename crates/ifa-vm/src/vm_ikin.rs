@@ -156,15 +156,6 @@ impl Ikin {
     }
 
     fn populate_bytecode_mapping(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
-        if self.strings.len() + bytecode.strings.len() > MAX_INTERNED_STRINGS {
-            return Err(IfaError::Runtime(format!(
-                "Bytecode string pool exceeds limit ({} + {} > {})",
-                self.strings.len(),
-                bytecode.strings.len(),
-                MAX_INTERNED_STRINGS
-            )));
-        }
-
         self.bytecode_to_ikin.clear();
         self.bytecode_to_ikin.reserve(bytecode.strings.len());
 
@@ -172,6 +163,13 @@ impl Ikin {
             let id = if let Some(&existing_id) = self.string_map.get(s.as_str()) {
                 existing_id
             } else {
+                if self.strings.len() >= MAX_INTERNED_STRINGS {
+                    return Err(IfaError::Runtime(format!(
+                        "Ikin string pool exhausted (limit = {})",
+                        MAX_INTERNED_STRINGS
+                    )));
+                }
+
                 let arc: Arc<str> = s.as_str().into();
                 let new_id = self.strings.len() as u32;
                 self.string_map.insert(arc.clone(), new_id);

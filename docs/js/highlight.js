@@ -12,8 +12,8 @@
     ];
 
     const DOMAINS = [
-        'Ogbe', 'Yoruba', 'Irosu', 'Irete', 'Osa', 'Otura', 'Ika', 'Obara', 'Okanran',
-        'Ogunda', 'Osa', 'Ika', 'Oturupon', 'Ofun', 'Iwori', 'Odi'
+        'Ogbe', 'Oyeku', 'Iwori', 'Odi', 'Irosu', 'Owonrin', 'Obara', 'Okanran',
+        'Ogunda', 'Osa', 'Ika', 'Oturupon', 'Otura', 'Irete', 'Ose', 'Ofun'
     ];
 
     function highlightCode() {
@@ -73,10 +73,10 @@
         style.textContent = `
             .string { color: #a8ff60; }
             .comment { color: #888; font-style: italic; }
-            .keyword { color: #ff6b81; font-weight: bold; }
+            .keyword { color: #ffb000; font-weight: bold; }
             .number { color: #70a1ff; }
             .domain { color: #ffd700; font-weight: bold; }
-            .function { color: #4ade80; }
+            .function { color: #4af626; }
         `;
         document.head.appendChild(style);
     }

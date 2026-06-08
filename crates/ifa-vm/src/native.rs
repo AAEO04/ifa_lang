@@ -15,7 +15,10 @@ impl<'a> VmContext<'a> {
     }
 
     pub fn await_future(&mut self, cell: &FutureCell) -> IfaResult<IfaValue> {
-        self.vm.await_future(cell, self.bytecode)
+        self.vm.await_future(
+            &ifa_types::value_union::IfaValue::Future(cell.clone()),
+            self.bytecode,
+        )
     }
 
     pub fn resource_registry(&mut self) -> std::sync::Arc<ifa_types::registry::ResourceRegistry> {
@@ -46,7 +49,10 @@ impl<'a> VmContext<'a> {
     pub fn call_value(&mut self, func: IfaValue, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
         let val = self.vm.spawn_task(func, args)?;
         if let IfaValue::Future(cell) = val {
-            self.vm.await_future(&cell, self.bytecode)
+            self.vm.await_future(
+                &ifa_types::value_union::IfaValue::Future(cell.clone()),
+                self.bytecode,
+            )
         } else {
             Ok(val)
         }

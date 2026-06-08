@@ -49,6 +49,7 @@ pub static AUTO_CLOSE: &[&str] = &["ogbe.bi", "ogbe.bere"];
 /// A resource debt - something opened that needs closing
 #[derive(Debug, Clone)]
 pub struct ResourceDebt {
+    pub var_name: Option<String>,
     pub opener: String,
     pub required: String,
     pub line: usize,
@@ -125,6 +126,12 @@ impl IwaEngine {
         self.borrow_ledger
             .retain(|b| b.scope_depth < self.scope_depth);
         self.scope_depth = self.scope_depth.saturating_sub(1);
+    }
+
+    /// Resolve (forgive) a debt if the resource has been moved out of the current scope
+    pub fn resolve_debt_by_move(&mut self, var_name: &str) {
+        self.debt_ledger
+            .retain(|d| d.var_name.as_deref() != Some(var_name));
     }
 
     /// Try to create an immutable borrow (&T)
@@ -236,6 +243,7 @@ impl IwaEngine {
 
         if let Some(Some(closer)) = LIFECYCLE_RULES.get(key.as_str()) {
             self.debt_ledger.push(ResourceDebt {
+                var_name: None,
                 opener: key,
                 required: closer.to_string(),
                 line,

@@ -369,7 +369,7 @@ impl IfaFfi {
             "js" | "javascript" => {
                 println!(
                     "[FFI] Summoning JavaScript bridge (timeout: {}s)...",
-                    timeout
+                    _timeout
                 );
                 Ok(())
             }
@@ -789,10 +789,10 @@ impl IfaFfi {
                     })?;
 
                     // Convert args inline to avoid self borrow
-                    let py_args: Vec<Py<PyAny>> = args_cloned
-                        .iter()
-                        .map(|val| ffi_to_py_value(val, py))
-                        .collect();
+                    let mut py_args = Vec::with_capacity(args_cloned.len());
+                    for val in &args_cloned {
+                        py_args.push(ffi_to_py_value(val, py)?);
+                    }
 
                     let py_tuple = PyTuple::new(py, &py_args).map_err(|e| {
                         FfiError::CallFailed(format!("Failed to create tuple: {}", e))
@@ -1025,19 +1025,32 @@ impl Default for IfaFfi {
 // =============================================================================
 
 #[cfg(feature = "python")]
-fn ffi_to_py_value<'py>(val: &FfiValue, py: pyo3::Python<'py>) -> pyo3::Py<pyo3::PyAny> {
+fn ffi_to_py_value<'py>(val: &FfiValue, py: pyo3::Python<'py>) -> FfiResult<pyo3::Py<pyo3::PyAny>> {
     use pyo3::prelude::*;
     use pyo3::types::PyList;
     match val {
-        FfiValue::I32(v) => v.into_pyobject(py).unwrap().into_any().unbind(),
-        FfiValue::I64(v) => v.into_pyobject(py).unwrap().into_any().unbind(),
-        FfiValue::F64(v) => v.into_pyobject(py).unwrap().into_any().unbind(),
-        FfiValue::Str(s) => s.into_pyobject(py).unwrap().into_any().unbind(),
+        FfiValue::I32(v) => v.into_pyobject(py)
+            .map(|v| v.into_any().unbind())
+            .map_err(|e| FfiError::CallFailed(format!("PyO3 error: {}", e))),
+        FfiValue::I64(v) => v.into_pyobject(py)
+            .map(|v| v.into_any().unbind())
+            .map_err(|e| FfiError::CallFailed(format!("PyO3 error: {}", e))),
+        FfiValue::F64(v) => v.into_pyobject(py)
+            .map(|v| v.into_any().unbind())
+            .map_err(|e| FfiError::CallFailed(format!("PyO3 error: {}", e))),
+        FfiValue::Str(s) => s.into_pyobject(py)
+            .map(|v| v.into_any().unbind())
+            .map_err(|e| FfiError::CallFailed(format!("PyO3 error: {}", e))),
         FfiValue::List(l) => {
-            let items: Vec<Py<PyAny>> = l.iter().map(|i| ffi_to_py_value(i, py)).collect();
-            PyList::new(py, &items).unwrap().into_any().unbind()
+            let mut items = Vec::with_capacity(l.len());
+            for i in l {
+                items.push(ffi_to_py_value(i, py)?);
+            }
+            PyList::new(py, &items)
+                .map(|v| v.into_any().unbind())
+                .map_err(|e| FfiError::CallFailed(format!("PyO3 error: {}", e)))
         }
-        _ => py.None(),
+        _ => Ok(py.None()),
     }
 }
 
@@ -1515,7 +1528,6 @@ impl IfaRpcServer {
 
     /// Start HTTP server (blocking)
     #[cfg(feature = "full")]
-    #[allow(dead_code)]
     pub fn start(&self) -> std::io::Result<()> {
         use std::io::{Read, Write};
         use std::net::TcpListener;

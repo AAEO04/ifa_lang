@@ -31,14 +31,6 @@ impl<T> Drop for SubscriptionGuard<T> {
     }
 }
 
-/// Type alias for reactive binding relationships  
-#[allow(dead_code)]
-type BindingRelation<S, T> = Vec<(
-    Weak<RwLock<S>>,
-    Weak<RwLock<T>>,
-    Box<dyn Fn(&S, &mut T) + Send + Sync>,
-)>;
-
 // ============================================================================
 // SIGNALS - Core reactive primitive
 // ============================================================================
@@ -262,13 +254,15 @@ impl RelContext {
     }
 }
 
+pub type AjoseRelationship<S, T> = (
+    Weak<RwLock<S>>,
+    Weak<RwLock<T>>,
+    Box<dyn Fn(&S, &mut T) + Send + Sync>,
+);
+
 /// The Àjọṣe Engine - manages reactive relationships
 pub struct Ajose<S: 'static, T: 'static> {
-    relationships: Vec<(
-        Weak<RwLock<S>>,
-        Weak<RwLock<T>>,
-        Box<dyn Fn(&S, &mut T) + Send + Sync>,
-    )>,
+    relationships: Vec<AjoseRelationship<S, T>>,
 }
 
 impl<S: Send + Sync + 'static, T: Send + Sync + 'static> Ajose<S, T> {
@@ -301,16 +295,14 @@ impl<S: Send + Sync + 'static, T: Send + Sync + 'static> Ajose<S, T> {
     /// Propagate changes from source to targets
     pub fn propagate(&self, source: &Arc<RwLock<S>>) {
         for (src_weak, tgt_weak, transform) in &self.relationships {
-            if let Some(src) = src_weak.upgrade() {
-                if Arc::ptr_eq(&src, source) {
-                    if let Some(tgt) = tgt_weak.upgrade() {
+            if let Some(src) = src_weak.upgrade()
+                && Arc::ptr_eq(&src, source)
+                    && let Some(tgt) = tgt_weak.upgrade() {
                         transform(
                             &src.read().unwrap_or_else(|e| e.into_inner()),
                             &mut tgt.write().unwrap_or_else(|e| e.into_inner()),
                         );
                     }
-                }
-            }
         }
     }
 

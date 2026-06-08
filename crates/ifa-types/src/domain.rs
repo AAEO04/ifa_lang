@@ -208,3 +208,35 @@ impl std::fmt::Display for OduDomain {
         write!(f, "{}", self.yoruba_name())
     }
 }
+
+impl std::str::FromStr for OduDomain {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "ogbe" => Ok(OduDomain::Ogbe),
+            "oyeku" => Ok(OduDomain::Oyeku),
+            "iwori" => Ok(OduDomain::Iwori),
+            "odi" => Ok(OduDomain::Odi),
+            "irosu" => Ok(OduDomain::Irosu),
+            "owonrin" => Ok(OduDomain::Owonrin),
+            "obara" => Ok(OduDomain::Obara),
+            "okanran" => Ok(OduDomain::Okanran),
+            "ogunda" => Ok(OduDomain::Ogunda),
+            "osa" => Ok(OduDomain::Osa),
+            "ika" => Ok(OduDomain::Ika),
+            "oturupon" => Ok(OduDomain::Oturupon),
+            "otura" => Ok(OduDomain::Otura),
+            "irete" => Ok(OduDomain::Irete),
+            "ose" => Ok(OduDomain::Ose),
+            "ofun" => Ok(OduDomain::Ofun),
+            "cpu" => Ok(OduDomain::Cpu),
+            "gpu" => Ok(OduDomain::Gpu),
+            "storage" => Ok(OduDomain::Storage),
+            "sys" => Ok(OduDomain::Sys),
+            "coop" => Ok(OduDomain::Coop),
+            "opele" => Ok(OduDomain::Opele),
+            _ => Err("Invalid OduDomain name"),
+        }
+    }
+}

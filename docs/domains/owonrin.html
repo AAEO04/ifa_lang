@@ -9,6 +9,7 @@
 </head>
 
 <body>
+    <div id="nav-placeholder"></div>
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list"></ul>
@@ -31,28 +32,32 @@
             <h3>pese / random_int</h3>
             <div class="sig">Owonrin.pese(min: Int, max: Int) → Int</div>
             <p>Random integer in inclusive range <code>min..=max</code>.</p>
-            <pre><code>ayanmo roll = Owonrin.pese(1, 6);  // Dice roll</code></pre>
+            <pre class="code-yoruba"><code>ayanmo roll = Owonrin.pese(1, 6);  // Dice roll</code></pre>
+            <pre class="code-english" style="display:none"><code>let roll = Owonrin.random_int(1, 6);  // Dice roll</code></pre>
         </div>
 
         <div class="method">
             <h3>pese_odidi / random_float</h3>
             <div class="sig">Owonrin.pese_odidi() → Float</div>
             <p>Random float in <code>0.0..1.0</code>.</p>
-            <pre><code>ayanmo pct = Owonrin.pese_odidi();</code></pre>
+            <pre class="code-yoruba"><code>ayanmo pct = Owonrin.pese_odidi();</code></pre>
+            <pre class="code-english" style="display:none"><code>let pct = Owonrin.random_float();</code></pre>
         </div>
 
         <div class="method">
             <h3>pese_larin / random_range</h3>
             <div class="sig">Owonrin.pese_larin(min: Float, max: Float) → Float</div>
             <p>Random float in range <code>min..max</code>.</p>
-            <pre><code>ayanmo temp = Owonrin.pese_larin(36.0, 40.0);</code></pre>
+            <pre class="code-yoruba"><code>ayanmo temp = Owonrin.pese_larin(36.0, 40.0);</code></pre>
+            <pre class="code-english" style="display:none"><code>let temp = Owonrin.random_range(36.0, 40.0);</code></pre>
         </div>
 
         <div class="method">
             <h3>boya / random_bool</h3>
             <div class="sig">Owonrin.boya(probability: Float) → Bool</div>
             <p>Random boolean with given probability (0.0-1.0) of being true.</p>
-            <pre><code>ti (Owonrin.boya(0.5)) { Irosu.fo("Heads!"); }</code></pre>
+            <pre class="code-yoruba"><code>ti (Owonrin.boya(0.5)) { Irosu.fo("Heads!"); }</code></pre>
+            <pre class="code-english" style="display:none"><code>if (Owonrin.random_bool(0.5)) { Irosu.println("Heads!"); }</code></pre>
         </div>
 
         <h2>Selection & Shuffling</h2>
@@ -61,21 +66,28 @@
             <h3>yan / choose</h3>
             <div class="sig">Owonrin.yan(items: List) → Any?</div>
             <p>Random choice from a list. Returns null if empty.</p>
-            <pre><code>ayanmo color = Owonrin.yan(["red", "green", "blue"]);</code></pre>
+            <pre class="code-yoruba"><code>ayanmo color = Owonrin.yan(["red", "green", "blue"]);</code></pre>
+            <pre class="code-english" style="display:none"><code>let color = Owonrin.choose(["red", "green", "blue"]);</code></pre>
         </div>
 
         <div class="method">
             <h3>paaro / shuffle</h3>
             <div class="sig">Owonrin.paaro(items: List)</div>
             <p>Shuffle list in place.</p>
-            <pre><code>Owonrin.paaro(deck);</code></pre>
+            <pre class="code-yoruba"><code>Owonrin.paaro(deck);</code></pre>
+            <pre class="code-english" style="display:none"><code>Owonrin.shuffle(deck);</code></pre>
         </div>
 
         <div class="method">
             <h3>yan_iwuwo / weighted_choice</h3>
             <div class="sig">Owonrin.yan_iwuwo(items: List(Tuple(Any, Float))) → Any?</div>
             <p>Weighted random choice from <code>(item, weight)</code> pairs.</p>
-            <pre><code>ayanmo pick = Owonrin.yan_iwuwo([
+            <pre class="code-yoruba"><code>ayanmo pick = Owonrin.yan_iwuwo([
+    ("common", 0.8),
+    ("rare", 0.15),
+    ("legendary", 0.05)
+]);</code></pre>
+            <pre class="code-english" style="display:none"><code>let pick = Owonrin.weighted_choice([
     ("common", 0.8),
     ("rare", 0.15),
     ("legendary", 0.05)
@@ -88,21 +100,24 @@
             <h3>awon_bytes / random_bytes</h3>
             <div class="sig">Owonrin.awon_bytes(count: Int) → List(Byte)</div>
             <p>Generate random bytes.</p>
-            <pre><code>ayanmo key = Owonrin.awon_bytes(32);</code></pre>
+            <pre class="code-yoruba"><code>ayanmo key = Owonrin.awon_bytes(32);</code></pre>
+            <pre class="code-english" style="display:none"><code>let key = Owonrin.random_bytes(32);</code></pre>
         </div>
 
         <div class="method">
             <h3>hex / hex_string</h3>
             <div class="sig">Owonrin.hex(bytes: Int) → Str</div>
             <p>Generate random hex string.</p>
-            <pre><code>ayanmo token = Owonrin.hex(16);  // 32-char hex</code></pre>
+            <pre class="code-yoruba"><code>ayanmo token = Owonrin.hex(16);  // 32-char hex</code></pre>
+            <pre class="code-english" style="display:none"><code>let token = Owonrin.hex_string(16);  // 32-char hex</code></pre>
         </div>
 
         <div class="method">
             <h3>uuid</h3>
             <div class="sig">Owonrin.uuid() → Str</div>
             <p>Generate UUID v4 string.</p>
-            <pre><code>ayanmo id = Owonrin.uuid();  // "550e8400-..."</code></pre>
+            <pre class="code-yoruba"><code>ayanmo id = Owonrin.uuid();  // "550e8400-..."</code></pre>
+            <pre class="code-english" style="display:none"><code>let id = Owonrin.uuid();  // "550e8400-..."</code></pre>
         </div>
 
         <h2>Seeding</h2>

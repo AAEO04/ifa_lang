@@ -7,7 +7,7 @@
     <title>Type System - Ifa-Lang</title>
     <meta name="description" content="ifa-types shared type system for Ifa-Lang runtime components">
     <link rel="stylesheet" href="../js/common.css">
-    <script src="../js/nav.js" defer></script>
+    <script src="../js/nav.js"></script>
 </head>
 
 <body>
@@ -460,6 +460,43 @@ pub struct ResourceToken(pub u64);
 // Only primitives (Null, Bool, Int, Float) can be NaN-boxed</code></pre>
             </div>
             <p><strong>Note:</strong> NaN boxing is used for fast paths in the VM. The maximum boxed integer range is &plusmn;(2^47 - 1). Values outside this range fall back to the IfaValue::Int(i64) variant.</p>
+        </div>
+
+        <div class="step">
+            <h2>Low-Level Types</h2>
+            <p>Low-level static types require <code>ailewu</code> (unsafe) context and provide precise memory layout control:</p>
+
+            <table class="field-table">
+                <tr><th>Type</th><th>Size</th><th>Description</th></tr>
+                <tr><td><code>I8</code></td><td>1 byte</td><td>Signed 8-bit integer</td></tr>
+                <tr><td><code>I16</code></td><td>2 bytes</td><td>Signed 16-bit integer</td></tr>
+                <tr><td><code>I32</code></td><td>4 bytes</td><td>Signed 32-bit integer</td></tr>
+                <tr><td><code>I64</code></td><td>8 bytes</td><td>Signed 64-bit integer</td></tr>
+                <tr><td><code>U8</code></td><td>1 byte</td><td>Unsigned 8-bit integer</td></tr>
+                <tr><td><code>U16</code></td><td>2 bytes</td><td>Unsigned 16-bit integer</td></tr>
+                <tr><td><code>U32</code></td><td>4 bytes</td><td>Unsigned 32-bit integer</td></tr>
+                <tr><td><code>U64</code></td><td>8 bytes</td><td>Unsigned 64-bit integer</td></tr>
+                <tr><td><code>F32</code></td><td>4 bytes</td><td>32-bit float</td></tr>
+                <tr><td><code>F64</code></td><td>8 bytes</td><td>64-bit float</td></tr>
+                <tr><td><code>Void</code></td><td>0 bytes</td><td>Unit/void type (for function returns)</td></tr>
+                <tr><td><code>Ptr&lt;T&gt;</code></td><td>8 bytes</td><td>Raw pointer: <code>*T</code> (requires <code>ailewu</code>)</td></tr>
+                <tr><td><code>Ref&lt;T&gt;</code></td><td>8 bytes</td><td>Immutable reference: <code>&amp;T</code> (borrow-checked)</td></tr>
+                <tr><td><code>RefMut&lt;T&gt;</code></td><td>8 bytes</td><td>Mutable reference: <code>&amp;mut T</code> (borrow-checked)</td></tr>
+                <tr><td><code>[T; N]</code></td><td><code>size_of(T) * N</code></td><td>Fixed-size contiguous array</td></tr>
+            </table>
+
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Low-Level Types in Use</span>
+                </div>
+                <pre><code>ailewu {
+    ayanmo ptr: Ptr&lt;I32&gt; = &amp;value;       // Raw pointer to i32
+    ayanmo val: I32 = *ptr;               // Dereference
+    ayanmo arr: [U8; 4] = [0, 0, 0, 0];  // Fixed-size array
+    ayanmo ref: Ref&lt;Str&gt; = &amp;name;         // Immutable reference
+    ayanmo mut_ref: RefMut&lt;Int&gt; = &amp;mut x; // Mutable reference
+}</code></pre>
+            </div>
         </div>
 
         <div class="step">

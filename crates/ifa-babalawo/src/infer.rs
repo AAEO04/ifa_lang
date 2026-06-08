@@ -133,7 +133,10 @@ fn scan_statement(stmt: &Statement, caps: &mut CapabilitySet) {
             }
         }
         Statement::EseDef {
-            body, effects: _, ..
+            body,
+            return_type: _,
+            effects: _,
+            ..
         } => {
             for s in body {
                 scan_statement(s, caps);

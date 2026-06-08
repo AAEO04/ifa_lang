@@ -230,30 +230,27 @@ impl Ose {
 
     fn handle_gbile() -> IfaResult<IfaValue> {
         loop {
-            match event::read() {
-                Ok(Event::Key(key)) => {
-                    let s = match key.code {
-                        KeyCode::Char(c) => c.to_string(),
-                        KeyCode::Enter => "Enter".to_string(),
-                        KeyCode::Esc => "Esc".to_string(),
-                        KeyCode::Up => "Up".to_string(),
-                        KeyCode::Down => "Down".to_string(),
-                        KeyCode::Left => "Left".to_string(),
-                        KeyCode::Right => "Right".to_string(),
-                        KeyCode::Backspace => "Backspace".to_string(),
-                        KeyCode::Tab => "Tab".to_string(),
-                        KeyCode::Home => "Home".to_string(),
-                        KeyCode::End => "End".to_string(),
-                        KeyCode::PageUp => "PageUp".to_string(),
-                        KeyCode::PageDown => "PageDown".to_string(),
-                        KeyCode::Delete => "Delete".to_string(),
-                        KeyCode::Insert => "Insert".to_string(),
-                        KeyCode::F(n) => return Ok(IfaValue::str(format!("F{}", n))),
-                        _ => return Ok(IfaValue::str("?")),
-                    };
-                    return Ok(IfaValue::str(s));
-                }
-                _ => {}
+            if let Ok(Event::Key(key)) = event::read() {
+                let s = match key.code {
+                    KeyCode::Char(c) => c.to_string(),
+                    KeyCode::Enter => "Enter".to_string(),
+                    KeyCode::Esc => "Esc".to_string(),
+                    KeyCode::Up => "Up".to_string(),
+                    KeyCode::Down => "Down".to_string(),
+                    KeyCode::Left => "Left".to_string(),
+                    KeyCode::Right => "Right".to_string(),
+                    KeyCode::Backspace => "Backspace".to_string(),
+                    KeyCode::Tab => "Tab".to_string(),
+                    KeyCode::Home => "Home".to_string(),
+                    KeyCode::End => "End".to_string(),
+                    KeyCode::PageUp => "PageUp".to_string(),
+                    KeyCode::PageDown => "PageDown".to_string(),
+                    KeyCode::Delete => "Delete".to_string(),
+                    KeyCode::Insert => "Insert".to_string(),
+                    KeyCode::F(n) => return Ok(IfaValue::str(format!("F{}", n))),
+                    _ => return Ok(IfaValue::str("?")),
+                };
+                return Ok(IfaValue::str(s));
             }
         }
     }
@@ -655,11 +652,10 @@ impl Ose {
 
         let mut table = Table::new(rows, widths).header(header).style(style);
 
-        if let Some(title) = ui_map.get("title").map(|v| v.to_string()) {
-            if !title.is_empty() {
+        if let Some(title) = ui_map.get("title").map(|v| v.to_string())
+            && !title.is_empty() {
                 table = table.block(Block::default().title(title).borders(Borders::ALL));
             }
-        }
 
         f.render_widget(table, area);
     }
@@ -1104,7 +1100,7 @@ impl Ose {
             "gigun" | "length" => Constraint::Length(value),
             "kere" | "min" => Constraint::Min(value),
             "pọ" | "max" => Constraint::Max(value),
-            "kun" | "fill" => Constraint::Fill(value.max(1) as u16),
+            "kun" | "fill" => Constraint::Fill(value.max(1)),
             _ => Constraint::Percentage(value.min(100)),
         }
     }
@@ -1165,7 +1161,7 @@ fn parse_color_value(value: Option<&IfaValue>) -> Option<Color> {
         }
         Some(IfaValue::Int(n)) => {
             let i = *n;
-            if i >= 0 && i <= 255 {
+            if (0..=255).contains(&i) {
                 Some(Color::Indexed(i as u8))
             } else {
                 None

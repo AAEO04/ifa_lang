@@ -1196,9 +1196,9 @@ pub static ODU_METHODS: &[(OduDomain, &[OduMethodInfo])] = &[
             OduMethodInfo {
                 domain: OduDomain::Irete,
                 method_id: 0x0D07,
-                yoruba: "tu",
+                yoruba: "sile",
                 english: "free",
-                aliases: &["tu", "free"],
+                aliases: &["sile", "free"],
             },
             OduMethodInfo {
                 domain: OduDomain::Irete,

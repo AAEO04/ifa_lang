@@ -270,11 +270,10 @@ impl eframe::App for InstallerApp {
                         if ui.text_edit_singleline(&mut path_str).changed() {
                             self.config.install_dir = std::path::PathBuf::from(&path_str);
                         }
-                        if ui.button("Browse...").clicked() {
-                            if let Some(path) = rfd::FileDialog::new().pick_folder() {
+                        if ui.button("Browse...").clicked()
+                            && let Some(path) = rfd::FileDialog::new().pick_folder() {
                                 self.config.install_dir = path;
                             }
-                        }
                         ui.label(
                             egui::RichText::new(format!(
                                 "Binary will be placed at: {}/bin/ifa",

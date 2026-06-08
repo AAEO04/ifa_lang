@@ -6,7 +6,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
-use std::ops::{Add, Mul, Neg, Not, Rem, Sub};
+use std::ops::Not;
 use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
@@ -184,72 +184,69 @@ impl fmt::Display for IfaValue {
 // MATH OPERATIONS (Ọ̀bàrà & Òtúúrúpọ̀n)
 // =============================================================================
 
-impl Add for IfaValue {
-    type Output = IfaValue;
-
-    fn add(self, other: IfaValue) -> IfaValue {
-        match (&self, &other) {
-            (IfaValue::Int(a), IfaValue::Int(b)) => a
+impl IfaValue {
+    pub fn checked_add(&self, other: &IfaValue) -> IfaResult<IfaValue> {
+        match (self, other) {
+            (IfaValue::Int(a), IfaValue::Int(b)) => Ok(a
                 .checked_add(*b)
                 .map(IfaValue::Int)
-                .unwrap_or_else(|| IfaValue::Float(*a as f64 + *b as f64)),
-            (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a + b),
-            (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float(*a as f64 + b),
-            (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a + *b as f64),
-            (IfaValue::Str(a), IfaValue::Str(b)) => IfaValue::Str(format!("{}{}", a, b).into()),
-            (IfaValue::Str(a), b) => IfaValue::Str(format!("{}{}", a, b).into()),
-            (a, IfaValue::Str(b)) => IfaValue::Str(format!("{}{}", a, b).into()),
+                .unwrap_or_else(|| IfaValue::Float(*a as f64 + *b as f64))),
+            (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Float(a + b)),
+            (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::Float(*a as f64 + b)),
+            (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::Float(a + *b as f64)),
+            (IfaValue::Str(a), IfaValue::Str(b)) => Ok(IfaValue::Str(format!("{}{}", a, b).into())),
+            (IfaValue::Str(a), b) => Ok(IfaValue::Str(format!("{}{}", a, b).into())),
+            (a, IfaValue::Str(b)) => Ok(IfaValue::Str(format!("{}{}", a, b).into())),
             (IfaValue::List(a), IfaValue::List(b)) => {
                 let mut result = a.clone();
                 result.extend(b.clone());
-                IfaValue::List(result)
+                Ok(IfaValue::List(result))
             }
-            _ => panic!("Arithmetic type mismatch: cannot perform operation on incompatible types"),
+            _ => Err(IfaError::TypeError {
+                expected: "numeric or string type".to_string(),
+                got: format!("{} + {}", self.type_name(), other.type_name()),
+            }),
         }
     }
-}
 
-impl Sub for IfaValue {
-    type Output = IfaValue;
-
-    fn sub(self, other: IfaValue) -> IfaValue {
-        match (&self, &other) {
-            (IfaValue::Int(a), IfaValue::Int(b)) => a
+    pub fn checked_sub(&self, other: &IfaValue) -> IfaResult<IfaValue> {
+        match (self, other) {
+            (IfaValue::Int(a), IfaValue::Int(b)) => Ok(a
                 .checked_sub(*b)
                 .map(IfaValue::Int)
-                .unwrap_or_else(|| IfaValue::Float(*a as f64 - *b as f64)),
-            (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a - b),
-            (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float(*a as f64 - b),
-            (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a - *b as f64),
-            _ => panic!("Arithmetic type mismatch: cannot perform operation on incompatible types"),
+                .unwrap_or_else(|| IfaValue::Float(*a as f64 - *b as f64))),
+            (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Float(a - b)),
+            (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::Float(*a as f64 - b)),
+            (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::Float(a - *b as f64)),
+            _ => Err(IfaError::TypeError {
+                expected: "numeric type".to_string(),
+                got: format!("{} - {}", self.type_name(), other.type_name()),
+            }),
         }
     }
-}
 
-impl Mul for IfaValue {
-    type Output = IfaValue;
-
-    fn mul(self, other: IfaValue) -> IfaValue {
-        match (&self, &other) {
-            (IfaValue::Int(a), IfaValue::Int(b)) => a
+    pub fn checked_mul(&self, other: &IfaValue) -> IfaResult<IfaValue> {
+        match (self, other) {
+            (IfaValue::Int(a), IfaValue::Int(b)) => Ok(a
                 .checked_mul(*b)
                 .map(IfaValue::Int)
-                .unwrap_or_else(|| IfaValue::Float(*a as f64 * *b as f64)),
-            (IfaValue::Float(a), IfaValue::Float(b)) => IfaValue::Float(a * b),
-            (IfaValue::Int(a), IfaValue::Float(b)) => IfaValue::Float(*a as f64 * b),
-            (IfaValue::Float(a), IfaValue::Int(b)) => IfaValue::Float(a * *b as f64),
+                .unwrap_or_else(|| IfaValue::Float(*a as f64 * *b as f64))),
+            (IfaValue::Float(a), IfaValue::Float(b)) => Ok(IfaValue::Float(a * b)),
+            (IfaValue::Int(a), IfaValue::Float(b)) => Ok(IfaValue::Float(*a as f64 * b)),
+            (IfaValue::Float(a), IfaValue::Int(b)) => Ok(IfaValue::Float(a * *b as f64)),
             (IfaValue::Str(s), IfaValue::Int(n)) if *n >= 0 => {
-                IfaValue::Str(s.repeat(*n as usize).into())
+                Ok(IfaValue::Str(s.repeat(*n as usize).into()))
             }
             (IfaValue::Int(n), IfaValue::Str(s)) if *n >= 0 => {
-                IfaValue::Str(s.repeat(*n as usize).into())
+                Ok(IfaValue::Str(s.repeat(*n as usize).into()))
             }
-            _ => panic!("Arithmetic type mismatch: cannot perform operation on incompatible types"),
+            _ => Err(IfaError::TypeError {
+                expected: "numeric type".to_string(),
+                got: format!("{} * {}", self.type_name(), other.type_name()),
+            }),
         }
     }
-}
 
-impl IfaValue {
     /// Checked division that returns proper errors.
     pub fn checked_div(&self, other: &IfaValue) -> IfaResult<IfaValue> {
         match (self, other) {
@@ -291,38 +288,35 @@ impl IfaValue {
             }),
         }
     }
-}
-
-impl Rem for IfaValue {
-    type Output = IfaValue;
-
-    fn rem(self, other: IfaValue) -> IfaValue {
-        match (&self, &other) {
+    pub fn checked_rem(&self, other: &IfaValue) -> IfaResult<IfaValue> {
+        match (self, other) {
             (IfaValue::Int(a), IfaValue::Int(b)) => {
                 if *b == 0 {
-                    return IfaValue::Null;
+                    return Ok(IfaValue::Null);
                 }
-                IfaValue::Int(a % b)
+                Ok(IfaValue::Int(a % b))
             }
             (IfaValue::Float(a), IfaValue::Float(b)) => {
                 if *b == 0.0 {
-                    return IfaValue::Null;
+                    return Ok(IfaValue::Null);
                 }
-                IfaValue::Float(a % b)
+                Ok(IfaValue::Float(a % b))
             }
-            _ => panic!("Arithmetic type mismatch: cannot perform operation on incompatible types"),
+            _ => Err(IfaError::TypeError {
+                expected: "numeric type".to_string(),
+                got: format!("{} % {}", self.type_name(), other.type_name()),
+            }),
         }
     }
-}
 
-impl Neg for IfaValue {
-    type Output = IfaValue;
-
-    fn neg(self) -> IfaValue {
+    pub fn checked_neg(&self) -> IfaResult<IfaValue> {
         match self {
-            IfaValue::Int(a) => IfaValue::Int(-a),
-            IfaValue::Float(a) => IfaValue::Float(-a),
-            _ => panic!("Arithmetic type mismatch: cannot perform operation on incompatible types"),
+            IfaValue::Int(a) => Ok(IfaValue::Int(-a)),
+            IfaValue::Float(a) => Ok(IfaValue::Float(-a)),
+            _ => Err(IfaError::TypeError {
+                expected: "numeric type".to_string(),
+                got: format!("-{}", self.type_name()),
+            }),
         }
     }
 }
@@ -769,9 +763,9 @@ mod tests {
     fn test_arithmetic() {
         let a = IfaValue::Int(10);
         let b = IfaValue::Int(5);
-        assert_eq!(a.clone() + b.clone(), IfaValue::Int(15));
-        assert_eq!(a.clone() - b.clone(), IfaValue::Int(5));
-        assert_eq!(a.clone() * b.clone(), IfaValue::Int(50));
+        assert_eq!(a.checked_add(&b).unwrap(), IfaValue::Int(15));
+        assert_eq!(a.checked_sub(&b).unwrap(), IfaValue::Int(5));
+        assert_eq!(a.checked_mul(&b).unwrap(), IfaValue::Int(50));
     }
 
     #[test]

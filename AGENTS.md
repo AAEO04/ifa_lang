@@ -46,11 +46,11 @@ Commands (all from `crates/ifa-cli/src/main.rs`):
 
 **Compilation pipeline**: `ifa-parser` (logos + pest) → `ifa-compiler` (AST → bytecode) → `ifa-bytecode`.
 
-**Two execution paths**: tree-walking `ifa-interpreter` and bytecode `ifa-vm` (`IfaVM`). Both parse + compile via the pipeline above.
+**Single execution path**: bytecode `ifa-vm` (`IfaVM`). The tree-walking `ifa-interpreter` crate has been archived — all execution goes through the compilation pipeline above.
 
-**Standard library** (`ifa-std`): 16 Odù domains, feature-gated: `backend`, `frontend`, `game`, `iot`, `crypto`, `ml`, `fusion`. Always-available: ogbe, oyeku, iwori, irosu, owonrin, obara, okanran, ogunda, ika, oturupon, ofun. Gated: odi/osa/otura (`backend`), ose (`game`), irete (`crypto`). Also: stacks/{crypto,backend,frontend,gamedev,ml,iot,fusion}, ffi (polyglot), infra/{cpu,gpu,storage,kernel,shaders,runtime}.
+**Standard library** (`ifa-std`): 16 Odù domains, feature-gated: `async_runtime`, `network`, `tui`, `crypto`, `backend`, `frontend`, `game`, `iot`, `ml`, `fusion`. Always-available: ogbe, oyeku, iwori, odi, irosu, owonrin, obara, okanran, ogunda, ika, oturupon, ofun. Gated: osa (`async_runtime`), otura (`network`), ose (`tui`), irete (`crypto`). Also: stacks/{crypto,backend,frontend,gamedev,ml,iot,fusion}, ffi (polyglot), infra/{cpu,gpu,storage,kernel,shaders,runtime}.
 
-**Capability security** (`ifa-sandbox`): `Ofun` enum (ReadFiles, WriteFiles, Network, Execute, Environment, Time, Random, Stdio, Bridge). Passed as `CapabilitySet` to interpreter/VM.
+**Capability security** (`ifa-sandbox`): `Ofun` enum (ReadFiles, WriteFiles, Network, Execute, Environment, Time, Random, Stdio, Bridge). Passed as `CapabilitySet` to `ifa-vm`.
 
 **Embedded** (`ifa-embedded`): no_std, heapless. Target features: `esp32`, `stm32`, `rp2040`. `ifa-vm` as dep with `default-features = false`.
 

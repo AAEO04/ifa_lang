@@ -17,9 +17,26 @@ const wordMappings = {
     'for': { yoruba: ['fun'], english: ['for'] },
     'in': { yoruba: ['ninu'], english: ['in'] },
     'return': { yoruba: ['pada'], english: ['return'] },
+    'break': { yoruba: ['da'], english: ['break'] },
+    'throw': { yoruba: ['ta', 'tá'], english: ['throw'] },
+    'catch': { yoruba: ['gba', 'gbà'], english: ['catch'] },
+    'await': { yoruba: ['reti', 'rẹti'], english: ['await'] },
     'end': { yoruba: ['ase', 'àṣẹ'], english: ['end'] },
     'match': { yoruba: ['yàn', 'yán'], english: ['match'] },
     'public': { yoruba: ['gbangba'], english: ['public'] },
+    'private': { yoruba: ['ikoko', 'àdáni'], english: ['private'] },
+    'const': { yoruba: ['ayanfe', 'àyànfẹ́', 'loruko', 'ka'], english: ['const'] },
+    'continue': { yoruba: ['tesiwaju', 'bayan'], english: ['continue'] },
+    'yield': { yoruba: ['jowo', 'jọ̀wọ́'], english: ['yield'] },
+    'defer': { yoruba: ['gbe'], english: ['defer'] },
+    'finally': { yoruba: ['nipari', 'nípàrí'], english: ['finally'] },
+    'move': { yoruba: ['yanda'], english: ['move'] },
+    'alias': { yoruba: ['oruko'], english: ['alias'] },
+    'strict': { yoruba: ['abo', 'abò'], english: ['strict'] },
+    'unsafe': { yoruba: ['ailewu', 'àìléwu'], english: ['unsafe'] },
+    'set': { yoruba: ['Set'], english: ['Set'] },
+    'assert_type': { yoruba: ['assert_type'], english: ['assert_type'] },
+    'verify': { yoruba: ['ewo', 'ẹ̀wọ̀'], english: ['assert', 'verify'] },
 
     // Memory sizes
     'small': { yoruba: ['kekere', 'kẹ́kẹ́rẹ́'], english: ['small', 'tiny', 'embedded'] },
@@ -46,6 +63,8 @@ const wordMappings = {
     'verify': { yoruba: ['ewo', 'ẹ̀wọ̀'], english: ['assert', 'verify'] },
     'true': { yoruba: ['otito'], english: ['true'] },
     'false': { yoruba: ['iro'], english: ['false'] },
+    'nil': { yoruba: ['ofo', 'ófo', 'ohunkohun'], english: ['nil', 'null'] },
+    'null': { yoruba: ['ofo', 'ófo', 'ohunkohun'], english: ['nil', 'null'] },
 
     // Console I/O methods
     'fo': { yoruba: ['fo'], english: ['println', 'print'] },
@@ -215,59 +234,59 @@ const wordMappings = {
     'akojọ': { yoruba: ['batch', 'akojọ'], english: ['batch', 'group'] },
     'group': { yoruba: ['batch', 'akojọ'], english: ['batch', 'group'] },
 
-    // Odù domains with English aliases (from lexer.rs)
+    // Odù domains — source-verified against crates/ifa-parser/src/lexer.rs
     // Core 16 Odù
     'irosu': { yoruba: ['Irosu', 'Ìrosù'], english: ['Fmt', 'Log'] },
-    'ogbe': { yoruba: ['Ogbe', 'Ogbè'], english: ['Sys', 'Os'] },
+    'ogbe': { yoruba: ['Ogbe', 'Ogbè'], english: ['Sys', 'System', 'Lifecycle'] },
     'oyeku': { yoruba: ['Oyeku', 'Ọ̀yẹ̀kú'], english: ['Exit'] },
     'iwori': { yoruba: ['Iwori', 'Ìwòrì'], english: ['Time', 'Datetime'] },
-    'odi': { yoruba: ['Odi', 'Òdí'], english: ['Fs', 'Io'] },
-    'owonrin': { yoruba: ['Owonrin', 'Ọ̀wọ́nrín'], english: ['Rand'] },
+    'odi': { yoruba: ['Odi', 'Òdí'], english: ['Fs', 'Io', 'File'] },
+    'owonrin': { yoruba: ['Owonrin', 'Ọ̀wọ́nrín'], english: ['Rand', 'Random'] },
     'obara': { yoruba: ['Obara', 'Ọ̀bàrà'], english: ['Math'] },
-    'okanran': { yoruba: ['Okanran', 'Ọ̀kànràn'], english: ['Err', 'Panic'] },
-    'ogunda': { yoruba: ['Ogunda', 'Ògúndá'], english: ['Vec', 'List'] },
-    'osa': { yoruba: ['Osa', 'Ọ̀sá'], english: ['Async', 'Thread'] },
+    'okanran': { yoruba: ['Okanran', 'Ọ̀kànràn'], english: ['Err', 'Panic', 'Error'] },
+    'ogunda': { yoruba: ['Ogunda', 'Ògúndá'], english: ['Vec', 'List', 'Array'] },
+    'osa': { yoruba: ['Osa', 'Ọ̀sá'], english: ['Async', 'Thread', 'Flow'] },
     'ika': { yoruba: ['Ika', 'Ìká'], english: ['Str', 'String'] },
-    'oturupon': { yoruba: ['Oturupon', 'Òtúúrúpọ̀n'], english: ['Div'] },
+    'oturupon': { yoruba: ['Oturupon', 'Òtúúrúpọ̀n'], english: ['Reduce', 'Math_sub', 'Div'] },
     'otura': { yoruba: ['Otura', 'Òtúrá'], english: ['Net', 'Http'] },
     'irete': { yoruba: ['Irete', 'Ìrẹtẹ̀'], english: ['Crypto', 'Hash'] },
-    'ose': { yoruba: ['Ose', 'Ọ̀ṣẹ́'], english: ['Tui', 'Term'] },
-    'ofun': { yoruba: ['Ofun', 'Òfún'], english: ['Perm', 'Auth'] },
+    'ose': { yoruba: ['Ose', 'Ọ̀ṣẹ́'], english: ['Tui', 'Term', 'Ui'] },
+    'ofun': { yoruba: ['Ofun', 'Òfún'], english: ['Perm', 'Auth', 'Root'] },
     // Pseudo-domains
     'coop': { yoruba: ['Coop', 'Àjọṣe'], english: ['Ffi', 'Bridge'] },
     'opele': { yoruba: ['Opele', 'Ọpẹlẹ'], english: ['Oracle'] },
-    // Infrastructure Layer
+    // Infrastructure Layer — actual OduDomain names (lexer.rs:105-108)
     'cpu': { yoruba: ['Cpu'], english: ['Parallel'] },
     'gpu': { yoruba: ['Gpu'], english: ['Compute'] },
     'storage': { yoruba: ['Storage'], english: ['Kv', 'Db'] },
-    'ohun': { yoruba: ['Ohun'], english: ['Audio', 'Sound'] },
-    'fidio': { yoruba: ['Fidio'], english: ['Video', 'Media'] },
-    // Application Stacks
-    'backend': { yoruba: ['Backend'], english: ['Server'] },
-    'frontend': { yoruba: ['Frontend'], english: ['Html', 'Web'] },
-    'ml': { yoruba: ['Ml'], english: ['Tensor', 'Ai'] },
-    'gamedev': { yoruba: ['GameDev'], english: ['Game', 'Engine'] },
-    'iot': { yoruba: ['Iot'], english: ['Gpio', 'Embedded'] },
-    // Reverse mappings for English → Yoruba (primary aliases)
+    // Reverse mappings for English → Yoruba
     'fmt': { yoruba: ['Irosu'], english: ['Fmt'] },
     'log': { yoruba: ['Irosu'], english: ['Log'] },
     'sys': { yoruba: ['Ogbe'], english: ['Sys'] },
-    'os': { yoruba: ['Ogbe'], english: ['Os'] },
+    'system': { yoruba: ['Ogbe'], english: ['System'] },
+    'lifecycle': { yoruba: ['Ogbe'], english: ['Lifecycle'] },
     'exit': { yoruba: ['Oyeku'], english: ['Exit'] },
     'time': { yoruba: ['Iwori'], english: ['Time'] },
     'datetime': { yoruba: ['Iwori'], english: ['Datetime'] },
     'fs': { yoruba: ['Odi'], english: ['Fs'] },
     'io': { yoruba: ['Odi'], english: ['Io'] },
+    'file': { yoruba: ['Odi'], english: ['File'] },
     'rand': { yoruba: ['Owonrin'], english: ['Rand'] },
+    'random': { yoruba: ['Owonrin'], english: ['Random'] },
     'math': { yoruba: ['Obara'], english: ['Math'] },
     'err': { yoruba: ['Okanran'], english: ['Err'] },
+    'error': { yoruba: ['Okanran'], english: ['Error'] },
     'panic': { yoruba: ['Okanran'], english: ['Panic'] },
     'vec': { yoruba: ['Ogunda'], english: ['Vec'] },
     'list': { yoruba: ['Ogunda'], english: ['List'] },
+    'array': { yoruba: ['Ogunda'], english: ['Array'] },
     'async': { yoruba: ['Osa'], english: ['Async'] },
     'thread': { yoruba: ['Osa'], english: ['Thread'] },
+    'flow': { yoruba: ['Osa'], english: ['Flow'] },
     'str': { yoruba: ['Ika'], english: ['Str'] },
     'string': { yoruba: ['Ika'], english: ['String'] },
+    'reduce': { yoruba: ['Oturupon'], english: ['Reduce'] },
+    'math_sub': { yoruba: ['Oturupon'], english: ['Math_sub'] },
     'div': { yoruba: ['Oturupon'], english: ['Div'] },
     'net': { yoruba: ['Otura'], english: ['Net'] },
     'http': { yoruba: ['Otura'], english: ['Http'] },
@@ -275,27 +294,16 @@ const wordMappings = {
     'hash': { yoruba: ['Irete'], english: ['Hash'] },
     'tui': { yoruba: ['Ose'], english: ['Tui'] },
     'term': { yoruba: ['Ose'], english: ['Term'] },
+    'ui': { yoruba: ['Ose'], english: ['Ui'] },
     'perm': { yoruba: ['Ofun'], english: ['Perm'] },
     'auth': { yoruba: ['Ofun'], english: ['Auth'] },
+    'root': { yoruba: ['Ofun'], english: ['Root'] },
     'ffi': { yoruba: ['Coop'], english: ['Ffi'] },
     'bridge': { yoruba: ['Coop'], english: ['Bridge'] },
     'parallel': { yoruba: ['Cpu'], english: ['Parallel'] },
     'compute': { yoruba: ['Gpu'], english: ['Compute'] },
     'kv': { yoruba: ['Storage'], english: ['Kv'] },
     'db': { yoruba: ['Storage'], english: ['Db'] },
-    'audio': { yoruba: ['Ohun'], english: ['Audio'] },
-    'sound': { yoruba: ['Ohun'], english: ['Sound'] },
-    'video': { yoruba: ['Fidio'], english: ['Video'] },
-    'media': { yoruba: ['Fidio'], english: ['Media'] },
-    'server': { yoruba: ['Backend'], english: ['Server'] },
-    'html': { yoruba: ['Frontend'], english: ['Html'] },
-    'web': { yoruba: ['Frontend'], english: ['Web'] },
-    'tensor': { yoruba: ['Ml'], english: ['Tensor'] },
-    'ai': { yoruba: ['Ml'], english: ['Ai'] },
-    'game': { yoruba: ['GameDev'], english: ['Game'] },
-    'engine': { yoruba: ['GameDev'], english: ['Engine'] },
-    'gpio': { yoruba: ['Iot'], english: ['Gpio'] },
-    'embedded': { yoruba: ['Iot'], english: ['Embedded'] }
 };
 
 // Create reverse lookup for efficient switching
@@ -410,9 +418,10 @@ function enhanceAllCodeExamples() {
     initializeSwitchableWords();
 }
 
-// Enhanced setLang function to maintain compatibility with both systems
+// Enhanced setLang function — single source of truth for language state
 function setLang(lang) {
     currentLanguage = lang;
+    localStorage.setItem('ifa-lang-pref', lang);
 
     // Handle new individual word switching system
     document.querySelectorAll('.switchable-word').forEach(element => {
@@ -443,9 +452,14 @@ function setLang(lang) {
     });
 }
 
-// Auto-initialize when DOM is ready
+// Auto-initialize when DOM is ready — single source of truth
 document.addEventListener('DOMContentLoaded', function () {
     enhanceAllCodeExamples();
+    // Apply saved language preference
+    const pref = localStorage.getItem('ifa-lang-pref');
+    if (pref === 'english') {
+        setLang('english');
+    }
 });
 
 // Export for use in other files

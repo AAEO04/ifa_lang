@@ -7,7 +7,7 @@
     <title>Storage Infrastructure - Ifa-Lang</title>
     <meta name="description" content="Storage infrastructure for persistence in Ifa-Lang">
     <link rel="stylesheet" href="../../js/common.css">
-    <script src="../../js/nav.js" defer></script>
+    <script src="../../js/nav.js"></script>
 </head>
 
 <body>
@@ -68,6 +68,12 @@
         <div class="step">
             <h2>Error Handling</h2>
             <p>Storage operations return <code>IfaValue::str("StorageError: ...")</code> on failure or <code>IfaValue::null()</code> on success. KeyNotFound returns null silently.</p>
+        </div>
+
+        <div class="step">
+            <h2>Serialization</h2>
+            <p>Values are serialized via the same <code>bincode</code> / <code>IfaValueSurrogate</code> path used by <code>yanda</code> deep-copy transfers. All <code>IfaValue</code> variants are supported — the <code>Set</code> type included. Variants without a serializable representation (<code>Fn</code>, <code>Closure</code>, <code>Actor</code>, <code>Future</code>) are rejected at store time with a clear error.</p>
+            <p>See <a href="../../language/yanda.html">Yanda documentation</a> for details on the serialization bridge.</p>
         </div>
 
         <footer>

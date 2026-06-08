@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Iwa - Protocol-Oriented Typing — Ifá-Lang</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .good { border-left: 3px solid var(--green); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+        .warn { border-left: 3px solid var(--amber); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">iwa.ifa</span></div><div class="terminal-body"><header>
+            <h1>Iwa — Protocol-Oriented Structural Typing</h1>
+            <p class="subtitle">Structural protocols with lifecycle tracking (Ìwà = character/conduct)</p>
+        </header>
+
+        <h2 class="section-header">1. What is Iwa?</h2>
+        <p><strong>Iwa</strong> (Yoruba: "character" / "conduct") is Ifá-Lang's protocol-oriented type system. Like Rust's traits, Go's interfaces, or TypeScript's structural types — but with lifecycle-aware method pairing.</p>
+
+        <p>An <code>iwa</code> defines a set of method signatures that a value must implement. Any value that satisfies the shape (structural typing) automatically conforms — no explicit <code>impl</code> declaration needed.</p>
+
+        <h2 class="section-header">2. Basic Protocol</h2>
+
+        <div class="code-block">
+<pre>iwa Logger {
+    log(msg: Str) -> Ase;
+}
+
+ayanmo logger: Iwa&lt;Logger&gt; = Obara.fikun(42);
+// Error: Int does not satisfy Iwa 'Logger': missing method 'log'
+
+// A Map with the right shape satisfies Iwa Logger:
+ayanmo logger: Iwa&lt;Logger&gt; = {
+    "log": ese (msg) { Irosu.fo(msg) }
+};</pre></div>
+
+        <p>The Babalawo (static analyzer) checks conformance at compile/check time:</p>
+
+        <div class="code-block">
+<pre>$ ifa check source.ifa
+# Error: Variable 'logger' must have Iwa 'Logger' type to be assigned
+# Error: Map does not satisfy Iwa 'Logger': missing method 'log'</pre></div>
+
+        <h2 class="section-header">3. Iwa Pele — Lifecycle Tracking</h2>
+
+        <p><strong>Iwa Pele</strong> (Ìwà Pẹ̀lẹ̀ = gentle character) extends protocols with resource lifecycle annotations. Pairs of methods are marked as open/close, and the Babalawo verifies they are balanced.</p>
+
+        <div class="code-block">
+<pre>iwa File {
+    #[iwa_pele_pair(open, close)]
+    open(path: Str) -> Result;
+    close() -> Result;
+
+    read() -> Str;
+}
+
+ayanmo file = Odi.si("data.txt");
+file.read();
+// file.close() forgotten!
+// → Babalawo: Resource 'odi.si' opened at line 3 was never closed (needs 'odi.pa')</pre></div>
+
+        <div class="good">
+            <strong>Runtime GC integration:</strong> Objects with a known <code>iwa_pele_pair</code> closer that was called are skipped by the cycle collector — their memory is guaranteed to be freed deterministically.
+        </div>
+
+        <p>The built-in lifecycle rules (<code>crates/ifa-babalawo/src/iwa.rs:11-44</code>):</p>
+
+        <table class="field-table">
+            <tr><th>Domain</th><th>Opener</th><th>Closer</th><th>Description</th></tr>
+            <tr><td>Odi (File)</td><td><code>odi.si</code></td><td><code>odi.pa</code></td><td>Open → Close</td></tr>
+            <tr><td>Otura (Net)</td><td><code>otura.de</code></td><td><code>otura.pa</code></td><td>Bind → Close</td></tr>
+            <tr><td>Otura (Net)</td><td><code>otura.so</code></td><td><code>otura.pa</code></td><td>Connect → Close</td></tr>
+            <tr><td>Ogunda (Alloc)</td><td><code>ogunda.ge</code></td><td><code>irete.tu</code></td><td>Alloc → Free</td></tr>
+            <tr><td>Ofun (Object)</td><td><code>ofun.da</code></td><td><code>ofun.pa</code></td><td>Create → Delete</td></tr>
+            <tr><td>Ogbe (System)</td><td><code>ogbe.bi</code></td><td><code>oyeku.duro</code></td><td>Init → Halt</td></tr>
+        </table>
+
+        <h2 class="section-header">4. Iwa Type Hints</h2>
+
+        <p>Function parameters and return types can declare Iwa constraints:</p>
+
+        <div class="code-block">
+<pre>// Parameter must satisfy Iwa Logger
+ese process(handler: Iwa&lt;Logger&gt;) {
+    handler.log("Starting...");
+}
+
+ese make_logger() -> Iwa&lt;Logger&gt; {
+    pada {
+        "log": ese (msg) { Irosu.fo(msg) }
+    }
+}
+
+ayanmo logger = make_logger();   // type: Iwa&lt;Logger&gt;
+process(logger);                  // OK: satisfies constraint</pre></div>
+
+        <h2 class="section-header">5. Iwa vs Odu Classes</h2>
+
+        <table class="field-table">
+            <tr><th></th><th>Iwa (protocol)</th><th>Odu (class)</th></tr>
+            <tr><td>Declares</td><td>Method signatures only</td><td>Fields + methods</td></tr>
+            <tr><td>Implementation</td><td>Structural (implicit)</td><td>Nominal (explicit body)</td></tr>
+            <tr><td>Lifecycle</td><td><code>#[iwa_pele_pair]</code></td><td>Constructor/destructor</td></tr>
+            <tr><td>Static checks</td><td>Babalawo checks shape + balance</td><td>Babalawo checks field access</td></tr>
+            <tr><td>Runtime cost</td><td>Zero (erased at compile time for known types)</td><td>Dynamic dispatch for virtual methods</td></tr>
+        </table>
+
+        <footer>
+            <p><a href="index.html">← Back to Language Reference</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

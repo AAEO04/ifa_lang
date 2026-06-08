@@ -1,4 +1,5 @@
-use ifa_embedded::{EmbeddedOpCode, EmbeddedValue, EmbeddedVm};
+use ifa_bytecode::embedded::EmbeddedOpCode;
+use ifa_embedded::{EmbeddedValue, EmbeddedVm};
 
 #[test]
 fn test_embedded_ptr_ops() {

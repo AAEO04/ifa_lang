@@ -74,16 +74,11 @@ impl Drop for ActorIdGuard {
 /// Messages that can be sent to an actor's inbox.
 #[derive(Clone, Debug)]
 pub enum ActorMsg {
-    /// A value sent via `Osa.ran(handle, value)`.
-    Value(IfaValue),
+    /// A deep-copied serialized value sent via `Osa.ran`.
+    SerializedValue(Vec<u8>),
     /// Orderly shutdown request.
     Shutdown,
 }
-
-// Safety: `IfaValue` contains only `Arc`-wrapped heap data and scalars.
-// The `#[cfg(feature = "vm")]` variants (Upvalue/Closure/Future) hold
-// `Arc<Mutex<...>>` which is also `Send`.
-unsafe impl Send for ActorMsg {}
 
 // ─── Handle ──────────────────────────────────────────────────────────────────
 
@@ -105,8 +100,10 @@ impl ActorHandle {
     /// Send a value to this actor's inbox. Non-blocking — returns an error
     /// if the channel is full or the actor has exited.
     pub fn send(&self, value: IfaValue) -> IfaResult<()> {
+        let bytes = bincode::serialize(&value)
+            .map_err(|_| IfaError::Runtime("Serialization failed".into()))?;
         self.tx
-            .try_send(ActorMsg::Value(value))
+            .try_send(ActorMsg::SerializedValue(bytes))
             .map_err(|e| match e {
                 TrySendError::Full(_) => IfaError::Runtime(format!(
                     "Actor {} inbox is full — apply back-pressure or increase buffer",
@@ -208,11 +205,18 @@ pub fn spawn_actor(
         };
         table.insert(handle.clone());
 
+        let init_fn_safe = match init_fn {
+            IfaValue::Fn(f) => Ok(f),
+            _ => Err(IfaError::Runtime(
+                "Actor must be spawned with a bytecode function".into(),
+            )),
+        }?;
+
         let table_clone = table.clone();
         spawn_actor_task(move || {
             actor_loop(
                 id,
-                init_fn,
+                IfaValue::Fn(init_fn_safe),
                 rx,
                 &bytecode,
                 &table_clone,
@@ -295,9 +299,12 @@ pub fn actor_send(
                 *id,
             );
 
+            let serialized = bincode::serialize(&safe_value)
+                .map_err(|_| IfaError::Runtime("Failed to serialize yanda transfer".into()))?;
+
             actor_handle
                 .tx
-                .try_send(ActorMsg::Value(safe_value))
+                .try_send(ActorMsg::SerializedValue(serialized))
                 .map_err(|e| match e {
                     mpsc::TrySendError::Full(_) => IfaError::Runtime(format!(
                         "Actor {} inbox full — back-pressure required",
@@ -345,25 +352,36 @@ fn actor_loop(
     let mut vm = IfaVM::new();
     vm.actor_id = Some(id);
     vm.registry = registry;
-    vm.resource_registry = resource_registry.into();
+    vm.resource_registry = resource_registry;
 
     while let Ok(msg) = rx.recv() {
         match msg {
             ActorMsg::Shutdown => break,
-            ActorMsg::Value(value) => {
+            ActorMsg::SerializedValue(bytes) => {
+                let value: IfaValue = match bincode::deserialize(&bytes) {
+                    Ok(v) => v,
+                    Err(_e) => {
+                        #[cfg(debug_assertions)]
+                        eprintln!("[ifa actor {}] failed to deserialize message: {}", id, _e);
+                        continue;
+                    }
+                };
                 let args = vec![value];
                 // spawn_task creates a cooperative task and returns a Future.
                 match vm.spawn_task(handler.clone(), args) {
                     Ok(IfaValue::Future(cell)) => {
                         // Drive the task to completion. Since there's only one
                         // task in this actor's queue, this will run it fully.
-                        if let Err(e) = vm.await_future(&cell, bytecode) {
-                            eprintln!("[ifa actor {}] handler error: {}", id, e);
+                        let val = ifa_types::value_union::IfaValue::Future(cell.clone());
+                        if let Err(_e) = vm.await_future(&val, bytecode) {
+                            #[cfg(debug_assertions)]
+                            eprintln!("[ifa actor {}] handler error: {}", id, _e);
                         }
                     }
                     Ok(_) => {}
-                    Err(e) => {
-                        eprintln!("[ifa actor {}] spawn error: {}", id, e);
+                    Err(_e) => {
+                        #[cfg(debug_assertions)]
+                        eprintln!("[ifa actor {}] spawn error: {}", id, _e);
                     }
                 }
             }

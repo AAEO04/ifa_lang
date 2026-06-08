@@ -494,6 +494,8 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
             let mut params = Vec::new();
             let mut body = Vec::new();
 
+            let mut return_type = None;
+
             for p in remaining {
                 match p.as_rule() {
                     Rule::params => {
@@ -509,7 +511,9 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                             for token in param_inner {
                                 match token.as_rule() {
                                     Rule::type_name => param_type = Some(parse_type_hint(token)?),
-                                    Rule::expression => default_value = Some(parse_expression(token)?),
+                                    Rule::expression => {
+                                        default_value = Some(parse_expression(token)?)
+                                    }
                                     _ => {}
                                 }
                             }
@@ -519,6 +523,9 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                                 default_value,
                             });
                         }
+                    }
+                    Rule::type_name => {
+                        return_type = Some(parse_type_hint(p)?);
                     }
                     Rule::effects_decl => {
                         let decl_str = p.as_str();
@@ -565,6 +572,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                 name,
                 visibility,
                 params,
+                return_type,
                 body,
                 effects,
                 span,
@@ -609,6 +617,91 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
                 body,
                 span,
             }))
+        }
+
+        Rule::iwa_def => {
+            let mut inner = pair.into_inner();
+            let mut visibility = Visibility::Private;
+
+            let first = inner
+                .next()
+                .ok_or(IfaError::Parse("Iwa missing name or modifier".into()))?;
+            let (name, remaining) = if first.as_rule() == Rule::public_mod {
+                visibility = Visibility::Public;
+                (
+                    inner
+                        .next()
+                        .ok_or(IfaError::Parse("Iwa missing name".into()))?
+                        .as_str()
+                        .to_string(),
+                    inner,
+                )
+            } else {
+                (first.as_str().to_string(), inner)
+            };
+
+            let mut methods = Vec::new();
+            for method_pair in remaining {
+                if method_pair.as_rule() == Rule::iwa_method {
+                    let mut method_inner = method_pair.into_inner();
+                    let mut attributes = Vec::new();
+                    // Extract #[attr]
+                    let mut current = method_inner
+                        .next()
+                        .ok_or(IfaError::Parse("IwaMethod empty".into()))?;
+                    while current.as_rule() == Rule::attribute {
+                        attributes.push(current.as_str().to_string());
+                        current = method_inner
+                            .next()
+                            .ok_or(IfaError::Parse("IwaMethod missing name".into()))?;
+                    }
+
+                    let method_name = current.as_str().to_string();
+                    let mut params = Vec::new();
+                    let mut return_type = None;
+
+                    for p in method_inner {
+                        if p.as_rule() == Rule::params {
+                            for param_pair in p.into_inner() {
+                                let mut param_inner = param_pair.into_inner();
+                                let param_name = param_inner
+                                    .next()
+                                    .ok_or(IfaError::Parse("Param missing name".into()))?
+                                    .as_str()
+                                    .to_string();
+                                let mut param_type = None;
+                                for token in param_inner {
+                                    if token.as_rule() == Rule::type_name {
+                                        param_type = Some(parse_type_hint(token)?);
+                                    }
+                                }
+                                params.push(Param {
+                                    name: param_name,
+                                    type_hint: param_type,
+                                    default_value: None,
+                                });
+                            }
+                        } else if p.as_rule() == Rule::type_name {
+                            return_type = Some(parse_type_hint(p)?);
+                        }
+                    }
+
+                    methods.push(IwaMethod {
+                        name: method_name,
+                        params,
+                        return_type,
+                        attributes,
+                        span: span.clone(),
+                    });
+                }
+            }
+
+            Ok(Some(Statement::IwaDef(IwaDef {
+                name,
+                visibility,
+                methods,
+                span,
+            })))
         }
 
         Rule::match_stmt => {
@@ -714,8 +807,8 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
             let finally_body = if let Some(nipari_pair) = nipari_clause_pair {
                 let mut finally_stmts = Vec::new();
                 for p in nipari_pair.into_inner() {
+                    #[allow(clippy::collapsible_if)]
                     if p.as_rule() == Rule::statement {
-                        #[allow(clippy::collapsible_if)]
                         if let Some(stmt) = parse_statement(p)? {
                             finally_stmts.push(stmt);
                         }
@@ -849,6 +942,15 @@ fn parse_lvalue(pair: pest::iterators::Pair<Rule>) -> IfaResult<AssignTarget> {
 }
 
 fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> {
+    let span = make_span(&pair);
+    let expr = parse_expression_inner(pair)?;
+    Ok(Expression::Spanned {
+        expr: Box::new(expr),
+        span,
+    })
+}
+
+fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> {
     match pair.as_rule() {
         Rule::pipeline_expr => {
             let mut inner = pair.into_inner();
@@ -1251,7 +1353,9 @@ fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> 
                             for token in param_inner {
                                 match token.as_rule() {
                                     Rule::type_name => param_type = Some(parse_type_hint(token)?),
-                                    Rule::expression => default_value = Some(parse_expression(token)?),
+                                    Rule::expression => {
+                                        default_value = Some(parse_expression(token)?)
+                                    }
                                     _ => {}
                                 }
                             }
@@ -1393,7 +1497,13 @@ fn parse_type_hint(pair: pest::iterators::Pair<Rule>) -> IfaResult<TypeHint> {
         "f32" => Ok(TypeHint::F32),
         "f64" => Ok(TypeHint::F64),
         "void" => Ok(TypeHint::Void),
-        other => Ok(TypeHint::Custom(other.to_string())),
+        other => {
+            if other.starts_with("Iwa<") && other.ends_with('>') {
+                Ok(TypeHint::Iwa(other[4..other.len() - 1].to_string()))
+            } else {
+                Ok(TypeHint::Custom(other.to_string()))
+            }
+        }
     }
 }
 

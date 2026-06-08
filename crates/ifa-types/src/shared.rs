@@ -70,14 +70,14 @@ impl IfaShared {
                 for item in l {
                     thawed_list.push(item.thaw());
                 }
-                IfaValue::List(Arc::new(thawed_list))
+                IfaValue::List(crate::gc::IfaGc::new(thawed_list))
             }
             IfaShared::Map(m) => {
                 let mut thawed_map = HashMap::new();
                 for (k, v) in m {
                     thawed_map.insert(crate::CompactString::new(k.as_ref()), v.thaw());
                 }
-                IfaValue::Map(Arc::new(thawed_map))
+                IfaValue::Map(crate::gc::IfaGc::new(thawed_map))
             }
             IfaShared::Object(o) => {
                 let mut thawed_map = HashMap::new();
@@ -98,7 +98,7 @@ impl IfaShared {
                         }
                     }
                 }
-                IfaValue::Map(Arc::new(thawed_map))
+                IfaValue::Map(crate::gc::IfaGc::new(thawed_map))
             }
             IfaShared::Fn(_) => IfaValue::Null, // Cannot thaw shared functions
         }

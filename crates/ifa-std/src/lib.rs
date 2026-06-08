@@ -1,4 +1,3 @@
-
 //! # Ifá-Std - The 16 Odù Domains
 //!
 //! Standard library implementing the 16 principal Odù as Rust modules.

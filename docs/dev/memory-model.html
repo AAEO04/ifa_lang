@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Memory Model — Ifá-Lang Dev Docs</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 1rem 0; }
+        .field-table th { text-align: left; color: var(--green); border-bottom: 1px solid var(--border); padding: 0.4rem 0.6rem; }
+        .field-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .field-table td:first-child { color: var(--amber); font-weight: 500; }
+        .field-table td:nth-child(3) { color: var(--dim); font-size: 0.75rem; }
+        .warn { border-left: 3px solid var(--amber); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+        .good { border-left: 3px solid var(--green); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">memory.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Memory Model</h1>
+            <p class="subtitle">IfaGc cycle collector, Orí heap isolation, and the SendableValue boundary</p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified.</strong> Extracted from
+            <code>crates/ifa-types/src/gc.rs</code>,
+            <code>crates/ifa-vm/src/actor.rs</code>,
+            <code>crates/ifa-vm/src/vm.rs</code>,
+            <code>crates/ifa-types/src/value_union.rs</code>.
+        </div>
+
+        <h2 class="section-header">1. Architecture Overview</h2>
+
+        <p>Ifá-Lang uses a <strong>two-track memory management</strong> architecture:</p>
+
+        <table class="field-table">
+            <tr><th>Track</th><th>Target</th><th>Strategy</th><th>Crate</th></tr>
+            <tr>
+                <td><strong>Track A</strong></td>
+                <td>Native (desktop/server)</td>
+                <td><code>IfaGc&lt;T&gt;</code> — per-actor Bacon-Rajan cycle collector</td>
+                <td><code>ifa-types::gc</code></td>
+            </tr>
+            <tr>
+                <td><strong>Track B</strong></td>
+                <td>Embedded (no_std, no alloc)</td>
+                <td><code>heapless::Slab</code> — bitmap + size classes, no GC</td>
+                <td><code>ifa-embedded</code> (independent)</td>
+            </tr>
+        </table>
+
+        <p>Track A and Track B share <strong>no code</strong> at the value-representation level. Track B uses <code>EmbeddedValue</code> (8–12 bytes), never <code>IfaValue</code>.</p>
+
+        <h2 class="section-header">2. IfaGc — The Cycle Collector</h2>
+
+        <p><code>gc.rs:57-63</code>. <code>IfaGc&lt;T&gt;</code> replaces <code>Arc&lt;T&gt;</code> for heap-backed <code>IfaValue</code> variants that can form reference cycles.</p>
+
+        <table class="field-table">
+            <tr><th>Variant</th><th>Before</th><th>After</th><th>Why</th></tr>
+            <tr><td><code>List</code></td><td><code>Arc&lt;Vec&lt;IfaValue&gt;&gt;</code></td><td><code>IfaGc&lt;Vec&lt;IfaValue&gt;&gt;</code></td><td>Lists can contain cycles via mutable references</td></tr>
+            <tr><td><code>Map</code></td><td><code>Arc&lt;HashMap&gt;</code></td><td><code>IfaGc&lt;HashMap&gt;</code></td><td>Maps can contain cycles (self-referential or recursive)</td></tr>
+            <tr><td><code>Set</code></td><td><code>Arc&lt;HashSet&gt;</code></td><td><code>Arc&lt;HashSet&gt;</code> (unchanged)</td><td>Set semantics make cycles impossible (no ordering)</td></tr>
+            <tr><td><code>Closure</code></td><td><code>Arc&lt;ClosureData&gt;</code></td><td><code>IfaGc&lt;ClosureData&gt;</code></td><td>Closures capture environments that can form cycles</td></tr>
+            <tr><td><code>Upvalue</code></td><td><code>Arc&lt;Mutex&gt;</code></td><td><code>IfaGc&lt;Mutex&gt;</code></td><td>Upvalue cells capture mutable bindings</td></tr>
+        </table>
+
+        <p><code>CompactString</code>, <code>Arc&lt;BytecodeFnData&gt;</code>, <code>FutureCell</code> (async), and all scalar variants are <strong>untouched</strong> — they cannot form cycles.</p>
+
+        <h3 class="section-header">2.1 Layout</h3>
+
+        <p>Each <code>IfaGc</code> allocation carries a <code>CycleHeader</code> (<code>gc.rs:27-38</code>) before the payload data:</p>
+
+        <div class="code-block">
+<pre>#[repr(C)]
+pub struct CycleHeader {
+    pub strong: Cell&lt;usize&gt;,         // Reference count
+    pub tracing_rc: Cell&lt;usize&gt;,      // Bacon-Rajan tracing count
+    pub color: Cell&lt;Color&gt;,            // Black/White/Gray/Purple/Red
+    pub buffered: Cell&lt;bool&gt;,          // In suspect buffer?
+    pub trace_fn: fn(...),             // Virtual: trace children
+    pub drop_data_fn: fn(...),         // Virtual: drop payload
+    pub dealloc_fn: fn(...),           // Virtual: free memory
+}</pre></div>
+
+        <p>The three function pointers implement type-erased virtual dispatch — the GC can trace and free <em>any</em> <code>CycleNode&lt;T&gt;</code> without knowing the concrete <code>T</code> at runtime.</p>
+
+        <h3 class="section-header">2.2 Per-Actor Isolation (Orí)</h3>
+
+        <p><code>IfaGc&lt;T&gt;</code> is <strong>!Send and !Sync</strong> (<code>gc.rs:62</code>):</p>
+
+        <div class="code-block">
+<pre>pub struct IfaGc&lt;T: Trace&gt; {
+    pub(crate) ptr: NonNull&lt;CycleNode&lt;T&gt;&gt;,
+    _marker: PhantomData&lt;*mut ()&gt;, // Explicitly !Send and !Sync
+}</pre></div>
+
+        <p>This enforces the <strong>Orí</strong> (head) per-actor heap invariant at the type-system level. Every actor thread has its own suspect buffer and heap. No GC pointer ever crosses an actor boundary.</p>
+
+        <div class="warn">
+            <strong>Cross-actor transfer is always deep copy.</strong> The <code>actor.rs:102-115</code> <code>send()</code> method serializes <code>IfaValue</code> → <code>Vec&lt;u8&gt;</code> via bincode before sending to the channel. The receiver deserializes and allocates fresh <code>IfaGc</code> handles in its own Orí heap.
+        </div>
+
+        <h2 class="section-header">3. Bacon-Rajan Algorithm</h2>
+
+        <p><code>gc.rs:202-303</code>. The collector runs in four passes:</p>
+
+        <table class="field-table">
+            <tr><th>Pass</th><th>Function</th><th>What it does</th></tr>
+            <tr><td>1. Mark Roots</td><td><code>mark_gray</code></td><td>Purple nodes (decref suspects) → Gray. Traces children, decrementing their <code>tracing_rc</code>.</td></tr>
+            <tr><td>2. Scan</td><td><code>scan</code></td><td>Gray nodes with <code>tracing_rc &gt; 0</code> → Black (reachable externally). Others → White (cyclic garbage candidates).</td></tr>
+            <tr><td>3. Collect White</td><td><code>collect_white</code></td><td>White nodes → Red (condemned). Recursively collects the entire cyclic garbage subgraph.</td></tr>
+            <tr><td>4. Free</td><td><em>inline</em></td><td>Call <code>drop_data_fn</code> then <code>dealloc_fn</code> on every Red node. Overcounted strong refs are NOT double-freed because <code>Drop::drop</code> returns early for <code>Color::Red</code>.</td></tr>
+        </table>
+
+        <p>All traversal uses <strong>explicit worklists</strong>, not recursion — no stack overflow for deep cycles (<code>gc.rs:207, 228, 240, 246</code>).</p>
+
+        <h3 class="section-header">3.1 Drop Path</h3>
+
+        <p><code>gc.rs:131-161</code>. The <code>Drop</code> implementation has two paths:</p>
+
+        <ul>
+            <li><strong>Fast path (prev == 1):</strong> Strong count hits zero. If the node is <em>not</em> buffered, free it immediately. 95%+ of allocations are acyclic and take this path — no GC overhead.</li>
+            <li><strong>Slow path:</strong> Strong count &gt; 0. If the node is Black (was reachable), turn it Purple and push to the thread-local suspect buffer.</li>
+            <li><strong>Red guard:</strong> If the node is already Red (being dismantled by the collector), return immediately — prevents recursive dismantling.</li>
+        </ul>
+
+        <h3 class="section-header">3.2 Trigger Point</h3>
+
+        <p><code>vm.rs:893-895</code>. The GC runs every 1024 VM ticks:</p>
+
+        <div class="code-block">
+<pre>self.ticks = self.ticks.wrapping_add(1);
+if self.ticks % 1024 == 0 {
+    ifa_types::gc::collect_cycles();
+}</pre></div>
+
+        <p>Also triggered at <code>Drop for IfaVM</code> to drain any remaining suspects before teardown.</p>
+
+        <h2 class="section-header">4. SendableValue — Thread Boundary</h2>
+
+        <p>The <code>IfaGc</code> cycle collector is <code>!Send</code> by design. All cross-thread communication must go through a serialization boundary. The actor system solves this with <code>ActorMsg::SerializedValue(Vec&lt;u8&gt;)</code> (<code>actor.rs:78</code>).</p>
+
+        <p>The pattern applies everywhere <code>IfaValue</code> crosses a thread boundary:</p>
+
+        <div class="code-block">
+<pre>// ── VM Thread ──┐                    ┌── Hardware Thread ──
+//                 │                    │
+//  IfaValue       │   bincode::serialize│   deserialize
+//  → serialize() ─┼───────────────────→│   → process
+//                 │                    │   → serialize
+//  IfaValue       │   deserialize      │   ↑
+//  ← deserialize ─┼────────────────────│←──┘
+//                 │                    │</pre></div>
+
+        <div class="warn">
+            <strong>Hardware workers never hold <code>IfaGc</code> pointers.</strong> Storage, GPU, and network threads work with serialized <code>Vec&lt;u8&gt;</code> exclusively. See <code>crates/ifa-std/src/hardware/storage.rs</code> for the canonical pattern.
+        </div>
+
+        <p>Variants that cannot be serialized (<code>Fn</code>, <code>Closure</code>, <code>Actor</code>, <code>Future</code>) are rejected at serialization time (<code>value_union.rs:624-629</code>) — a compile-time-like error that prevents accidental cross-thread leakage of GC pointers.</p>
+
+        <h2 class="section-header">5. Ebo Epochs</h2>
+
+        <p>The <code>ebo { ... }</code> language keyword creates a scoped memory epoch (<code>ast.rs:204-210</code>). When the block exits, the VM triggers a targeted GC sweep for allocations within that epoch.</p>
+
+        <p>See <a href="../language/ebo.html">Ebo documentation</a> for the user-facing API.</p>
+
+        <h2 class="section-header">6. Key Invariants</h2>
+
+        <ol>
+            <li><strong>Every actor has its own heap.</strong> <code>IfaGc</code> is <code>!Send</code> — no GC pointer crosses thread boundaries.</li>
+            <li><strong>Cross-actor transfer is always deep copy.</strong> Serialize at the sender, deserialize at the receiver. Fresh <code>IfaGc</code> handles in the receiver's heap.</li>
+            <li><strong>95%+ allocations bypass the collector.</strong> The <code>prev == 1</code> fast path in <code>Drop</code> frees acyclic allocations immediately.</li>
+            <li><strong>The cycle collector is the fallback.</strong> Epoch reclamation (<code>ebo</code>) is the primary memory management strategy. The Bacon-Rajan collector handles long-lived cyclic state that escapes epochs.</li>
+            <li><strong><code>Bytecode</code> is safe to share.</strong> The constant pool contains only primitives and strings — never <code>IfaGc</code> pointers. <code>unsafe impl Send/Sync</code> at <code>bytecode.rs:84-85</code> is correct but must be reviewed if the constant pool gains closure support.</li>
+            <li><strong><code>#![forbid(unsafe_code)]</code> was removed from <code>ifa-types</code>.</strong> The GC module (<code>gc.rs</code>) uses <code>unsafe</code> for pointer manipulation. The module is tagged <code>#[allow(unsafe_code)]</code> at <code>lib.rs:36</code>. All other modules remain safe.</li>
+        </ol>
+
+        <footer>
+            <p><a href="index.html">← Back to Development Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+</html>

@@ -203,7 +203,7 @@ impl Irete {
     pub fn hex_decode(&self, hex: &str) -> IfaResult<Vec<u8>> {
         self.esu
             .enforce_crossroads(&crate::sandbox_shim::Ofun::Crypto, "Irete.hex_decode")?;
-        if hex.len() % 2 != 0 {
+        if !hex.len().is_multiple_of(2) {
             return Err(IfaError::Custom("Invalid hex length".to_string()));
         }
 
@@ -319,8 +319,10 @@ mod tests {
     #[test]
     fn test_chacha20_poly1305() {
         let irete = test_irete();
-        let key = b"01234567890123456789012345678901"; // 32 bytes
-        let nonce = b"012345678901"; // 12 bytes
+        let key_vec = irete.random_bytes(32).unwrap();
+        let key = &key_vec;
+        let nonce_vec = irete.random_bytes(12).unwrap();
+        let nonce = &nonce_vec;
         let data = b"Secret Ifa message";
 
         let encrypted = irete.chacha20_encrypt(key, nonce, data).unwrap();

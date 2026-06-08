@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 use crate::check::check_system_for;
 use crate::config::InstallConfig;
 use crate::net::{NetManager, find_asset_for_platform};
@@ -44,11 +46,10 @@ impl Drop for InstallTransaction {
                 self.files.len()
             );
             for file in &self.files {
-                if file.exists() {
-                    if let Err(e) = fs::remove_file(file) {
+                if file.exists()
+                    && let Err(e) = fs::remove_file(file) {
                         eprintln!("[Rollback] Failed to remove {:?}: {}", file, e);
                     }
-                }
             }
         }
     }
@@ -57,6 +58,7 @@ impl Drop for InstallTransaction {
 // ── Error type ──────────────────────────────────────────────────────────────
 
 #[derive(Error, Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum InstallError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -487,11 +489,10 @@ pub fn install(config: &InstallConfig, components: &[Component]) -> Result<(), I
         }
 
         // Write version file if we know the installed version
-        if let Some(tag) = release_tag {
-            if let Err(e) = write_version_file(&config.install_dir, &tag) {
+        if let Some(tag) = release_tag
+            && let Err(e) = write_version_file(&config.install_dir, &tag) {
                 eprintln!("⚠ Could not write .ifa-version: {}", e);
             }
-        }
 
         txn.commit();
         println!("✅ Installation complete.");

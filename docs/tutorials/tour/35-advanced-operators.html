@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Advanced Operators & Collections — Ifá-Lang Tutorial</title>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">tutorial.35.ifa</span></div><div class="terminal-body"><header>
+            <h1>35. Advanced Operators & Collections</h1>
+            <p class="subtitle">Power, null coalescing, references, compound assignment, Set literals, interpolated strings</p>
+        </header>
+
+        <h2 class="section-header">1. Power Operator <code>**</code></h2>
+
+        <p>Exponentiation with <code>**</code> works on integers and floats:</p>
+
+        <div class="code-block">
+<pre>ayanmo squared = 4 ** 2;     // 16
+ayanmo cubed = 2 ** 3;       // 8
+ayanmo root = 9 ** 0.5;      // 3.0
+ayanmo big = 10 ** 6;        // 1_000_000</pre></div>
+
+        <p>This is shorthand for <code>Obara.agbara(base, exp)</code>.</p>
+
+        <h2 class="section-header">2. Null Coalescing <code>??</code></h2>
+
+        <p>The <code>??</code> operator returns the left side if it is not null, otherwise the right side:</p>
+
+        <div class="code-block">
+<pre>ayanmo name = Irosu.gbo("Enter name: ");
+ayanmo display = name ?? "Guest";
+Irosu.fo("Hello, " + display);
+
+// Chaining
+ayanmo config = env ?? file_config ?? defaults();</pre></div>
+
+        <h2 class="section-header">3. AddressOf <code>&amp;</code> and Dereference <code>*</code></h2>
+
+        <p>Ifá-Lang supports low-level pointer operations through domain methods, but <code>&amp;</code> and <code>*</code> operators work on references:</p>
+
+        <div class="code-block">
+<pre>ayanmo x = 42;
+ayanmo ref = &x;      // Take a reference
+Irosu.fo(*ref);       // 42 — dereference
+
+// Mutable reference
+ayanmo y = [1, 2, 3];
+ayanmo mut_ref = &mut y;
+Ogbontarigi.fi(mut_ref, 4);  // Mutate through reference</pre></div>
+
+        <p>These are primarily used when interfacing with low-level or FFI code. The GC-tracked types (List, Map, String) do not require manual dereferencing.</p>
+
+        <h2 class="section-header">4. Compound Assignment</h2>
+
+        <p>Augmented assignment operators modify a variable in place:</p>
+
+        <div class="code-block">
+<pre>ayanmo score = 10;
+score += 5;    // 15
+score -= 3;    // 12
+score *= 2;    // 24
+score /= 4;    // 6
+score %= 3;    // 0
+
+// Works with strings (concat-assign)
+ayanmo greeting = "Hello ";
+greeting += "World";  // "Hello World"</pre></div>
+
+        <h2 class="section-header">5. Set Literals</h2>
+
+        <p>Ifá-Lang supports Set literals using <code>Set { ... }</code> syntax. Sets are unordered collections of unique values:</p>
+
+        <div class="code-block">
+<pre>// Create a set
+ayanmo colors = Set { "red", "green", "blue" };
+
+// Sets deduplicate automatically
+ayanmo unique = Set { 1, 2, 2, 3, 3, 3 };
+Irosu.fo(unique);  // Set { 1, 2, 3 }
+
+// Check membership (via Ogunda)
+ayanmo has_red = Ogunda.wa(colors, fn(c) { c == "red" });</pre></div>
+
+        <h2 class="section-header">6. Interpolated Strings</h2>
+
+        <p>String interpolation with <code>$"..."</code> embeds expressions directly in strings:</p>
+
+        <div class="code-block">
+<pre>ayanmo name = "Ifá";
+ayanmo version = 2;
+
+// Basic interpolation
+Irosu.fo($"Hello {name}!");  // Hello Ifá!
+
+// Expressions inside
+Irosu.fo($"Version {version + 1}.0");  // Version 3.0
+
+// Method calls
+Irosu.fo($"Today is {Iwori.bayi()}");</pre></div>
+
+        <p>Interpolated strings are more readable than concatenation:</p>
+
+        <div class="code-block">
+<pre>// Without interpolation
+Irosu.fo("User " + name + " scored " + score + " points");
+
+// With interpolation
+Irosu.fo($"User {name} scored {score} points");</pre></div>
+
+        <p><a href="index.html">← Back to Tutorial Index</a></p>
+    </div></div>
+    <script src="../../js/nav.js"></script>
+    <script src="../../js/common.js"></script>
+</body>
+</html>

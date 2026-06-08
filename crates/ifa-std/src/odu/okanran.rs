@@ -68,8 +68,8 @@ impl Okanran {
     ///
     /// **DEPRECATED**: Panicking is an anti-pattern. Use `ku_bi` for Result-based errors.
     #[deprecated(since = "1.2.1", note = "Use ku_bi() instead which returns Result")]
-    pub fn ku(&self, message: &str) -> ! {
-        panic!("[Ọ̀kànràn] {}", message)
+    pub fn ku(&self, message: &str) -> IfaResult<()> {
+        Err(IfaError::Custom(format!("[Ọ̀kànràn] {}", message)))
     }
 
     /// Fatal error (kú bí) - Returns error instead of panicking
@@ -95,8 +95,8 @@ impl Okanran {
         since = "1.2.1",
         note = "Use ko_le_de_bi() instead which returns Result"
     )]
-    pub fn ko_le_de(&self) -> ! {
-        panic!("[Ọ̀kànràn] Unreachable code executed!")
+    pub fn ko_le_de(&self) -> IfaResult<()> {
+        Err(IfaError::Custom("[Ọ̀kànràn] Unreachable code executed!".into()))
     }
 
     /// Unreachable code (returns error)
@@ -111,11 +111,11 @@ impl Okanran {
         since = "1.2.1",
         note = "Use ko_ti_se_bi() instead which returns Result"
     )]
-    pub fn ko_ti_se(&self, feature: &str) -> ! {
-        panic!(
+    pub fn ko_ti_se(&self, feature: &str) -> IfaResult<()> {
+        Err(IfaError::NotImplemented(format!(
             "Ẹ̀yà '{}' kò tíì ṣé (Feature '{}' is not yet implemented)",
             feature, feature
-        );
+        )))
     }
 
     /// Not implemented (returns error)
@@ -161,25 +161,25 @@ impl Okanran {
     */
 
     /// Debug print value
-    pub fn wo(&self, label: &str, value: &impl std::fmt::Debug) {
-        eprintln!("[Ọ̀kànràn DEBUG] {}: {:?}", label, value);
+    pub fn wo(&self, _label: &str, _value: &impl std::fmt::Debug) {
+        // Debug output suppressed in library context
     }
 }
 
 /// Result extension trait for Yoruba-style error handling
 pub trait IfaResultExt<T> {
     /// Unwrap or panic with Yoruba message
-    fn tabi_ku(self, msg: &str) -> T;
+    fn tabi_ku(self, msg: &str) -> IfaResult<T>;
 
     /// Map error to custom message
     fn pelu_iroyin(self, msg: &str) -> IfaResult<T>;
 }
 
 impl<T> IfaResultExt<T> for IfaResult<T> {
-    fn tabi_ku(self, msg: &str) -> T {
+    fn tabi_ku(self, msg: &str) -> IfaResult<T> {
         match self {
-            Ok(v) => v,
-            Err(e) => panic!("[Ọ̀kànràn] {}: {}", msg, e),
+            Ok(v) => Ok(v),
+            Err(e) => Err(IfaError::Custom(format!("[Ọ̀kànràn] {}: {}", msg, e))),
         }
     }
 

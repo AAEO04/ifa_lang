@@ -224,10 +224,10 @@ impl Ika {
                 .iter()
                 .map(|s| IfaValue::Str(s.to_string().into()))
                 .collect();
-            rows.push(IfaValue::List(std::sync::Arc::new(row)));
+            rows.push(IfaValue::List(ifa_types::gc::IfaGc::new(row)));
         }
 
-        Ok(IfaValue::List(std::sync::Arc::new(rows)))
+        Ok(IfaValue::List(ifa_types::gc::IfaGc::new(rows)))
     }
 
     // =========================================================================
@@ -339,7 +339,7 @@ impl Ika {
     ///
     /// Returns `IfaValue::Null` — callers must check for this.
     pub fn tumo(&self, _html: &str) -> IfaValue {
-        IfaValue::Null
+        IfaValue::err(IfaValue::str("DOM parse handles are not implemented"))
     }
 
     #[cfg(feature = "html")]
@@ -389,7 +389,7 @@ impl Ika {
 
     #[cfg(not(feature = "html"))]
     pub fn tumo(&self, _html: &str) -> IfaValue {
-        IfaValue::Null
+        IfaValue::err(IfaValue::str("DOM parse handles are not implemented"))
     }
 
     #[cfg(not(feature = "html"))]

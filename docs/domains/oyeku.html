@@ -9,6 +9,7 @@
 </head>
 
 <body>
+    <div id="nav-placeholder"></div>
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list"></ul>
@@ -31,8 +32,10 @@
             <h3>jade / exit</h3>
             <div class="sig">Oyeku.jade(code: Int) → !</div>
             <p>Exit the program with the given exit code.</p>
-            <pre><code>Oyeku.jade(0);   // Success
+            <pre class="code-yoruba"><code>Oyeku.jade(0);   // Success
 Oyeku.jade(1);   // Error</code></pre>
+            <pre class="code-english" style="display:none"><code>Oyeku.exit(0);   // Success
+Oyeku.exit(1);   // Error</code></pre>
         </div>
 
         <h2>Sleep</h2>
@@ -41,14 +44,16 @@ Oyeku.jade(1);   // Error</code></pre>
             <h3>sun / sleep</h3>
             <div class="sig">Oyeku.sun(ms: Int)</div>
             <p>Sleep for the given number of milliseconds (requires <code>Time</code> capability).</p>
-            <pre><code>Oyeku.sun(1000);  // Wait 1 second</code></pre>
+            <pre class="code-yoruba"><code>Oyeku.sun(1000);  // Wait 1 second</code></pre>
+            <pre class="code-english" style="display:none"><code>Oyeku.sleep(1000);  // Wait 1 second</code></pre>
         </div>
 
         <div class="method">
             <h3>duro / stop</h3>
             <div class="sig">Oyeku.duro()</div>
             <p>Stop/pause execution.</p>
-            <pre><code>Oyeku.duro();</code></pre>
+            <pre class="code-yoruba"><code>Oyeku.duro();</code></pre>
+            <pre class="code-english" style="display:none"><code>Oyeku.stop();</code></pre>
         </div>
 
         <div class="method">

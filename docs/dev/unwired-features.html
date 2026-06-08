@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Unwired Features — Ifá-Lang Dev Docs</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 1rem 0; }
+        .field-table th { text-align: left; color: var(--green); border-bottom: 1px solid var(--border); padding: 0.4rem 0.6rem; }
+        .field-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .field-table td:first-child { color: var(--amber); font-weight: 500; }
+        .field-table td:nth-child(3) { color: var(--dim); font-size: 0.75rem; }
+        .tag-wired { display: inline-block; background: #1a3a1a; color: #5ae65a; padding: 0.1rem 0.4rem; font-size: 0.65rem; border-radius: 3px; font-weight: 600; }
+        .tag-critical { display: inline-block; background: #6b2020; color: #ff6b6b; padding: 0.1rem 0.4rem; font-size: 0.65rem; border-radius: 3px; font-weight: 600; }
+        .tag-missing { display: inline-block; background: #5a3a0a; color: #ffa500; padding: 0.1rem 0.4rem; font-size: 0.65rem; border-radius: 3px; font-weight: 600; }
+        .tag-stub { display: inline-block; background: #1a3a5a; color: #5ba3e6; padding: 0.1rem 0.4rem; font-size: 0.65rem; border-radius: 3px; font-weight: 600; }
+        .tag-ok { display: inline-block; background: #1a3a1a; color: #5ae65a; padding: 0.1rem 0.4rem; font-size: 0.65rem; border-radius: 3px; font-weight: 600; }
+        .tag-bug { display: inline-block; background: #5a1a1a; color: #ff6b6b; padding: 0.1rem 0.4rem; font-size: 0.65rem; border-radius: 3px; font-weight: 600; }
+        .warning { background: #2a2a0a; border-left: 3px solid #ffa500; padding: 0.5rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+        .critical { background: #2a0a0a; border-left: 3px solid #ff4444; padding: 0.5rem 1rem; margin: 1rem 0; font-size: 0.8rem; }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">unwired-features.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Unwired Features Inventory</h1>
+            <p class="subtitle">Everything defined but not yet connected — source-verified across all crates</p>
+        </header>
+
+        <div class="critical">
+            <strong>Source-verified against actual crate code (June 2026).</strong> This is not a roadmap — it lists features that
+            <em>exist</em> in one layer of the codebase but are missing, stubbed, or no-op in downstream layers.
+            Items marked <span class="tag-wired">WIRED</span> have been connected since the initial audit.
+        </div>
+
+        <!-- ================================================================== -->
+        <h2 class="section-header">1. Bytecode VM (ifa-vm) — No Dispatch Arms</h2>
+        <!-- ================================================================== -->
+
+        <p>All four previously missing opcodes now have dispatch arms in <code>step()</code> at <code>ifa-vm/src/vm.rs:1346</code>.</p>
+
+        <table class="field-table">
+            <tr><th>OpCode</th><th>Byte</th><th>Line</th><th>Tag</th></tr>
+            <tr><td><code>Sar</code></td><td>0x36</td><td><code>vm.rs:2275</code></td><td><span class="tag-wired">WIRED</span></td></tr>
+            <tr><td colspan="4">Arithmetic right shift. Pops two i64 values, pushes <code>a >> b</code>.</td></tr>
+            <tr><td><code>Append</code></td><td>0x75</td><td><code>vm.rs:1884</code></td><td><span class="tag-wired">WIRED</span></td></tr>
+            <tr><td colspan="4">Append to collection. Pops value and list, pushes mutated list.</td></tr>
+            <tr><td><code>GetField</code></td><td>0x78</td><td><code>vm.rs:1898</code></td><td><span class="tag-wired">WIRED</span></td></tr>
+            <tr><td colspan="4">Get object field by string-table index. Supports Map lookup; returns null on miss.</td></tr>
+            <tr><td><code>SetField</code></td><td>0x79</td><td><code>vm.rs:1917</code></td><td><span class="tag-wired">WIRED</span></td></tr>
+            <tr><td colspan="4">Set object field by string-table index. Mutates Map.</td></tr>
+        </table>
+
+        <!-- ================================================================== -->
+        <h2 class="section-header">2. Compiler (ifa-compiler) — No-Op Statements</h2>
+        <!-- ================================================================== -->
+
+        <p>AST statements that are parsed but produce no useful bytecode:</p>
+
+        <table class="field-table">
+            <tr><th>Statement</th><th>Behavior</th><th>Compiler Line</th><th>Tag</th></tr>
+            <tr><td><code>Abo</code> (strict mode)</td><td>Empty match arm — no bytecode emitted</td><td><code>lib.rs:653</code></td><td><span class="tag-missing">NO-OP</span></td></tr>
+            <tr><td><code>Taboo</code> (domain restriction)</td><td>Variables captured but no validation or bytecode</td><td><code>lib.rs:764-768</code></td><td><span class="tag-missing">NO-OP</span></td></tr>
+            <tr><td><code>Ewo</code> (assert)</td><td><span class="tag-wired">FIXED</span> — emits JumpIfFalse + Jump + PushStr + Throw</td><td><code>lib.rs:770-788</code></td><td><span class="tag-wired">WIRED</span></td></tr>
+            <tr><td><code>IwaDef</code> (protocol)</td><td>Erased at runtime (purely static — by design)</td><td><code>lib.rs:337-340</code></td><td><span class="tag-ok">BY DESIGN</span></td></tr>
+        </table>
+
+        <!-- ================================================================== -->
+        <h2 class="section-header">3. Odu Domain Methods — Missing from VM Dispatch</h2>
+        <!-- ================================================================== -->
+
+        <p>Methods declared in <code>odu_metadata.rs</code> but not implemented in <code>vm_registry.rs</code>:</p>
+
+        <table class="field-table">
+            <tr><th>Domain</th><th>Missing Methods</th><th>Metadata ID</th><th>Dispatch Location</th><th>Tag</th></tr>
+            <tr><td>Odi</td><td><code>si</code>/<code>open</code>, <code>pa</code>/<code>close</code>, <code>pa_iwe</code>/<code>delete</code></td><td>0x0304-0x0306</td><td><code>vm_registry.rs:238-240</code></td><td><span class="tag-wired">WIRED</span></td></tr>
+            <tr><td colspan="5">All 3 in <code>call_fast</code> and <code>dispatch_odi</code>. <code>pa_iwe</code> calls real <code>pa_faili(&amp;path)</code>. <code>si</code>/<code>pa</code> are stubs returning null.</td></tr>
+            <tr><td>Irosu</td><td><code>ka</code>/<code>read</code>/<code>input</code></td><td>0x0408</td><td><code>vm_registry.rs:254, 936-938</code></td><td><span class="tag-wired">WIRED</span></td></tr>
+            <tr><td colspan="5">8th and final Irosu method now wired. All 8 Irosu methods are connected.</td></tr>
+            <tr><td>Osa</td><td><code>duro</code>/<code>await</code> (0x0904), <code>egbe</code>/<code>spawn_actor</code> (0x0905), <code>ran</code>/<code>send</code> (0x0906)</td><td>0x0904-0x0906</td><td><code>vm_registry.rs:353, 1404-1434</code></td><td><span class="tag-bug">PARTIAL</span></td></tr>
+            <tr><td colspan="5">Wired in string-based <code>call</code> path (lines 1404-1434). BUT <code>call_fast</code> has <code>duro</code> at <strong>wrong position</strong> (low byte 0x03 instead of 0x04). Low byte 0x04/0x05/0x06 are NOT in <code>call_fast</code> (lines 354-357 fall through to error).</td></tr>
+            <tr><td>CPU</td><td><code>positive</code>, <code>negative</code>, <code>nonzero</code>, <code>even</code>, <code>odd</code>, <code>par_sum</code>, <code>par_filter</code>, <code>par_sort</code></td><td>0x1209-0x1218</td><td><code>hardware/cpu.rs:16-34</code></td><td><span class="tag-missing">MISSING</span></td></tr>
+            <tr><td colspan="5">All 8 in metadata. None in <code>call_fast</code> (lines 495-507) or <code>cpu::dispatch()</code> (lines 16-34). Underlying impls exist in <code>ifa-infra/src/cpu.rs</code> for <code>par_sum</code>/<code>par_filter</code>/<code>par_sort</code> but never connected.</td></tr>
+            <tr><td>Owonrin</td><td><code>uuid</code></td><td>0x0505</td><td><code>vm_registry.rs:1550</code></td><td><span class="tag-missing">PARTIAL</span></td></tr>
+            <tr><td colspan="5">In metadata and string-based <code>call</code> path. NOT in <code>call_fast</code> (low byte 0x05 falls through to error at line 262-265).</td></tr>
+        </table>
+
+        <!-- ================================================================== -->
+        <h2 class="section-header">4. Odù Domain Methods — Explicit Stubs</h2>
+        <!-- ================================================================== -->
+
+        <table class="field-table">
+            <tr><th>Domain</th><th>Methods</th><th>Current Behavior</th><th>Tag</th></tr>
+            <tr><td>Otura (sync dispatch)</td><td><code>gba</code>/<code>get</code>, <code>ran</code>/<code>post</code>, <code>de</code>/<code>listen</code>, <code>soro</code>/<code>connect</code>, <code>pa</code>/<code>close</code></td><td>Sync dispatch returns placeholder strings for <code>gba</code>/<code>ran</code>. <code>de</code>/<code>soro</code> do real <code>std::net</code> calls. <code>pa</code> is no-op. Async struct (<code>otura.rs</code>) is fully real.</td><td><span class="tag-stub">STUB</span></td></tr>
+            <tr><td>Ose (no <code>tui</code> feature)</td><td>All 14 methods</td><td>Return dummy values (80x24, "q", null) — graceful degradation</td><td><span class="tag-stub">STUB</span></td></tr>
+        </table>
+
+        <!-- ================================================================== -->
+        <h2 class="section-header">5. Feature Gate Bugs</h2>
+        <!-- ================================================================== -->
+
+        <table class="field-table">
+            <tr><th>Issue</th><th>File</th><th>Lines</th><th>Tag</th></tr>
+            <tr><td>Otura gate unified on <code>network</code></td><td><code>odu/mod.rs:18</code>, <code>vm_registry.rs:23,63,673,712</code></td><td>Both now gate on <code>network</code> consistently</td><td><span class="tag-wired">FIXED</span></td></tr>
+            <tr><td colspan="4">BUT error message at <code>vm_registry.rs:716</code> still says <code>"requires the 'full' feature"</code> instead of <code>'network'</code>.</td></tr>
+            <tr><td>Ose <code>tui</code> feature undeclared</td><td><code>ifa-std/Cargo.toml</code></td><td>Line 116: <code>tui = ["dep:crossterm", "dep:ratatui"]</code></td><td><span class="tag-wired">FIXED</span></td></tr>
+            <tr><td colspan="4"><code>tui</code> is now properly declared and enables crossterm + ratatui.</td></tr>
+            <tr><td>Irete <code>tu</code> alias collision</td><td><code>odu_metadata.rs:1217-1222</code></td><td>0x0D07 is now <code>"dasile"</code>/<code>"free"</code></td><td><span class="tag-wired">FIXED</span></td></tr>
+            <tr><td colspan="4">No duplicate <code>"tu"</code>. Only 0x0D06 uses <code>"tu"</code>/<code>"decompress"</code>.</td></tr>
+        </table>
+
+        <div class="warning">
+            <strong>Remaining bug:</strong> Osa <code>call_fast</code> has <code>duro</code> at low byte 0x03 (should be 0x04).
+            Metadata says 0x0903 = <code>sa</code>/<code>spawn</code>, 0x0904 = <code>duro</code>/<code>await</code>.
+            The compiler emitting low byte 0x03 will call <code>duro</code> instead of <code>spawn</code>.
+        </div>
+
+        <!-- ================================================================== -->
+        <h2 class="section-header">6. Embedded VM (ifa-embedded)</h2>
+        <!-- ================================================================== -->
+
+        <p>The <code>ifa-embedded</code> crate (<code>crates/ifa-embedded/</code>) provides a no_std VM for MCU targets.
+        All 23 defined <code>EmbeddedOpCode</code> variants are dispatched in <code>resume_with_hook()</code>
+        (<code>lib.rs:481-824</code>). No unwired opcodes. However:</p>
+
+        <table class="field-table">
+            <tr><th>Issue</th><th>File</th><th>Tag</th></tr>
+            <tr><td>Storage module is a stub</td><td><code>src/storage.rs:13-24</code></td><td><span class="tag-stub">STUB</span></td></tr>
+            <tr><td colspan="3"><code>OduStoreEmbedded</code> struct wraps <code>FlashStorage</code> trait but is never wired into the embedded VM. No read/write/erase commands are exposed. The struct has zero methods, no <code>impl</code> block.</td></tr>
+            <tr><td>No <code>odu/</code> directory in embedded crate</td><td><code>src/odu/</code> does not exist</td><td><span class="tag-missing">UNWIRED</span></td></tr>
+            <tr><td colspan="3">Unlike <code>ifa-std</code>, the embedded crate has no Odi, Irosu, or any domain implementations. No <code>dispatch_odi</code> or <code>pa_faili</code> equivalents exist. The embedded VM has zero domain method dispatch.</td></tr>
+            <tr><td>IoT module — concrete but unexposed</td><td><code>src/iot.rs:102-250</code></td><td><span class="tag-stub">UNWIRED</span></td></tr>
+            <tr><td colspan="3"><code>GpioPin</code>, <code>EmbeddedSerial</code>, <code>JsonHelper</code> exist with full method bodies. But never wired into the VM execution loop (<code>lib.rs:481-824</code> has zero references to <code>iot</code>). Library-level export only.</td></tr>
+            <tr><td>Target features empty</td><td><code>Cargo.toml:29-31</code></td><td><span class="tag-stub">STUB</span></td></tr>
+            <tr><td colspan="3"><code>esp32</code>, <code>stm32</code>, <code>rp2040</code> features are empty feature flags. No target-specific code, no HAL implementations, no linker scripts. Placeholders.</td></tr>
+            <tr><td>Dual-Copy semantics issue</td><td><code>src/lib.rs:236-290</code></td><td><span class="tag-missing">DESIGN</span></td></tr>
+            <tr><td colspan="3"><code>EmbeddedValue</code> derives <code>Copy</code> when <code>alloc</code> is off, <code>Clone</code>-only when <code>alloc</code> is on. <code>peek().copied()</code> will fail when <code>alloc</code> is enabled — no <code>cloned()</code> guard in place.</td></tr>
+        </table>
+
+        <!-- ================================================================== -->
+        <h2 class="section-header">7. Transpiler (ifa-transpiler)</h2>
+        <!-- ================================================================== -->
+
+        <table class="field-table">
+            <tr><th>Issue</th><th>File & Line</th><th>Tag</th></tr>
+            <tr><td><code>Set</code> variant missing from generated <code>IfaValue</code> enum</td><td><code>statements.rs:57-66</code></td><td><span class="tag-missing">BUG</span></td></tr>
+            <tr><td colspan="3">The transpiler emits <code>Expression::Set</code> as <code>IfaValue::Set(HashSet::from([...]))</code> (expressions.rs:334-341), but the generated enum template has no <code>Set</code> variant. Transpiled code using Set literals will fail to compile.</td></tr>
+            <tr><td><code>AssertType</code> transpiles to comment</td><td><code>statements.rs:318-329</code></td><td><span class="tag-missing">NO-OP</span></td></tr>
+            <tr><td colspan="3"><code>assert_type(value, Int)</code> becomes <code>/* assert_type(val, Int) */</code> — a Rust comment.</td></tr>
+            <tr><td><code>Alias</code> transpiles to empty string</td><td><code>statements.rs:316</code></td><td><span class="tag-missing">NO-OP</span></td></tr>
+            <tr><td><code>Abo</code> transpiles to comment</td><td><code>statements.rs:554-556</code></td><td><span class="tag-missing">NO-OP</span></td></tr>
+            <tr><td colspan="3"><code>// Strict mode directive</code> — no runtime enforcement.</td></tr>
+            <tr><td><code>Taboo</code> transpiles to comment</td><td><code>statements.rs:558-560</code></td><td><span class="tag-missing">NO-OP</span></td></tr>
+            <tr><td colspan="3"><code>// TABOO: X cannot call Y</code> — no runtime capability check.</td></tr>
+            <tr><td><code>IwaDef</code> transpiles to empty string</td><td><code>statements.rs:789-792</code></td><td><span class="tag-ok">BY DESIGN</span></td></tr>
+            <tr><td>Domain coverage improved</td><td><code>domains.rs:15-416</code></td><td><span class="tag-ok">COMPREHENSIVE</span></td></tr>
+            <tr><td colspan="3">All 16 Odù domains now implemented with multiple methods each (Ogbe, Oyeku, Iwori, Odi, Irosu, Owonrin, Okanran, Ogunda, Osa, Otura, Irete, Ose, Ofun, Obara, Oturupon, Ika). Unknown domain/method falls through to <code>compile_error!</code> at line 406-413.</td></tr>
+            <tr><td>Generated <code>IfaValue</code> uses <code>Arc&lt;Mutex&gt;</code> (outdated)</td><td><code>statements.rs:64</code></td><td><span class="tag-missing">STALE</span></td></tr>
+            <tr><td colspan="3">The <code>Ptr</code> variant uses <code>Arc&lt;Mutex&lt;IfaValue&gt;&gt;</code>. The actual runtime uses <code>IfaGc</code> + <code>IfaShared</code>. No <code>IfaGc</code> type exists anywhere in the transpiler crate.</td></tr>
+        </table>
+
+        <!-- ================================================================== -->
+        <h2 class="section-header">8. General Stubs & Dead Code</h2>
+        <!-- ================================================================== -->
+
+        <table class="field-table">
+            <tr><th>Item</th><th>File</th><th>Tag</th></tr>
+            <tr><td>DebugAdapter (entire file)</td><td><code>ifa-cli/src/debug_adapter.rs</code></td><td><span class="tag-stub">STUB</span></td></tr>
+            <tr><td colspan="3">Functional DAP JSON-RPC loop (140 lines) but <code>launch</code>/<code>attach</code> return <code>"success": false</code> — not yet migrated from AST to Bytecode VM.</td></tr>
+            <tr><td>WASM compilation</td><td><code>ifa-cli/src/main.rs:558-562</code></td><td><span class="tag-stub">STUB</span></td></tr>
+            <tr><td colspan="3"><code>force_wasm = true</code> sandbox mode exists but runs on VM with capability restrictions. No actual <code>.ifa</code>-to-<code>.wasm</code> compilation.</td></tr>
+            <tr><td>Git deps (Oja package manager)</td><td><code>ifa-cli/src/oja.rs:747-755</code></td><td><span class="tag-wired">WIRED</span></td></tr>
+            <tr><td colspan="3">Not a stub — real tarball download logic for GitHub repos.</td></tr>
+            <tr><td><code>CachedModule</code> — dead code</td><td><code>ifa-vm/src/vm.rs:119-124</code></td><td><span class="tag-stub">DEAD</span></td></tr>
+            <tr><td colspan="3"><code>#[allow(dead_code)]</code> suppresses warning on unused struct.</td></tr>
+            <tr><td>Security auditor tests removed</td><td><code>ifa-sandbox/tests/security_tests.rs:577</code></td><td><span class="tag-stub">STUB</span></td></tr>
+            <tr><td colspan="3">Tests replaced with comment: <code>"SecurityAuditor tests removed — feature not yet implemented."</code></td></tr>
+            <tr><td><code>#[allow(dead_code)]</code> on <code>struct Slab</code></td><td><code>ifa-infra/src/gpu.rs:775</code></td><td><span class="tag-stub">DEAD</span></td></tr>
+            <tr><td><code>#[allow(unused_variables)]</code> on entire test file</td><td><code>ifa-sandbox/tests/security_tests.rs:3</code></td><td><span class="tag-stub">DEAD</span></td></tr>
+        </table>
+
+        <!-- ================================================================== -->
+        <h2 class="section-header">9. Thread-Boundary Violations (Remaining)</h2>
+        <!-- ================================================================== -->
+
+        <p>Carried over from the Linus Review — items that cross thread boundaries with non-Send types:</p>
+
+        <table class="field-table">
+            <tr><th>Item</th><th>File & Line</th><th>Problem</th><th>Tag</th></tr>
+            <tr><td><code>StorageCmd::Set</code></td><td><code>ifa-std/src/hardware/storage.rs:16</code></td><td><span class="tag-wired">FIXED</span> — <code>val</code> is now <code>Vec&lt;u8&gt;</code> (bincode-serialized), not <code>IfaValue</code></td><td><span class="tag-wired">FIXED</span></td></tr>
+            <tr><td><code>FutureCell</code></td><td><code>ifa-types/src/value_union.rs:128</code></td><td><code>Arc&lt;Mutex&lt;FutureState&gt;&gt;</code> — <code>FutureState::Ready(IfaValue)</code> crosses thread boundary</td><td><span class="tag-critical">UNSAFE</span></td></tr>
+            <tr><td><code>IfaValueSurrogate</code> missing <code>Map</code> variant</td><td><code>ifa-types/src/value_union.rs:597-606</code></td><td>Serialization surrogate can't represent maps — only Null, Bool, Int, Float, Str, List, Unsupported</td><td><span class="tag-missing">MISSING</span></td></tr>
+        </table>
+
+        </div>
+    </div>
+</body>
+
+</html>

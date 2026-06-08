@@ -1,5 +1,3 @@
-#![allow(clippy::collapsible_if)]
-
 use ifa_babalawo::{
     BabalawoConfig, LintContext, Severity as IfaSeverity, analyze_program, list_methods_for_domain,
 };
@@ -94,10 +92,9 @@ fn main_loop(
                             == Some(lsp_types::NumberOrString::String(
                                 "UNUSED_VARIABLE".to_string(),
                             ))
-                        {
-                            if let Some(data) = &diagnostic.data {
-                                if let Some(context_val) = data.get("context") {
-                                    if let Some(name) = context_val.as_str() {
+                            && let Some(data) = &diagnostic.data
+                                && let Some(context_val) = data.get("context")
+                                    && let Some(name) = context_val.as_str() {
                                         let new_name = format!("_{}", name);
 
                                         let mut changes = std::collections::HashMap::new();
@@ -126,9 +123,6 @@ fn main_loop(
                                             },
                                         ));
                                     }
-                                }
-                            }
-                        }
                     }
                     let result = serde_json::to_value(&actions).unwrap_or(serde_json::Value::Null);
                     let resp = Response {
@@ -276,11 +270,7 @@ fn publish_diagnostics(
                     format!("[{}] {}", diag.odu, diag.error.message)
                 };
 
-                let data = if let Some(ctx_val) = diag.error.context {
-                    Some(serde_json::json!({ "context": ctx_val }))
-                } else {
-                    None
-                };
+                let data = diag.error.context.map(|ctx_val| serde_json::json!({ "context": ctx_val }));
 
                 diagnostics.push(Diagnostic {
                     range,
@@ -378,7 +368,7 @@ fn get_completions(
                 let domain_str = before_cursor[..dot_idx]
                     .trim()
                     .split(|c: char| !c.is_alphanumeric())
-                    .last();
+                    .next_back();
                 if let Some(domain_name) = domain_str {
                     let odu_opt = match domain_name {
                         "Ogbe" => Some(ifa_babalawo::Odu::Ogbe),

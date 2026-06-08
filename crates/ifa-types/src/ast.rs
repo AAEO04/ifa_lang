@@ -37,6 +37,25 @@ pub struct Program {
     pub statements: Vec<Statement>,
 }
 
+/// An Iwa method requirement
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IwaMethod {
+    pub name: String,
+    pub params: Vec<Param>,
+    pub return_type: Option<TypeHint>,
+    pub attributes: Vec<String>,
+    pub span: Span,
+}
+
+/// An Iwa (Protocol/Trait) definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IwaDef {
+    pub name: String,
+    pub visibility: Visibility,
+    pub methods: Vec<IwaMethod>,
+    pub span: Span,
+}
+
 /// Visibility level for fields, functions, and classes
 /// Follows Rust model: private by default
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -58,6 +77,9 @@ pub enum Visibility {
 /// All statement types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Statement {
+    /// Iwa (Protocol/Trait) definition: iwa Logger { log(msg: Str) -> Ase; }
+    IwaDef(IwaDef),
+
     /// Variable declaration: ayanmo x = 5;
     VarDecl {
         name: String,
@@ -107,11 +129,11 @@ pub enum Statement {
         span: Span,
     },
 
-    /// Function definition: ese start() { }
     EseDef {
         name: String,
         visibility: Visibility,
         params: Vec<Param>,
+        return_type: Option<TypeHint>,
         body: Vec<Statement>,
         effects: Vec<Effect>,
         span: Span,
@@ -323,6 +345,8 @@ pub enum TypeHint {
     },
     /// Custom/user-defined type
     Custom(String),
+    /// Iwa structural type (protocol/trait)
+    Iwa(String),
 
     // ═══════════════════════════════════════════════════════════════════
     // Low-Level (Static) Types - Requires ailewu or static context
@@ -499,6 +523,9 @@ pub enum Expression {
     /// Explicit ownership transfer (zero-copy messaging)
     /// Yoruba: yanda (surrender) or move
     MoveExpr(Box<Expression>),
+
+    /// Wrapper to attach source location (Span) to an expression
+    Spanned { expr: Box<Expression>, span: Span },
 }
 
 /// A part of an interpolated string
@@ -584,6 +611,7 @@ impl std::fmt::Display for BinaryOperator {
 impl Statement {
     pub fn span(&self) -> &Span {
         match self {
+            Statement::IwaDef(def) => &def.span,
             Statement::VarDecl { span, .. }
             | Statement::Assignment { span, .. }
             | Statement::Import { span, .. }

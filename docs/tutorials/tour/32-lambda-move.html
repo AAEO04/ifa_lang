@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Lambda, Closures & Move — Ifá-Lang Tutorial</title>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">tutorial.32.ifa</span></div><div class="terminal-body"><header>
+            <h1>32. Lambda, Closures & Move</h1>
+            <p class="subtitle">Anonymous functions, upvalue capture, and ownership transfer</p>
+        </header>
+
+        <p>Beyond named functions, Ifá-Lang supports anonymous functions (lambdas) that capture variables from their enclosing scope, and explicit ownership transfer with <code>yanda</code> / <code>move</code>.</p>
+
+        <h2 class="section-header">1. Lambda Syntax</h2>
+
+        <p>A lambda is a function without a name. Use any function keyword followed by parameters and a body:</p>
+
+        <div class="code-block">
+<pre>// Simple lambda assigned to a variable
+ayanmo double = fn(x) { x * 2 };
+Irosu.fo(double(5));  // 10
+
+// Yoruba spelling
+ayanmo ilopo = ese(x) { x * 2 };
+
+// Multi-parameter lambda
+ayanmo add = fn(a, b) { a + b };</pre></div>
+
+        <p>Lambdas are first-class — you can pass them to domain methods:</p>
+
+        <div class="code-block">
+<pre>ayanmo items = [1, 2, 3, 4, 5];
+
+// Lambda as mapper
+ayanmo doubled = Ogunda.yi_pada(items, fn(x) { x * 2 });
+Irosu.fo(doubled);  // [2, 4, 6, 8, 10]
+
+// Lambda as predicate filter
+ayanmo evens = Ogunda.yan(items, fn(x) { x % 2 == 0 });
+Irosu.fo(evens);  // [2, 4]</pre></div>
+
+        <h2 class="section-header">2. Closures — Capturing Upvalues</h2>
+
+        <p>A lambda that refers to variables from its enclosing scope is a <strong>closure</strong>. The captured variables are called <strong>upvalues</strong>:</p>
+
+        <div class="code-block">
+<pre>ese make_counter(start) {
+    ayanmo count = start;
+    // This lambda captures 'count' from the enclosing scope
+    pada fn() {
+        count = count + 1;
+        pada count;
+    };
+}
+
+ayanmo counter = make_counter(10);
+Irosu.fo(counter());  // 11
+Irosu.fo(counter());  // 12
+Irosu.fo(counter());  // 13</pre></div>
+
+        <p>The inner lambda captures <code>count</code> as an upvalue. Each call to <code>make_counter</code> creates a fresh <code>count</code>:</p>
+
+        <div class="code-block">
+<pre>ayanmo a = make_counter(0);
+ayanmo b = make_counter(100);
+Irosu.fo(a());  // 1
+Irosu.fo(a());  // 2
+Irosu.fo(b());  // 101  — independent from a</pre></div>
+
+        <h2 class="section-header">3. Move — Ownership Transfer</h2>
+
+        <p>Use <code>yanda</code> / <code>move</code> to transfer ownership of a value. This is primarily used when sending values across actor boundaries, but can also be used to prevent aliasing within a single thread:</p>
+
+        <div class="code-block">
+<pre>ayanmo original = [1, 2, 3];
+
+// Move ownership to a new variable
+ayanmo moved = yanda original;
+// original is still usable in the same thread (deep-copied in native mode)</pre></div>
+
+        <p>In the native VM, <code>yanda</code> performs a deep-copy. This guarantees the receiver has full ownership with no shared mutable state. In embedded mode, the original is invalidated (true move semantics).</p>
+
+        <div class="code-block">
+<pre>// Practical: send data to an actor
+ajose worker {
+    ibeere: fn(data) {
+        Irosu.fo("Got: " + Ogunda.iwon(data) + " items");
+    }
+}
+
+ayanmo large_data = Ogunda.seda(1000, fn(i) { i });
+yanda large_data to worker;
+// worker processes its own copy</pre></div>
+
+        <h2 class="section-header">4. Move in Closures</h2>
+
+        <p>When a closure captures a variable you want to transfer ownership of, use <code>move</code> before the lambda:</p>
+
+        <div class="code-block">
+<pre>ayanmo handle = Otura.de(":8080");
+
+// Move handle into the closure
+ayanmo task = fn() {
+    // handle is captured by reference
+    ayanmo conn = Otura.gba_handle(handle);
+    Irosu.fo("Accepted connection");
+};
+
+// Without move, handle is borrowed
+// With move, ownership transfers into the closure</pre></div>
+
+        <h2 class="section-header">5. When to Use Each</h2>
+
+        <table class="field-table">
+            <tr><th>Pattern</th><th>Syntax</th><th>Use Case</th></tr>
+            <tr><td>Named function</td><td><code>fn name() { }</code></td><td>Reusable logic, public API</td></tr>
+            <tr><td>Lambda</td><td><code>fn(params) { body }</code></td><td>Short inline logic, callbacks</td></tr>
+            <tr><td>Closure</td><td>Lambda referencing outer vars</td><td>Stateful callbacks, generators</td></tr>
+            <tr><td>Move</td><td><code>yanda expr</code></td><td>Actor messages, ownership transfer</td></tr>
+        </table>
+
+        <p><a href="index.html">← Back to Tutorial Index</a></p>
+    </div></div>
+    <script src="../../js/nav.js"></script>
+    <script src="../../js/common.js"></script>
+</body>
+</html>

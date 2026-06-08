@@ -53,6 +53,17 @@ impl OponSize {
             OponSize::Ailopin => 3,
         }
     }
+
+    /// GC collection policy for this memory tier.
+    /// Returns (check_interval_ticks, suspect_threshold).
+    pub fn gc_policy(&self) -> (u64, usize) {
+        match self {
+            OponSize::Kekere => (128, 8),
+            OponSize::Arinrin => (512, 32),
+            OponSize::Nla => (2048, 128),
+            OponSize::Ailopin => (4096, 256),
+        }
+    }
 }
 
 /// Bytecode chunk - a compiled unit of code
@@ -78,6 +89,11 @@ pub struct Bytecode {
     /// Opon (Memory) configuration directive
     pub opon_size: OponSize,
 }
+
+// SAFETY: Bytecode constants only contain primitives and strings (no IfaGc cycles).
+// It is safely shared across actor threads.
+unsafe impl Send for Bytecode {}
+unsafe impl Sync for Bytecode {}
 
 impl Bytecode {
     /// Create new empty bytecode
@@ -112,7 +128,6 @@ impl Bytecode {
     }
 
     /// Serialize to .ifab binary format
-    #[allow(clippy::map_entry)]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut output = Vec::new();
         let mut constant_bytes = Vec::new();
@@ -125,10 +140,10 @@ impl Bytecode {
         for constant in &self.constants {
             if let IfaValue::Str(s) = constant {
                 let string_value = s.to_string();
-                if !index_map.contains_key(&string_value) {
-                    strings.push(string_value.clone());
-                    index_map.insert(string_value, (strings.len() - 1) as u16);
-                }
+                index_map.entry(string_value.clone()).or_insert_with(|| {
+                    strings.push(string_value);
+                    (strings.len() - 1) as u16
+                });
             }
         }
         for name in &self.exports {

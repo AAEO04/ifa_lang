@@ -1,5 +1,3 @@
-#![allow(clippy::collapsible_if)]
-
 //! # Ifá-Macros
 //!
 //! Procedural macros for Ifá-Lang's cultural safety features.
@@ -36,19 +34,17 @@ pub fn derive_ebo(input: TokenStream) -> TokenStream {
     // Parse ebo attribute for custom cleanup method
     let mut cleanup_method = None;
     for attr in &input.attrs {
-        if attr.path().is_ident("ebo") {
-            if let Ok(meta) = attr.meta.require_list() {
+        if attr.path().is_ident("ebo")
+            && let Ok(meta) = attr.meta.require_list() {
                 let tokens = meta.tokens.to_string();
                 if tokens.contains("cleanup") {
                     // Extract method name from cleanup = "method"
-                    if let Some(start) = tokens.find('"') {
-                        if let Some(end) = tokens.rfind('"') {
+                    if let Some(start) = tokens.find('"')
+                        && let Some(end) = tokens.rfind('"') {
                             cleanup_method = Some(tokens[start + 1..end].to_string());
                         }
-                    }
                 }
             }
-        }
     }
 
     let drop_impl = if let Some(method) = cleanup_method {
@@ -80,21 +76,15 @@ pub fn derive_ebo(input: TokenStream) -> TokenStream {
 ///
 /// ## Usage
 /// ```rust,ignore
-/// #[iwa_pele]
+/// #[iwa_pele(open, close)]
 /// fn network_task() {
-///     let conn = Otura.so("example.com", 80);  // open
+///     let conn = Network::open();
 ///     // ... work
-///     conn.pa();  // close - REQUIRED or compile error
+///     conn.close();  // REQUIRED or compile error
 /// }
 /// ```
-///
-/// ## Pairs Checked
-/// - `so` / `pa` (open/close)
-/// - `si` / `ti` (write open/close)  
-/// - `mu` / `fi` (acquire/release)
-/// - `bere` / `da` (start/stop)
 #[proc_macro_attribute]
-pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn iwa_pele(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemFn);
     let fn_vis = &input.vis;
     let fn_sig = &input.sig;
@@ -102,7 +92,7 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     struct BlockVisitor<'a> {
         errors: &'a mut Vec<String>,
-        pairs: &'a [(&'static str, &'static str)],
+        pairs: &'a [(String, String)],
     }
 
     impl<'ast, 'a> Visit<'ast> for BlockVisitor<'a> {
@@ -133,8 +123,8 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
             // Lexical CFG check: resources allocated in this block must be freed in this block
             for (open, close) in self.pairs {
-                let open_count = *counts.get(*open).unwrap_or(&0);
-                let close_count = *counts.get(*close).unwrap_or(&0);
+                let open_count = *counts.get(open).unwrap_or(&0);
+                let close_count = *counts.get(close).unwrap_or(&0);
                 if open_count > close_count {
                     self.errors.push(format!(
                         "Ìwà Pẹ̀lẹ́ violation: Block leaks resource. {} '{}' calls but only {} '{}' calls inside this lexical scope.",
@@ -148,12 +138,24 @@ pub fn iwa_pele(_attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
 
-    let pairs = [
-        ("so", "pa"),   // socket open/close
-        ("si", "ti"),   // file open/close
-        ("mu", "fi"),   // acquire/release
-        ("bere", "da"), // start/stop
-    ];
+    // Parse custom pairs from attribute, e.g., #[iwa_pele(open, close)]
+    let attr_str = attr.to_string();
+    let parts: Vec<&str> = attr_str.split(',').map(|s| s.trim()).collect();
+
+    let mut pairs = Vec::new();
+    if parts.len() >= 2 {
+        for chunk in parts.chunks(2) {
+            if chunk.len() == 2 {
+                pairs.push((chunk[0].to_string(), chunk[1].to_string()));
+            }
+        }
+    }
+
+    if pairs.is_empty() {
+        return TokenStream::from(quote! {
+            compile_error!("iwa_pele requires paired arguments, e.g., #[iwa_pele(open, close)]");
+        });
+    }
 
     let mut errors = Vec::new();
     let mut visitor = BlockVisitor {

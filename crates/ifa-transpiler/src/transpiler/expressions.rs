@@ -197,6 +197,7 @@ impl RustTranspiler {
                     args.iter().map(|a| self.transpile_expression(a)).collect();
 
                 // Inject default parameters if missing
+                #[allow(clippy::collapsible_if)]
                 if let Some(signature) = self.fn_signatures.get(name).cloned() {
                     if args_str.len() < signature.len() {
                         for param in signature.iter().skip(args_str.len()) {
@@ -310,8 +311,10 @@ impl RustTranspiler {
             }
 
             Expression::Lambda { params, body } => {
-                let params_str: Vec<String> =
-                    params.iter().map(|p| format!("{}: IfaValue", p.name)).collect();
+                let params_str: Vec<String> = params
+                    .iter()
+                    .map(|p| format!("{}: IfaValue", p.name))
+                    .collect();
                 let mut inner = String::new();
                 for s in body {
                     inner.push_str(&self.transpile_statement(s));
@@ -324,16 +327,31 @@ impl RustTranspiler {
                 )
             }
             Expression::MoveExpr(inner) => {
-                // In transpiled Rust, we just evaluate the inner expression.
-                // Rust's own move semantics or Arc cloning handles the rest,
-                // guided by Babalawo's static analysis.
-                self.transpile_expression(inner)
+                // yanda semantics: true ownership transfer (zero-copy)
+                if let Expression::Identifier(name) = &**inner {
+                    let m_name = self.mangle_identifier(name);
+                    if self.global_vars.contains(name) {
+                        format!(
+                            "__IFA_GLOBAL_{}.with(|v| std::mem::replace(&mut *v.borrow_mut(), IfaValue::Nil))",
+                            m_name
+                        )
+                    } else {
+                        format!("std::mem::replace(&mut {}, IfaValue::Nil)", m_name)
+                    }
+                } else {
+                    // For temporaries, just evaluate them
+                    self.transpile_expression(inner)
+                }
             }
             Expression::Set(items) => {
                 let items_str: Vec<String> =
                     items.iter().map(|i| self.transpile_expression(i)).collect();
-                format!("IfaValue::Set(std::collections::HashSet::from([{}]))", items_str.join(", "))
+                format!(
+                    "IfaValue::set(std::collections::HashSet::from([{}]))",
+                    items_str.join(", ")
+                )
             }
+            Expression::Spanned { expr, span: _ } => self.transpile_expression(expr),
         }
     }
 

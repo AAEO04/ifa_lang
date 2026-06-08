@@ -52,6 +52,15 @@ impl OmniBox {
         let engine =
             Engine::new(&wasm_config).map_err(|e| eyre!("Failed to init Wasmtime engine: {e}"))?;
 
+        // Spawn a background thread to increment the epoch every second for timeouts
+        let engine_clone = engine.clone();
+        std::thread::spawn(move || {
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                engine_clone.increment_epoch();
+            }
+        });
+
         Ok(OmniBox { engine, config })
     }
 

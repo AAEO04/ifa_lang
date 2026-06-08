@@ -18,6 +18,7 @@
 </head>
 
 <body>
+    <div id="nav-placeholder"></div>
     <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
     <div class="container">
         <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">compiler.ifa</span></div><div class="terminal-body">
@@ -88,11 +89,17 @@
 
         <h2 class="section-header">4. Optimizations (Current)</h2>
 
-        <p>The compiler has <strong>no general optimization passes</strong> — no constant
-        folding, dead code elimination, or peephole optimization. Three targeted
-        optimizations exist:</p>
+        <p>The compiler has <strong>no full optimization pipeline</strong> — no dead code
+        elimination or peephole optimization. Several targeted optimizations exist:</p>
 
-        <h3>4a. Tail Call Optimization</h3>
+        <h3>4a. Constant Folding</h3>
+        <p><code>lib.rs:1775</code>. <code>fold_expression()</code> evaluates binary
+        operations on literal integers, floats, booleans, and strings at compile time.
+        Also folds Odù method calls with constant arguments (E6: Constant Divination,
+        lines 1937-2036), including <code>Obara.fikun</code>/<code>add</code>,
+        <code>Ika.gigun</code>/<code>len</code>/<code>upper</code>/<code>lower</code>.</p>
+
+        <h3>4b. Tail Call Optimization</h3>
         <p><code>lib.rs:592-617</code>. When a <code>return</code> statement wraps
         a direct function call (<code>return f(x)</code>), the compiler emits:</p>
         <div class="code-block">

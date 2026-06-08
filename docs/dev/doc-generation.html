@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Doc Generation — Ifá-Lang Dev Docs</title>
+    <style>
+        .section-header { color: var(--amber); font-size: 1.1rem; margin: 2rem 0 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+        .code-block { background: var(--bg-code); border: 1px solid var(--border); padding: 0.75rem 1rem; margin: 0.75rem 0; font-size: 0.8rem; overflow-x: auto; }
+        .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 1rem 0; }
+        .field-table th { text-align: left; color: var(--green); border-bottom: 1px solid var(--border); padding: 0.4rem 0.6rem; }
+        .field-table td { padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .field-table td:first-child { color: var(--amber); font-weight: 500; }
+        .tag-yes { display: inline-block; background: #1a3a1a; color: #5ae65a; padding: 0.1rem 0.4rem; font-size: 0.65rem; border-radius: 3px; font-weight: 600; }
+        .tag-no { display: inline-block; background: #5a1a1a; color: #ff6b6b; padding: 0.1rem 0.4rem; font-size: 0.65rem; border-radius: 3px; font-weight: 600; }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">docgen.ifa</span></div><div class="terminal-body">
+        <header>
+            <h1><span class="pattern">—</span> Doc Generation</h1>
+            <p class="subtitle"><code>ifa doc &lt;input&gt; [--output &lt;dir&gt;]</code></p>
+        </header>
+
+        <div class="note">
+            <strong>Source-verified:</strong> <code>crates/ifa-cli/src/docgen.rs</code> (1214 lines).
+        </div>
+
+        <h2 class="section-header">What It Does</h2>
+        <p><code>ifa doc</code> generates HTML documentation for Ifá-Lang projects. It walks <code>.ifa</code> source files,
+        parses them using the real language parser (<code>ifa_parser</code>), extracts <code>///</code> doc comments,
+        and produces a static site:</p>
+        <ul>
+            <li><strong>index.html</strong> — landing page with all 20 domains + user Odù + orphans</li>
+            <li><strong>&lt;slug&gt;.html</strong> — one page per domain (16 Odù + 4 infra) listing their methods from <code>odu_metadata.rs</code></li>
+            <li><strong>user_&lt;slug&gt;.html</strong> — one page per user-defined Odù with doc-commented items</li>
+        </ul>
+
+        <h2 class="section-header">Architecture</h2>
+
+        <table class="field-table">
+            <tr><th>Component</th><th>Location</th><th>Purpose</th></tr>
+            <tr><td>CLI entry</td><td><code>main.rs:241-247</code></td><td><code>Doc { input, output }</code> command definition</td></tr>
+            <tr><td>Dispatch</td><td><code>main.rs:1490-1506</code></td><td>Calls <code>docgen::generate_docs()</code></td></tr>
+            <tr><td>Core engine</td><td><code>docgen.rs:1122-1214</code></td><td><code>generate_docs()</code> — orchestrates all phases</td></tr>
+            <tr><td>AST parser</td><td><code>docgen.rs:984-1119</code></td><td><code>parse_file()</code> — walks real AST, extracts docs via <code>extract_docs_before()</code></td></tr>
+            <tr><td>Doc extraction</td><td><code>docgen.rs:962-981</code></td><td><code>extract_docs_before()</code> — reads <code>///</code> comments preceding any AST node span</td></tr>
+            <tr><td>Method metadata</td><td><code>ifa-types::odu_metadata</code></td><td><code>all_odu_domains_with_methods()</code> — 239 methods across 20 domains</td></tr>
+            <tr><td>ODU_DOMAINS</td><td><code>docgen.rs:63-224</code></td><td>Static metadata for all 20 domains (16 Odù + Cpu, Gpu, Storage, Sys)</td></tr>
+        </table>
+
+        <h2 class="section-header">What It Documents</h2>
+
+        <p>The AST walk handles every language construct that can carry a <code>///</code> doc comment:</p>
+
+        <table class="field-table">
+            <tr><th>Construct</th><th>AST Node</th><th>Output Kind</th><th>Line</th></tr>
+            <tr><td><code>odu</code> / <code>odù</code> / <code>class</code></td><td><code>Statement::OduDef</code></td><td>User Odù page</td><td>1001</td></tr>
+            <tr><td><code>ese</code> / <code>ẹsẹ</code> / <code>fn</code></td><td><code>Statement::EseDef</code></td><td>Function item (with params in signature)</td><td>1004</td></tr>
+            <tr><td><code>iwa</code> (protocol)</td><td><code>Statement::IwaDef</code></td><td>Protocol page + method items with attributes</td><td>1044</td></tr>
+            <tr><td><code>let</code> / <code>ayanmo</code></td><td><code>Statement::VarDecl</code></td><td>Variable item</td><td>1018</td></tr>
+            <tr><td><code>const</code> / <code>loruko</code> / <code>ka</code></td><td><code>Statement::Const</code></td><td>Constant item</td><td>1031</td></tr>
+            <tr><td><code>alias</code></td><td><code>Statement::Alias</code></td><td>Orphan item</td><td>1069</td></tr>
+            <tr><td><code>èèwọ̀</code> / <code>taboo</code></td><td><code>Statement::Taboo</code></td><td>Orphan item (<code>source → target</code>)</td><td>1078</td></tr>
+            <tr><td><code>abo</code> / <code>strict</code></td><td><code>Statement::Abo</code></td><td>Orphan item</td><td>1087</td></tr>
+            <tr><td><code>ewo</code> / <code>assert</code></td><td><code>Statement::Ewo</code></td><td>Orphan item</td><td>1096</td></tr>
+            <tr><td><code>ebo</code> (scope)</td><td><code>Statement::Ebo</code></td><td>Orphan item</td><td>1105</td></tr>
+        </table>
+
+        <h2 class="section-header">20 Documented Domains</h2>
+
+        <p>Each domain gets an auto-generated page listing all methods from <code>odu_metadata.rs</code>:</p>
+
+        <table class="field-table">
+            <tr><th>Domain</th><th>Slug</th><th>Alias</th><th>Methods</th></tr>
+            <tr><td>Ogbè</td><td><code>ogbe</code></td><td>System</td><td>5</td></tr>
+            <tr><td>Ọ̀yẹ̀kú</td><td><code>oyeku</code></td><td>Exit</td><td>4</td></tr>
+            <tr><td>Ìwòrì</td><td><code>iwori</code></td><td>Time</td><td>4</td></tr>
+            <tr><td>Òdí</td><td><code>odi</code></td><td>File</td><td>6</td></tr>
+            <tr><td>Ìrosù</td><td><code>irosu</code></td><td>Log</td><td>8</td></tr>
+            <tr><td>Ọ̀wọ́nrín</td><td><code>owonrin</code></td><td>Random</td><td>5</td></tr>
+            <tr><td>Ọ̀bàrà</td><td><code>obara</code></td><td>Math</td><td>18</td></tr>
+            <tr><td>Ọ̀kànràn</td><td><code>okanran</code></td><td>Error</td><td>16</td></tr>
+            <tr><td>Ògúndá</td><td><code>ogunda</code></td><td>Array</td><td>19</td></tr>
+            <tr><td>Ọ̀sá</td><td><code>osa</code></td><td>Flow</td><td>6</td></tr>
+            <tr><td>Ìká</td><td><code>ika</code></td><td>String</td><td>35</td></tr>
+            <tr><td>Òtúúrúpọ̀n</td><td><code>oturupon</code></td><td>Reduce</td><td>12</td></tr>
+            <tr><td>Òtúrá</td><td><code>otura</code></td><td>Net</td><td>6</td></tr>
+            <tr><td>Ìrẹtẹ̀</td><td><code>irete</code></td><td>Crypto</td><td>19</td></tr>
+            <tr><td>Ọ̀ṣẹ́</td><td><code>ose</code></td><td>UI</td><td>14</td></tr>
+            <tr><td>Òfún</td><td><code>ofun</code></td><td>Root</td><td>10</td></tr>
+            <tr><td>Cpu</td><td><code>cpu</code></td><td>Parallel</td><td>27</td></tr>
+            <tr><td>Gpu</td><td><code>gpu</code></td><td>Compute</td><td>6</td></tr>
+            <tr><td>Storage</td><td><code>storage</code></td><td>DB</td><td>5</td></tr>
+            <tr><td>Sys</td><td><code>sys</code></td><td>Kernel</td><td>4</td></tr>
+            <tr><td colspan="3"><strong>Total</strong></td><td><strong>~239</strong></td></tr>
+        </table>
+
+        <p>The index page also includes built-in sections for CLI reference (<code>ifa run</code>, <code>ifa build</code>, <code>ifa flash --target esp32</code>), syntax examples, and a dual-lexicon table of Yoruba ↔ English keywords.</p>
+
+        <h2 class="section-header">How Doc Extraction Works</h2>
+
+        <p>Unlike the old line-by-line scanner, the current <code>parse_file()</code> uses the real parser:</p>
+
+        <div class="code-block">
+<pre>let program = ifa_parser::parser::parse(&amp;content)?;
+
+for stmt in program.statements {
+    let span = stmt.span();
+    let docs = extract_docs_before(&amp;content, span.start);
+    // match on Statement::OduDef, EseDef, IwaDef, etc.
+}</pre>
+        </div>
+
+        <p><code>extract_docs_before()</code> (line 962) scans backwards from the AST node's <code>span.start</code> offset,
+        collecting contiguous <code>///</code> lines. This is AST-aware — it works for any construct the parser knows about,
+        including nested protocol methods.</p>
+
+        <h2 class="section-header">Usage</h2>
+
+        <div class="code-block">
+<pre># Generate docs from src/ into docs/
+ifa doc src/ --output docs/
+
+# Generate from a single file
+ifa doc src/main.ifa</pre>
+        </div>
+
+        <h2 class="section-header">Limitations</h2>
+        <ul>
+            <li>No cross-references or hyperlinks between methods</li>
+            <li>No search functionality in generated output</li>
+            <li>No versioning or changelog generation</li>
+            <li>Method signatures show only parameter names, not types</li>
+            <li>No feature-gate awareness — docs show all methods regardless of <code>#[cfg]</code></li>
+        </ul>
+
+        <footer>
+            <p><a href="index.html">← Back to Dev Docs</a></p>
+        </footer>
+    </div></div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+
+</html>

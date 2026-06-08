@@ -2,7 +2,6 @@
 //!
 //! Dependency resolution, lockfile generation, and sandboxed execution.
 //! Conforms to IFA_LANG_RUNTIME_SPEC §33.
-#![allow(clippy::collapsible_if)]
 use chrono::Local;
 use eyre::{Result, WrapErr, eyre};
 use flate2::read::GzDecoder;
@@ -161,12 +160,7 @@ pub struct IfaManifest {
     pub dev_dependencies: HashMap<String, Dependency>,
 }
 
-impl IfaManifest {
-    /// Access package info from either `[package]` or `[project]` (§33 uses `[project]`)
-    pub fn package_info(&self) -> Option<&PackageInfo> {
-        self.package.as_ref().or(self.project.as_ref())
-    }
-}
+impl IfaManifest {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkspaceInfo {
@@ -216,16 +210,6 @@ impl Dependency {
             Dependency::Version(v) => Some(v.as_str()),
             Dependency::Detailed { version, .. } => version.as_deref(),
         }
-    }
-
-    /// True if this is a path dependency (local).
-    pub fn is_path(&self) -> bool {
-        matches!(self, Dependency::Detailed { path: Some(_), .. })
-    }
-
-    /// True if this is a git dependency.
-    pub fn is_git(&self) -> bool {
-        matches!(self, Dependency::Detailed { git: Some(_), .. })
     }
 }
 
@@ -456,7 +440,6 @@ jẹ́ kí a sọ "Ẹ káàbọ̀ sí Ifá-Lang!"
     }
 
     /// Build project (Project-Centric Build)
-    #[allow(clippy::only_used_in_recursion)]
     pub fn build(&self, release: bool) -> Result<()> {
         let manifest = self.load_manifest()?;
 
@@ -672,8 +655,8 @@ opt-level = 3
 
         // Verify checksums against lockfile
         for pkg in &resolved {
-            if let Some(expected) = locked_checksums.get(&pkg.name) {
-                if &pkg.checksum != expected {
+            if let Some(expected) = locked_checksums.get(&pkg.name)
+                && &pkg.checksum != expected {
                     return Err(eyre!(
                         "OjaIntegrityError: checksum mismatch for '{}'\n  \
                          expected: {}\n  \
@@ -687,7 +670,6 @@ opt-level = 3
                         pkg.name
                     ));
                 }
-            }
         }
 
         // Write oja.lock
@@ -755,16 +737,24 @@ opt-level = 3
                     (ver, format!("path+{}", p), pkg_path)
                 }
                 Dependency::Detailed {
-                    version: _,
+                    version,
                     git: Some(g),
                     ..
                 } => {
-                    return Err(eyre!(
-                        "Git dependencies are not yet implemented (package '{}', source: '{}'). \
-                         Use a `path` or `version` dependency instead.",
-                        name,
-                        g
-                    ));
+                    let target_dir = lib_dir.join(format!("{}-git", name));
+                    if !target_dir.exists() {
+                        let status = std::process::Command::new("git")
+                            .arg("clone")
+                            .arg(g)
+                            .arg(&target_dir)
+                            .status()
+                            .map_err(|e| eyre::eyre!("Failed to run git: {}", e))?;
+                        if !status.success() {
+                            return Err(eyre::eyre!("Git clone failed for package '{}'", name));
+                        }
+                    }
+                    let ver = version.as_deref().unwrap_or("0.0.0-git").to_string();
+                    (ver, format!("git+{}", g), target_dir)
                 }
                 Dependency::Detailed {
                     version: Some(ver), ..
@@ -794,9 +784,9 @@ opt-level = 3
             // Read the dependency's own manifest to find transitive deps
             let mut transitive_names: Vec<String> = Vec::new();
             let dep_manifest_path = Self::find_manifest_in(&pkg_dir);
-            if let Some(mp) = dep_manifest_path {
-                if let Ok(content) = fs::read_to_string(&mp) {
-                    if let Ok(dep_manifest) = toml::from_str::<IfaManifest>(&content) {
+            if let Some(mp) = dep_manifest_path
+                && let Ok(content) = fs::read_to_string(&mp)
+                    && let Ok(dep_manifest) = toml::from_str::<IfaManifest>(&content) {
                         for (tname, tdep) in &dep_manifest.dependencies {
                             transitive_names.push(tname.clone());
                             if !seen.contains(tname) {
@@ -804,8 +794,6 @@ opt-level = 3
                             }
                         }
                     }
-                }
-            }
 
             resolved.push(LockedPackage {
                 name,
@@ -1061,31 +1049,6 @@ opt-level = 3
     /// If `expected_checksum` is `Some`, the computed hash MUST match or
     /// the install is aborted with `OjaIntegrityError`.
     /// If `None`, this is a first install — the hash is computed and returned.
-    fn verify_integrity(&self, path: &Path, expected_checksum: Option<&str>) -> Result<String> {
-        println!("     🔒 Verifying integrity...");
-        let computed = self.sha256_dir(path)?;
-
-        if let Some(expected) = expected_checksum {
-            if computed != expected {
-                return Err(eyre!(
-                    "OjaIntegrityError: checksum mismatch for {}\n  \
-                     expected: {}\n  \
-                     computed: {}\n  \
-                     The downloaded package does not match the lockfile. \
-                     This may indicate tampering, corruption, or a changed version.",
-                    path.display(),
-                    expected,
-                    computed
-                ));
-            }
-            println!("       ✓ Checksum verified: {}", &computed[7..15]);
-        } else {
-            println!("       ✓ Computed checksum: {}", &computed[7..15]);
-        }
-
-        Ok(computed)
-    }
-
     /// Publish to Registry (Git Tagging Strategy)
     pub fn publish(&self) -> Result<()> {
         println!("📦  Publishing package...");

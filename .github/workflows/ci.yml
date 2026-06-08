@@ -12,6 +12,9 @@ env:
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: 1
 
+permissions:
+  contents: read
+
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════════
   # OPON CHECK - Cross-platform Build & Test
@@ -55,15 +58,11 @@ jobs:
 
       - name: Security Audit
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          cargo install cargo-audit
-          cargo audit
+        uses: rustsec/audit-check@v1.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. Build Core
-      - name: Build Workspace
-        run: cargo build --workspace --verbose --target ${{ matrix.target }}
-
-      # 3. Test Core & Standard Library
+      # 2. Test Core & Standard Library
       - name: Run Standard Tests
         run: cargo test --workspace --verbose --target ${{ matrix.target }}
 

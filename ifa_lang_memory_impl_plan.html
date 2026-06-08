@@ -1,0 +1,466 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+
+.plan { padding: 1rem 0 2rem; }
+
+.phase-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border-tertiary);
+}
+
+.phase-tag {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.phase-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.phase-subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-left: auto;
+}
+
+.phase-block {
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 20px;
+  margin-bottom: 20px;
+  background: var(--color-background-secondary);
+}
+
+.phase-block:hover {
+  border-color: var(--color-border-secondary);
+}
+
+.tasks { display: flex; flex-direction: column; gap: 10px; }
+
+.task {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-tertiary);
+  background: var(--color-background-primary);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.task:hover { border-color: var(--color-border-secondary); }
+
+.task-num {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  padding-top: 1px;
+}
+
+.task-body { flex: 1; }
+
+.task-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 3px;
+}
+
+.task-desc {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.task-crate {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  align-self: start;
+}
+
+.blocker-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-tertiary);
+}
+
+.blocker-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.blocker-pill {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--color-border-secondary);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 3px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin-bottom: 14px;
+}
+
+.warning-box {
+  background: var(--color-background-warning);
+  border: 1px solid var(--color-border-warning);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--color-text-warning);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.decision-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 500px) {
+  .decision-grid { grid-template-columns: 1fr; }
+  .phase-subtitle { display: none; }
+}
+
+.decision-card {
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--color-background-primary);
+}
+
+.decision-card-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.decision-card-body {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.tag-purple { background: #EEEDFE; color: #3C3489; }
+.tag-teal   { background: #E1F5EE; color: #0F6E56; }
+.tag-amber  { background: #FAEEDA; color: #633806; }
+.tag-coral  { background: #FAECE7; color: #993C1D; }
+.tag-gray   { background: #F1EFE8; color: #5F5E5A; }
+
+@media (prefers-color-scheme: dark) {
+  .tag-purple { background: #26215C; color: #AFA9EC; }
+  .tag-teal   { background: #04342C; color: #5DCAA5; }
+  .tag-amber  { background: #412402; color: #FAC775; }
+  .tag-coral  { background: #4A1B0C; color: #F0997B; }
+  .tag-gray   { background: #2C2C2A; color: #B4B2A9; }
+}
+
+.crate-types { background: #E6F1FB; color: #0C447C; }
+.crate-infra { background: #E1F5EE; color: #085041; }
+.crate-vm    { background: #FAEEDA; color: #633806; }
+.crate-mem   { background: #FBEAF0; color: #72243E; }
+.crate-emb   { background: #F1EFE8; color: #444441; }
+
+@media (prefers-color-scheme: dark) {
+  .crate-types { background: #042C53; color: #85B7EB; }
+  .crate-infra { background: #04342C; color: #5DCAA5; }
+  .crate-vm    { background: #412402; color: #FAC775; }
+  .crate-mem   { background: #4B1528; color: #ED93B1; }
+  .crate-emb   { background: #2C2C2A; color: #B4B2A9; }
+}
+</style>
+
+<div class="plan">
+
+  <div class="section-title">Key architectural decisions first</div>
+  <div class="decision-grid">
+    <div class="decision-card">
+      <div class="decision-card-title">Keep Arc — don't touch it</div>
+      <div class="decision-card-body"><code>Arc</code> stays as-is until the slab lands. The <code>iwori_arc_rc_duality</code> spec is superseded by Phase 3. Don't spend time on the toggle.</div>
+    </div>
+    <div class="decision-card">
+      <div class="decision-card-title">No WeakList / WeakMap</div>
+      <div class="decision-card-body">Drop the proposal entirely. Exposing weak refs as a language primitive leaks the runtime model onto the user.</div>
+    </div>
+    <div class="decision-card">
+      <div class="decision-card-title">GPU slab is the reference impl</div>
+      <div class="decision-card-body"><code>gpu.rs:821–1004</code> already has size classes, free bitmaps, and stats. The CPU slab is a parameterisation of that, not a rewrite.</div>
+    </div>
+    <div class="decision-card">
+      <div class="decision-card-title">GC is a target backend param</div>
+      <div class="decision-card-body">The GC strategy is not a language decision. It lives in target-specific backends. <code>ifa-types</code> only knows about indices.</div>
+    </div>
+  </div>
+
+  <div class="warning-box">
+    <strong>Cycle collection gap:</strong> the current <code>Arc</code>-based model leaks on cycles and has no collector. Phases 0–1 do not fix this — they lay the foundation. Bacon-Rajan trial deletion (Phase 2) is the first real fix. Don't ship graph-heavy workloads as stable until Phase 2 lands.
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot crate-types"></div>ifa-types</div>
+    <div class="legend-item"><div class="legend-dot crate-mem"></div>ifa-memory (new)</div>
+    <div class="legend-item"><div class="legend-dot crate-infra"></div>ifa-infra</div>
+    <div class="legend-item"><div class="legend-dot crate-vm"></div>ifa-vm</div>
+    <div class="legend-item"><div class="legend-dot crate-emb"></div>ifa-embedded</div>
+  </div>
+
+  <!-- PHASE 0 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-tag tag-gray">Phase 0</span>
+      <span class="phase-title">Extract the shared slab abstraction</span>
+      <span class="phase-subtitle">Prerequisite — no user-visible change</span>
+    </div>
+    <div class="tasks">
+      <div class="task" onclick="sendPrompt('What should the MemoryBackend trait look like in Rust, including the borrow safety issue with allocate returning &mut [u8]?')">
+        <span class="task-num">0.1</span>
+        <div class="task-body">
+          <div class="task-title">Define <code>MemoryBackend</code> trait in a new <code>ifa-memory</code> crate</div>
+          <div class="task-desc">Separate <code>allocate</code> (returns index only) from <code>get_mut(index)</code> to avoid the unsound borrow in the draft spec. Must be <code>no_std</code> + <code>no_alloc</code> compatible for embedded Tier 0.</div>
+        </div>
+        <span class="task-crate crate-mem">ifa-memory</span>
+      </div>
+      <div class="task" onclick="sendPrompt('How should SlabAllocator be parameterised over MemoryBackend? What are the size class boundaries?')">
+        <span class="task-num">0.2</span>
+        <div class="task-body">
+          <div class="task-title">Refactor <code>gpu.rs:821–1004</code> into <code>SlabAllocator&lt;B: MemoryBackend&gt;</code></div>
+          <div class="task-desc">Port the existing 7 power-of-2 size classes, free bitmap with atomic CAS, and stats counters from the GPU slab into the shared crate. GPU path becomes <code>SlabAllocator&lt;GpuBackend&gt;</code>.</div>
+        </div>
+        <span class="task-crate crate-mem">ifa-memory</span>
+      </div>
+      <div class="task" onclick="sendPrompt('What does a heapless fixed-size slab look like for embedded Tier 0 with const generics?')">
+        <span class="task-num">0.3</span>
+        <div class="task-body">
+          <div class="task-title">Implement <code>RamBackend</code> and <code>FixedBackend&lt;N&gt;</code></div>
+          <div class="task-desc"><code>RamBackend</code> uses <code>Vec&lt;u8&gt;</code> (native/WASM). <code>FixedBackend&lt;N&gt;</code> uses a const-generic <code>[u8; N]</code> — zero heap, zero alloc, for embedded Tier 0.</div>
+        </div>
+        <span class="task-crate crate-mem">ifa-memory</span>
+      </div>
+    </div>
+    <div class="blocker-row">
+      <span class="blocker-label">Blocks</span>
+      <span class="blocker-pill">Phase 1</span>
+      <span class="blocker-pill">Phase 3 (embedded)</span>
+    </div>
+  </div>
+
+  <!-- PHASE 1 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-tag tag-purple">Phase 1</span>
+      <span class="phase-title">Wire <code>IfaValue</code> heap variants to slab indices</span>
+      <span class="phase-subtitle">Breaking change — coordinate with ifa-vm</span>
+    </div>
+    <div class="tasks">
+      <div class="task" onclick="sendPrompt('How should IfaValue heap variants be changed from Arc<T> to u32 slab indices? What does the enum look like?')">
+        <span class="task-num">1.1</span>
+        <div class="task-body">
+          <div class="task-title">Replace <code>Arc&lt;List&gt;</code>, <code>Arc&lt;Map&gt;</code>, <code>Arc&lt;Str&gt;</code> with <code>u32</code> slab indices in <code>IfaValue</code></div>
+          <div class="task-desc">The index is the portable handle. How it gets freed is the target-specific backend's concern. This is the load-bearing change that makes <code>IfaValue: Copy + Send + Sync</code> trivially.</div>
+        </div>
+        <span class="task-crate crate-types">ifa-types</span>
+      </div>
+      <div class="task" onclick="sendPrompt('How does the Opon struct change when IfaValue uses slab indices? What is the per-actor slab ownership model?')">
+        <span class="task-num">1.2</span>
+        <div class="task-body">
+          <div class="task-title">Introduce per-actor <code>OponSlab</code> backed by <code>SlabAllocator&lt;RamBackend&gt;</code></div>
+          <div class="task-desc">Each actor owns one <code>OponSlab</code>. The actor's stack and heap are index ranges within it. The <code>Opon</code> flight recorder now also serves as the root set for GC.</div>
+        </div>
+        <span class="task-crate crate-vm">ifa-vm</span>
+      </div>
+      <div class="task" onclick="sendPrompt('How does yanda message passing change when values are slab indices? What is the deferred free protocol?')">
+        <span class="task-num">1.3</span>
+        <div class="task-body">
+          <div class="task-title">Update <code>Osa.ran</code> message passing to use index handoff + deferred free</div>
+          <div class="task-desc">On <code>yanda</code>, the sender passes the index and enqueues a deferred-free message back to itself. <code>SysRuntime</code> in <code>ifa-infra</code> provides the channel: async on native/tokio, synchronous on WASM/embedded.</div>
+        </div>
+        <span class="task-crate crate-vm">ifa-vm</span>
+      </div>
+      <div class="task" onclick="sendPrompt('What needs to change in cpu.rs to enable par_map and par_filter now that IfaValue is Send + Sync via slab indices?')">
+        <span class="task-num">1.4</span>
+        <div class="task-body">
+          <div class="task-title">Unlock Rayon parallelism in <code>cpu.rs</code></div>
+          <div class="task-desc">Remove the sequential fallback comments at <code>cpu.rs:507</code> and <code>:525</code>. Add index-range partitioning to ensure parallel workers operate on disjoint slab regions — this is a hard constraint, not optional.</div>
+        </div>
+        <span class="task-crate crate-infra">ifa-infra</span>
+      </div>
+      <div class="task" onclick="sendPrompt('How does storage.rs serialization need to change when IfaValue is a slab index? Should we use mmap for the slab?')">
+        <span class="task-num">1.5</span>
+        <div class="task-body">
+          <div class="task-title">Fix <code>storage.rs</code> serialization — resolve indices before persisting</div>
+          <div class="task-desc">Serializing a raw <code>u32</code> index is meaningless. Either walk the live set and serialize actual data, or switch to mmap-backed slab persistence (<code>msync</code> / <code>mmap</code>). The mmap path is architecturally cleaner and makes crash recovery free.</div>
+        </div>
+        <span class="task-crate crate-infra">ifa-infra</span>
+      </div>
+    </div>
+    <div class="blocker-row">
+      <span class="blocker-label">Blocks</span>
+      <span class="blocker-pill">Phase 2</span>
+      <span class="blocker-pill">Phase 3</span>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-tag tag-teal">Phase 2</span>
+      <span class="phase-title">Cycle collection — Bacon-Rajan trial deletion</span>
+      <span class="phase-subtitle">First real fix for the cycle leak</span>
+    </div>
+    <div class="tasks">
+      <div class="task" onclick="sendPrompt('How does the Bacon-Rajan trial deletion algorithm work? What data structures does it need?')">
+        <span class="task-num">2.1</span>
+        <div class="task-body">
+          <div class="task-title">Implement trial deletion collector in <code>ifa-memory</code></div>
+          <div class="task-desc">Bacon-Rajan operates on the reference count graph. Suspects are flagged, counts are decremented in a local pass, and subgraphs that reach zero are reclaimed. Keeps RC semantics — no full heap tracing. This is the easiest upgrade from the current Arc model.</div>
+        </div>
+        <span class="task-crate crate-mem">ifa-memory</span>
+      </div>
+      <div class="task" onclick="sendPrompt('How should the per-actor cycle collector be triggered? What threshold makes sense based on the Opon allocation log?')">
+        <span class="task-num">2.2</span>
+        <div class="task-body">
+          <div class="task-title">Wire collection trigger into <code>OponSlab</code></div>
+          <div class="task-desc">Trigger per-actor collection when allocation crosses a configurable threshold (informed by <code>kernel.rs</code> available memory). No global pause — each actor collects independently. The <code>Opon</code> registry already has the root set.</div>
+        </div>
+        <span class="task-crate crate-vm">ifa-vm</span>
+      </div>
+      <div class="task" onclick="sendPrompt('How should the Babalawo static analyser be scoped now that we have a runtime cycle collector? What is it still useful for?')">
+        <span class="task-num">2.3</span>
+        <div class="task-body">
+          <div class="task-title">Scope Babalawo correctly — trivial cycles only</div>
+          <div class="task-desc">Babalawo remains useful for catching <code>a = [a]</code>-style literals at compile time, and for emitting a warning when a value visibly crosses a function boundary into a mutable container. It must not attempt inter-procedural cycle detection — that is the runtime collector's job.</div>
+        </div>
+        <span class="task-crate crate-vm">ifa-vm</span>
+      </div>
+    </div>
+    <div class="blocker-row">
+      <span class="blocker-label">Blocks</span>
+      <span class="blocker-pill">Phase 3 (GC backends)</span>
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-tag tag-amber">Phase 3</span>
+      <span class="phase-title">Target-specific GC backends</span>
+      <span class="phase-subtitle">Only after profiling justifies the complexity</span>
+    </div>
+    <div class="tasks">
+      <div class="task" onclick="sendPrompt('How does a per-actor generational semi-space copying GC work when values are slab indices? How does pointer fixup work?')">
+        <span class="task-num">3.1</span>
+        <div class="task-body">
+          <div class="task-title">Native: per-actor generational semi-space copying collector</div>
+          <div class="task-desc">Flip to new slab, trace from actor stack roots, copy live data, discard old slab. Cycles are destroyed — unreachable objects simply aren't copied. Pointer fixup is index remapping. Pauses only one actor at a time.</div>
+        </div>
+        <span class="task-crate crate-mem">ifa-memory</span>
+      </div>
+      <div class="task" onclick="sendPrompt('How should the WASM GC backend work within a single linear memory with cooperative scheduling?')">
+        <span class="task-num">3.2</span>
+        <div class="task-body">
+          <div class="task-title">WASM: cooperative copying GC at yield points</div>
+          <div class="task-desc">Per-coroutine slab regions within WASM linear memory. GC runs at <code>await</code> / yield points — acceptable since there is only one thread. No <code>mprotect</code>; copying must stay within a single <code>Vec&lt;u8&gt;</code> / <code>ArrayBuffer</code>.</div>
+        </div>
+        <span class="task-crate crate-mem">ifa-memory</span>
+      </div>
+      <div class="task" onclick="sendPrompt('What does epoch reclamation look like for embedded Tier 0 with a fixed 256-slot slab?')">
+        <span class="task-num">3.3</span>
+        <div class="task-body">
+          <div class="task-title">Embedded Tier 0: epoch reclamation, no GC</div>
+          <div class="task-desc">Bulk free at <code>ebo</code> scope exit. <code>FixedBackend&lt;256&gt;</code> — compile-time error on overflow. Replace <code>EmbeddedValue</code> with shared <code>IfaValue</code> (u32 index). Merge embedded opcodes with main opcode set.</div>
+        </div>
+        <span class="task-crate crate-emb">ifa-embedded</span>
+      </div>
+      <div class="task" onclick="sendPrompt('How should the CPU and GPU slab backends be unified for UMA architectures via wgpu?')">
+        <span class="task-num">3.4</span>
+        <div class="task-body">
+          <div class="task-title">Unified CPU/GPU slab for native UMA targets</div>
+          <div class="task-desc">On Apple Silicon / integrated GPU, the CPU <code>RamBackend</code> and GPU <code>GpuBackend</code> can share physical memory. Note: wgpu does not currently expose UMA as a first-class API — treat as a future optimisation, not a near-term target.</div>
+        </div>
+        <span class="task-crate crate-infra">ifa-infra</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="phase-block">
+    <div class="phase-header">
+      <span class="phase-tag tag-coral">Phase 4</span>
+      <span class="phase-title">Auto-tuning and observability</span>
+      <span class="phase-subtitle">Quality-of-life — can be done in parallel with Phase 3</span>
+    </div>
+    <div class="tasks">
+      <div class="task" onclick="sendPrompt('How should OponSlab size be auto-tuned at startup using kernel.rs memory queries?')">
+        <span class="task-num">4.1</span>
+        <div class="task-body">
+          <div class="task-title">Auto-tune slab size from <code>kernel.rs</code> at startup</div>
+          <div class="task-desc">Query <code>available_memory()</code> and <code>num_cores()</code> to select <code>OponSize::Kekere</code> / <code>Nla</code> / etc. Feed slab stats counters (already present in the GPU slab) into GC heuristics.</div>
+        </div>
+        <span class="task-crate crate-infra">ifa-infra</span>
+      </div>
+      <div class="task" onclick="sendPrompt('How should Ikin read-only constants be placed in .rodata on native and in the WASM data segment?')">
+        <span class="task-num">4.2</span>
+        <div class="task-body">
+          <div class="task-title">Land <code>Ikin</code> read-only global region</div>
+          <div class="task-desc">Compile-time constants (string literals, bytecode templates) into <code>.rodata</code> on native, WASM data segment on WASM, flash on embedded MCUs. Zero RAM cost on read. Shared across all actors — no slab allocation needed for constants.</div>
+        </div>
+        <span class="task-crate crate-types">ifa-types</span>
+      </div>
+    </div>
+  </div>
+
+</div>

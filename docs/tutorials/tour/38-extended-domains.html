@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../js/common.css">
+    <title>Extended Domains — Ifá-Lang Tutorial</title>
+</head>
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs"><div class="breadcrumbs-container"><ul class="breadcrumb-list"></ul></div></div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">tutorial.38.ifa</span></div><div class="terminal-body"><header>
+            <h1>38. Extended Domains</h1>
+            <p class="subtitle">Coop (FFI), Opele, Gpu, Storage, and Sys</p>
+        </header>
+
+        <p>Beyond the 16 canonical Odù, Ifá-Lang has extended domains for infrastructure, FFI, and compound operations.</p>
+
+        <h2 class="section-header">1. Coop — FFI Bridge</h2>
+
+        <p><code>Coop</code> (also accessible as <code>Ffi</code> or <code>Bridge</code>) provides foreign function interface capabilities. It lets you call into C, Rust, or other languages:</p>
+
+        <div class="code-block">
+<pre>// Call a C function
+ayanmo result = Coop.call("c_function_name", [arg1, arg2]);
+
+// Load and call from a shared library
+ayanmo lib = Coop.load("libmylib.so");
+ayanmo version = Coop.call_in(lib, "get_version", []);
+
+// Memory operations
+ayanmo buf = Coop.alloc(1024);
+Coop.copy(src, buf, 100);
+Coop.free(buf);</pre></div>
+
+        <div class="warn" style="border-left: 3px solid var(--amber); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem;">
+            <strong>Safety:</strong> FFI calls can crash the VM if misused. Wrap Coop calls in <code>ailewu</code> / <code>unsafe</code> blocks when possible.
+        </div>
+
+        <p>Coop requires the <code>native_ffi</code> feature and the <code>Bridge</code> capability:</p>
+
+        <div class="code-block">
+<pre>// Check capability first
+ti (Ofun.le("Bridge")) {
+    ayanmo result = Coop.call("math_pow", [2, 10]);
+} bibeko {
+    Irosu.kigbe("FFI not available");
+}</pre></div>
+
+        <h2 class="section-header">2. Opele — Compound Domain Oracle</h2>
+
+        <p><code>Opele</code> (the Oracle) handles compound domain operations and divination patterns. It is a meta-domain that combines multiple Odù:</p>
+
+        <div class="code-block">
+<pre>// Get the combined meaning of two domains
+ayanmo meaning = Opele.ibo(Ogbe, Oyeku);
+
+// Resolve a compound Odù pattern
+ayanmo pattern = Opele.resolve("ogbe-oyeku");
+
+// Query the oracle for guidance
+ayanmo advice = Opele.iboo("Should I deploy?");</pre></div>
+
+        <p>Opele is primarily used in tooling, not in application code. The Babalawo static analyzer uses it for compound type analysis.</p>
+
+        <h2 class="section-header">3. Gpu — Compute Domain</h2>
+
+        <p><code>Gpu</code> provides access to GPU compute via wgpu. It is gated behind the <code>gpu</code> feature flag:</p>
+
+        <div class="code-block">
+<pre>// Check GPU availability
+ayanmo available = Gpu.is_available();
+
+// Get GPU info
+ayanmo info = Gpu.info();
+Irosu.fo(info);  // { name: "NVIDIA RTX 4090", memory: 24564 }
+
+// Execute compute shader
+ayanmo input = [1.0, 2.0, 3.0, 4.0];
+ayanmo output = Gpu.compute("shader.wgsl", input);
+
+// Buffer operations
+ayanmo buf = Gpu.alloc_buffer(1024);
+Gpu.write_buffer(buf, input);
+ayanmo result = Gpu.read_buffer(buf);</pre></div>
+
+        <p>GPU support is optional and platform-dependent. Use <code>Ofun.le("Compute")</code> to check availability at runtime.</p>
+
+        <h2 class="section-header">4. Storage — Key-Value Persistence</h2>
+
+        <p><code>Storage</code> (also <code>Kv</code> / <code>Db</code>) provides persistent key-value storage backed by an append-only log. All operations are async (return <code>Future</code>):</p>
+
+        <div class="code-block">
+<pre>// Open a store (returns Future — await with reti)
+ayanmo store = reti Storage.open("data.ifas");
+
+// Store a value
+reti Storage.set(store, "username", "john_doe");
+
+// Retrieve
+ayanmo user = reti Storage.get(store, "username");  // "john_doe"
+
+// Delete
+reti Storage.delete(store, "username");
+
+// Compact the append-only log
+reti Storage.compact(store);</pre></div>
+
+        <p>Storage persists to disk via OduStore. The backend is configurable (default: local file, with network DB options via features). Values are serialized using the same <code>bincode</code> path as <code>yanda</code> — most <code>IfaValue</code> variants are supported, including the <code>Set</code> type.</p>
+
+        <h2 class="section-header">5. Sys — Kernel/OS Interface</h2>
+
+        <p><code>Sys</code> extends Ogbe with kernel-level operations. It provides lower-level system access:</p>
+
+        <div class="code-block">
+<pre>// System information
+ayanmo os = Sys.os();        // "linux"
+ayanmo arch = Sys.arch();    // "x86_64"
+ayanmo hostname = Sys.hostname();
+ayanmo uptime = Sys.uptime();
+
+// Process management
+ayanmo pid = Sys.pid();
+Sys.kill(pid, 9);  // Send SIGKILL
+
+// Memory info
+ayanmo mem = Sys.memory();
+Irosu.fo(mem);  // { total: 16777216, free: 8388608, used: 8388608 }</pre></div>
+
+        <p>Sys requires the <code>sysinfo</code> feature. All Sys operations require the <code>Environment</code> capability.</p>
+
+        <h2 class="section-header">Domain Summary</h2>
+
+        <table class="field-table">
+            <tr><th>Domain</th><th>Aliases</th><th>Feature Gate</th><th>Capability</th></tr>
+            <tr><td>Coop</td><td>Ffi, Bridge</td><td><code>native_ffi</code></td><td>Bridge</td></tr>
+            <tr><td>Opele</td><td>Oracle</td><td>Always</td><td>None</td></tr>
+            <tr><td>Gpu</td><td>Compute</td><td><code>gpu</code></td><td>Compute</td></tr>
+            <tr><td>Storage</td><td>Kv, Db</td><td><code>persistence</code></td><td>ReadFiles / WriteFiles</td></tr>
+            <tr><td>Sys</td><td>Kernel</td><td><code>sysinfo</code></td><td>Environment</td></tr>
+        </table>
+
+        <p><a href="index.html">← Back to Tutorial Index</a></p>
+    </div></div>
+    <script src="../../js/nav.js"></script>
+    <script src="../../js/common.js"></script>
+</body>
+</html>

@@ -108,6 +108,9 @@ pub enum IfaError {
     #[error("Async not available: {0}")]
     AsyncNotAvailable(String),
 
+    #[error("Actor {0} crashed")]
+    ActorCrashed(u64),
+
     #[error("stack overflow — program declared #opon {directive:?} (limit: {limit} slots)")]
     StackOverflow {
         limit: usize,
@@ -212,7 +215,8 @@ impl IfaError {
             | IfaError::LoopContinue
             | IfaError::Exit(_)
             | IfaError::RegistryNotAttached(_)
-            | IfaError::Runtime(_) => ErrorCode::VmError,
+            | IfaError::Runtime(_)
+            | IfaError::ActorCrashed(_) => ErrorCode::VmError,
         }
     }
 
@@ -240,6 +244,9 @@ impl IfaError {
             }
             IfaError::Exit(_) => {
                 "Ìbẹ̀rẹ̀ kì í ṣe oníṣẹ́, ẹni tí ó bá parí rẹ̀ ni ó ń jẹ́ oníṣẹ́. (Starting is not the master, he who finishes is.)"
+            }
+            IfaError::ActorCrashed(_) => {
+                "Igi ganganran má gùn mí lójú, òkèèrè la ti ń wò ó. (A projecting twig that could pierce the eye must be spotted from afar.)"
             }
             _ => "Gbogbo ìṣòro ní ojúùtù. (Every problem has a solution.)",
         }

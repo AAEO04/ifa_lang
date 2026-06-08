@@ -9,6 +9,8 @@
 //! General `+` expressions remain source-compatible; this hardening pass isolates
 //! interpolation without forcing a language-wide string-operator redesign.
 
+pub mod embedded;
+
 use ifa_types::OduDomain;
 use ifa_types::ast::*;
 use ifa_types::bytecode::OponSize;
@@ -36,7 +38,7 @@ pub struct Compiler {
 
 #[derive(Debug)]
 struct LoopContext {
-    // Note: `continue` jumps must be patched at the end of the loop block 
+    // Note: `continue` jumps must be patched at the end of the loop block
     // because `for` loops require jumping to the increment phase, not the loop start.
     break_jumps: Vec<usize>,
     continue_jumps: Vec<usize>,
@@ -330,6 +332,11 @@ impl Compiler {
 
             Statement::Alias { name, target, .. } => {
                 self.aliases.insert(name.clone(), target.clone());
+            }
+
+            Statement::IwaDef(_) => {
+                // Protocol definitions are purely for static analysis
+                // At runtime they are erased since structural typing checks maps dynamically
             }
 
             Statement::Update {
@@ -749,11 +756,19 @@ impl Compiler {
             Statement::Ewo {
                 condition, message, ..
             } => {
-                // Compile the condition expression
                 self.compile_expression(condition)?;
-                // Note: Assertion is verified at bytecode interpretation time
-                // For now, we just compile the condition check
-                let _ = message;
+                let jump_idx = self.emit_jump(OpCode::JumpIfTrue);
+
+                if let Some(msg) = message {
+                    self.emit(OpCode::PushStr);
+                    self.emit_string(msg);
+                } else {
+                    self.emit(OpCode::PushStr);
+                    self.emit_string("Assertion failed (Ewo)");
+                }
+
+                self.emit(OpCode::Halt);
+                self.patch_jump(jump_idx);
             }
 
             Statement::Opon { size, .. } => {
@@ -987,9 +1002,7 @@ impl Compiler {
             }
 
             Statement::AssertType {
-                value,
-                type_hint,
-                ..
+                value, type_hint, ..
             } => {
                 self.compile_expression(value)?;
                 self.emit(OpCode::AssertType);
@@ -1616,6 +1629,11 @@ impl Compiler {
                 let anon_name = format!("<lambda@{}>", self.current_offset());
                 self.compile_function(&anon_name, params, body, false)?;
             }
+
+            Expression::Spanned { expr, span: _ } => {
+                // Compile the inner expression
+                self.compile_expression(expr)?;
+            }
         }
         Ok(())
     }
@@ -1762,8 +1780,6 @@ fn collect_exports(program: &Program) -> Vec<String> {
     }
     out
 }
-
-#[allow(clippy::collapsible_if)]
 fn fold_expression(expr: &Expression) -> Expression {
     match expr {
         Expression::BinaryOp { left, op, right } => {
@@ -2100,6 +2116,7 @@ fn fold_expression(expr: &Expression) -> Expression {
                     },
                 }
             }
+            #[allow(clippy::collapsible_if)]
             if combined_parts.len() == 1 {
                 if let InterpolatedPart::Literal(s) = &combined_parts[0] {
                     return Expression::String(s.clone());

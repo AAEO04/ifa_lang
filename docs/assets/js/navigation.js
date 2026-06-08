@@ -106,6 +106,16 @@ class NavigationComponent {
         return [...dirSegments, fileSegment];
     }
 
+    escapeHtml(text) {
+        if (!text) return '';
+        return text.toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     buildBreadcrumbList(parts, rootPrefix) {
         let breadcrumbs = `<li><a href="${rootPrefix}index.html">🏠 Home</a></li>`;
         let accumulatedPath = '';
@@ -118,13 +128,14 @@ class NavigationComponent {
             }
             
             accumulatedPath += (accumulatedPath ? '/' : '') + part;
+            const safePath = this.escapeHtml(accumulatedPath);
             
             if (isLast) {
-                const displayName = this.getDisplayName(part, true);
+                const displayName = this.escapeHtml(this.getDisplayName(part, true));
                 breadcrumbs += `<li class="separator">›</li><li class="current">${displayName}</li>`;
             } else {
-                const displayName = this.getDisplayName(part, false);
-                const relativeLink = `${rootPrefix}${accumulatedPath}/index.html`;
+                const displayName = this.escapeHtml(this.getDisplayName(part, false));
+                const relativeLink = `${rootPrefix}${safePath}/index.html`;
                 breadcrumbs += `<li class="separator">›</li><li><a href="${relativeLink}">${displayName}</a></li>`;
             }
         });

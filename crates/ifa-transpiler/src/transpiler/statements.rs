@@ -313,12 +313,19 @@ impl std::ops::Not for IfaValue {{
                 }
             }
 
-            Statement::Alias { .. } => String::new(),
+            Statement::Alias { name, .. } => format!("{}/* Alias created for {} */", indent, name),
 
-            Statement::AssertType { value, type_hint, .. } => {
+            Statement::AssertType {
+                value, type_hint, ..
+            } => {
                 let val = self.transpile_expression(value);
                 // The transpiler doesn't enforce runtime types yet, just pass through or ignore
-                format!("{indent}/* assert_type({val}, {:?}) */", type_hint, indent = indent, val = val)
+                format!(
+                    "{indent}/* assert_type_transpiled({val}, {:?}) */",
+                    type_hint,
+                    indent = indent,
+                    val = val
+                )
             }
 
             Statement::Assignment { target, value, .. } => {
@@ -474,6 +481,7 @@ impl std::ops::Not for IfaValue {{
             Statement::EseDef {
                 name,
                 params,
+                return_type: _,
                 body,
                 visibility,
                 effects,
@@ -549,7 +557,10 @@ impl std::ops::Not for IfaValue {{
             }
 
             Statement::Taboo { source, target, .. } => {
-                format!("{}// TABOO: {} cannot call {}", indent, source, target)
+                format!(
+                    "{}/* TABOO enforcement: {} restricts {} */",
+                    indent, source, target
+                )
             }
 
             Statement::Ewo {
@@ -778,6 +789,11 @@ impl std::ops::Not for IfaValue {{
                 let val_str = self.transpile_expression(value);
                 format!("{}std::panic::panic_any({});", indent, val_str)
             }
+
+            Statement::IwaDef(_) => {
+                // Iwa Definitions are purely for static typing
+                String::new()
+            }
         }
     }
 
@@ -874,31 +890,31 @@ impl std::ops::Not for IfaValue {{
                 && let Ok(program) = ifa_parser::parse(&source)
             {
                 self.parsed_modules.insert(module_name.clone());
-                    self.module_aliases.insert(module_name.clone());
+                self.module_aliases.insert(module_name.clone());
 
-                    let mut sub = RustTranspiler::new();
-                    sub.base_path = self.base_path.clone();
-                    sub.parsed_modules = self.parsed_modules.clone();
+                let mut sub = RustTranspiler::new();
+                sub.base_path = self.base_path.clone();
+                sub.parsed_modules = self.parsed_modules.clone();
 
-                    let code = sub.transpile_module(&program, &module_name);
+                let code = sub.transpile_module(&program, &module_name);
 
-                    self.has_async |= sub.has_async;
-                    self.needs_tokio |= sub.needs_tokio;
-                    self.needs_reqwest |= sub.needs_reqwest;
-                    self.needs_rand |= sub.needs_rand;
+                self.has_async |= sub.has_async;
+                self.needs_tokio |= sub.needs_tokio;
+                self.needs_reqwest |= sub.needs_reqwest;
+                self.needs_rand |= sub.needs_rand;
 
-                    for pm in sub.parsed_modules {
-                        self.parsed_modules.insert(pm);
-                    }
-                    for (name, content) in sub.external_modules {
-                        self.external_modules.insert(name, content);
-                    }
-
-                    self.external_modules
-                        .insert(format!("{}.rs", module_name), code);
-                    self.module_defs.push(format!("pub mod {};", module_name));
-                    return true;
+                for pm in sub.parsed_modules {
+                    self.parsed_modules.insert(pm);
                 }
+                for (name, content) in sub.external_modules {
+                    self.external_modules.insert(name, content);
+                }
+
+                self.external_modules
+                    .insert(format!("{}.rs", module_name), code);
+                self.module_defs.push(format!("pub mod {};", module_name));
+                return true;
+            }
         }
         false
     }
@@ -932,7 +948,13 @@ impl std::ops::Not for IfaValue {{
             Statement::Alias { name, target, .. } => {
                 self.aliases.insert(name.clone(), target.clone());
             }
-            Statement::EseDef { name, params, body, .. } => {
+            Statement::EseDef {
+                name,
+                params,
+                return_type: _,
+                body,
+                ..
+            } => {
                 self.fn_signatures.insert(name.clone(), params.clone());
                 for s in body {
                     self.collect_signatures_stmt(s);
@@ -943,7 +965,11 @@ impl std::ops::Not for IfaValue {{
                     self.collect_signatures_stmt(s);
                 }
             }
-            Statement::If { then_body, else_body, .. } => {
+            Statement::If {
+                then_body,
+                else_body,
+                ..
+            } => {
                 for s in then_body {
                     self.collect_signatures_stmt(s);
                 }
@@ -963,7 +989,12 @@ impl std::ops::Not for IfaValue {{
                     self.collect_signatures_stmt(s);
                 }
             }
-            Statement::Try { try_body, catch_body, finally_body, .. } => {
+            Statement::Try {
+                try_body,
+                catch_body,
+                finally_body,
+                ..
+            } => {
                 for s in try_body {
                     self.collect_signatures_stmt(s);
                 }
@@ -976,7 +1007,11 @@ impl std::ops::Not for IfaValue {{
                     }
                 }
             }
-            Statement::Ebo { body: Some(body), .. } | Statement::Ailewu { body, .. } | Statement::Defer { body, .. } => {
+            Statement::Ebo {
+                body: Some(body), ..
+            }
+            | Statement::Ailewu { body, .. }
+            | Statement::Defer { body, .. } => {
                 for s in body {
                     self.collect_signatures_stmt(s);
                 }

@@ -75,11 +75,10 @@ pub fn verify_equivalence(source: &str) -> OracleResult {
     let int_stdout_final = int_stdout.trim().to_string();
 
     if int_stdout_final != trans_stdout {
-        println!("--- SEMANTIC MISMATCH ---");
-        println!("SOURCE:\n{}", source);
-        println!("VM STDOUT:\n'{}'", int_stdout_final);
-        println!("TRANSPILER STDOUT:\n'{}'", trans_stdout);
-        panic!("equivalence violation");
+        panic!(
+            "--- SEMANTIC MISMATCH ---\nSOURCE:\n{}\nVM STDOUT:\n'{}'\nTRANSPILER STDOUT:\n'{}'\nequivalence violation",
+            source, int_stdout_final, trans_stdout
+        );
     }
 
     OracleResult {

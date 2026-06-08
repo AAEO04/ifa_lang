@@ -7,7 +7,7 @@
     <title>Grammar Reference - Ifá-Lang</title>
     <meta name="description" content="Complete grammar reference for Ifá-Lang based on Pest grammar implementation">
     <link rel="stylesheet" href="../js/common.css">
-    <script src="../js/nav.js" defer></script>
+    <script src="../js/nav.js"></script>
 </head>
 
 <body>
@@ -30,7 +30,7 @@
 
         <div class="note">
             <strong>Source-verified.</strong> This page was extracted from
-            <code>crates/ifa-parser/src/grammar.pest</code> (348 lines).
+            <code>crates/ifa-parser/src/grammar.pest</code> (392 lines).
         </div>
 
         <div class="step">
@@ -64,15 +64,18 @@
                     <pre><code>statement = {
     import_stmt
     | from_import_stmt
-    | instruction                // odu_call, method_call, function_call
+    | abo_stmt                   // Strict mode
+    | ase_stmt                   // End marker
     | opon_stmt                  // Memory directive
     | ebo_stmt                   // Offering / epoch region
     | defer_stmt                 // Deferred cleanup
     | ailewu_stmt                // Unsafe block
     | var_decl                   // Variable declaration
     | const_stmt                 // Constant declaration
+    | alias_stmt                 // Alias / rename
     | update_stmt                // +=, -=, *=, /=, %=
     | assignment_stmt            // =
+    | iwa_def                    // Protocol / interface definition
     | odu_def                    // Class / struct definition
     | ese_def                    // Function definition
     | if_stmt                    // Conditional
@@ -81,12 +84,14 @@
     | return_stmt                // Return
     | break_stmt                 // Break
     | continue_stmt              // Continue
+    | throw_stmt                 // Throw / ta
     | taboo_stmt                 // Domain taboo
     | ewo_stmt                   // Assertion
-    | ase_stmt                   // End marker
+    | assert_type_stmt           // Runtime type assertion
     | match_stmt                 // Pattern matching
     | try_stmt                   // Try/catch/finally
     | yield_stmt                 // Yield control
+    | instruction                // odu_call, method_call, function_call
     | COMMENT
 }</code></pre>
                 </div>
@@ -397,6 +402,58 @@ ase_kw = { "ase" | "àṣẹ" | "end" }</code></pre>
             </div>
 
             <div class="grammar-section">
+                <h3>Abo (Strict Mode)</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Abo Grammar</span>
+                    </div>
+                    <pre><code>abo_stmt = { abo_kw ~ ";"? }
+abo_kw = { "abo" | "abò" | "strict" }
+
+// Enable strict type checking for the current scope
+// Example: abo;</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Alias (Rename)</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Alias Grammar</span>
+                    </div>
+                    <pre><code>alias_stmt = { alias_kw ~ ident ~ "=" ~ expression ~ ";" }
+alias_kw = { "alias" | "oruko" }
+
+// Example: alias MyList = List;</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Throw (Error Raising)</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Throw Grammar</span>
+                    </div>
+                    <pre><code>throw_stmt = { throw_kw ~ expression ~ ";" }
+throw_kw = { "ta" | "tá" | "throw" }
+
+// Example: ta "Something went wrong";</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>AssertType (Runtime Type Check)</h3>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">AssertType Grammar</span>
+                    </div>
+                    <pre><code>assert_type_stmt = { assert_type_kw ~ "(" ~ expression ~ "," ~ type_name ~ ")" ~ ";" }
+
+// Example: assert_type(x, Int);</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
                 <h3>Taboo (Domain Restriction)</h3>
                 <div class="code-example">
                     <div class="code-header">
@@ -422,17 +479,35 @@ await_kw = { "reti" | "await" }</code></pre>
         <div class="step">
             <h2>Expressions (Precedence, Low to High)</h2>
             
-            <h3>Precedence Chain</h3>
+            <h3>Precedence Chain (Low to High)</h3>
             <div class="code-example">
-                <pre><code>expression = { null_coalesce_expr }
+                <pre><code>expression       = { pipeline_expr }                                   // Lowest precedence
+pipeline_expr    = { null_coalesce_expr ~ ("|>" ~ null_coalesce_expr)* }
 null_coalesce_expr = { or_expr ~ (null_coalesce_op ~ or_expr)* }
-or_expr    = { and_expr ~ (or_op ~ and_expr)* }
-and_expr   = { not_expr ~ (and_op ~ not_expr)* }
-not_expr   = { comparison }
-comparison = { arith_expr ~ (comp_op ~ arith_expr)* }
-arith_expr = { term ~ ((add_op | sub_op) ~ term)* }
-term       = { factor ~ ((mul_op | div_op | mod_op) ~ factor)* }
-factor     = { unary_op* ~ atom ~ try_op? }</code></pre>
+or_expr          = { and_expr ~ (or_op ~ and_expr)* }
+and_expr         = { not_expr ~ (and_op ~ not_expr)* }
+not_expr         = { comparison }
+comparison       = { arith_expr ~ (comp_op ~ arith_expr)* }
+arith_expr       = { term ~ ((add_op | sub_op) ~ term)* }
+term             = { pow_expr ~ ((mul_op | div_op | mod_op) ~ pow_expr)* }
+pow_expr         = { factor ~ (pow_op ~ factor)* }                      // ** exponentiation
+factor           = { unary_op* ~ atom ~ try_op? }                       // Highest (tight) binding</code></pre>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Pipeline Operator</h3>
+                <p>The pipeline operator <code>|></code> threads the left operand as the first argument of the right operand, enabling left-to-right function composition:</p>
+                <div class="code-example">
+                    <div class="code-header">
+                        <span class="code-title">Pipeline Grammar</span>
+                    </div>
+                    <pre><code>pipeline_expr = { null_coalesce_expr ~ ("|>" ~ null_coalesce_expr)* }
+
+// Examples:
+result = items |> Ogunda.map(fn(x) { x * 2 }) |> Ogunda.filter(fn(x) { x > 10 });
+// Equivalent to: Ogunda.filter(Ogunda.map(items, fn(x) { x * 2 }), fn(x) { x > 10 })</code></pre>
+                </div>
+            </div>
             </div>
 
             <div class="grammar-section">
@@ -455,6 +530,7 @@ not_op = { "!" | "kii" | "not" }
 
 // Other
 null_coalesce_op = { "??" }
+pow_op = { "**" }
 unary_op = { "+" | "-" | "&" | "*" }
 chain_op = { "." | "?." }
 try_op = { "?" }</code></pre>
@@ -465,22 +541,24 @@ try_op = { "?" }</code></pre>
                 <h3>Atom (Expression Base)</h3>
                 <div class="code-example">
                     <pre><code>atom = {
-    lambda_expr
-    | odu_call                      // Obara.fikun(10)
-    | method_call                   // obj.method(args)
-    | property_access               // obj.field
-    | function_call                 // func(args)
-    | index_access                  // arr[0] or arr?.[0]
-    | await_expr                    // reti expr
-    | list_literal                  // [1, 2, 3]
-    | map_literal                   // { "key": value }
-    | number                        // 42, 3.14, 0xFF, 0b101
-    | interpolated_string           // $"Hello {name}"
-    | string                        // "text" or 'text'
-    | boolean                       // true, false, otito, iro
-    | nil                           // null, nil, ofo
-    | ident                         // variable name
-    | "(" ~ expression ~ ")"        // grouping
+    lambda_expr                    // ese(x) { x * 2 }
+    | odu_call                     // Obara.fikun(10)
+    | method_call                  // obj.method(args)
+    | property_access              // obj.field
+    | function_call                // func(args)
+    | index_access                 // arr[0] or arr?.[0]
+    | await_expr                   // reti expr
+    | move_expr                    // yanda expr (ownership transfer)
+    | list_literal                 // [1, 2, 3]
+    | map_literal                  // { "key": value }
+    | set_literal                  // Set { 1, 2, 3 }
+    | number                       // 42, 3.14, 0xFF, 0b101
+    | interpolated_string          // $"Hello {name}"
+    | string                       // "text" or 'text'
+    | boolean                      // true, false, otito, iro
+    | nil                          // null, nil, ofo
+    | ident                        // variable name
+    | "(" ~ expression ~ ")"       // grouping
 }</code></pre>
                 </div>
             </div>
@@ -502,6 +580,13 @@ string = {
     | "'" ~ ( (!("'" | "\\") ~ ANY) | ("\\" ~ ANY) )* ~ "'"
 }
 
+// Set literal: Set { 1, 2, 3 }
+set_literal = { set_kw ~ "{" ~ (expression ~ ("," ~ expression)*)? ~ "}" }
+set_kw = { "Set" | "set" }
+
+// Sets are unordered collections of unique values:
+// ayanmo colors = Set { "red", "green", "blue" };
+
 // Interpolated string: $"Hello {name}"
 interpolated_string = { "$" ~ "\"" ~ (interp_part)* ~ "\"" }
 interp_text = { "\"" | "{" | "\\" ... }
@@ -522,6 +607,19 @@ nil = { "ofo" | "null" | "nil" }</code></pre>
 
 // Example: ese(x, y) { pada x + y; }
 // Equivalent to: fn(x, y) { return x + y; }</code></pre>
+                </div>
+            </div>
+
+            <div class="grammar-section">
+                <h3>Move Expression</h3>
+                <div class="code-example">
+                    <pre><code>move_expr = { move_kw ~ expression }
+
+move_kw = { "yanda" | "free" }
+
+// Transfers ownership of a value. After the move, the original
+// binding is invalidated and cannot be used.
+// Example: yanda large_data to worker;</code></pre>
                 </div>
             </div>
 

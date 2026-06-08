@@ -1,9 +1,0 @@
-[package]
-name = "ifa-docs"
-version = "1.3.0"
-edition = "2024"
-authors = ["Ifá-Lang Contributors"]
-description = "Documentation for Ifá-Lang"
-publish = false
-
-[dependencies]

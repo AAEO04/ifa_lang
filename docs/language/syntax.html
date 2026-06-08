@@ -7,7 +7,7 @@
     <title>Syntax Reference - Ifa-Lang</title>
     <meta name="description" content="Complete syntax reference for Ifa-Lang programming language">
     <link rel="stylesheet" href="../js/common.css">
-    <script src="../js/nav.js" defer></script>
+    <script src="../js/nav.js"></script>
 </head>
 
 <body>
@@ -251,6 +251,10 @@ ewo balance >= 0;
 assert x >= 0, "x must be non-negative";
 verify balance >= 0;
 
+// Type assertion
+assert_type(value, Int);
+assert_type(result, Str);
+
 // Okanran (explicit throw)
 Okanran.kigbe("Something went wrong");</code></pre>
             </div>
@@ -278,6 +282,19 @@ iba { yokuro, pipin } from std.oturupon;
 // Import from sub-modules
 iba std.crypto.sha256;
 import std.crypto.sha256;</code></pre>
+            </div>
+
+            <h3>Type Aliases</h3>
+            <p>Create shorthand names for types:</p>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Alias Declarations</span>
+                </div>
+                <pre><code>// Create a type alias
+alias Handle = Iwa&lt;Resource&gt;;
+
+// Use the alias
+ayanmo conn: Handle = open_connection();</code></pre>
             </div>
 
             <h3>What DOESN'T Need Imports</h3>
@@ -494,6 +511,19 @@ defer {
     Irosu.fo("Cleaning up...");
 }</code></pre>
             </div>
+
+            <h3>Strict Mode</h3>
+            <p>The <code>abo</code> directive enables strict mode — the Babalawo enforces additional static checks including type annotations on all variables and function parameters:</p>
+            <div class="code-example">
+                <div class="code-header">
+                    <span class="code-title">Strict Mode</span>
+                </div>
+                <pre><code>abo;                    // Enable strict mode
+
+// Strict mode requires explicit type hints:
+ayanmo x: Int = 5;      // OK
+// ayanmo y = 5;        // ERROR: missing type hint in strict mode</code></pre>
+            </div>
         </div>
 
         <div class="step">
@@ -623,6 +653,7 @@ ayanmo n = ofo;              // null / nil
 // Collections
 ayanmo list = [1, 2, 3];
 ayanmo map = {"a": 1, "b": 2};
+ayanmo set = Set {1, 2, 3};           // Set literal (unique, unordered)
 
 // Low-level types (in unsafe contexts)
 ayanmo addr: u64 = 0xdeadbeef;
@@ -746,6 +777,14 @@ Ika.tumo_html("<b>text</b>");         // "text" (strip HTML)</code></pre>
                     <tr><td>Ebo</td><td>ebo</td><td>sacrifice</td></tr>
                     <tr><td>Public</td><td>gbangba/fi</td><td>public/export</td></tr>
                     <tr><td>Odu</td><td>odu</td><td>class</td></tr>
+                    <tr><td>Iwa</td><td>iwa</td><td>protocol/interface</td></tr>
+                    <tr><td>Opon</td><td>opon</td><td>mem</td></tr>
+                    <tr><td>Alias</td><td>alias</td><td>alias</td></tr>
+                    <tr><td>Strict</td><td>abo</td><td>abo</td></tr>
+                    <tr><td>Assert Type</td><td>assert_type</td><td>assert_type</td></tr>
+                    <tr><td>Set</td><td>Set</td><td>Set (capitalized)</td></tr>
+                    <tr><td>Move</td><td>yanda</td><td>move</td></tr>
+                    <tr><td>Co-op</td><td>ajose</td><td>co-op</td></tr>
                 </tbody>
             </table>
 

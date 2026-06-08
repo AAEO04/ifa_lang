@@ -87,6 +87,7 @@ impl OponSize {
     }
 
     /// Parse from string (supports both Yoruba and English names)
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             // Yoruba names
@@ -359,7 +360,7 @@ impl Opon {
     /// Record an event in the flight recorder
     pub fn record(&mut self, spirit: &str, action: &str, value: &IfaValue) {
         let epoch_id = self.current_epoch().map(|e| e.id);
-        
+
         let event = OponEvent {
             epoch_id,
             spirit: spirit.to_string(),

@@ -118,6 +118,10 @@ pub trait IwaPele<T> {
 
     /// Convert to IwaPeleResult
     fn gentle(self) -> IwaPeleResult<T>;
+
+    /// Escape hatch: Explicitly surrender ownership to the runtime (Native/WASM only)
+    /// Bypasses static lifecycle checks, shifting responsibility to dynamic CircuitBreakers.
+    fn yanda(self) -> T;
 }
 
 impl<T> IwaPele<T> for Option<T> {
@@ -134,6 +138,14 @@ impl<T> IwaPele<T> for Option<T> {
     fn gentle(self) -> IwaPeleResult<T> {
         self.ok_or_else(|| IwaPeleError::missing("value"))
     }
+
+    #[inline]
+    fn yanda(self) -> T {
+        // In actual implementation, this would interact with the VM's event loop
+        // or a global CircuitBreaker registry. For now, it functions as an explicit unwrap
+        // that Babalawo's static analyzer permits to escape scope.
+        self.expect("yanda: surrender failed, value was missing")
+    }
 }
 
 impl<T, E: fmt::Debug> IwaPele<T> for Result<T, E> {
@@ -149,6 +161,14 @@ impl<T, E: fmt::Debug> IwaPele<T> for Result<T, E> {
 
     fn gentle(self) -> IwaPeleResult<T> {
         self.map_err(|e| IwaPeleError::new(IwaPeleErrorKind::OperationFailed, format!("{:?}", e)))
+    }
+
+    #[inline]
+    fn yanda(self) -> T {
+        match self {
+            Ok(v) => v,
+            Err(e) => panic!("yanda: surrender failed, operation error: {:?}", e),
+        }
     }
 }
 

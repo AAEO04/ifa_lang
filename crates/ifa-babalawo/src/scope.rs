@@ -1,3 +1,4 @@
+
 use ifa_types::ast::{Span, TypeHint, Visibility};
 use std::collections::HashMap;
 
@@ -14,6 +15,12 @@ pub struct VarInfo {
 pub struct Scope {
     pub values: HashMap<String, VarInfo>,
     pub parent: Option<Box<Scope>>,
+}
+
+impl Default for Scope {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Scope {
@@ -90,7 +97,7 @@ impl ScopeChain {
     }
 
     pub fn enter_scope(&mut self) {
-        let new_current = Scope::child(std::mem::replace(&mut self.current, Scope::new()));
+        let new_current = Scope::child(std::mem::take(&mut self.current));
         self.current = new_current;
     }
 

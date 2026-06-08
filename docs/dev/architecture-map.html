@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../js/common.css">
+    <title>Architecture Map — Ifá-Lang</title>
+    <style>
+        /* ── Zone containers ────────────────────── */
+        .arch-zone {
+            margin: 2rem 0;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+        .arch-zone h2 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.4rem;
+        }
+        .zone-label {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 1px 6px;
+            border: 1px solid var(--dim);
+            color: var(--dim);
+            margin-bottom: 0.5rem;
+        }
+
+        /* ── Stats bar ──────────────────────────── */
+        .stats-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+        }
+        .stat {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
+        }
+        .stat-num {
+            font-size: 1.4rem;
+            color: var(--green);
+            font-weight: 700;
+        }
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--dim);
+        }
+
+        /* ── Pipeline Flow ──────────────────────── */
+        .pipeline-flow {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+            justify-content: center;
+        }
+        .pipe-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 0.5rem 0.75rem;
+            text-align: center;
+            min-width: 90px;
+            font-size: 0.8rem;
+            border-left: 3px solid var(--green);
+        }
+        .pipe-box .crate-name {
+            color: var(--green);
+            font-weight: 700;
+        }
+        .pipe-box .files {
+            font-size: 0.65rem;
+            color: var(--dim);
+            margin-top: 2px;
+        }
+        .pipe-box .files a {
+            color: var(--dim);
+            text-decoration: none;
+        }
+        .pipe-box .files a:hover {
+            color: var(--green);
+            text-decoration: underline;
+        }
+        .pipe-arrow {
+            color: var(--dim);
+            font-size: 1.2rem;
+        }
+        .pipe-side {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            margin: 0.5rem 0;
+        }
+        .pipe-side-item {
+            font-size: 0.75rem;
+            background: var(--bg);
+            border: 1px dashed var(--amber);
+            padding: 0.3rem 0.6rem;
+            border-left: 3px solid var(--amber);
+        }
+        .pipe-side-item a {
+            color: var(--amber);
+            text-decoration: none;
+        }
+        .pipe-side-item a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Dependency Grid ────────────────────── */
+        .dep-grid {
+            display: grid;
+            grid-template-columns: 130px repeat(17, 1fr);
+            font-size: 0.65rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+        .dep-grid .cell {
+            padding: 3px 2px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+        }
+        .dep-grid .cell.header-y {
+            font-weight: 600;
+            color: var(--green);
+            text-align: right;
+            padding-right: 6px;
+            position: sticky;
+            left: 0;
+            background: var(--bg-card);
+            z-index: 1;
+        }
+        .dep-grid .cell.header-x {
+            font-weight: 600;
+            color: var(--amber);
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+            padding: 6px 2px;
+            font-size: 0.6rem;
+        }
+        .dep-grid .cell.dot {
+            color: var(--green);
+        }
+        .dep-grid .cell.opt {
+            color: var(--amber);
+        }
+        .dep-grid .cell.feat {
+            color: #6aafff;
+        }
+        .dep-grid .cell.self {
+            color: var(--dim);
+        }
+        .dep-grid .cell.empty {
+            color: transparent;
+        }
+        .dep-legend {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: var(--dim);
+            margin-bottom: 0.5rem;
+        }
+        .dep-legend span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ── Crate Cards ────────────────────────── */
+        .crate-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--green);
+            margin: 1rem 0;
+            padding: 1rem 1.25rem;
+        }
+        .crate-card details {
+            margin-top: 0.5rem;
+        }
+        .crate-card details summary {
+            cursor: pointer;
+            color: var(--amber);
+            font-size: 0.8rem;
+            user-select: none;
+        }
+        .crate-card details summary:hover {
+            color: var(--green);
+        }
+        .crate-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .crate-card-title h3 {
+            margin: 0;
+            color: var(--green);
+        }
+        .crate-card-title .crate-path {
+            font-size: 0.75rem;
+            color: var(--dim);
+        }
+        .crate-card-title .crate-path a {
+            color: var(--dim);
+            text-decoration: none;
+        }
+        .crate-card-title .crate-path a:hover {
+            color: var(--green);
+            text-decoration: underline;
+        }
+        .crate-card .crate-meta {
+            font-size: 0.8rem;
+            color: var(--dim);
+            margin: 0.3rem 0;
+        }
+        .crate-card .crate-meta strong {
+            color: var(--amber);
+        }
+        .file-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+            margin-top: 0.5rem;
+        }
+        .file-table th {
+            text-align: left;
+            color: var(--green);
+            border-bottom: 1px solid var(--border);
+            padding: 0.3rem 0.5rem;
+            font-weight: 500;
+        }
+        .file-table td {
+            padding: 0.3rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        .file-table .file-name {
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+        }
+        .file-table .file-name a {
+            color: var(--text);
+            text-decoration: none;
+        }
+        .file-table .file-name a:hover {
+            color: var(--green);
+            text-decoration: underline;
+        }
+        .file-arrow {
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+        .file-arrow .to {
+            color: var(--green);
+        }
+        .file-arrow .from {
+            color: var(--amber);
+        }
+
+        /* ── Domain Matrix ──────────────────────── */
+        .domain-grid {
+            display: grid;
+            grid-template-columns: auto auto auto auto 1fr auto;
+            font-size: 0.78rem;
+            margin: 1rem 0;
+        }
+        .domain-grid .dg-cell {
+            padding: 0.3rem 0.6rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .domain-grid .dg-hdr {
+            color: var(--green);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            padding: 0.4rem 0.6rem;
+        }
+        .domain-grid .dg-name {
+            font-weight: 500;
+        }
+        .domain-grid .dg-id {
+            color: var(--dim);
+            text-align: center;
+        }
+        .domain-grid .dg-always {
+            color: var(--green);
+            font-size: 0.7rem;
+        }
+        .domain-grid .dg-gated {
+            color: var(--amber);
+            font-size: 0.7rem;
+        }
+        .domain-grid .dg-gate {
+            font-size: 0.7rem;
+            color: var(--dim);
+        }
+        .domain-grid .dg-file {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+        }
+        .domain-grid .dg-file a {
+            color: var(--dim);
+            text-decoration: none;
+        }
+        .domain-grid .dg-file a:hover {
+            color: var(--green);
+            text-decoration: underline;
+        }
+        .domain-grid .dg-methods {
+            color: var(--dim);
+            text-align: right;
+        }
+
+        /* ── Feature tree ───────────────────────── */
+        .feat-tree {
+            font-size: 0.8rem;
+            line-height: 1.8;
+        }
+        .feat-tree .feat-root {
+            color: var(--green);
+            font-weight: 700;
+        }
+        .feat-tree .feat-child {
+            color: var(--text);
+            margin-left: 1.5rem;
+        }
+        .feat-tree .feat-child .arrow {
+            color: var(--dim);
+            margin: 0 0.4rem;
+        }
+        .feat-tree .feat-gate {
+            color: var(--amber);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        /* ── Navigation grid for internal links ─── */
+        .arch-nav {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+            font-size: 0.8rem;
+        }
+        .arch-nav a {
+            padding: 0.3rem 0.6rem;
+            border: 1px solid var(--border);
+            color: var(--dim);
+            text-decoration: none;
+        }
+        .arch-nav a:hover {
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        /* ── Responsive ─────────────────────────── */
+        @media (max-width: 720px) {
+            .dep-grid { font-size: 0.55rem; grid-template-columns: 80px repeat(17, 1fr); }
+            .pipeline-flow { flex-direction: column; }
+            .pipe-arrow { transform: rotate(90deg); }
+        }
+
+        /* ── Color-coded borders for crate layers ── */
+        .crate-card.layer-foundation { border-left-color: #4af626; }
+        .crate-card.layer-pipeline  { border-left-color: #ffb000; }
+        .crate-card.layer-runtime   { border-left-color: #6aafff; }
+        .crate-card.layer-stdlib    { border-left-color: #b06aff; }
+        .crate-card.layer-tooling   { border-left-color: #ff6666; }
+    </style>
+</head>
+
+<body>
+    <div id="nav-placeholder"></div>
+    <div class="breadcrumbs">
+        <div class="breadcrumbs-container">
+            <ul class="breadcrumb-list"></ul>
+        </div>
+    </div>
+    <div class="container">
+        <div class="terminal-header"><span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span><span class="terminal-title">arch.ifa</span></div>
+        <div class="terminal-body">
+
+            <header>
+                <h1><span class="pattern">—</span> Architecture Map</h1>
+                <p class="subtitle">Every crate, file, and dependency — verified from <code>crates/</code> source code</p>
+            </header>
+
+            <div class="note">
+                <strong>How to read this page:</strong><br>
+                <strong>Devs</strong> — use the crate deep-dive (§4) to find the exact file for any change; follow the <code>◀</code>/<code>▶</code> arrows to see which other crates are affected.<br>
+                <strong>Maintainers</strong> — use the dependency grid (§2) to assess change impact and the feature tree (§5) to understand flag propagation.<br>
+                <strong>Users</strong> — follow the pipeline flow (§1) to understand what happens when you run <code>ifa run file.ifa</code>; check the domain matrix (§3) for available functionality.
+            </div>
+
+            <div class="stats-bar">
+                <div class="stat"><div class="stat-num">17</div><div class="stat-label">workspace crates</div></div>
+                <div class="stat"><div class="stat-num">14</div><div class="stat-label">library crates</div></div>
+                <div class="stat"><div class="stat-num">2</div><div class="stat-label">binary crates</div></div>
+                <div class="stat"><div class="stat-num">1</div><div class="stat-label">proc-macro crate</div></div>
+                <div class="stat"><div class="stat-num">93</div><div class="stat-label">opcodes</div></div>
+                <div class="stat"><div class="stat-num">16</div><div class="stat-label">Odù domains</div></div>
+            </div>
+
+            <!-- ─── Zone 1: Pipeline Flow ─────────────── -->
+            <div class="arch-zone" id="zone-pipeline">
+                <span class="zone-label">§1</span>
+                <h2>Compilation Pipeline &amp; Runtime Flow</h2>
+                <p style="font-size:0.85rem;color:var(--dim)">
+                    How an <code>.ifa</code> source file becomes executing bytecode. Each box links to that crate's source files.
+                </p>
+
+                <div class="pipeline-flow">
+                    <div class="pipe-box" style="border-left-color:var(--amber)">
+                        <div class="crate-name">.ifa Source</div>
+                        <div class="files"><code>file.ifa</code></div>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+
+                    <div class="pipe-box" style="border-left-color:var(--amber)">
+                        <div class="crate-name"><a href="../../crates/ifa-parser/src/lib.rs" style="color:var(--green);text-decoration:none">ifa-parser</a></div>
+                        <div class="files">
+                            <a href="../../crates/ifa-parser/src/lexer.rs">lexer.rs</a> ·
+                            <a href="../../crates/ifa-parser/src/parser.rs">parser.rs</a> ·
+                            <a href="../../crates/ifa-parser/src/grammar.pest">grammar.pest</a>
+                        </div>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+
+                    <div class="pipe-box" style="border-left-color:var(--amber)">
+                        <div class="crate-name"><a href="../../crates/ifa-compiler/src/lib.rs" style="color:var(--green);text-decoration:none">ifa-compiler</a></div>
+                        <div class="files">
+                            <a href="../../crates/ifa-compiler/src/lib.rs">lib.rs</a> ·
+                            <a href="../../crates/ifa-compiler/src/embedded.rs">embedded.rs</a>
+                        </div>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+
+                    <div class="pipe-box">
+                        <div class="crate-name"><a href="../../crates/ifa-bytecode/src/lib.rs" style="color:var(--green);text-decoration:none">ifa-bytecode</a></div>
+                        <div class="files">
+                            <a href="../../crates/ifa-bytecode/src/lib.rs">lib.rs</a> ·
+                            <a href="../../crates/ifa-bytecode/src/format.rs">format.rs</a> ·
+                            <a href="../../crates/ifa-bytecode/src/embedded.rs">embedded.rs</a>
+                        </div>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+
+                    <div class="pipe-box" style="border-left-color:#6aafff">
+                        <div class="crate-name"><a href="../../crates/ifa-vm/src/vm.rs" style="color:var(--green);text-decoration:none">ifa-vm</a></div>
+                        <div class="files">
+                            <a href="../../crates/ifa-vm/src/vm.rs">vm.rs</a> ·
+                            <a href="../../crates/ifa-vm/src/opon.rs">opon.rs</a> ·
+                            <a href="../../crates/ifa-vm/src/actor.rs">actor.rs</a>
+                        </div>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+
+                    <div class="pipe-box" style="border-left-color:var(--green)">
+                        <div class="crate-name">Output</div>
+                        <div class="files">stdout / file / network</div>
+                    </div>
+                </div>
+
+                <div class="pipe-side">
+                    <div class="pipe-side-item">
+                        <strong>Parallel analysis:</strong>
+                        <a href="../../crates/ifa-babalawo/src/checks.rs">ifa-babalawo</a> runs alongside compilation
+                        (<code>main.rs:490-497</code>)
+                    </div>
+                    <div class="pipe-side-item">
+                        <strong>Domain dispatch:</strong>
+                        <a href="../../crates/ifa-std/src/vm_registry.rs">ifa-std (StdRegistry)</a> implements
+                        <code>OduRegistry</code> — bridges VM opcodes to domain methods
+                    </div>
+                    <div class="pipe-side-item">
+                        <strong>Alternative path:</strong>
+                        <a href="../../crates/ifa-transpiler/src/transpiler/core.rs">ifa-transpiler</a> converts AST → Rust
+                        source for <code>ifa build</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── Zone 2: Dependency Grid ──────────── -->
+            <div class="arch-zone" id="zone-deps">
+                <span class="zone-label">§2</span>
+                <h2>Inter-Crate Dependency Matrix</h2>
+                <p style="font-size:0.85rem;color:var(--dim)">
+                    <code>●</code> = direct dep &ensp; <code>○</code> = optional / feature-gated &ensp; <code>▷</code> = feature propagation
+                    &ensp; Rows <em>depend on</em> columns.
+                </p>
+
+                <div class="dep-grid">
+                    <div class="cell self"></div>
+                    <div class="cell header-x">bytecode</div>
+                    <div class="cell header-x">types</div>
+                    <div class="cell header-x">parser</div>
+                    <div class="cell header-x">compiler</div>
+                    <div class="cell header-x">transpiler</div>
+                    <div class="cell header-x">vm</div>
+                    <div class="cell header-x">std</div>
+                    <div class="cell header-x">babalawo</div>
+                    <div class="cell header-x">sandbox</div>
+                    <div class="cell header-x">embedded</div>
+                    <div class="cell header-x">infra</div>
+                    <div class="cell header-x">fmt</div>
+                    <div class="cell header-x">macros</div>
+                    <div class="cell header-x">wasm</div>
+                    <div class="cell header-x">cli</div>
+                    <div class="cell header-x">inst-core</div>
+                    <div class="cell header-x">inst-gui</div>
+
+                    <div class="cell header-y">ifa-bytecode</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-types</div><div class="cell dot">●</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-parser</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-compiler</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-transpiler</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-vm</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell opt">○</div><div class="cell opt">○</div><div class="cell opt">○</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell opt">○</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-std</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell opt">○</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-babalawo</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell self">✕</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-sandbox</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-embedded</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-infra</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-fmt</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-macros</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-wasm</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell self">✕</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div>
+                    <div class="cell header-y">ifa-cli</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell dot">●</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell self">✕</div><div class="cell dot">●</div><div class="cell empty">·</div>
+                    <div class="cell header-y">inst-core</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell self">✕</div><div class="cell empty">·</div>
+                    <div class="cell header-y">inst-gui</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell empty">·</div><div class="cell dot">●</div><div class="cell self">✕</div>
+                </div>
+
+                <p style="font-size:0.7rem;color:var(--dim);margin-top:0.5rem">
+                    <strong>Key:</strong> `ifa-cli` is the top-level consumer (10 workspace deps).
+                    `ifa-bytecode` is the true foundation (zero deps).
+                    `ifa-vm` optionally pulls in parser/compiler/transpiler via its <code>compiler</code> feature.
+                </p>
+            </div>
+
+            <!-- ─── Zone 3: Odu Domain Matrix ────────── -->
+            <div class="arch-zone" id="zone-domains">
+                <span class="zone-label">§3</span>
+                <h2>Odù Domain Matrix</h2>
+                <p style="font-size:0.85rem;color:var(--dim)">
+                    All 16 Odù domains with feature gates, source file locations, and method counts.
+                    Implemented in <a href="../../crates/ifa-std/src/odu/mod.rs" style="color:var(--dim)">ifa-std/src/odu/mod.rs</a>
+                    and dispatched via <a href="../../crates/ifa-std/src/vm_registry.rs" style="color:var(--dim)">vm_registry.rs</a>.
+                </p>
+
+                <div class="domain-grid">
+                    <div class="dg-hdr">Domain</div>
+                    <div class="dg-hdr" style="text-align:center">ID</div>
+                    <div class="dg-hdr">Status</div>
+                    <div class="dg-hdr">Feature Gate</div>
+                    <div class="dg-hdr">Source File</div>
+                    <div class="dg-hdr" style="text-align:right">Methods</div>
+
+                    <div class="dg-cell dg-name">Ogbe</div><div class="dg-cell dg-id">0</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/ogbe.rs">odu/ogbe.rs</a></div><div class="dg-cell dg-methods">5</div>
+                    <div class="dg-cell dg-name">Oyeku</div><div class="dg-cell dg-id">1</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/oyeku.rs">odu/oyeku.rs</a></div><div class="dg-cell dg-methods">4</div>
+                    <div class="dg-cell dg-name">Iwori</div><div class="dg-cell dg-id">2</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/iwori.rs">odu/iwori.rs</a></div><div class="dg-cell dg-methods">4</div>
+                    <div class="dg-cell dg-name">Odi</div><div class="dg-cell dg-id">3</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/odi.rs">odu/odi.rs</a></div><div class="dg-cell dg-methods">6</div>
+                    <div class="dg-cell dg-name">Irosu</div><div class="dg-cell dg-id">4</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/irosu.rs">odu/irosu.rs</a></div><div class="dg-cell dg-methods">8</div>
+                    <div class="dg-cell dg-name">Owonrin</div><div class="dg-cell dg-id">5</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/owonrin.rs">odu/owonrin.rs</a></div><div class="dg-cell dg-methods">5</div>
+                    <div class="dg-cell dg-name">Obara</div><div class="dg-cell dg-id">6</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/obara.rs">odu/obara.rs</a></div><div class="dg-cell dg-methods">24</div>
+                    <div class="dg-cell dg-name">Okanran</div><div class="dg-cell dg-id">7</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/okanran.rs">odu/okanran.rs</a></div><div class="dg-cell dg-methods">16</div>
+                    <div class="dg-cell dg-name">Ogunda</div><div class="dg-cell dg-id">8</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/ogunda.rs">odu/ogunda.rs</a></div><div class="dg-cell dg-methods">27</div>
+                    <div class="dg-cell dg-name">Osa</div><div class="dg-cell dg-id">9</div><div class="dg-cell dg-gated">⚡ gated</div><div class="dg-cell dg-gate"><code>async_runtime</code></div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/osa.rs">odu/osa.rs</a></div><div class="dg-cell dg-methods">2</div>
+                    <div class="dg-cell dg-name">Ika</div><div class="dg-cell dg-id">10</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/ika.rs">odu/ika.rs</a></div><div class="dg-cell dg-methods">15</div>
+                    <div class="dg-cell dg-name">Oturupon</div><div class="dg-cell dg-id">11</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/oturupon.rs">odu/oturupon.rs</a></div><div class="dg-cell dg-methods">6</div>
+                    <div class="dg-cell dg-name">Otura</div><div class="dg-cell dg-id">12</div><div class="dg-cell dg-gated">⚡ gated</div><div class="dg-cell dg-gate"><code>network</code></div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/otura.rs">odu/otura.rs</a></div><div class="dg-cell dg-methods">6</div>
+                    <div class="dg-cell dg-name">Irete</div><div class="dg-cell dg-id">13</div><div class="dg-cell dg-gated">⚡ gated</div><div class="dg-cell dg-gate"><code>crypto</code></div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/irete.rs">odu/irete.rs</a></div><div class="dg-cell dg-methods">19</div>
+                    <div class="dg-cell dg-name">Ose</div><div class="dg-cell dg-id">14</div><div class="dg-cell dg-gated">⚡ gated</div><div class="dg-cell dg-gate"><code>tui</code></div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/ose.rs">odu/ose.rs</a></div><div class="dg-cell dg-methods">14</div>
+                    <div class="dg-cell dg-name">Ofun</div><div class="dg-cell dg-id">15</div><div class="dg-cell dg-always">✅ always</div><div class="dg-cell dg-gate">—</div><div class="dg-cell dg-file"><a href="../../crates/ifa-std/src/odu/ofun.rs">odu/ofun.rs</a></div><div class="dg-cell dg-methods">10</div>
+                </div>
+
+                <p style="font-size:0.75rem;color:var(--dim);margin-top:0.5rem">
+                    <strong>Infra domains:</strong> CPU (18) · GPU (19) · Storage (20) · Sys (29) —
+                    in <a href="../../crates/ifa-std/src/hardware/" style="color:var(--dim)">ifa-std/src/hardware/</a>
+                </p>
+            </div>
+
+            <!-- ─── Zone 4: Crate Deep-Dive ──────────── -->
+            <div class="arch-zone" id="zone-crates">
+                <span class="zone-label">§4</span>
+                <h2>Crate Deep-Dive &amp; File Links</h2>
+                <p style="font-size:0.85rem;color:var(--dim)">
+                    Every workspace crate with all source files. File rows show <span class="file-arrow"><span class="to">▶</span> what it provides</span>
+                    and <span class="file-arrow"><span class="from">◀</span> what it consumes</span> from other crates.
+                    <strong>Expand</strong> a crate to see its file table.
+                </p>
+
+                <!-- LAYER: Foundation -->
+                <h3 style="color:#4af626;margin-top:1.5rem">Layer: Foundation (no_std)</h3>
+
+                <div class="crate-card layer-foundation">
+                    <div class="crate-card-title">
+                        <h3>ifa-bytecode</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-bytecode/Cargo.toml">crates/ifa-bytecode/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> (none — zero-dependency foundation)</div>
+                    <div class="crate-meta"><strong>Features:</strong> default = std, alloc, serde (optional)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-types (required), ifa-compiler, ifa-vm, ifa-embedded</div>
+                    <details>
+                        <summary>Show 5 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-bytecode/src/lib.rs">lib.rs</a></td><td><code>OpCode</code> enum — all 93 opcodes, from_u8, mnemonic, operand_bytes, stack_effect</td><td class="file-arrow"><span class="to">▶</span> every crate</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-bytecode/src/embedded.rs">embedded.rs</a></td><td><code>EmbeddedOpCode</code> — 26-opcode subset for no_std targets</td><td class="file-arrow"><span class="to">▶</span> ifa-embedded</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-bytecode/src/format.rs">format.rs</a></td><td><code>BytecodeHeader</code>, MAGIC, VERSION 3 — .ifab binary format</td><td class="file-arrow"><span class="to">▶</span> ifa-vm, ifa-cli</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-bytecode/src/error.rs">error.rs</a></td><td><code>ErrorCode</code>, <code>InvalidOpCode</code></td><td class="file-arrow"><span class="to">▶</span> ifa-types, ifa-vm</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-bytecode/src/validator.rs">validator.rs</a></td><td>Bytecode validation</td><td class="file-arrow"><span class="to">▶</span> ifa-vm</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <!-- LAYER: Pipeline -->
+                <h3 style="color:#ffb000;margin-top:1.5rem">Layer: Compilation Pipeline</h3>
+
+                <div class="crate-card layer-pipeline">
+                    <div class="crate-card-title">
+                        <h3>ifa-types</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-types/Cargo.toml">crates/ifa-types/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-bytecode</div>
+                    <div class="crate-meta"><strong>Features:</strong> default = std+serde+dashmap, vm (enables bytecode re-export)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> every crate except ifa-bytecode, ifa-macros, ifa-installer-core</div>
+                    <details>
+                        <summary>Show 18 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/value_union.rs">value_union.rs</a></td><td><code>IfaValue</code> — 32-byte tagged union (18 variants), Arc/IfaGc-backed</td><td class="file-arrow"><span class="to">▶</span> ifa-vm, ifa-std, ifa-cli</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/shared.rs">shared.rs</a></td><td><code>IfaShared</code> — Arc&lt;RwLock&gt;/DashMap for Send+Sync threading</td><td class="file-arrow"><span class="to">▶</span> ifa-vm actor model</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/domain.rs">domain.rs</a></td><td><code>OduDomain</code> enum — 16 Odù + 4 infra + 2 reserved</td><td class="file-arrow"><span class="to">▶</span> ifa-std, ifa-babalawo</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/ast.rs">ast.rs</a></td><td><code>Statement</code>, <code>Expression</code>, <code>Program</code>, <code>OduCall</code></td><td class="file-arrow"><span class="to">▶</span> ifa-parser, ifa-compiler, ifa-transpiler, ifa-babalawo</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/error.rs">error.rs</a></td><td><code>IfaError</code>, <code>IfaResult</code> — comprehensive error enum</td><td class="file-arrow"><span class="to">▶</span> every crate</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/nan_box.rs">nan_box.rs</a></td><td><code>NanBox</code> — NaN-boxing: 47-bit ints, floats, null, bool in 64-bit</td><td class="file-arrow"><span class="to">▶</span> ifa-vm arithmetic ops</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/gc.rs">gc.rs</a></td><td><code>IfaGc</code> — Bacon-Rajan cycle collector, per-actor heap</td><td class="file-arrow"><span class="to">▶</span> ifa-vm (List, Map, Closure)</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/compact_str.rs">compact_str.rs</a></td><td><code>CompactString</code> — SSO: ≤21 bytes inline, else Arc&lt;str&gt;</td><td class="file-arrow"><span class="to">▶</span> ifa-vm string handling</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/capability.rs">capability.rs</a></td><td><code>Ofun</code>, <code>CapabilitySet</code> — security capabilities</td><td class="file-arrow"><span class="to">▶</span> ifa-sandbox, ifa-babalawo</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/bytecode.rs">bytecode.rs</a></td><td><code>Bytecode</code> struct, <code>OponSize</code> (cfg vm)</td><td class="file-arrow"><span class="to">▶</span> ifa-vm</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/methods.rs">methods.rs</a></td><td><code>resolve_method_id</code> — Odu method ID mapping</td><td class="file-arrow"><span class="to">▶</span> ifa-compiler, ifa-vm</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/odu_metadata.rs">odu_metadata.rs</a></td><td>Domain metadata + method descriptor tables</td><td class="file-arrow"><span class="to">▶</span> ifa-babalawo</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/binary_ops.rs">binary_ops.rs</a></td><td>Binary operation helpers</td><td class="file-arrow"><span class="to">▶</span> ifa-vm</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/registry.rs">registry.rs</a></td><td><code>ResourceRegistry</code>, actor ID management</td><td class="file-arrow"><span class="to">▶</span> ifa-vm</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/target.rs">target.rs</a></td><td>Target triple enum</td><td class="file-arrow"><span class="to">▶</span> ifa-babalawo</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/lib.rs">lib.rs</a></td><td>Crate root, feature gates, re-exports</td><td class="file-arrow"><span class="to">▶</span> all consumers</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/traits.rs">traits.rs</a></td><td>Core traits (Display, etc.)</td><td class="file-arrow"><span class="to">▶</span> ifa-std</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-types/src/token.rs">token.rs</a></td><td>Token types for lexer</td><td class="file-arrow"><span class="to">▶</span> ifa-parser</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-pipeline">
+                    <div class="crate-card-title">
+                        <h3>ifa-parser</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-parser/Cargo.toml">crates/ifa-parser/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-types (vm)</div>
+                    <div class="crate-meta"><strong>Features:</strong> default = compiler (enables logos+pest)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-compiler, ifa-vm (opt), ifa-transpiler, ifa-fmt, ifa-cli, ifa-wasm</div>
+                    <details>
+                        <summary>Show 4 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-parser/src/lexer.rs">lexer.rs</a></td><td><code>tokenize()</code> — logos-based lexer, Token enum</td><td class="file-arrow"><span class="from">◀</span> logos &ensp;<span class="to">▶</span> parser.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-parser/src/parser.rs">parser.rs</a></td><td><code>parse()</code> → AST Program — pest-based PEG parser</td><td class="file-arrow"><span class="from">◀</span> ifa-types AST &ensp;<span class="to">▶</span> ifa-compiler</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-parser/src/grammar.pest">grammar.pest</a></td><td>PEG grammar definition — all language syntax rules</td><td class="file-arrow"><span class="from">◀</span> pest_derive</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-parser/src/lib.rs">lib.rs</a></td><td>Crate root, conditional module exports</td><td class="file-arrow"><span class="to">▶</span> all consumers</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-pipeline">
+                    <div class="crate-card-title">
+                        <h3>ifa-compiler</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-compiler/Cargo.toml">crates/ifa-compiler/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-types, ifa-parser, ifa-bytecode</div>
+                    <div class="crate-meta"><strong>Features:</strong> (none)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-vm (opt), ifa-cli</div>
+                    <details>
+                        <summary>Show 2 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-compiler/src/lib.rs">lib.rs</a></td><td><code>Compiler</code> — AST→bytecode, 2145 lines. Constant folding (E6), tail-call optimization, CallOduFast static resolution</td><td class="file-arrow"><span class="from">◀</span> ifa-parser AST, ifa-bytecode OpCode &ensp;<span class="to">▶</span> ifa-vm Bytecode</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-compiler/src/embedded.rs">embedded.rs</a></td><td>Embedded-target compilation helpers</td><td class="file-arrow"><span class="to">▶</span> ifa-embedded</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-pipeline">
+                    <div class="crate-card-title">
+                        <h3>ifa-transpiler</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-transpiler/Cargo.toml">crates/ifa-transpiler/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-types, ifa-parser</div>
+                    <div class="crate-meta"><strong>Features:</strong> (none)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-vm (opt), ifa-cli</div>
+                    <details>
+                        <summary>Show 8 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-transpiler/src/transpiler/core.rs">core.rs</a></td><td><code>RustTranspiler</code> — AST→Rust source, entry point</td><td class="file-arrow"><span class="from">◀</span> ifa-types AST, ifa-parser &ensp;<span class="to">▶</span> ifa-cli build</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-transpiler/src/transpiler/expressions.rs">expressions.rs</a></td><td>Expression transpilation: IfaExpr → Rust expressions</td><td class="file-arrow"><span class="from">◀</span> ifa-types IfaValue</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-transpiler/src/transpiler/statements.rs">statements.rs</a></td><td>Statement transpilation</td><td class="file-arrow"><span class="from">◀</span> ifa-types Statement</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-transpiler/src/transpiler/domains.rs">domains.rs</a></td><td>Odù domain method binding generation</td><td class="file-arrow"><span class="from">◀</span> ifa-types OduDomain</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-transpiler/src/transpiler/constants.rs">constants.rs</a></td><td>Constant transpilation helpers</td><td class="file-arrow"><span class="to">▶</span> expressions.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-transpiler/src/project_generator.rs">project_generator.rs</a></td><td><code>generate_project</code> — Cargo project from transpiled code</td><td class="file-arrow"><span class="to">▶</span> ifa-cli build</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-transpiler/src/lib.rs">lib.rs</a></td><td>Crate root, re-exports</td><td class="file-arrow"><span class="to">▶</span> all consumers</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <!-- LAYER: Runtime -->
+                <h3 style="color:#6aafff;margin-top:1.5rem">Layer: Runtime &amp; VM</h3>
+
+                <div class="crate-card layer-runtime">
+                    <div class="crate-card-title">
+                        <h3>ifa-vm</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-vm/Cargo.toml">crates/ifa-vm/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-types, ifa-bytecode, ifa-sandbox (opt), ifa-parser/compiler/transpiler (opt via compiler feature)</div>
+                    <div class="crate-meta"><strong>Features:</strong> default = native+parallel+sysinfo, compiler, network, audio, gpu</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-std, ifa-cli, ifa-wasm</div>
+                    <details>
+                        <summary>Show 15 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/vm.rs">vm.rs</a></td><td><code>IfaVM</code> — 3493 lines. step() dispatch, call_value(), execute(), async tasks, exception handling</td><td class="file-arrow"><span class="from">◀</span> ifa-bytecode OpCode, ifa-types IfaValue &ensp;<span class="to">▶</span> ifa-cli run</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/opon.rs">opon.rs</a></td><td><code>Opon</code> — epoch memory (Vec&lt;IfaValue&gt;, 4 sizes, flight recorder 256 events)</td><td class="file-arrow"><span class="from">◀</span> ifa-types IfaValue, OponSize</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/vm_ikin.rs">vm_ikin.rs</a></td><td>Ikin — runtime constant pool (Arc&lt;str&gt; Vec, O(1) access)</td><td class="file-arrow"><span class="from">◀</span> ifa-types IfaValue, ifa-bytecode</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/vm_iroke.rs">vm_iroke.rs</a></td><td>Iroke — instruction fetch, fuel metering (every 1024 ticks)</td><td class="file-arrow"><span class="to">▶</span> vm.rs step()</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/actor.rs">actor.rs</a></td><td><code>ActorTable</code> — OS-thread actor model, channel-based messaging</td><td class="file-arrow"><span class="from">◀</span> ifa-types Actor, IfaShared &ensp;<span class="to">▶</span> vm.rs spawn_actor</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/ebo.rs">ebo.rs</a></td><td><code>Ebo&lt;F&gt;</code>, <code>EboScope&lt;T,F&gt;</code> — RAII guards, defer!/ebo! macros</td><td class="file-arrow"><span class="to">▶</span> vm.rs resource mgmt</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/ajose.rs">ajose.rs</a></td><td><code>Ajose&lt;S,T&gt;</code> — reactive bindings, signals, subscriptions</td><td class="file-arrow"><span class="to">▶</span> vm.rs reactive values</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/iwa_pele.rs">iwa_pele.rs</a></td><td><code>IwaPele</code> — graceful error handling (Ok/Err discrimination)</td><td class="file-arrow"><span class="from">◀</span> ifa-types Result, IfaError</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/native.rs">native.rs</a></td><td><code>OduRegistry</code> trait — interface for domain dispatch</td><td class="file-arrow"><span class="to">▶</span> ifa-std StdRegistry</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/module_resolver.rs">module_resolver.rs</a></td><td><code>ModuleResolver</code>, <code>ImportGuard</code> — import resolution, circular dep detection</td><td class="file-arrow"><span class="from">◀</span> ifa-parser parse, ifa-compiler compile</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/ast.rs">ast.rs</a></td><td>Re-exports AST types from ifa-types</td><td class="file-arrow"><span class="from">◀</span> ifa-types ast</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/value.rs">value.rs</a></td><td>IfaValue re-exports (delegates to ifa-types)</td><td class="file-arrow"><span class="from">◀</span> ifa-types</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/error.rs">error.rs</a></td><td>IfaError/IfaResult re-exports</td><td class="file-arrow"><span class="from">◀</span> ifa-types</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/lib.rs">lib.rs</a></td><td>Crate root, module declarations, re-exports</td><td class="file-arrow"><span class="to">▶</span> all consumers</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-vm/src/oracle.rs">oracle.rs</a></td><td>Test oracle for conformance testing (cfg test+compiler)</td><td class="file-arrow">test support</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-runtime">
+                    <div class="crate-card-title">
+                        <h3>ifa-embedded</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-embedded/Cargo.toml">crates/ifa-embedded/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-bytecode (no default features)</div>
+                    <div class="crate-meta"><strong>Features:</strong> alloc, iot, storage, esp32, stm32, rp2040, force_64bit</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-infra</div>
+                    <details>
+                        <summary>Show 6 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-embedded/src/lib.rs">lib.rs</a></td><td><code>EmbeddedVm</code> — no_std bytecode VM, <code>EmbeddedValue</code>, HAL traits</td><td class="file-arrow"><span class="from">◀</span> ifa-bytecode EmbeddedOpCode</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-embedded/src/embedded_ikin.rs">embedded_ikin.rs</a></td><td>Ikin-optimized execution for embedded</td><td class="file-arrow"><span class="to">▶</span> lib.rs VM loop</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-embedded/src/embedded_iroke.rs">embedded_iroke.rs</a></td><td>Iroke polling/yield for embedded</td><td class="file-arrow"><span class="to">▶</span> lib.rs VM loop</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-embedded/src/iot.rs">iot.rs</a></td><td>IoT extensions — GPIO, Serial, JSON (cfg iot)</td><td class="file-arrow"><span class="to">▶</span> embedded HAL traits</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-embedded/src/storage.rs">storage.rs</a></td><td>Storage extensions (cfg storage)</td><td class="file-arrow">FlashStorage trait</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-embedded/src/slab.rs">slab.rs</a></td><td>Memory slab allocator</td><td class="file-arrow"><span class="to">▶</span> lib.rs embedded memory</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-runtime">
+                    <div class="crate-card-title">
+                        <h3>ifa-sandbox</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-sandbox/Cargo.toml">crates/ifa-sandbox/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-types (std)</div>
+                    <div class="crate-meta"><strong>Features:</strong> (none)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-vm (opt native), ifa-std (opt network/database), ifa-babalawo, ifa-cli</div>
+                    <details>
+                        <summary>Show 7 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-sandbox/src/igbale.rs">igbale.rs</a></td><td><code>Igbale</code> — native OS sandbox (Linux namespaces, resource limits)</td><td class="file-arrow"><span class="from">◀</span> ifa-types CapabilitySet</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-sandbox/src/omnibox.rs">omnibox.rs</a></td><td><code>OmniBox</code> — WASM-based isolation (wasmtime 43.0)</td><td class="file-arrow"><span class="from">◀</span> wasmtime, ifa-types Ofun</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-sandbox/src/config.rs">config.rs</a></td><td><code>SandboxConfig</code>, <code>SecurityProfile</code></td><td class="file-arrow"><span class="to">▶</span> igbale.rs, omnibox.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-sandbox/src/runtime.rs">runtime.rs</a></td><td>Native capability enforcement at domain boundaries</td><td class="file-arrow"><span class="to">▶</span> ifa-vm native.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-sandbox/src/monitor.rs">monitor.rs</a></td><td><code>ResourceMonitor</code> — CPU, memory, files, network tracking</td><td class="file-arrow"><span class="to">▶</span> ifa-cli sandbox command</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-sandbox/src/sandbox.rs">sandbox.rs</a></td><td><code>Sandbox</code> — process isolation wrapper</td><td class="file-arrow"><span class="to">▶</span> ifa-cli</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-sandbox/src/lib.rs">lib.rs</a></td><td>Crate root, re-exports</td><td class="file-arrow"><span class="to">▶</span> all consumers</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <!-- LAYER: Std Library -->
+                <h3 style="color:#b06aff;margin-top:1.5rem">Layer: Standard Library</h3>
+
+                <div class="crate-card layer-stdlib">
+                    <div class="crate-card-title">
+                        <h3>ifa-std</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-std/Cargo.toml">crates/ifa-std/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-types (dashmap), ifa-vm, ifa-infra, ifa-sandbox (opt)</div>
+                    <div class="crate-meta"><strong>Features:</strong> default = network+database+parallel+dashmap, full, async_runtime, crypto, tui, gpu, etc.</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-cli, ifa-wasm</div>
+                    <details>
+                        <summary>Show 29 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/vm_registry.rs">vm_registry.rs</a></td><td><code>StdRegistry</code> — bridges all 16 Odù to VM via OduRegistry trait</td><td class="file-arrow"><span class="from">◀</span> ifa-vm OduRegistry &ensp;<span class="to">▶</span> ifa-cli StdRegistry</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/odu/mod.rs">odu/mod.rs</a></td><td>Module aggregator — feature-gates osa/otura/ose/irete</td><td class="file-arrow"><span class="to">▶</span> vm_registry.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/traits.rs">traits.rs</a></td><td><code>OduDomain</code> trait + impl_odu_domain! macro</td><td class="file-arrow"><span class="from">◀</span> ifa-types OduDomain</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/esu.rs">esu.rs</a></td><td><code>Esu</code> — root entry point for stdlib binding</td><td class="file-arrow"><span class="to">▶</span> vm_registry.rs</td></tr>
+                            <tr><td class="file-name" style="font-size:0.7rem"><a href="../../crates/ifa-std/src/odu/ogbe.rs">odu/ogbe.rs</a> … <a href="../../crates/ifa-std/src/odu/ofun.rs">ofun.rs</a></td><td>16 Odù domain implementations — see §3 Domain Matrix</td><td class="file-arrow"><span class="from">◀</span> ifa-vm VmContext &ensp;<span class="to">▶</span> VM domain dispatch</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/hardware/mod.rs">hardware/mod.rs</a></td><td>Hardware module aggregator</td><td class="file-arrow"><span class="to">▶</span> vm_registry.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/hardware/cpu.rs">hardware/cpu.rs</a></td><td>CPU/parallel compute (domain 18)</td><td class="file-arrow"><span class="from">◀</span> ifa-infra compute</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/hardware/gpu.rs">hardware/gpu.rs</a></td><td>GPU compute (domain 19, cfg gpu)</td><td class="file-arrow"><span class="from">◀</span> ifa-infra gpu</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/hardware/storage.rs">hardware/storage.rs</a></td><td>Storage persistence (domain 20)</td><td class="file-arrow"><span class="from">◀</span> ifa-infra storage</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/hardware/sys.rs">hardware/sys.rs</a></td><td>System/kernel info (domain 29)</td><td class="file-arrow"><span class="from">◀</span> ifa-infra kernel</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/opele.rs">opele.rs</a></td><td>Opele chain — tamper-evident append-only log</td><td class="file-arrow"><span class="from">◀</span> ifa-types OduDomain</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/ffi.rs">ffi.rs</a></td><td>Foreign Function Interface (cfg native_ffi)</td><td class="file-arrow"><span class="from">◀</span> libffi, libloading</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/sandbox_shim.rs">sandbox_shim.rs</a></td><td>Sandbox capability shim</td><td class="file-arrow"><span class="from">◀</span> ifa-sandbox</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-std/src/lib.rs">lib.rs</a></td><td>Crate root, module declarations</td><td class="file-arrow"><span class="to">▶</span> all consumers</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <!-- LAYER: Static Analysis -->
+                <div class="crate-card layer-pipeline">
+                    <div class="crate-card-title">
+                        <h3>ifa-babalawo</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-babalawo/Cargo.toml">crates/ifa-babalawo/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-types (vm), ifa-sandbox</div>
+                    <div class="crate-meta"><strong>Features:</strong> (none)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-cli</div>
+                    <details>
+                        <summary>Show 13 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/checks.rs">checks.rs</a></td><td><code>analyze_program</code>, <code>check_program</code> — main analysis entry, 2022 lines</td><td class="file-arrow"><span class="from">◀</span> ifa-types AST, CapabilitySet &ensp;<span class="to">▶</span> ifa-cli Babalawo</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/inference.rs">inference.rs</a></td><td><code>infer_expression_type</code> — type inference engine</td><td class="file-arrow"><span class="from">◀</span> ifa-types Expression, TypeHint</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/scope.rs">scope.rs</a></td><td><code>Scope</code>, <code>ScopeChain</code>, <code>VarInfo</code> — lexical scope analysis</td><td class="file-arrow"><span class="to">▶</span> checks.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/movement.rs">movement.rs</a></td><td><code>MoveTracker</code> — yanda move semantics, use-after-move detection</td><td class="file-arrow"><span class="to">▶</span> checks.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/iwa.rs">iwa.rs</a></td><td><code>IwaEngine</code>, <code>LIFECYCLE_RULES</code> — resource lifecycle balance</td><td class="file-arrow"><span class="to">▶</span> checks.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/effects.rs">effects.rs</a></td><td>Effect analysis — side-effect boundary tracking</td><td class="file-arrow"><span class="from">◀</span> ifa-types Effect enum</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/taboo.rs">taboo.rs</a></td><td><code>TabooEnforcer</code> — cross-domain call constraints</td><td class="file-arrow"><span class="from">◀</span> ifa-types OduDomain</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/target_check.rs">target_check.rs</a></td><td>Target environment validation</td><td class="file-arrow"><span class="from">◀</span> ifa-types Target</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/metadata.rs">metadata.rs</a></td><td><code>OduMethodDescriptor</code>, domain method metadata</td><td class="file-arrow"><span class="from">◀</span> ifa-types odu_metadata</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/diagnose.rs">diagnose.rs</a></td><td><code>Babalawo</code>, <code>Diagnostic</code>, <code>Severity</code> — error formatting</td><td class="file-arrow"><span class="to">▶</span> checks.rs output</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/wisdom.rs">wisdom.rs</a></td><td><code>ERROR_TO_ODU</code>, <code>ODU_WISDOM</code> — proverb-based messages</td><td class="file-arrow"><span class="to">▶</span> diagnose.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/infer.rs">infer.rs</a></td><td><code>infer_capabilities</code> — static capability inference</td><td class="file-arrow"><span class="from">◀</span> ifa-types CapabilitySet</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-babalawo/src/history.rs">history.rs</a></td><td><code>StateHistoryBuffer</code>, <code>StateSnapshot</code></td><td class="file-arrow"><span class="to">▶</span> checks.rs</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <!-- LAYER: Tooling -->
+                <h3 style="color:#ff6666;margin-top:1.5rem">Layer: Tooling &amp; Infrastructure</h3>
+
+                <div class="crate-card layer-tooling">
+                    <div class="crate-card-title">
+                        <h3>ifa-cli</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-cli/Cargo.toml">crates/ifa-cli/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-vm, ifa-parser, ifa-std, ifa-babalawo, ifa-fmt, ifa-sandbox, ifa-types, ifa-infra, ifa-compiler, ifa-installer-core</div>
+                    <div class="crate-meta"><strong>Features:</strong> default=full (enables ifa-std/full + ifa-vm features + ifa-infra/persistence)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> (binary — no library exports)</div>
+                    <details>
+                        <summary>Show 7 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-cli/src/main.rs">main.rs</a></td><td>Binary entry — 1616 lines. All commands: run, build, bytecode, runb, check, fmt, test, babalawo, repl, lsp, oja, deploy, debug, doc</td><td class="file-arrow"><span class="from">◀</span> EVERY crate &ensp;<span class="to">▶</span> user CLI</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-cli/src/oja.rs">oja.rs</a></td><td>Oja package manager: init, add, remove, build, run, test, search, publish, audit, upgrade</td><td class="file-arrow"><span class="from">◀</span> ifa-vm, ifa-compiler, ifa-std</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-cli/src/lsp.rs">lsp.rs</a></td><td>LSP server — stdio-based Language Server Protocol</td><td class="file-arrow"><span class="from">◀</span> ifa-babalawo analysis</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-cli/src/debug_adapter.rs">debug_adapter.rs</a></td><td>DAP server — Debug Adapter Protocol for bytecode VM</td><td class="file-arrow"><span class="from">◀</span> ifa-vm execution</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-cli/src/deploy.rs">deploy.rs</a></td><td>Zero-config deployment scanner — infers capabilities, generates Iwe.toml</td><td class="file-arrow"><span class="from">◀</span> ifa-babalawo infer_capabilities</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-cli/src/docgen.rs">docgen.rs</a></td><td>HTML doc generator — Oríkì-style docs from .ifa sources</td><td class="file-arrow"><span class="from">◀</span> ifa-parser AST</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-tooling">
+                    <div class="crate-card-title">
+                        <h3>ifa-infra</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-infra/Cargo.toml">crates/ifa-infra/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-types, ifa-embedded (alloc)</div>
+                    <div class="crate-meta"><strong>Features:</strong> default=parallel, gpu, gpu_native, persistence, kernel, sysinfo</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-std (cpu/gpu/storage/kernel backends), ifa-cli</div>
+                    <details>
+                        <summary>Show 8 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-infra/src/compute.rs">compute.rs</a></td><td><code>ComputeBackend</code>, <code>DeviceInfo</code> — unified compute abstraction</td><td class="file-arrow"><span class="to">▶</span> ifa-std hardware</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-infra/src/cpu.rs">cpu.rs</a></td><td>CPU parallel compute (cfg parallel, rayon)</td><td class="file-arrow"><span class="to">▶</span> ifa-std cpu domain</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-infra/src/gpu.rs">gpu.rs</a></td><td>GPU compute via wgpu (cfg gpu)</td><td class="file-arrow"><span class="to">▶</span> ifa-std gpu domain</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-infra/src/shaders.rs">shaders.rs</a></td><td>Pre-built WGSL compute shaders (cfg gpu)</td><td class="file-arrow"><span class="to">▶</span> gpu.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-infra/src/storage.rs">storage.rs</a></td><td>Persistence storage layer (cfg persistence)</td><td class="file-arrow"><span class="to">▶</span> ifa-std storage domain</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-infra/src/kernel.rs">kernel.rs</a></td><td>Kernel/OS interface (cfg kernel)</td><td class="file-arrow"><span class="to">▶</span> ifa-std sys domain</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-infra/src/runtime.rs">runtime.rs</a></td><td>Runtime abstraction</td><td class="file-arrow"><span class="to">▶</span> compute.rs</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-infra/src/lib.rs">lib.rs</a></td><td>Crate root, module declarations</td><td class="file-arrow"><span class="to">▶</span> all consumers</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-tooling">
+                    <div class="crate-card-title">
+                        <h3>ifa-fmt</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-fmt/Cargo.toml">crates/ifa-fmt/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-parser</div>
+                    <div class="crate-meta"><strong>Features:</strong> (none) — #![forbid(unsafe_code)]</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-cli, ifa-wasm</div>
+                    <details>
+                        <summary>Show 1 source file</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-fmt/src/lib.rs">lib.rs</a></td><td><code>format()</code> — token-stream formatter, FormatterConfig</td><td class="file-arrow"><span class="from">◀</span> ifa-parser tokenize &ensp;<span class="to">▶</span> ifa-cli fmt command</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-tooling">
+                    <div class="crate-card-title">
+                        <h3>ifa-wasm</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-wasm/Cargo.toml">crates/ifa-wasm/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-vm (compiler), ifa-parser, ifa-types, ifa-fmt, ifa-std (wasm)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> browser JS via wasm-bindgen</div>
+                    <details>
+                        <summary>Show 1 source file</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-wasm/src/lib.rs">lib.rs</a></td><td><code>run_code</code>, <code>format_code</code>, <code>cast_opele</code> — JS-callable via wasm-bindgen</td><td class="file-arrow"><span class="from">◀</span> ifa-vm compile+execute, ifa-fmt format, ifa-std domains</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-tooling">
+                    <div class="crate-card-title">
+                        <h3>ifa-macros</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-macros/Cargo.toml">crates/ifa-macros/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> (none — standalone proc-macro crate)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> used by user .ifa code via compiler expansions</div>
+                    <details>
+                        <summary>Show 1 source file</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-macros/src/lib.rs">lib.rs</a></td><td>5 proc macros: <code>#[derive(Ebo)]</code>, <code>#[iwa_pele]</code>, <code>ebo_block!</code>, <code>ajose!</code>, <code>#[derive(Observable)]</code></td><td class="file-arrow"><span class="to">▶</span> user code at compile time</td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-tooling">
+                    <div class="crate-card-title">
+                        <h3>ifa-installer-core</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-installer-core/Cargo.toml">crates/ifa-installer-core/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> (none workspace)</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> ifa-installer-gui, ifa-cli (self-update)</div>
+                    <details>
+                        <summary>Show 11 source files</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-core/src/install.rs">install.rs</a></td><td><code>install</code>, <code>self_update</code> — binary placement, version checks</td><td class="file-arrow"><span class="to">▶</span> ifa-cli self-update</td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-core/src/uninstall.rs">uninstall.rs</a></td><td><code>uninstall</code> — remove binary, clean PATH</td><td class="file-arrow"></td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-core/src/check.rs">check.rs</a></td><td><code>check_system</code> — OS, arch, rustc detection</td><td class="file-arrow"></td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-core/src/config.rs">config.rs</a></td><td><code>InstallConfig</code>, default paths</td><td class="file-arrow"></td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-core/src/profiles.rs">profiles.rs</a></td><td>Component installation profiles</td><td class="file-arrow"></td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-core/src/extraction.rs">extraction.rs</a></td><td>Archive extraction (tar.gz, zip)</td><td class="file-arrow"></td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-core/src/net.rs">net.rs</a></td><td>Network download helper</td><td class="file-arrow"></td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-core/src/args.rs">args.rs</a></td><td>CLI argument parsing for installer</td><td class="file-arrow"></td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-core/src/windows.rs">windows.rs</a></td><td>Windows platform specifics</td><td class="file-arrow"></td></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-core/src/unix.rs">unix.rs</a></td><td>Unix platform specifics (symlinks, profiles)</td><td class="file-arrow"></td></tr>
+                        </table>
+                    </details>
+                </div>
+
+                <div class="crate-card layer-tooling">
+                    <div class="crate-card-title">
+                        <h3>ifa-installer-gui</h3>
+                        <span class="crate-path"><a href="../../crates/ifa-installer-gui/Cargo.toml">crates/ifa-installer-gui/</a></span>
+                    </div>
+                    <div class="crate-meta"><strong>Depends on:</strong> ifa-installer-core</div>
+                    <div class="crate-meta"><strong>Provides to:</strong> (binary — GUI installer app)</div>
+                    <details>
+                        <summary>Show 1 source file</summary>
+                        <table class="file-table">
+                            <tr><th>File</th><th>Purpose</th><th>Connections</th></tr>
+                            <tr><td class="file-name"><a href="../../crates/ifa-installer-gui/src/main.rs">main.rs</a></td><td>eframe/egui GUI — welcome, config, install progress, finish screens</td><td class="file-arrow"><span class="from">◀</span> ifa-installer-core</td></tr>
+                        </table>
+                    </details>
+                </div>
+            </div>
+
+            <!-- ─── Zone 5: Feature Flag Propagation ─── -->
+            <div class="arch-zone" id="zone-features">
+                <span class="zone-label">§5</span>
+                <h2>Feature Flag Propagation</h2>
+                <p style="font-size:0.85rem;color:var(--dim)">
+                    How features cascade from <code>ifa-cli</code> down the dependency tree.
+                    Enabling a feature at the top level may pull in optional crates and their dependencies.
+                </p>
+
+                <div class="feat-tree">
+                    <div class="feat-root">ifa-cli (default = full)</div>
+                    <div class="feat-child">├── <span class="feat-gate">full</span> <span class="arrow">→</span> ifa-std/full</div>
+                    <div class="feat-child">│   ├── <span class="feat-gate">ifa-std/full</span> <span class="arrow">→</span> network + database + tui + async_runtime + crypto + parallel + gpu + persistence + kernel + sysinfo + audio + html</div>
+                    <div class="feat-child">│   │   ├── <span class="feat-gate">network</span> <span class="arrow">→</span> ifa-sandbox, tokio, reqwest</div>
+                    <div class="feat-child">│   │   ├── <span class="feat-gate">async_runtime</span> <span class="arrow">→</span> tokio</div>
+                    <div class="feat-child">│   │   ├── <span class="feat-gate">crypto</span> <span class="arrow">→</span> ring, argon2</div>
+                    <div class="feat-child">│   │   ├── <span class="feat-gate">tui</span> <span class="arrow">→</span> crossterm, ratatui</div>
+                    <div class="feat-child">│   │   ├── <span class="feat-gate">parallel</span> <span class="arrow">→</span> ifa-vm/parallel, ifa-infra/parallel</div>
+                    <div class="feat-child">│   │   ├── <span class="feat-gate">gpu</span> <span class="arrow">→</span> ifa-infra/gpu, wgpu, bytemuck</div>
+                    <div class="feat-child">│   │   ├── <span class="feat-gate">persistence</span> <span class="arrow">→</span> ifa-infra/persistence, tokio/fs</div>
+                    <div class="feat-child">│   │   └── <span class="feat-gate">database</span> <span class="arrow">→</span> ifa-sandbox, rusqlite</div>
+                    <div class="feat-child">├── <span class="feat-gate">full</span> <span class="arrow">→</span> ifa-vm/std + ifa-vm/sysinfo + ifa-vm/parallel + ifa-vm/gpu + ifa-vm/compiler</div>
+                    <div class="feat-child">│   ├── <span class="feat-gate">ifa-vm/compiler</span> <span class="arrow">→</span> ifa-parser, ifa-compiler, ifa-transpiler</div>
+                    <div class="feat-child">│   ├── <span class="feat-gate">ifa-vm/native</span> <span class="arrow">→</span> ifa-sandbox</div>
+                    <div class="feat-child">│   ├── <span class="feat-gate">ifa-vm/parallel</span> <span class="arrow">→</span> rayon</div>
+                    <div class="feat-child">│   └── <span class="feat-gate">ifa-vm/gpu</span> <span class="arrow">→</span> wgpu</div>
+                    <div class="feat-child">└── <span class="feat-gate">full</span> <span class="arrow">→</span> ifa-infra/persistence</div>
+                    <div class="feat-child" style="margin-top:0.5rem">│</div>
+                    <div class="feat-child"><span class="feat-gate">minimal</span> <span class="arrow">→</span> ifa-vm/std + ifa-vm/compiler + ifa-types/vm</div>
+                </div>
+
+                <p style="font-size:0.75rem;color:var(--dim);margin-top:0.5rem">
+                    <strong>Key takeaway:</strong> The <code>ifa-cli/full</code> feature is the standard path — it enables everything.
+                    Use <code>ifa-cli/minimal</code> for CI or restricted builds. The <code>ifa-vm/compiler</code> feature is the
+                    gateway that brings in the parser, compiler, and transpiler.
+                </p>
+            </div>
+
+            <footer>
+                <p>
+                    <a href="crate-map.html">← Crate Map</a> ·
+                    <a href="vm.html">VM Internals →</a>
+                </p>
+                <p style="font-size:0.75rem;color:var(--dim);margin-top:1rem">
+                    Source-verified from <code>crates/</code> — last updated June 2026.
+                    File links target canonical paths under <code>crates/&lt;name&gt;/</code>.
+                </p>
+            </footer>
+
+        </div><!-- /.terminal-body -->
+    </div><!-- /.container -->
+    <script src="../js/nav.js"></script>
+    <script src="../js/common.js"></script>
+</body>
+
+</html>

@@ -16,6 +16,7 @@ mod metadata;
 mod movement;
 mod scope;
 mod taboo;
+mod target_check;
 mod wisdom;
 
 pub use checks::{

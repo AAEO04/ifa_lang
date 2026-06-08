@@ -9,6 +9,7 @@
 </head>
 
 <body>
+    <div id="nav-placeholder"></div>
     <div class="breadcrumbs">
         <div class="breadcrumbs-container">
             <ul class="breadcrumb-list"></ul>
@@ -28,6 +29,10 @@
         </div>
 
         <div class="nav-grid">
+            <a href="architecture-map.html" class="nav-card" style="border-left-color:var(--green)">
+                <h3>🗺️ Architecture Map</h3>
+                <p>Full-codebase visual map: pipeline flow, dependency matrix, all 17 crates with file links, Odù domain matrix, feature propagation.</p>
+            </a>
             <a href="crate-map.html" class="nav-card">
                 <h3>📦 Crate Map</h3>
                 <p>All 18 workspace crates: dependencies, features, no_std status, public API surface.</p>
@@ -48,9 +53,21 @@
                 <h3>📦 Building External Packages</h3>
                 <p>Custom domains via iba import + oja package manager (the 16 Odù are fixed core).</p>
             </a>
+            <a href="memory-model.html" class="nav-card">
+                <h3>🧠 Memory Model</h3>
+                <p>IfaGc cycle collector, Orí per-actor heap, Bacon-Rajan algorithm, SendableValue boundary.</p>
+            </a>
             <a href="testing.html" class="nav-card">
                 <h3>🧪 Testing</h3>
                 <p>Conformance tests, VM tests, property-based tests, benchmarks, test structure.</p>
+            </a>
+            <a href="unwired-features.html" class="nav-card">
+                <h3>⚠️ Unwired Features</h3>
+                <p>OpCodes without dispatch, no-op statements, missing domain methods, stubs, bugs — across all crates.</p>
+            </a>
+            <a href="doc-generation.html" class="nav-card">
+                <h3>📚 Doc Generation</h3>
+                <p><code>ifa doc</code> — AST-based doc generator covering 20 domains, user Odù, protocols, aliases, and all language constructs.</p>
             </a>
         </div>
 
