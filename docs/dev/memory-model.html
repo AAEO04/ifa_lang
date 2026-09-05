@@ -134,11 +134,12 @@ pub struct CycleHeader {
 
         <h3 class="section-header">3.2 Trigger Point</h3>
 
-        <p><code>vm.rs:893-895</code>. The GC runs every 1024 VM ticks:</p>
+        <p><code>vm.rs:984-988</code>. The GC runs dynamically at tick intervals determined by the configured <code>#opon</code> size (via <code>self.opon_size.gc_policy()</code>):</p>
 
         <div class="code-block">
 <pre>self.ticks = self.ticks.wrapping_add(1);
-if self.ticks % 1024 == 0 {
+let (gc_interval, _) = self.opon_size.gc_policy();
+if self.ticks.is_multiple_of(gc_interval as usize) {
     ifa_types::gc::collect_cycles();
 }</pre></div>
 

@@ -5,8 +5,8 @@
 //! Vec with iterators and subprocess spawning via tokio-process.
 
 use crate::impl_odu_domain;
+use ifa_types::IfaValue;
 use ifa_vm::error::{IfaError, IfaResult};
-use ifa_vm::value::IfaValue;
 use std::process::{Command, Output, Stdio};
 
 /// Ògúndá - The Warrior (Arrays/Processes)

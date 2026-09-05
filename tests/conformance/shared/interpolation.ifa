@@ -1,4 +1,4 @@
-// # expect: Alafia, Orunmila! The count is 16.
+# expect: Alafia, Orunmila! The count is 16.
 
 ayanmo name = "Orunmila";
 ayanmo count = 16;

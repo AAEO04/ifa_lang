@@ -11,6 +11,7 @@ use serde::ser::Error as SerError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
+use std::hash::Hasher;
 use std::sync::Arc;
 #[cfg(feature = "vm")]
 use std::sync::Mutex;
@@ -20,7 +21,6 @@ use std::sync::Mutex;
 #[cfg(feature = "vm")]
 use crate::ast::Statement;
 use crate::error::{IfaError, IfaResult};
-use crate::nan_box::{BoxedPrimitive, NanBox};
 use crate::shared::IfaShared;
 use crate::token::ResourceToken;
 
@@ -42,7 +42,7 @@ pub enum IfaValue {
     Float(f64),
 
     // 2. Heap Objects (Ref-Counted, Shared)
-    Str(crate::CompactString),
+    Str(Box<String>),
     List(IfaGc<Vec<IfaValue>>),
     Map(IfaGc<HashMap<crate::CompactString, IfaValue>>),
     Set(Arc<std::collections::HashSet<IfaValue>>),
@@ -66,16 +66,11 @@ pub enum IfaValue {
     Future(FutureCell),
     #[cfg(feature = "vm")]
     NativeFuture(NativeFutureCell),
-    /// H2: Actor handle — a reference to a running isolated VM thread.
+    /// H2: Actor handle — externalized to keep IfaValue at 16 bytes.
     /// Uses type-erased Arc so ifa-types has no dependency on ifa-vm's ActorHandle.
     /// Callers in ifa-vm downcast via `Arc::downcast` after cloning.
     #[cfg(feature = "vm")]
-    Actor {
-        /// Monotonic actor ID for routing and display.
-        id: u64,
-        /// Type-erased SyncSender<ActorMsg>. Downcast in ifa-vm.
-        handle: Arc<dyn std::any::Any + Send + Sync>,
-    },
+    Actor(Arc<ActorData>),
 
     // Legacy / Other
     Resource(Arc<ResourceToken>),
@@ -89,6 +84,9 @@ pub enum IfaValue {
     /// Loop continue signal — consumed by the nearest While/For handler.
     #[cfg(feature = "vm")]
     Continue,
+    /// Moved value (ownership transferred)
+    #[cfg(feature = "vm")]
+    Moved,
 
     // 4. Okanran (Error Handling)
     Result(Box<ResultPayload>),
@@ -108,6 +106,16 @@ pub type UpvalueCell = IfaGc<Mutex<IfaValue>>;
 pub struct ClosureData {
     pub fn_data: Arc<BytecodeFnData>,
     pub env: Arc<Vec<UpvalueCell>>,
+}
+
+/// Actor handle payload — externalized to keep IfaValue at 16 bytes.
+#[cfg(feature = "vm")]
+#[derive(Clone, Debug)]
+pub struct ActorData {
+    /// Monotonic actor ID for routing and display.
+    pub id: u64,
+    /// Type-erased SyncSender<ActorMsg>. Downcast in ifa-vm.
+    pub handle: Arc<dyn std::any::Any + Send + Sync>,
 }
 
 // ========================================================================
@@ -137,8 +145,8 @@ pub type NativeFutureCell = std::sync::Arc<std::sync::RwLock<NativeFutureState>>
 
 #[derive(Clone, Debug)]
 pub enum ResultPayload {
-    Ok(IfaValue),
-    Err(IfaValue),
+    Ire(IfaValue),
+    Ibi(IfaValue),
 }
 
 // ============================================================================
@@ -181,7 +189,7 @@ impl IfaValue {
 
     // --- Heap Types ---
     pub fn str(s: impl Into<String>) -> Self {
-        IfaValue::Str(crate::CompactString::new(&s.into()))
+        IfaValue::Str(Box::new(s.into()))
     }
 
     pub fn list(items: Vec<IfaValue>) -> Self {
@@ -231,36 +239,12 @@ impl IfaValue {
         IfaValue::Future(Arc::new(std::sync::RwLock::new(FutureState::Pending)))
     }
 
-    pub fn ok(val: IfaValue) -> Self {
-        IfaValue::Result(Box::new(ResultPayload::Ok(val)))
+    pub fn ire(val: IfaValue) -> Self {
+        IfaValue::Result(Box::new(ResultPayload::Ire(val)))
     }
 
-    pub fn err(val: IfaValue) -> Self {
-        IfaValue::Result(Box::new(ResultPayload::Err(val)))
-    }
-
-    /// Convert an inline primitive into the initial NaN-boxed representation.
-    ///
-    /// Heap-backed variants are intentionally excluded until pointer tagging is
-    /// migrated.
-    pub fn to_nan_boxed_primitive(&self) -> Option<NanBox> {
-        match self {
-            IfaValue::Null => Some(NanBox::from_null()),
-            IfaValue::Bool(b) => Some(NanBox::from_bool(*b)),
-            IfaValue::Int(i) => NanBox::from_int(*i).ok(),
-            IfaValue::Float(f) => Some(NanBox::from_float(*f)),
-            _ => None,
-        }
-    }
-
-    /// Reconstruct an `IfaValue` from the primitive NaN-boxed subset.
-    pub fn from_nan_boxed_primitive(value: NanBox) -> Option<Self> {
-        match value.to_primitive().ok()? {
-            BoxedPrimitive::Null => Some(Self::null()),
-            BoxedPrimitive::Bool(b) => Some(Self::bool(b)),
-            BoxedPrimitive::Int(i) => Some(Self::int(i)),
-            BoxedPrimitive::Float(f) => Some(Self::float(f)),
-        }
+    pub fn ibi(val: IfaValue) -> Self {
+        IfaValue::Result(Box::new(ResultPayload::Ibi(val)))
     }
 
     pub fn is_return(&self) -> bool {
@@ -318,17 +302,19 @@ impl IfaValue {
             #[cfg(feature = "vm")]
             IfaValue::NativeFuture(_) => "NativeFuture",
             #[cfg(feature = "vm")]
-            IfaValue::Actor { .. } => "Actor",
+            IfaValue::Actor(_) => "Actor",
+            #[cfg(feature = "vm")]
+            IfaValue::Moved => "Moved",
             _ => "Unknown",
         }
     }
 
     pub fn is_truthy(&self) -> bool {
-        if let Some(boxed) = self.to_nan_boxed_primitive() {
-            return boxed.is_truthy();
-        }
-
         match self {
+            IfaValue::Null => false,
+            IfaValue::Bool(b) => *b,
+            IfaValue::Int(i) => *i != 0,
+            IfaValue::Float(f) => *f != 0.0 && !f.is_nan(),
             IfaValue::Str(s) => !s.is_empty(),
             IfaValue::List(l) => !l.is_empty(),
             IfaValue::Map(m) => !m.is_empty(),
@@ -349,6 +335,8 @@ impl IfaValue {
                 .ok()
                 .map(|value| value.is_truthy())
                 .unwrap_or(false),
+            #[cfg(feature = "vm")]
+            IfaValue::Moved => false,
             #[allow(unreachable_patterns)]
             _ => true,
         }
@@ -402,12 +390,34 @@ impl IfaValue {
                     .all(|(k, v)| b.get(k).is_some_and(|bv| v.is_equal(bv)))
             }
             (IfaValue::Result(a), IfaValue::Result(b)) => match (a.as_ref(), b.as_ref()) {
-                (ResultPayload::Ok(av), ResultPayload::Ok(bv))
-                | (ResultPayload::Err(av), ResultPayload::Err(bv)) => av.is_equal(bv),
+                (ResultPayload::Ire(av), ResultPayload::Ire(bv))
+                | (ResultPayload::Ibi(av), ResultPayload::Ibi(bv)) => av.is_equal(bv),
                 _ => false,
             },
             #[cfg(feature = "vm")]
             (IfaValue::Upvalue(a), IfaValue::Upvalue(b)) => IfaGc::ptr_eq(a, b),
+            (IfaValue::Fn(a), IfaValue::Fn(b)) => Arc::ptr_eq(a, b),
+            #[cfg(feature = "vm")]
+            (IfaValue::AstFn(a), IfaValue::AstFn(b)) => Arc::ptr_eq(a, b),
+            #[cfg(feature = "vm")]
+            (IfaValue::Closure(a), IfaValue::Closure(b)) => IfaGc::ptr_eq(a, b),
+            #[cfg(feature = "vm")]
+            (IfaValue::Actor(a), IfaValue::Actor(b)) => {
+                a.id == b.id && Arc::ptr_eq(&a.handle, &b.handle)
+            }
+            #[cfg(feature = "vm")]
+            (IfaValue::Future(a), IfaValue::Future(b)) => Arc::ptr_eq(a, b),
+            #[cfg(feature = "vm")]
+            (IfaValue::NativeFuture(a), IfaValue::NativeFuture(b)) => Arc::ptr_eq(a, b),
+            #[cfg(feature = "vm")]
+            (IfaValue::Return(a), IfaValue::Return(b)) => a.is_equal(b),
+            #[cfg(feature = "vm")]
+            (IfaValue::Break, IfaValue::Break) => true,
+            #[cfg(feature = "vm")]
+            (IfaValue::Continue, IfaValue::Continue) => true,
+            #[cfg(feature = "vm")]
+            (IfaValue::Moved, IfaValue::Moved) => true,
+            (IfaValue::Resource(a), IfaValue::Resource(b)) => Arc::ptr_eq(a, b),
             _ => false,
         }
     }
@@ -418,7 +428,7 @@ impl IfaValue {
         match self {
             IfaValue::Int(n) => Ok(IfaShared::Int(*n)),
             IfaValue::Float(n) => Ok(IfaShared::Float(*n)),
-            IfaValue::Str(s) => Ok(IfaShared::Str(s.as_str().into())),
+            IfaValue::Str(s) => Ok(IfaShared::Str(Arc::from(s.as_str()))),
             IfaValue::Bool(b) => Ok(IfaShared::Bool(*b)),
             IfaValue::Null => Ok(IfaShared::Null),
             IfaValue::List(l) => {
@@ -466,15 +476,29 @@ impl std::hash::Hash for IfaValue {
                     f.to_bits().hash(state);
                 }
             }
-            IfaValue::Str(s) => s.as_str().hash(state),
+            IfaValue::Str(s) => s.hash(state),
             IfaValue::List(l) => l.hash(state),
             IfaValue::Set(s) => {
-                // Elements in a hashset don't have a guaranteed order, so hashing the pointer
-                // is safer, similar to Maps.
-                Arc::as_ptr(s).hash(state);
+                // Sum of element hashes — order-independent, matches structural contains().
+                let mut combined = 0u64;
+                for elem in s.iter() {
+                    let mut h = std::collections::hash_map::DefaultHasher::new();
+                    elem.hash(&mut h);
+                    combined = combined.wrapping_add(h.finish());
+                }
+                combined.hash(state);
             }
             IfaValue::Map(m) => {
-                m.ptr.as_ptr().hash(state);
+                // Sum of (key_hash XOR value_hash) — order-independent, matches structural eq.
+                let mut combined = 0u64;
+                for (k, v) in m.iter() {
+                    let mut h = std::collections::hash_map::DefaultHasher::new();
+                    k.hash(&mut h);
+                    let kv = h.finish();
+                    v.hash(&mut h);
+                    combined = combined.wrapping_add(kv ^ h.finish());
+                }
+                combined.hash(state);
             }
             IfaValue::Fn(f) => Arc::as_ptr(f).hash(state),
             #[cfg(feature = "vm")]
@@ -488,7 +512,7 @@ impl std::hash::Hash for IfaValue {
             #[cfg(feature = "vm")]
             IfaValue::NativeFuture(f) => Arc::as_ptr(f).hash(state),
             #[cfg(feature = "vm")]
-            IfaValue::Actor { id, .. } => id.hash(state),
+            IfaValue::Actor(data) => data.id.hash(state),
             IfaValue::Resource(r) => Arc::as_ptr(r).hash(state),
             #[cfg(feature = "vm")]
             IfaValue::Return(r) => r.hash(state),
@@ -496,12 +520,14 @@ impl std::hash::Hash for IfaValue {
             IfaValue::Break => {}
             #[cfg(feature = "vm")]
             IfaValue::Continue => {}
+            #[cfg(feature = "vm")]
+            IfaValue::Moved => {}
             IfaValue::Result(r) => match r.as_ref() {
-                ResultPayload::Ok(v) => {
+                ResultPayload::Ire(v) => {
                     0u8.hash(state);
                     v.hash(state);
                 }
-                ResultPayload::Err(v) => {
+                ResultPayload::Ibi(v) => {
                     1u8.hash(state);
                     v.hash(state);
                 }
@@ -525,19 +551,11 @@ impl std::cmp::PartialOrd for IfaValue {
             (IfaValue::Float(a), IfaValue::Float(b)) => a.partial_cmp(b),
             (IfaValue::Int(a), IfaValue::Float(b)) => {
                 let a_f64 = *a as f64;
-                if a_f64 as i64 == *a {
-                    a_f64.partial_cmp(b)
-                } else {
-                    None
-                }
+                a_f64.partial_cmp(b)
             }
             (IfaValue::Float(a), IfaValue::Int(b)) => {
                 let b_f64 = *b as f64;
-                if b_f64 as i64 == *b {
-                    a.partial_cmp(&b_f64)
-                } else {
-                    None
-                }
+                a.partial_cmp(&b_f64)
             }
             (IfaValue::Str(a), IfaValue::Str(b)) => a.partial_cmp(b),
             _ => None,
@@ -559,15 +577,17 @@ impl fmt::Display for IfaValue {
             #[cfg(feature = "vm")]
             IfaValue::AstFn(data) => write!(f, "<fn {}>", data.name),
             IfaValue::Result(payload) => match payload.as_ref() {
-                ResultPayload::Ok(val) => write!(f, "Ok({})", val),
-                ResultPayload::Err(val) => write!(f, "Err({})", val),
+                ResultPayload::Ire(val) => write!(f, "Ire({})", val),
+                ResultPayload::Ibi(val) => write!(f, "Ibi({})", val),
             },
             #[cfg(feature = "vm")]
             IfaValue::Future(_) => write!(f, "<future>"),
             #[cfg(feature = "vm")]
             IfaValue::NativeFuture(_) => write!(f, "<native_future>"),
             #[cfg(feature = "vm")]
-            IfaValue::Actor { id, .. } => write!(f, "<actor:{id}>"),
+            IfaValue::Actor(data) => write!(f, "<actor:{}>", data.id),
+            #[cfg(feature = "vm")]
+            IfaValue::Moved => write!(f, "<moved>"),
             _ => write!(f, "<?>"),
         }
     }
@@ -698,35 +718,162 @@ mod tests {
         assert_eq!(IfaValue::unicode_string_len("e\u{301}"), 2);
         assert_eq!(IfaValue::unicode_string_len("🔥a"), 2);
     }
-    #[test]
-    fn nan_boxed_primitive_roundtrip_matches_ifa_value() {
-        let values = [
-            IfaValue::null(),
-            IfaValue::bool(false),
-            IfaValue::bool(true),
-            IfaValue::int(42),
-            IfaValue::int(-42),
-            IfaValue::float(2.5),
-        ];
-
-        for value in values {
-            let boxed = value
-                .to_nan_boxed_primitive()
-                .expect("primitive should box");
-            let roundtrip =
-                IfaValue::from_nan_boxed_primitive(boxed).expect("boxed primitive should unbox");
-            assert_eq!(roundtrip, value);
-        }
-    }
 }
 
 #[cfg(test)]
 mod layout_tests {
     use super::*;
+    use crate::CompactString;
+    use std::hash::{Hash, Hasher};
 
     #[test]
-    fn ifa_value_stays_within_32_bytes_on_64_bit() {
-        assert_eq!(std::mem::size_of::<IfaValue>(), 32);
+    fn ifa_value_stays_within_16_bytes_on_64_bit() {
+        assert!(
+            std::mem::size_of::<IfaValue>() <= 16,
+            "IfaValue is {} bytes, expected <= 16",
+            std::mem::size_of::<IfaValue>()
+        );
+    }
+
+    #[test]
+    fn set_of_maps_hashes_by_content() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::collections::HashSet;
+
+        let mut map1 = HashMap::new();
+        map1.insert(CompactString::new("a"), IfaValue::Int(1));
+        let mut map2 = HashMap::new();
+        map2.insert(CompactString::new("a"), IfaValue::Int(1));
+
+        let mut set = HashSet::new();
+        set.insert(IfaValue::Map(IfaGc::new(map1)));
+
+        let lookup = IfaValue::Map(IfaGc::new(map2));
+        assert!(
+            set.contains(&lookup),
+            "Set::contains must find structurally equal map"
+        );
+
+        // Verify hash equality
+        let h1 = {
+            let mut s = DefaultHasher::new();
+            set.iter().next().unwrap().hash(&mut s);
+            s.finish()
+        };
+        let h2 = {
+            let mut s = DefaultHasher::new();
+            lookup.hash(&mut s);
+            s.finish()
+        };
+        assert_eq!(h1, h2, "structurally equal maps must hash identically");
+    }
+
+    #[test]
+    fn set_of_sets_hashes_by_content() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::collections::HashSet;
+
+        let inner1: HashSet<IfaValue> = [IfaValue::Int(1), IfaValue::Int(2)].into_iter().collect();
+        let inner2: HashSet<IfaValue> = [IfaValue::Int(2), IfaValue::Int(1)].into_iter().collect();
+
+        let mut outer = HashSet::new();
+        outer.insert(IfaValue::Set(Arc::new(inner1)));
+
+        let lookup = IfaValue::Set(Arc::new(inner2));
+        assert!(
+            outer.contains(&lookup),
+            "Set::contains must find structurally equal inner set"
+        );
+
+        let h1 = {
+            let mut s = DefaultHasher::new();
+            outer.iter().next().unwrap().hash(&mut s);
+            s.finish()
+        };
+        let h2 = {
+            let mut s = DefaultHasher::new();
+            lookup.hash(&mut s);
+            s.finish()
+        };
+        assert_eq!(h1, h2, "structurally equal sets must hash identically");
+    }
+
+    #[test]
+    fn reference_equality_reflexive() {
+        let data = Arc::new(BytecodeFnData {
+            name: "f".into(),
+            start_ip: 0,
+            arity: 0,
+            is_async: false,
+        });
+        let a = IfaValue::Fn(data.clone());
+        let b = IfaValue::Fn(data);
+        assert!(a == b, "same Arc must be equal");
+        assert!(a == a.clone(), "clone must be equal");
+    }
+
+    #[test]
+    fn cross_variant_equality_false() {
+        let fn_val = IfaValue::Fn(Arc::new(BytecodeFnData {
+            name: "f".into(),
+            start_ip: 0,
+            arity: 0,
+            is_async: false,
+        }));
+        let int_val = IfaValue::Int(42);
+        assert!(fn_val != int_val);
+        assert!(IfaValue::Null != IfaValue::Bool(false));
+        assert!(IfaValue::Int(0) != IfaValue::Float(0.0));
+    }
+
+    #[test]
+    fn partial_ord_int_float_consistent() {
+        use std::cmp::Ordering;
+
+        // Equal numeric values
+        assert_eq!(
+            IfaValue::Int(1).partial_cmp(&IfaValue::Float(1.0)),
+            Some(Ordering::Equal)
+        );
+        assert_eq!(
+            IfaValue::Float(1.0).partial_cmp(&IfaValue::Int(1)),
+            Some(Ordering::Equal)
+        );
+
+        // Int < Float
+        assert_eq!(
+            IfaValue::Int(1).partial_cmp(&IfaValue::Float(2.0)),
+            Some(Ordering::Less)
+        );
+        assert_eq!(
+            IfaValue::Float(1.0).partial_cmp(&IfaValue::Int(2)),
+            Some(Ordering::Less)
+        );
+
+        // Int > Float
+        assert_eq!(
+            IfaValue::Int(5).partial_cmp(&IfaValue::Float(2.5)),
+            Some(Ordering::Greater)
+        );
+        assert_eq!(
+            IfaValue::Float(5.0).partial_cmp(&IfaValue::Int(2)),
+            Some(Ordering::Greater)
+        );
+
+        // Large int that is lossy in f64 — still comparable (cast is lossy but consistent).
+        // i64::MAX as f64 rounds up to 2^63, so Int(i64::MAX) and Float(2^63) are equal as f64.
+        let big = i64::MAX;
+        let big_f = big as f64;
+        assert_eq!(
+            IfaValue::Int(big).partial_cmp(&IfaValue::Float(big_f)),
+            Some(Ordering::Equal),
+            "lossy int→float round-trip still compares consistently"
+        );
+        // Float that is strictly larger than i64::MAX
+        assert_eq!(
+            IfaValue::Int(big).partial_cmp(&IfaValue::Float(f64::MAX)),
+            Some(Ordering::Less)
+        );
     }
 }
 
@@ -806,8 +953,10 @@ impl Trace for ClosureData {
 #[cfg(feature = "vm")]
 impl Trace for std::sync::Mutex<IfaValue> {
     fn trace(&self, cb: crate::gc::TraceCallback) {
-        if let Ok(guard) = self.try_lock() {
-            guard.trace(cb);
-        }
+        // Use lock() not try_lock(): silently skipping edges breaks the
+        // Bacon-Rajan invariant. On the single-threaded VM no locks are held
+        // during collection, so this always succeeds immediately.
+        let guard = self.lock().unwrap_or_else(|e| e.into_inner());
+        guard.trace(cb);
     }
 }

@@ -31,7 +31,6 @@ pub mod iwa_pele;
 pub mod module_resolver;
 pub mod native;
 pub mod opon;
-pub mod value;
 pub mod vm;
 
 // Enhanced VM modules with Ikin & Iroke optimizations
@@ -55,10 +54,10 @@ pub use ifa_parser::parse;
 pub use ifa_transpiler::{
     ProjectConfig, RustTranspiler, generate_project, generate_project_with_types, transpile_to_rust,
 };
+pub use ifa_types::IfaValue;
 pub use iwa_pele::{IwaPele, IwaPeleError, IwaPeleErrorKind};
 pub use module_resolver::{ImportGuard, ModuleResolver};
 pub use opon::{Opon, OponError, OponErrorKind, OponResult, OponSize};
-pub use value::IfaValue;
 pub use vm::IfaVM;
 
 #[cfg(feature = "compiler")]

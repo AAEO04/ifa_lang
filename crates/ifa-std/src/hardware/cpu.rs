@@ -10,7 +10,6 @@ use std::sync::{Arc, RwLock};
 /// Registered in the VM's ResourceRegistry as `IfaValue::Resource(token)`.
 pub struct CpuOponView {
     pub buffer: RwLock<Vec<f32>>,
-    pub size: usize,
 }
 
 pub fn dispatch(
@@ -30,7 +29,7 @@ pub fn dispatch(
         "min" => handle_iterator_method("min", args),
         "max" => handle_iterator_method("max", args),
         "par_sum" => handle_iterator_method("par_sum", args),
-        "par_filter" | "filter" => handle_iterator_method("par_filter", args),
+        "par_filter" => handle_iterator_method("par_filter", args),
         "par_sort" | "sort" => handle_iterator_method("par_sort", args),
 
         "threads" | "num_threads" => Ok(IfaValue::Int(CpuContext::num_threads() as i64)),
@@ -81,7 +80,6 @@ fn handle_alloc_buffer(
 
     let view = CpuOponView {
         buffer: RwLock::new(vec![0.0; size]),
-        size,
     };
 
     let token = ctx.resource_registry().register(view);
@@ -110,7 +108,7 @@ fn handle_read_buffer(
         .buffer
         .read()
         .map_err(|_| IfaError::Runtime("CpuOponView read lock poisoned".into()))?;
-    let mut list = Vec::with_capacity(view.size);
+    let mut list = Vec::with_capacity(buffer.len());
     for &val in buffer.iter() {
         list.push(IfaValue::Float(val as f64));
     }
@@ -144,18 +142,20 @@ fn handle_write_buffer(
         .get::<CpuOponView>(view_token)
         .ok_or_else(|| IfaError::Runtime("CpuOponView handle not found".into()))?;
 
-    if list_val.len() != view.size {
-        return Err(IfaError::Runtime(format!(
-            "List size {} does not match CpuOponView size {}",
-            list_val.len(),
-            view.size
-        )));
-    }
-
+    // Take the write lock first: validates size and writes in one atomic hold,
+    // closing the TOCTOU window that existed when a read lock was taken for
+    // validation and then dropped before re-acquiring the write lock.
     let mut buffer = view
         .buffer
         .write()
         .map_err(|_| IfaError::Runtime("CpuOponView write lock poisoned".into()))?;
+    if list_val.len() != buffer.len() {
+        return Err(IfaError::Runtime(format!(
+            "List size {} does not match CpuOponView size {}",
+            list_val.len(),
+            buffer.len()
+        )));
+    }
     for (i, item) in list_val.iter().enumerate() {
         match item {
             IfaValue::Float(f) => buffer[i] = *f as f32,
@@ -201,7 +201,6 @@ fn handle_par_map(args: Vec<IfaValue>, ctx: &mut ifa_vm::native::VmContext) -> I
 
     let new_view = CpuOponView {
         buffer: RwLock::new(mapped),
-        size: view.size,
     };
 
     let token = registry.register(new_view);
@@ -442,17 +441,11 @@ fn handle_iterator_method(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaVal
             }
         }
         "par_filter" => {
-            // Placeholder: par_filter should ideally take a closure
-            // We just implement a basic copy to satisfy the method mapping if no closure given
-            if is_float {
-                Ok(IfaValue::list(
-                    vec_f64.into_iter().map(IfaValue::float).collect(),
-                ))
-            } else {
-                Ok(IfaValue::list(
-                    vec_int.into_iter().map(IfaValue::int).collect(),
-                ))
-            }
+            // par_filter requires a closure argument that the VM dispatch layer cannot
+            // currently pass through. Returning identity silently would give wrong results.
+            Err(IfaError::Custom(
+                "Cpu.par_filter requires a closure — not yet callable via VM dispatch".into(),
+            ))
         }
         _ => Err(IfaError::ArgumentError(format!(
             "Unknown Cpu iterator method {}",

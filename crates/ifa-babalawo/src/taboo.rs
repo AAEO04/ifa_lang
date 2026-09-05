@@ -114,7 +114,7 @@ impl TabooEnforcer {
                     self.current_context == taboo.source_context || taboo.source_context.is_empty();
                 let target_match = callee == taboo.target_domain || taboo.target_domain.is_empty();
 
-                if source_match && context_match && target_match {
+                if source_match & context_match & target_match {
                     self.violations.push(TabooViolation {
                         taboo: taboo.clone(),
                         caller: caller.clone(),

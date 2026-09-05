@@ -29,7 +29,7 @@
 
         <div class="step">
             <h2>Overview</h2>
-            <p>Ifa-Lang uses a dynamic type system. All values are instances of <code>IfaValue</code>, a 32-byte tagged union enum. The actual implementation is in <code>crates/ifa-types/src/value_union.rs</code>.</p>
+            <p>Ifa-Lang uses a dynamic type system. All values are instances of <code>IfaValue</code>, a 16-byte tagged union enum. The actual implementation is in <code>crates/ifa-types/src/value_union.rs</code>.</p>
         </div>
 
         <div class="step">
@@ -93,19 +93,18 @@ ayanmo nothing = null;</code></pre>
         </div>
 
         <div class="step">
-            <h2>String Type (CompactString)</h2>
+            <h2>String Type</h2>
 
             <div class="type-card">
                 <h4>Str</h4>
-                <p>Unicode string with Small String Optimization</p>
+                <p>Unicode string (heap-allocated)</p>
                 <div class="code-example">
                     <pre><code>ayanmo name = "Ifa-Lang";
 ayanmo yoruba = "Kaabo awuju!";</code></pre>
                 </div>
                 <ul>
-                    <li>UTF-8 encoded</li>
-                    <li>Small String Optimization: strings up to 21 bytes stored inline (no heap alloc)</li>
-                    <li>Strings longer than 21 bytes stored as <code>Arc&lt;str&gt;</code> (heap-allocated, ref-counted)</li>
+                    <li>UTF-8 encoded, stored as <code>Box&lt;String&gt;</code> (8-byte thin pointer)</li>
+                    <li>All strings heap-allocated — no inline SSO in the value itself</li>
                     <li>Methods: Ika string operations</li>
                 </ul>
             </div>
@@ -141,8 +140,8 @@ ayanmo mixed = [1, "hello", otito, 3.14];</code></pre>
 };</code></pre>
                     </div>
                     <ul>
-                        <li>Wrapped in <code>Arc&lt;HashMap&lt;CompactString, IfaValue&gt;&gt;</code></li>
-                        <li>String keys only (CompactString for SSO)</li>
+                        <li>Wrapped in <code>IfaGc&lt;HashMap&lt;CompactString, IfaValue&gt;&gt;</code></li>
+                        <li>String keys only (CompactString for map key SSO)</li>
                         <li>Any value types</li>
                     </ul>
                 </div>
@@ -222,7 +221,7 @@ ayanmo result = Odi.ka("data.txt");
                 <li><strong>AstFn:</strong> AST function representation (interpreter path)</li>
                 <li><strong>Upvalue:</strong> Captured binding cell for closures</li>
                 <li><strong>Future:</strong> Async future value (Pending/Ready)</li>
-                <li><strong>Actor:</strong> Actor handle (id + type-erased channel sender)</li>
+                <li><strong>Actor:</strong> Actor handle (<code>Arc&lt;ActorData&gt;</code> with id + type-erased channel sender)</li>
                 <li><strong>Return:</strong> Return wrapper for function return values</li>
                 <li><strong>Break:</strong> Loop break signal</li>
                 <li><strong>Continue:</strong> Loop continue signal</li>
@@ -234,15 +233,16 @@ ayanmo result = Odi.ka("data.txt");
 
             <h3>IfaValue Size</h3>
             <ul>
-                <li><strong>Total:</strong> 32 bytes on 64-bit systems (confirmed by test)</li>
+                <li><strong>Total:</strong> 16 bytes on 64-bit systems (confirmed by test)</li>
                 <li>This is a regular Rust enum, size driven by discriminator + largest variant</li>
+                <li>Str uses <code>Box&lt;String&gt;</code> (8-byte thin pointer) to stay within 16 bytes</li>
             </ul>
 
-            <h3>CompactString Layout</h3>
+            <h3>CompactString Layout (Map Keys)</h3>
             <ul>
-                <li><strong>Inline branch:</strong> { len: u8, char_len: u8, data: [u8; 21] } — 23 bytes total</li>
-                <li><strong>Heap branch:</strong> Arc&lt;str&gt; (pointer + length = 16 bytes)</li>
-                <li><strong>SSO threshold:</strong> 21 bytes — strings up to 21 UTF-8 bytes stored inline</li>
+                <li>Used for Map key storage (<code>HashMap&lt;CompactString, IfaValue&gt;</code>)</li>
+                <li><strong>Inline branch:</strong> { len: u8, char_len: u8, data: [u8; 21] } — strings up to 21 bytes stored inline</li>
+                <li><strong>Heap branch:</strong> Arc&lt;str&gt; — strings over 21 bytes</li>
             </ul>
         </div>
 
@@ -262,13 +262,15 @@ ayanmo message = "Value: " + 42;  // Int -> Str
             </div>
 
             <h3>Equality Semantics</h3>
-            <p><code>is_equal()</code> compares structurally:</p>
+            <p><code>is_equal()</code> compares structurally (used by <code>Set</code>/<code>Map</code> internal checks):</p>
             <ul>
-                <li>Int/Float cross-type comparison with numeric promotion</li>
-                <li>Float comparison uses epsilon (f64::EPSILON)</li>
+                <li>Same-type comparison for all primitives (Int, Float, Str, Bool, Null)</li>
+                <li>Float NaN == NaN returns true (for Set/Map consistency)</li>
                 <li>List/Map comparison deep-equals element by element</li>
-                <li>Arc pointer-equality shortcut for List/Map (same Arc = equal)</li>
+                <li>Arc/IfaGc pointer-equality shortcut for List/Map (same Arc = equal)</li>
+                <li>Reference types (Fn, Actor, Closure, etc.) use pointer identity — <code>a == a</code> is always true</li>
             </ul>
+            <p>VM <code>==</code>/<code>!=</code> opcodes support Int/Float cross-type comparison (e.g., <code>1 == 1.0</code> is true).</p>
         </div>
 
         <div class="step">

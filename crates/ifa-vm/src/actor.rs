@@ -18,8 +18,9 @@ use std::collections::HashMap;
 use std::sync::{
     Arc, Mutex, OnceLock,
     atomic::{AtomicU64, Ordering},
-    mpsc::{self, SyncSender, TrySendError},
 };
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::sync::mpsc::{self, Sender, error::TrySendError};
 
 #[cfg(not(target_arch = "wasm32"))]
 static ACTOR_RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
@@ -37,14 +38,14 @@ fn get_actor_runtime() -> &'static tokio::runtime::Runtime {
 
 pub fn spawn_actor_task<F>(f: F)
 where
-    F: FnOnce() + Send + 'static,
+    F: std::future::Future<Output = ()> + Send + 'static,
 {
     #[cfg(not(target_arch = "wasm32"))]
     {
         if let Ok(handle) = tokio::runtime::Handle::try_current() {
-            handle.spawn_blocking(f);
+            handle.spawn(f);
         } else {
-            get_actor_runtime().spawn_blocking(f);
+            get_actor_runtime().spawn(f);
         }
     }
     #[cfg(target_arch = "wasm32")]
@@ -91,7 +92,7 @@ pub struct ActorHandle {
     /// Unique actor identifier (monotonic u64).
     pub id: u64,
     /// Bounded channel transmit end. Bounded = back-pressure is free.
-    tx: Arc<SyncSender<ActorMsg>>,
+    tx: Arc<Sender<ActorMsg>>,
     /// The isolated resource registry for this actor.
     pub resource_registry: Arc<ifa_types::registry::ResourceRegistry>,
 }
@@ -109,7 +110,7 @@ impl ActorHandle {
                     "Actor {} inbox is full — apply back-pressure or increase buffer",
                     self.id
                 )),
-                TrySendError::Disconnected(_) => {
+                TrySendError::Closed(_) => {
                     IfaError::Runtime(format!("Actor {} has exited", self.id))
                 }
             })
@@ -196,7 +197,7 @@ pub fn spawn_actor(
     #[cfg(not(target_arch = "wasm32"))]
     {
         let id = next_actor_id();
-        let (tx, rx) = mpsc::sync_channel::<ActorMsg>(ACTOR_INBOX_CAPACITY);
+        let (tx, rx) = mpsc::channel::<ActorMsg>(ACTOR_INBOX_CAPACITY);
         let tx = Arc::new(tx);
         let handle = ActorHandle {
             id,
@@ -207,28 +208,33 @@ pub fn spawn_actor(
 
         let init_fn_safe = match init_fn {
             IfaValue::Fn(f) => Ok(f),
+            IfaValue::Closure(c) => Ok(c.fn_data.clone()), // Support isolated closures
             _ => Err(IfaError::Runtime(
-                "Actor must be spawned with a bytecode function".into(),
+                "Actor must be spawned with a bytecode function or closure".into(),
             )),
         }?;
 
         let table_clone = table.clone();
-        spawn_actor_task(move || {
+        spawn_actor_task(async move {
             actor_loop(
                 id,
-                IfaValue::Fn(init_fn_safe),
+                init_fn_safe,
                 rx,
-                &bytecode,
-                &table_clone,
+                bytecode,
+                table_clone,
                 registry,
                 resource_registry,
-            );
+            )
+            .await;
         });
 
         // Wrap the full handle as a type-erased Arc so IfaValue::Actor can hold it
         // without ifa-types depending on ifa-vm.
         let erased: Arc<dyn std::any::Any + Send + Sync> = Arc::new(handle);
-        Ok(IfaValue::Actor { id, handle: erased })
+        Ok(IfaValue::Actor(Arc::new(ifa_types::ActorData {
+            id,
+            handle: erased,
+        })))
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -263,10 +269,10 @@ pub fn transfer_resources(
             }
         }
         IfaValue::Result(payload) => match payload.as_ref() {
-            ifa_types::value_union::ResultPayload::Ok(v) => {
+            ifa_types::value_union::ResultPayload::Ire(v) => {
                 transfer_resources(v, sender_registry, recipient_registry, recipient_actor_id)
             }
-            ifa_types::value_union::ResultPayload::Err(v) => {
+            ifa_types::value_union::ResultPayload::Ibi(v) => {
                 transfer_resources(v, sender_registry, recipient_registry, recipient_actor_id)
             }
         },
@@ -282,36 +288,35 @@ pub fn actor_send(
 ) -> IfaResult<()> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        if let IfaValue::Actor { id, handle } = actor {
-            let actor_handle = handle
-                .downcast_ref::<Arc<ActorHandle>>()
-                .ok_or_else(|| IfaError::Runtime(format!("Actor {}: invalid handle type", id)))?;
+        if let IfaValue::Actor(data) = actor {
+            let actor_handle = data
+                .handle
+                .downcast_ref::<ActorHandle>()
+                .ok_or_else(|| IfaError::Runtime(format!("Actor {}: invalid handle type", data.id)))?;
 
             // 1. Enforce No-Shared-Mutability via Zero-Copy Ownership Transfer.
             // Babalawo statically guarantees the sender cannot access this value again.
-            let safe_value = value.clone();
-
             // 2. Transfer ownership of any resources contained in the message payload
             transfer_resources(
-                &safe_value,
+                &value,
                 sender_registry,
                 &actor_handle.resource_registry,
-                *id,
+                data.id,
             );
 
-            let serialized = bincode::serialize(&safe_value)
+            let serialized = bincode::serialize(&value)
                 .map_err(|_| IfaError::Runtime("Failed to serialize yanda transfer".into()))?;
 
             actor_handle
                 .tx
                 .try_send(ActorMsg::SerializedValue(serialized))
                 .map_err(|e| match e {
-                    mpsc::TrySendError::Full(_) => IfaError::Runtime(format!(
+                    mpsc::error::TrySendError::Full(_) => IfaError::Runtime(format!(
                         "Actor {} inbox full — back-pressure required",
-                        id
+                        data.id
                     )),
-                    mpsc::TrySendError::Disconnected(_) => {
-                        IfaError::Runtime(format!("Actor {} has exited", id))
+                    mpsc::error::TrySendError::Closed(_) => {
+                        IfaError::Runtime(format!("Actor {} has exited", data.id))
                     }
                 })
         } else {
@@ -330,31 +335,41 @@ pub fn actor_send(
     }
 }
 
-/// The actor's main loop. Runs on a dedicated OS thread.
+/// Safe Send wrapper for IfaVM.
+/// SAFETY: `IfaVM` is isolated per actor via the `iso` capability typing system.
+/// No other thread holds pointers to its `IfaGc` cycle-collected heap.
+/// Moving across `.await` yield points in the M:N scheduler is strictly memory safe,
+/// and `SUSPECT_BUFFER` interacts seamlessly with whatever OS thread drops the value.
+struct SafeVmWrapper(crate::vm::IfaVM);
+unsafe impl Send for SafeVmWrapper {}
+
+/// The actor's main loop. Runs cooperatively on the tokio M:N scheduler.
 ///
 /// Receives messages from its inbox, calls `handler(message)` for each
 /// `Value` message, stops on `Shutdown` or channel close.
-fn actor_loop(
+async fn actor_loop(
     id: u64,
-    handler: IfaValue,
-    rx: mpsc::Receiver<ActorMsg>,
-    bytecode: &crate::bytecode::Bytecode,
-    table: &Arc<ActorTable>,
+    handler_data: Arc<ifa_types::value_union::BytecodeFnData>,
+    mut rx: mpsc::Receiver<ActorMsg>,
+    bytecode: Arc<crate::bytecode::Bytecode>,
+    table: Arc<ActorTable>,
     registry: Option<Box<dyn crate::native::OduRegistry>>,
     resource_registry: std::sync::Arc<ifa_types::registry::ResourceRegistry>,
 ) {
     use crate::vm::IfaVM;
 
-    // Use guard to set and automatically clear the thread-local actor ID on exit/panic
-    let _guard = ActorIdGuard::new(id);
+    let mut safe_vm = SafeVmWrapper({
+        let mut vm = IfaVM::new();
+        vm.actor_id = Some(id);
+        vm.registry = registry;
+        vm.resource_registry = resource_registry;
+        vm
+    });
 
-    // Fresh, isolated VM — zero shared state with the parent.
-    let mut vm = IfaVM::new();
-    vm.actor_id = Some(id);
-    vm.registry = registry;
-    vm.resource_registry = resource_registry;
+    while let Some(msg) = rx.recv().await {
+        // Use guard to set and automatically clear the thread-local actor ID on exit/panic
+        let _guard = ActorIdGuard::new(id);
 
-    while let Ok(msg) = rx.recv() {
         match msg {
             ActorMsg::Shutdown => break,
             ActorMsg::SerializedValue(bytes) => {
@@ -368,12 +383,15 @@ fn actor_loop(
                 };
                 let args = vec![value];
                 // spawn_task creates a cooperative task and returns a Future.
-                match vm.spawn_task(handler.clone(), args) {
+                match safe_vm
+                    .0
+                    .spawn_task(IfaValue::Fn(handler_data.clone()), args)
+                {
                     Ok(IfaValue::Future(cell)) => {
                         // Drive the task to completion. Since there's only one
                         // task in this actor's queue, this will run it fully.
                         let val = ifa_types::value_union::IfaValue::Future(cell.clone());
-                        if let Err(_e) = vm.await_future(&val, bytecode) {
+                        if let Err(_e) = safe_vm.0.await_future(&val, &bytecode) {
                             #[cfg(debug_assertions)]
                             eprintln!("[ifa actor {}] handler error: {}", id, _e);
                         }
@@ -405,10 +423,10 @@ mod tests {
         assert!(b > a);
     }
 
-    #[test]
-    fn actor_table_insert_get_remove() {
+    #[tokio::test]
+    async fn actor_table_insert_get_remove() {
         let table = ActorTable::new();
-        let (tx, _rx) = mpsc::sync_channel::<ActorMsg>(1);
+        let (tx, _rx) = mpsc::channel::<ActorMsg>(1);
         let registry = Arc::new(ifa_types::registry::ResourceRegistry::new());
         let handle = ActorHandle {
             id: 999,
@@ -425,9 +443,9 @@ mod tests {
         assert!(table.get(999).is_none());
     }
 
-    #[test]
-    fn send_to_disconnected_actor_errors() {
-        let (tx, _rx) = mpsc::sync_channel::<ActorMsg>(1);
+    #[tokio::test]
+    async fn send_to_disconnected_actor_errors() {
+        let (tx, _rx) = mpsc::channel::<ActorMsg>(1);
         // Drop rx so the channel is disconnected.
         drop(_rx);
         let registry = Arc::new(ifa_types::registry::ResourceRegistry::new());

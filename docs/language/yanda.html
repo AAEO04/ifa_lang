@@ -30,15 +30,15 @@
         <table class="field-table">
             <tr><th>Strategy</th><th>Keyword</th><th>Scope</th><th>Description</th></tr>
             <tr><td>Epoch reclamation</td><td><code>ebo { ... }</code></td><td>Block-scoped</td><td>Allocations released at scope exit — primary strategy</td></tr>
-            <tr><td>Cycle collection</td><td><em>Automatic</em></td><td>VM-wide</td><td>Bacon-Rajan collector handles long-lived cycles every 1024 VM ticks</td></tr>
-            <tr><td>Ownership transfer</td><td><code>yanda</code></td><td>Cross-actor</td><td>Deep-copy serialization at actor boundaries</td></tr>
+            <tr><td>Cycle collection</td><td><em>Automatic</em></td><td>VM-wide</td><td>Bacon-Rajan collector handles long-lived cycles at dynamic VM tick intervals depending on opon size (e.g. 512 ticks for default size)</td></tr>
+            <tr><td>Ownership transfer</td><td><code>yanda</code></td><td>Cross-actor</td><td>Deep-copy serialization at actor boundaries + source slot cleared via MoveLocal opcode</td></tr>
         </table>
 
         <p>Memory is managed per-actor (Orí model). Each actor VM has an isolated heap. GC pointers never cross thread boundaries.</p>
 
         <h2 class="section-header">2. Yanda — Deep-Copy Transfer</h2>
 
-        <p>The <code>yanda</code> keyword (Yoruba: "surrender/release") explicitly transfers ownership of a value across an actor boundary. Unlike Rust's <code>move</code> (which is zero-copy pointer handoff), Ifá-Lang's <code>yanda</code> is always a <strong>deep copy</strong> — the value is serialized, sent, and deserialized on the receiving actor's heap.</p>
+        <p>The <code>yanda</code> keyword (Yoruba: "surrender/release") explicitly transfers ownership of a value across an actor boundary. The <code>MoveLocal</code> opcode (0x1F) clears the source slot to <code>Null</code> at runtime, and Babalawo statically prevents use-after-move. For cross-actor transfer, the value is <strong>deep-copied via serialization</strong> — sent and deserialized on the receiving actor's heap.</p>
 
         <div class="code-block">
 <pre>// Spawn an actor
@@ -48,13 +48,12 @@ ayanmo worker = ajose "worker" {
     }
 };
 
-// Send a value — deep-copied via serialization
+// Send a value — source slot cleared + deep-copied via serialization
 ayanmo data = [1, 2, 3, [4, 5]];
 yanda data to worker;
-// data is still usable here (yanda is a copy for cross-actor,
-// not a destructive move like Rust's)
-// But for embedded targets without GC, yanda IS destructive:
-// data becomes null after yanda</pre></div>
+// data is Null at runtime (MoveLocal cleared the slot)
+// Babalawo flags any use-after-move as a compile error
+// For embedded targets without GC, yanda is also destructive</pre></div>
 
         <div class="good">
             <strong>Why deep copy?</strong> Each actor has its own cycle collector heap. A zero-copy pointer handoff would require cross-thread GC coordination, defeating the purpose of per-actor isolation. Serialization is the clean boundary.
@@ -63,10 +62,10 @@ yanda data to worker;
         <h3>2.1 How It Works</h3>
 
         <ol>
+            <li>Compiler emits <code>MoveLocal</code> opcode (0x1F) for identifier moves — source slot replaced with <code>Null</code></li>
             <li>Sender calls <code>bincode::serialize(&amp;value)</code> — converts <code>IfaValue</code> to <code>Vec&lt;u8&gt;</code></li>
             <li>Serialized bytes are sent through a bounded <code>SyncSender</code> channel</li>
             <li>Receiver calls <code>bincode::deserialize(&amp;bytes)</code> — allocates fresh <code>IfaGc</code> handles on the receiver's heap</li>
-            <li>Original value remains valid on the sender (in the native VM)</li>
         </ol>
 
         <p>Variants that cannot be serialized (<code>Fn</code>, <code>Closure</code>, <code>Actor</code>, <code>Future</code>) are rejected at serialization time — you can't <code>yanda</code> a closure to another actor.</p>
@@ -140,23 +139,21 @@ fun process_requests() {
         It also powers the <code>ebo</code> epoch system and the flight recorder. See the
         <a href="../language/opon.html">dedicated Opon reference</a> for full details.</p>
 
-        <p>The <code>OponSize::gc_policy()</code> method defines GC tuning parameters, but these
-        are <span style="color:var(--amber);">aspirational</span> — the VM currently uses a hardcoded
-        1,024-tick collector interval regardless of the <code>#opon</code> setting. The primary
-        role of <code>#opon</code> is memory capacity and limit enforcement, not GC tuning:</p>
+        <p>The <code>OponSize::gc_policy()</code> method defines GC tuning parameters, which
+        are fully wired and active — the VM's execution loop queries this policy to trigger
+        cycle collection dynamically. The primary role of <code>#opon</code> remains memory
+        capacity and limit enforcement, with corresponding GC tuning:</p>
 
         <table class="field-table">
             <tr><th>Directive</th><th>Slots</th><th>Stack Cap</th><th>Frame Cap</th><th>GC Policy</th></tr>
-            <tr><td><code>opon kekere</code></td><td>256</td><td>256</td><td>64</td><td>Check every 128 ticks <span style="color:var(--amber);">(unwired)</span></td></tr>
-            <tr><td><code>opon arinrin</code></td><td>4,096</td><td>4,096</td><td>512</td><td>Check every 512 ticks <span style="color:var(--amber);">(unwired)</span></td></tr>
-            <tr><td><code>opon nla</code></td><td>65,536</td><td>65,536</td><td>4,096</td><td>Check every 2,048 ticks <span style="color:var(--amber);">(unwired)</span></td></tr>
-            <tr><td><code>opon ailopin</code></td><td>Dynamic up to ~1M</td><td>None</td><td>None</td><td>Check every 4,096 ticks <span style="color:var(--amber);">(unwired)</span></td></tr>
+            <tr><td><code>opon kekere</code></td><td>256</td><td>256</td><td>64</td><td>Check every 128 ticks <span style="color:var(--green);">(wired)</span></td></tr>
+            <tr><td><code>opon arinrin</code></td><td>4,096</td><td>4,096</td><td>512</td><td>Check every 512 ticks <span style="color:var(--green);">(wired)</span></td></tr>
+            <tr><td><code>opon nla</code></td><td>65,536</td><td>65,536</td><td>4,096</td><td>Check every 2,048 ticks <span style="color:var(--green);">(wired)</span></td></tr>
+            <tr><td><code>opon ailopin</code></td><td>Dynamic up to ~1M</td><td>None</td><td>None</td><td>Check every 4,096 ticks <span style="color:var(--green);">(wired)</span></td></tr>
         </table>
 
         <div class="warn">
-            <strong>Note:</strong> The <code>gc_policy()</code> values are defined but not wired into
-            the VM's cycle collector loop. For deterministic memory release, use
-            <code>ebo</code> epochs — they always work regardless of GC tuning status.
+            <strong>Note:</strong> The <code>gc_policy()</code> values are fully wired into the VM's cycle collector loop, checking at different tick frequencies depending on your configured <code>#opon</code> size. For deterministic memory release, use <code>ebo</code> epochs — they always work regardless of GC tuning status.
         </div>
 
         <h2 class="section-header">5. Embedded Targets (.yanda() method)</h2>

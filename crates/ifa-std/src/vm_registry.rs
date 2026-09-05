@@ -20,9 +20,9 @@ use crate::esu::Esu;
 use crate::odu::irete::Irete;
 use crate::odu::irosu::Irosu;
 use crate::odu::odi::Odi;
-#[cfg(feature = "full")]
+#[cfg(feature = "network")]
 use crate::odu::otura::Otura;
-use crate::sandbox_shim::CapabilitySet;
+use crate::sandbox_shim::{CapabilitySet, Ofun};
 
 // ---------------------------------------------------------------------------
 // Domain ID constants — single authoritative source for all numeric domain IDs.
@@ -60,15 +60,117 @@ pub mod domain {
 pub struct StdRegistry {
     irosu: OnceLock<Irosu>,
     odi: OnceLock<Odi>,
-    #[cfg(feature = "full")]
+    #[cfg(feature = "network")]
     otura: OnceLock<Otura>,
     #[cfg(feature = "crypto")]
     irete: OnceLock<Irete>,
     storage: crate::hardware::storage::StorageWorker,
+    /// Persistent tokio runtime for networking.
+    #[cfg(feature = "network")]
+    net_runtime: OnceLock<tokio::runtime::Runtime>,
     esu: Esu,
 }
 
 impl StdRegistry {
+    ifa_macros::odu_registry_dispatch! {
+        domain 0 => self.dispatch_ogbe, {
+            0x01 => "bere",
+            0x02 => "version",
+            0x03 => "args",
+            0x04 => "àwọn_àríyànjú",
+            0x05 => "env",
+            0x06 => "ayika",
+            0x07 => "cwd",
+            0x08 => "ibi_isisiyi"
+        },
+        domain 1 => self.dispatch_oyeku, {
+            0x01 => "jade",
+            0x02 => "sun",
+            0x03 => "pid",
+            0x04 => "is_alive"
+        },
+        domain 2 => self.dispatch_iwori, {
+            0x01 => "sise",
+            0x02 => "duro"
+        },
+        domain 3 => self.dispatch_odi, {
+            0x01 => "ka",
+            0x02 => "ko",
+            0x03 => "so_po",
+            0x04 => "pa_re",
+            0x05 => "is_file",
+            0x06 => "is_dir"
+        },
+        domain 4 ctx => self.dispatch_irosu, {
+            0x01 => "te",
+            0x02 => "gba"
+        },
+        domain 5 => dispatch_owonrin, {
+            0x01 => "tuka",
+            0x02 => "yan"
+        },
+        domain 6 => dispatch_obara, {
+            0x01 => "ropo",
+            0x02 => "pin",
+            0x03 => "sin",
+            0x04 => "cos"
+        },
+        domain 7 ctx => dispatch_okanran, {
+            0x01 => "dajo",
+            0x02 => "se"
+        },
+        domain 8 ctx => self.dispatch_ogunda, {
+            0x01 => "da",
+            0x02 => "pa",
+            0x03 => "len",
+            0x04 => "push"
+        },
+        domain 9 ctx => dispatch_osa, {
+            0x01 => "sa",
+            0x02 => "di",
+            0x03 => "spawn"
+        },
+        domain 10 ctx => dispatch_ika, {
+            0x01 => "ka",
+            0x02 => "ko",
+            0x03 => "split"
+        },
+        domain 11 => dispatch_oturupon, {
+            0x01 => "ru",
+            0x02 => "pon",
+            0x03 => "json_parse"
+        },
+        domain 12 ctx => self.dispatch_otura, {
+            0x01 => "tu",
+            0x02 => "ra",
+            0x03 => "get",
+            0x04 => "post",
+            0x05 => "de",
+            0x06 => "soro",
+            0x07 => "ka",
+            0x08 => "ko",
+            0x09 => "pa",
+            0x0a => "gba_sile",
+            0x0b => "url_encode",
+            0x0c => "fetch_json",
+            0x0d => "check_host"
+        },
+        domain 13 => self.dispatch_irete, {
+            0x01 => "te",
+            0x02 => "re",
+            0x03 => "hash"
+        },
+        domain 14 ctx => dispatch_ose, {
+            0x01 => "se",
+            0x02 => "la",
+            0x03 => "draw"
+        },
+        domain 15 ctx => self.dispatch_ofun, {
+            0x01 => "fun",
+            0x02 => "da",
+            0x03 => "grant"
+        }
+    }
     pub fn new() -> Self {
         Self::new_with_caps(CapabilitySet::new())
     }
@@ -78,11 +180,13 @@ impl StdRegistry {
         Self {
             irosu: OnceLock::new(),
             odi: OnceLock::new(),
-            #[cfg(feature = "full")]
+            #[cfg(feature = "network")]
             otura: OnceLock::new(),
             #[cfg(feature = "crypto")]
             irete: OnceLock::new(),
             storage: crate::hardware::storage::StorageWorker::new(),
+            #[cfg(feature = "network")]
+            net_runtime: OnceLock::new(),
             esu,
         }
     }
@@ -106,9 +210,22 @@ impl StdRegistry {
         self.odi.get_or_init(|| Odi::new(self.esu.clone()))
     }
 
-    #[cfg(feature = "full")]
+    #[cfg(feature = "network")]
     fn otura(&self) -> &Otura {
         self.otura.get_or_init(|| Otura::new(self.esu.clone()))
+    }
+
+    /// Get or create the shared networking runtime.
+    #[cfg(feature = "network")]
+    fn net_runtime(&self) -> &tokio::runtime::Runtime {
+        self.net_runtime.get_or_init(|| {
+            tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(2)
+                .enable_all()
+                .thread_name("ifa-net")
+                .build()
+                .expect("Failed to create networking runtime")
+        })
     }
 
     #[cfg(feature = "crypto")]
@@ -131,13 +248,35 @@ impl OduRegistry for StdRegistry {
         Box::new(StdRegistry {
             irosu: OnceLock::new(),
             odi: OnceLock::new(),
-            #[cfg(feature = "full")]
+            #[cfg(feature = "network")]
             otura: OnceLock::new(),
             #[cfg(feature = "crypto")]
             irete: OnceLock::new(),
             storage: self.storage.clone(),
+            #[cfg(feature = "network")]
+            net_runtime: OnceLock::new(),
             esu: Esu::new(self.esu.world_state()),
         })
+    }
+
+    #[inline]
+    fn check_effect(&self, domain_id: u8) -> IfaResult<()> {
+        let cap = match domain_id {
+            // Irosu: Print, Input
+            4 => Ofun::Stdio,
+            // Odi: Import (Module loading requires broad read access)
+            3 => Ofun::ReadFiles {
+                root: std::path::PathBuf::from("/"),
+            },
+            // Otura: Network access
+            12 => Ofun::Network {
+                domains: vec!["*".to_string()],
+            },
+            // Osa, Ogunda, Cpu are internal VM state manipulation, no external capability needed
+            9 | 8 | 18 => return Ok(()),
+            _ => return Ok(()),
+        };
+        self.esu.enforce_crossroads(&cap, "direct VM opcode")
     }
 
     fn call(
@@ -147,58 +286,9 @@ impl OduRegistry for StdRegistry {
         args: Vec<IfaValue>,
         ctx: &mut VmContext,
     ) -> IfaResult<IfaValue> {
-        match domain_id {
-            0 => self.dispatch_ogbe(method_name, args),
-            1 => self.dispatch_oyeku(method_name, args),
-            2 => self.dispatch_iwori(method_name, args),
-            3 => self.dispatch_odi(method_name, args),
-            4 => self.dispatch_irosu(method_name, args, ctx),
-            5 => dispatch_owonrin(method_name, args),
-            6 => dispatch_obara(method_name, args),
-            7 => dispatch_okanran(method_name, args, ctx),
-            8 => self.dispatch_ogunda(method_name, args, ctx),
-            9 => dispatch_osa(method_name, args, ctx),
-            10 => dispatch_ika(method_name, args, ctx),
-            11 => dispatch_oturupon(method_name, args),
-            12 => self.dispatch_otura(method_name, args),
-            #[cfg(feature = "crypto")]
-            13 => self.dispatch_irete(method_name, args),
-            14 => dispatch_ose(method_name, args, ctx),
-            15 => self.dispatch_ofun(method_name, args, ctx),
-            18 => crate::hardware::cpu::dispatch(method_name, args, ctx),
-            19 => {
-                #[cfg(feature = "gpu")]
-                {
-                    match method_name {
-                        "init" => crate::hardware::gpu::handle_init(args, ctx),
-                        "dispatch_pipeline" | "dispatch" => {
-                            crate::hardware::gpu::handle_dispatch_pipeline(args, ctx)
-                        }
-                        "sync" => crate::hardware::gpu::handle_sync(args, ctx),
-                        "alloc_buffer" => crate::hardware::gpu::handle_alloc_buffer(args, ctx),
-                        "read_buffer" => crate::hardware::gpu::handle_read_buffer(args, ctx),
-                        "write_buffer" => crate::hardware::gpu::handle_write_buffer(args, ctx),
-                        _ => Err(IfaError::Custom(format!(
-                            "Unknown gpu method: {}",
-                            method_name
-                        ))),
-                    }
-                }
-                #[cfg(not(feature = "gpu"))]
-                {
-                    Err(IfaError::Runtime("GPU disabled".into()))
-                }
-            }
-            20 => crate::hardware::storage::dispatch(&self.storage, method_name, args),
-            29 => crate::hardware::sys::dispatch(method_name, args),
-            _ => Err(IfaError::Custom(format!(
-                "Unknown Odù domain ID: {}",
-                domain_id
-            ))),
-        }
+        self.generated_call(domain_id, method_name, args, ctx)
     }
 
-    #[inline]
     fn call_fast(
         &self,
         domain_id: u8,
@@ -206,353 +296,8 @@ impl OduRegistry for StdRegistry {
         args: Vec<IfaValue>,
         ctx: &mut VmContext,
     ) -> IfaResult<IfaValue> {
-        let low = (method_id & 0xFF) as u8;
-        match domain_id {
-            0 => match low {
-                0x01 => self.dispatch_ogbe("bere", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            1 => match low {
-                0x01 => self.dispatch_oyeku("jade", args),
-                0x02 => self.dispatch_oyeku("sun", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            2 => match low {
-                0x01 => self.dispatch_iwori("bayi", args),
-                0x02 => self.dispatch_iwori("akoko", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            3 => match low {
-                0x01 => self.dispatch_odi("ka", args),
-                0x02 => self.dispatch_odi("ko", args),
-                0x03 => self.dispatch_odi("wa", args),
-                0x04 => self.dispatch_odi("si", args),
-                0x05 => self.dispatch_odi("pa", args),
-                0x06 => self.dispatch_odi("pa_iwe", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            4 => match low {
-                0x01 => self.dispatch_irosu("fo", args, ctx),
-                0x02 => self.dispatch_irosu("so", args, ctx),
-                0x03 => self.dispatch_irosu("gbo", args, ctx),
-                0x04 => self.dispatch_irosu("gbo_nomba", args, ctx),
-                0x05 => self.dispatch_irosu("mo", args, ctx),
-                0x06 => self.dispatch_irosu("san", args, ctx),
-                0x07 => self.dispatch_irosu("kigbe", args, ctx),
-                0x08 => self.dispatch_irosu("ka", args, ctx),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            5 => match low {
-                0x01 => dispatch_owonrin("pese", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            6 => match low {
-                0x01 => dispatch_obara("fikun", args),
-                0x02 => dispatch_obara("isodipupo", args),
-                0x03 => dispatch_obara("agbara", args),
-                0x04 => dispatch_obara("gbongbo", args),
-                0x05 => dispatch_obara("abs", args),
-                0x06 => dispatch_obara("apapo", args),
-                0x07 => dispatch_obara("ile", args),
-                0x08 => dispatch_obara("orule", args),
-                0x09 => dispatch_obara("yika", args),
-                0x0A => dispatch_obara("iyoku", args),
-                0x0B => dispatch_obara("sin", args),
-                0x0C => dispatch_obara("cos", args),
-                0x0D => dispatch_obara("tan", args),
-                0x0E => dispatch_obara("asin", args),
-                0x0F => dispatch_obara("acos", args),
-                0x10 => dispatch_obara("atan", args),
-                0x11 => dispatch_obara("log", args),
-                0x12 => dispatch_obara("log10", args),
-                0x13 => dispatch_obara("exp", args),
-                0x14 => dispatch_obara("aropin", args),
-                0x15 => dispatch_obara("nla_julo", args),
-                0x16 => dispatch_obara("kere_julo", args),
-                0x17 => dispatch_obara("pi", args),
-                0x18 => dispatch_obara("e", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            7 => match low {
-                0x01 => dispatch_okanran("sise", args, ctx),
-                0x02 => dispatch_okanran("ta", args, ctx),
-                0x03 => dispatch_okanran("dogba", args, ctx),
-                0x04 => dispatch_okanran("beeni", args, ctx),
-                0x05 => dispatch_okanran("yato", args, ctx),
-                0x06 => dispatch_okanran("beko", args, ctx),
-                0x07 => dispatch_okanran("ko_si", args, ctx),
-                0x08 => dispatch_okanran("ku_bi", args, ctx),
-                0x09 => dispatch_okanran("ko_le_de_bi", args, ctx),
-                0x0A => dispatch_okanran("ko_ti_se_bi", args, ctx),
-                0x0B => dispatch_okanran("owe", args, ctx),
-                0x0C => dispatch_okanran("gbiyanju", args, ctx),
-                0x0D => dispatch_okanran("wo", args, ctx),
-                0x0E => dispatch_okanran("ku", args, ctx),
-                0x0F => dispatch_okanran("ko_le_de", args, ctx),
-                0x10 => dispatch_okanran("ko_ti_se", args, ctx),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            8 => match low {
-                0x01 => self.dispatch_ogunda("iwon", args, ctx),
-                0x02 => self.dispatch_ogunda("fi", args, ctx),
-                0x03 => self.dispatch_ogunda("mu", args, ctx),
-                0x04 => self.dispatch_ogunda("yi_pada", args, ctx),
-                0x05 => self.dispatch_ogunda("yan", args, ctx),
-                0x06 => self.dispatch_ogunda("seku", args, ctx),
-                0x07 => self.dispatch_ogunda("ge", args, ctx),
-                0x08 => self.dispatch_ogunda("da", args, ctx),
-                0x09 => self.dispatch_ogunda("seda", args, ctx),
-                0x0A => self.dispatch_ogunda("seda_agbara", args, ctx),
-                0x0B => self.dispatch_ogunda("sofo", args, ctx),
-                0x0C => self.dispatch_ogunda("pada", args, ctx),
-                0x0D => self.dispatch_ogunda("to", args, ctx),
-                0x0E => self.dispatch_ogunda("dapo", args, ctx),
-                0x0F => self.dispatch_ogunda("wa", args, ctx),
-                0x10 => self.dispatch_ogunda("eyikeyi", args, ctx),
-                0x11 => self.dispatch_ogunda("gbogbo", args, ctx),
-                0x12 => self.dispatch_ogunda("awon_kokoro", args, ctx),
-                0x13 => self.dispatch_ogunda("awon_iye", args, ctx),
-                0x14 => self.dispatch_ogunda("awon_nkan", args, ctx),
-                0x15 => self.dispatch_ogunda("yo", args, ctx),
-                0x16 => self.dispatch_ogunda("sise", args, ctx),
-                0x17 => self.dispatch_ogunda("sise_ka", args, ctx),
-                0x18 => self.dispatch_ogunda("bere", args, ctx),
-                0x19 => self.dispatch_ogunda("ayika", args, ctx),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            9 => match low {
-                0x01 => dispatch_osa("sun", args, ctx),
-                0x02 => dispatch_osa("gbogbo", args, ctx),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            10 => match low {
-                0x01 => dispatch_ika("gigun", args, ctx),
-                0x02 => dispatch_ika("ge", args, ctx),
-                0x03 => dispatch_ika("so", args, ctx),
-                0x04 => dispatch_ika("oruko_html", args, ctx),
-                0x05 => dispatch_ika("tumo_html", args, ctx),
-                0x06 => dispatch_ika("nla", args, ctx),
-                0x07 => dispatch_ika("kekere", args, ctx),
-                0x08 => dispatch_ika("wa", args, ctx),
-                0x09 => dispatch_ika("ni", args, ctx),
-                0x0A => dispatch_ika("pin", args, ctx),
-                0x0B => dispatch_ika("dapo", args, ctx),
-                0x0C => dispatch_ika("yi_pada", args, ctx),
-                0x0D => dispatch_ika("pada", args, ctx),
-                0x0E => dispatch_ika("ge_lara", args, ctx),
-                0x0F => dispatch_ika("tun", args, ctx),
-                0x10 => dispatch_ika("bere", args, ctx),
-                0x11 => dispatch_ika("pari", args, ctx),
-                0x12 => dispatch_ika("ba_mu", args, ctx),
-                0x13 => dispatch_ika("wa_akoko", args, ctx),
-                0x14 => dispatch_ika("wa_gbogbo", args, ctx),
-                0x15 => dispatch_ika("ropo", args, ctx),
-                0x16 => dispatch_ika("yi_si_json", args, ctx),
-                0x17 => dispatch_ika("yi_pada_json", args, ctx),
-                0x18 => dispatch_ika("bo", args, ctx),
-                0x19 => dispatch_ika("titu_asiri_url", args, ctx),
-                0x1A => dispatch_ika("yi_si_csv", args, ctx),
-                0x1B => dispatch_ika("yi_pada_csv", args, ctx),
-                0x1C => dispatch_ika("rope_new", args, ctx),
-                0x1D => dispatch_ika("rope_insert", args, ctx),
-                0x1E => dispatch_ika("rope_delete", args, ctx),
-                0x1F => dispatch_ika("rope_slice", args, ctx),
-                0x20 => dispatch_ika("rope_len", args, ctx),
-                0x21 => dispatch_ika("ge_trim", args, ctx),
-                0x22 => dispatch_ika("mo", args, ctx),
-                0x23 => dispatch_ika("wa_html", args, ctx),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            11 => match low {
-                0x01 => dispatch_oturupon("yokuro", args),
-                0x02 => dispatch_oturupon("pipin", args),
-                0x03 => dispatch_oturupon("din", args),
-                0x04 => dispatch_oturupon("pin", args),
-                0x05 => dispatch_oturupon("pin_odidi", args),
-                0x06 => dispatch_oturupon("din_f", args),
-                0x07 => dispatch_oturupon("pin_f", args),
-                0x08 => dispatch_oturupon("ku", args),
-                0x09 => dispatch_oturupon("ku_euclidean", args),
-                0x0A => dispatch_oturupon("dake", args),
-                0x0B => dispatch_oturupon("idakeji", args),
-                0x0C => dispatch_oturupon("iyoku", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            12 => match low {
-                0x01 => self.dispatch_otura("gba", args),
-                0x02 => self.dispatch_otura("ran", args),
-                0x03 => self.dispatch_otura("de", args),
-                0x04 => self.dispatch_otura("soro", args),
-                0x05 => self.dispatch_otura("pa", args),
-                0x06 => self.dispatch_otura("ṣàyẹ̀wò", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            #[cfg(feature = "crypto")]
-            13 => match low {
-                0x01 => self.dispatch_irete("hash", args),
-                0x02 => self.dispatch_irete("hmac", args),
-                0x03 => self.dispatch_irete("base64", args),
-                0x04 => self.dispatch_irete("decode", args),
-                0x05 => self.dispatch_irete("funpo", args),
-                0x06 => self.dispatch_irete("tu", args),
-                0x08 => self.dispatch_irete("sha512", args),
-                0x09 => self.dispatch_irete("hmac_verify", args),
-                0x0A => self.dispatch_irete("chacha20_encrypt", args),
-                0x0B => self.dispatch_irete("chacha20_decrypt", args),
-                0x0C => self.dispatch_irete("ed25519_generate", args),
-                0x0D => self.dispatch_irete("ed25519_sign", args),
-                0x0E => self.dispatch_irete("ed25519_verify", args),
-                0x0F => self.dispatch_irete("random_bytes", args),
-                0x10 => self.dispatch_irete("hex_encode", args),
-                0x11 => self.dispatch_irete("hex_decode", args),
-                0x12 => self.dispatch_irete("iwon_funpo", args),
-                0x13 => self.dispatch_irete("sha256_hex", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            #[cfg(not(feature = "crypto"))]
-            13 => Err(IfaError::Runtime(
-                "Irete requires the 'crypto' feature".into(),
-            )),
-            14 => match low {
-                0x01 => dispatch_ose("bere", args, ctx),
-                0x02 => dispatch_ose("pari", args, ctx),
-                0x03 => dispatch_ose("gbile", args, ctx),
-                0x04 => dispatch_ose("apoti", args, ctx),
-                0x05 => dispatch_ose("ipinro", args, ctx),
-                0x06 => dispatch_ose("ya", args, ctx),
-                0x07 => dispatch_ose("nu", args, ctx),
-                0x08 => dispatch_ose("wo", args, ctx),
-                0x09 => dispatch_ose("gboran", args, ctx),
-                0x0A => dispatch_ose("ipile", args, ctx),
-                0x0B => dispatch_ose("ẹmí", args, ctx),
-                0x0C => dispatch_ose("pari_ẹmí", args, ctx),
-                0x0D => dispatch_ose("iwọn", args, ctx),
-                0x0E => dispatch_ose("duro", args, ctx),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            15 => match low {
-                0x01 => self.dispatch_ofun("le", args, ctx),
-                0x02 => self.dispatch_ofun("da", args, ctx),
-                0x03 => self.dispatch_ofun("pa", args, ctx),
-                0x04 => self.dispatch_ofun("iru", args, ctx),
-                0x05 => self.dispatch_ofun("laaye", args, ctx),
-                0x06 => self.dispatch_ofun("ju", args, ctx),
-                0x07 => self.dispatch_ofun("awon_agbara", args, ctx),
-                0x08 => self.dispatch_ofun("je", args, ctx),
-                0x09 => self.dispatch_ofun("afiwe", args, ctx),
-                0x0A => self.dispatch_ofun("dbg", args, ctx),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            18 => match low {
-                0x13 => crate::hardware::cpu::dispatch("threads", args, ctx),
-                0x19 => crate::hardware::cpu::dispatch("alloc_buffer", args, ctx),
-                0x1B => crate::hardware::cpu::dispatch("write_buffer", args, ctx),
-                0x1A => crate::hardware::cpu::dispatch("read_buffer", args, ctx),
-                0x15 => crate::hardware::cpu::dispatch("par_map", args, ctx),
-                0x17 => crate::hardware::cpu::dispatch("par_reduce", args, ctx),
-                0x12 => crate::hardware::cpu::dispatch("configure", args, ctx),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            19 => {
-                #[cfg(feature = "gpu")]
-                {
-                    match low {
-                        0x01 => crate::hardware::gpu::handle_init(args, ctx),
-                        0x02 => crate::hardware::gpu::handle_dispatch_pipeline(args, ctx),
-                        0x03 => crate::hardware::gpu::handle_sync(args, ctx),
-                        0x04 => crate::hardware::gpu::handle_alloc_buffer(args, ctx),
-                        0x05 => crate::hardware::gpu::handle_read_buffer(args, ctx),
-                        0x06 => crate::hardware::gpu::handle_write_buffer(args, ctx),
-                        _ => Err(IfaError::Custom(format!(
-                            "Unknown method id {} for domain {}",
-                            low, domain_id
-                        ))),
-                    }
-                }
-                #[cfg(not(feature = "gpu"))]
-                {
-                    Err(IfaError::Runtime("GPU disabled".into()))
-                }
-            }
-            20 => match low {
-                0x01 => crate::hardware::storage::dispatch(&self.storage, "open", args),
-                0x02 => crate::hardware::storage::dispatch(&self.storage, "get", args),
-                0x03 => crate::hardware::storage::dispatch(&self.storage, "set", args),
-                0x04 => crate::hardware::storage::dispatch(&self.storage, "delete", args),
-                0x05 => crate::hardware::storage::dispatch(&self.storage, "compact", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            29 => match low {
-                0x01 => crate::hardware::sys::dispatch("num_cores", args),
-                0x02 => crate::hardware::sys::dispatch("total_memory", args),
-                0x03 => crate::hardware::sys::dispatch("available_memory", args),
-                0x04 => crate::hardware::sys::dispatch("uptime", args),
-                _ => Err(IfaError::Custom(format!(
-                    "Unknown method id {} for domain {}",
-                    low, domain_id
-                ))),
-            },
-            _ => Err(IfaError::Custom(format!(
-                "Unknown Odù domain ID: {}",
-                domain_id
-            ))),
-        }
+        self.generated_call_fast(domain_id, method_id, args, ctx)
     }
-
     fn import(&self, path: &str) -> IfaResult<IfaValue> {
         let key = path.replace('\\', "/");
         let domain = key
@@ -617,6 +362,7 @@ impl StdRegistry {
                 }
             }
             "bi" | "init" => Ok(IfaValue::null()),
+            "eto" | "os" => Ok(IfaValue::str(ogbe.eto())),
             _ => Err(IfaError::Custom(format!(
                 "Ogbe: unknown method '{}'",
                 method
@@ -668,67 +414,136 @@ impl StdRegistry {
         }
     }
 
-    fn dispatch_otura(&self, method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
+        fn dispatch_otura(&self, method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> IfaResult<IfaValue> {
         #[cfg(feature = "network")]
         {
             match method {
                 "gba" | "get" | "fetch" => {
                     let url = args.first().map(|v| v.to_string()).unwrap_or_default();
-                    let rt = tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .build()
-                        .map_err(|e| {
-                            IfaError::Runtime(format!("Otura runtime init failed: {e}"))
-                        })?;
-                    let result = rt.block_on(self.otura().gba(&url))?;
+                    let result = self.net_runtime().block_on(self.otura().gba(&url))?;
                     Ok(IfaValue::str(result))
                 }
                 "ran" | "post" => {
                     let url = args.first().map(|v| v.to_string()).unwrap_or_default();
                     let body = args.get(1).map(|v| v.to_string()).unwrap_or_default();
-                    let rt = tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .build()
-                        .map_err(|e| {
-                            IfaError::Runtime(format!("Otura runtime init failed: {e}"))
-                        })?;
-                    let result = rt.block_on(self.otura().ran(&url, &body))?;
+                    let result = self.net_runtime().block_on(self.otura().ran(&url, &body))?;
                     Ok(IfaValue::str(result))
                 }
-                "de" | "listen" => Err(IfaError::Runtime(
-                    "Otura.de returns a TcpListener and is not exposed through the VM registry"
-                        .into(),
-                )),
-                "soro" | "connect" => Err(IfaError::Runtime(
-                    "Otura.soro returns a TcpStream and is not exposed through the VM registry"
-                        .into(),
-                )),
-                "pa" | "close" => Err(IfaError::Runtime(
-                    "Otura.pa closes a connection/stream and is not exposed through the VM registry"
-                        .into(),
-                )),
-                "ṣàyẹ̀wò" | "sayewo" | "check_host" => {
+                "de" | "listen" => {
+                    let addr = args.first().map(|v| v.to_string()).unwrap_or_default();
+                    let listener = self.net_runtime().block_on(self.otura().de(&addr))?;
+                    let resource = crate::odu::otura::TcpListenerResource { listener };
+                    let token = ctx.resource_registry().register(resource);
+                    Ok(IfaValue::Resource(std::sync::Arc::new(token)))
+                }
+                "soro" | "connect" => {
+                    let addr = args.first().map(|v| v.to_string()).unwrap_or_default();
+                    let stream = self.net_runtime().block_on(self.otura().soro(&addr))?;
+                    let resource = crate::odu::otura::TcpStreamResource {
+                        stream: std::sync::Mutex::new(stream),
+                    };
+                    let token = ctx.resource_registry().register(resource);
+                    Ok(IfaValue::Resource(std::sync::Arc::new(token)))
+                }
+                "gba_sile" | "accept" => {
+                    let token = match args.first() {
+                        Some(IfaValue::Resource(r)) => **r,
+                        _ => return Err(IfaError::ArgumentError(
+                            "otura.accept: first arg must be TcpListener resource".into(),
+                        )),
+                    };
+                    let registry = ctx.resource_registry();
+                    let resource = registry
+                        .get::<crate::odu::otura::TcpListenerResource>(token)
+                        .ok_or_else(|| IfaError::Runtime("TcpListener handle not found".into()))?;
+                    let (stream, _addr) = self.net_runtime()
+                        .block_on(resource.listener.accept())
+                        .map_err(|e| IfaError::ConnectionFailed(format!("Accept failed: {e}")))?;
+                    let stream_resource = crate::odu::otura::TcpStreamResource {
+                        stream: std::sync::Mutex::new(stream),
+                    };
+                    let stream_token = ctx.resource_registry().register(stream_resource);
+                    Ok(IfaValue::Resource(std::sync::Arc::new(stream_token)))
+                }
+                "ka" | "read" => {
+                    let token = match args.first() {
+                        Some(IfaValue::Resource(r)) => **r,
+                        _ => return Err(IfaError::ArgumentError(
+                            "otura.read: first arg must be TcpStream resource".into(),
+                        )),
+                    };
+                    let max_bytes = args.get(1).and_then(|v| match v {
+                        IfaValue::Int(i) => Some(*i as usize),
+                        _ => None,
+                    }).unwrap_or(4096);
+                    let registry = ctx.resource_registry();
+                    let resource = registry
+                        .get::<crate::odu::otura::TcpStreamResource>(token)
+                        .ok_or_else(|| IfaError::Runtime("TcpStream handle not found".into()))?;
+                    use tokio::io::AsyncReadExt;
+                    let mut buf = vec![0u8; max_bytes];
+                    let n = {
+                        let mut stream = resource.stream.lock().map_err(|_| {
+                            IfaError::Runtime("TcpStream lock poisoned".into())
+                        })?;
+                        self.net_runtime().block_on(stream.read(&mut buf))
+                            .map_err(|e| IfaError::IoError(format!("Read failed: {e}")))?
+                    };
+                    buf.truncate(n);
+                    match String::from_utf8(buf) {
+                        Ok(s) => Ok(IfaValue::str(s)),
+                        Err(e) => Ok(IfaValue::list(
+                            e.as_bytes().iter().map(|b| IfaValue::int(*b as i64)).collect(),
+                        )),
+                    }
+                }
+                "ko" | "write" => {
+                    let token = match args.first() {
+                        Some(IfaValue::Resource(r)) => **r,
+                        _ => return Err(IfaError::ArgumentError(
+                            "otura.write: first arg must be TcpStream resource".into(),
+                        )),
+                    };
+                    let data = args.get(1).map(|v| v.to_string().into_bytes()).unwrap_or_default();
+                    let registry = ctx.resource_registry();
+                    let resource = registry
+                        .get::<crate::odu::otura::TcpStreamResource>(token)
+                        .ok_or_else(|| IfaError::Runtime("TcpStream handle not found".into()))?;
+                    use tokio::io::AsyncWriteExt;
+                    let n = {
+                        let mut stream = resource.stream.lock().map_err(|_| {
+                            IfaError::Runtime("TcpStream lock poisoned".into())
+                        })?;
+                        self.net_runtime().block_on(stream.write_all(&data))
+                            .map_err(|e| IfaError::IoError(format!("Write failed: {e}")))?;
+                        data.len()
+                    };
+                    Ok(IfaValue::int(n as i64))
+                }
+                "pa" | "close" => {
+                    let _token = match args.first() {
+                        Some(IfaValue::Resource(r)) => **r,
+                        _ => return Err(IfaError::ArgumentError(
+                            "otura.close: first arg must be a network resource".into(),
+                        )),
+                    };
+                    Ok(IfaValue::null())
+                }
+                "sayewo" | "check_host" => {
                     let host = args.first().map(|v| v.to_string()).unwrap_or_default();
                     Ok(IfaValue::bool(self.otura().ṣàyẹ̀wò(&host)))
                 }
-                _ => Err(IfaError::Custom(format!(
-                    "Otura: unknown method '{}'",
-                    method
-                ))),
+                _ => Err(IfaError::Custom(format!("Otura: unknown method '{}'", method))),
             }
         }
-
         #[cfg(not(feature = "network"))]
         {
-            let _ = args;
-            Err(IfaError::Runtime(format!(
-                "Otura requires the 'network' feature (method: {})",
-                method
-            )))
+            let _ = (args, ctx);
+            Err(IfaError::Runtime(format!("Otura requires the network feature (method: {})", method)))
         }
     }
 
-    #[cfg(feature = "crypto")]
+#[cfg(feature = "crypto")]
     fn dispatch_irete(&self, method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
         let to_bytes = |val: &IfaValue| -> Vec<u8> {
             match val {
@@ -991,6 +806,19 @@ fn as_bool(val: &IfaValue) -> Option<bool> {
     match val {
         IfaValue::Bool(b) => Some(*b),
         _ => None,
+    }
+}
+
+fn parse_rounding_mode(s: &str) -> crate::odu::oturupon::RoundingMode {
+    match s.to_lowercase().as_str() {
+        "halfeven" | "half_even" => crate::odu::oturupon::RoundingMode::HalfEven,
+        "halfup" | "half_up" => crate::odu::oturupon::RoundingMode::HalfUp,
+        "halfdown" | "half_down" => crate::odu::oturupon::RoundingMode::HalfDown,
+        "down" | "truncate" => crate::odu::oturupon::RoundingMode::Down,
+        "up" => crate::odu::oturupon::RoundingMode::Up,
+        "ceil" | "ceiling" => crate::odu::oturupon::RoundingMode::Ceil,
+        "floor" => crate::odu::oturupon::RoundingMode::Floor,
+        _ => crate::odu::oturupon::RoundingMode::HalfEven,
     }
 }
 
@@ -1305,7 +1133,33 @@ fn dispatch_obara(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
     let b = args.get(1).map(extract_num).unwrap_or(0.0);
     match method {
         "fikun" | "add" | "plus" => Ok(IfaValue::float(obara.fikun(a, b))),
+        "fikun_odidi" | "add_decimal" => {
+            let a_val = args.first().and_then(as_int).unwrap_or(0);
+            let b_val = args.get(1).and_then(as_int).unwrap_or(0);
+            let scale = args.get(2).and_then(as_int).unwrap_or(0) as u32;
+            let res = obara.fikun_odidi(a_val, b_val, scale)?;
+            Ok(IfaValue::int(res))
+        }
+        "fikun_rounded" | "add_decimal_rounded" => {
+            let a_val = args.first().and_then(as_int).unwrap_or(0);
+            let b_val = args.get(1).and_then(as_int).unwrap_or(0);
+            let scale = args.get(2).and_then(as_int).unwrap_or(0) as u32;
+            let mode_str = args
+                .get(3)
+                .map(|v| v.to_string().to_lowercase())
+                .unwrap_or_else(|| "half_even".into());
+            let mode = parse_rounding_mode(&mode_str);
+            let res = obara.fikun_rounded(a_val, b_val, scale, mode)?;
+            Ok(IfaValue::int(res))
+        }
         "isodipupo" | "mul" | "times" => Ok(IfaValue::float(obara.isodipupo(a, b))),
+        "isodipupo_odidi" | "mul_decimal" => {
+            let a_val = args.first().and_then(as_int).unwrap_or(0);
+            let b_val = args.get(1).and_then(as_int).unwrap_or(0);
+            let scale = args.get(2).and_then(as_int).unwrap_or(0) as u32;
+            let res = obara.isodipupo_odidi(a_val, b_val, scale)?;
+            Ok(IfaValue::int(res))
+        }
         "agbara" | "pow" => Ok(IfaValue::float(obara.agbara(a, b))),
         "gbongbo" | "sqrt" => Ok(IfaValue::float(obara.gbongbo(a))),
         "abs" => Ok(IfaValue::float(obara.abs(a))),
@@ -1449,9 +1303,24 @@ fn dispatch_oturupon(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
             let res = oturupon.din(a_int, b_int)?;
             Ok(IfaValue::int(res))
         }
+        "din_odidi" | "sub_decimal" => {
+            let scale = args.get(2).and_then(as_int).unwrap_or(0) as u32;
+            let res = oturupon.din_odidi(a_int, b_int, scale)?;
+            Ok(IfaValue::int(res))
+        }
         "pin" | "div_checked" => {
             let res = oturupon.pin(a_int, b_int)?;
             Ok(IfaValue::float(res))
+        }
+        "pin_odidi_scaled" | "div_decimal" => {
+            let scale = args.get(2).and_then(as_int).unwrap_or(0) as u32;
+            let mode_str = args
+                .get(3)
+                .map(|v| v.to_string().to_lowercase())
+                .unwrap_or_else(|| "half_even".into());
+            let mode = parse_rounding_mode(&mode_str);
+            let res = oturupon.pin_odidi_scaled(a_int, b_int, scale, mode)?;
+            Ok(IfaValue::int(res))
         }
         "pin_odidi" | "div_int" => {
             let res = oturupon.pin_odidi(a_int, b_int)?;
@@ -1463,12 +1332,7 @@ fn dispatch_oturupon(method: &str, args: Vec<IfaValue>) -> IfaResult<IfaValue> {
                 .get(2)
                 .map(|v| v.to_string().to_lowercase())
                 .unwrap_or_else(|| "half_even".into());
-            let mode = match mode_str.as_str() {
-                "truncate" => crate::odu::oturupon::RoundingMode::Truncate,
-                "floor" => crate::odu::oturupon::RoundingMode::Floor,
-                "ceiling" => crate::odu::oturupon::RoundingMode::Ceiling,
-                _ => crate::odu::oturupon::RoundingMode::HalfEven,
-            };
+            let mode = parse_rounding_mode(&mode_str);
             let res = oturupon.pin_f(a_num, b_num, mode)?;
             Ok(IfaValue::float(res))
         }
@@ -1565,7 +1429,7 @@ fn dispatch_okanran(method: &str, args: Vec<IfaValue>, ctx: &mut VmContext) -> I
         }
         "ta" | "throw" | "raise" | "kigbe" => {
             let val = args.first().cloned().unwrap_or(IfaValue::Null);
-            Err(IfaError::UserError(Box::new(val)))
+            Err(IfaError::UserError(val.freeze()?))
         }
         "dogba" | "equals" => {
             let a = args.first().unwrap_or(&IfaValue::Null);

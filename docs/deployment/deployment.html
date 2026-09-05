@@ -32,7 +32,7 @@
 
         <div class="step">
             <h2>Native Deployment (ifa-cli)</h2>
-            <p>The native CLI provides the complete Ifa-Lang experience with all features enabled. Built on IfaVM (bytecode VM with step() dispatch loop), Opon epoch memory system, and IfaValue (32-byte tagged union, SSO up to 21 bytes, Arc&lt;Mutex&gt;/Arc&lt;str&gt;).</p>
+            <p>The native CLI provides the complete Ifa-Lang experience with all features enabled. Built on IfaVM (bytecode VM with step() dispatch loop), Opon epoch memory system, and IfaValue (16-byte tagged union, Box&lt;String&gt; for strings, IfaGc/Arc for heap types).</p>
 
             <h3>Installation</h3>
             <div class="code-example">

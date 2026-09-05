@@ -116,24 +116,24 @@ pub fn any_slice_range(max_len: usize) -> impl Strategy<Value = (i64, i64)> {
 /// Strategy for generating expressions
 pub fn any_expression() -> impl Strategy<Value = crate::ast::Expression> {
     let leaf = prop_oneof![
-        any_ifa_value().prop_map(crate::ast::Expression::Literal),
+        any_ifa_value().prop_map(crate::ast::ExprKind::Literal),
         any::<string::String>()
             .prop_filter("valid identifier", |s| {
                 !s.is_empty() && s.chars().all(|c| c.is_alphanumeric() || c == '_')
             })
-            .prop_map(crate::ast::Expression::Variable),
+            .prop_map(crate::ast::ExprKind::Variable),
     ];
     
     prop::recursion(leaf, |inner| {
         prop_oneof![
             (inner.clone(), any_arithmetic_operand(), any::<crate::ast::BinaryOperator>())
-                .prop_map(|(left, right, op)| crate::ast::Expression::BinaryOp {
+                .prop_map(|(left, right, op)| crate::ast::ExprKind::BinaryOp {
                     left: Box::new(left),
                     op,
                     right: Box::new(right),
                 }),
             (any::<string::String>(), prop::collection::vec(inner, 0..5))
-                .prop_map(|(name, args)| crate::ast::Expression::FunctionCall { name, args }),
+                .prop_map(|(name, args)| crate::ast::ExprKind::FunctionCall { name, args }),
         ]
     })
 }

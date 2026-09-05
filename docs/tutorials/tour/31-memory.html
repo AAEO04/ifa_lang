@@ -30,7 +30,7 @@
         <table class="field-table">
             <tr><th>Tool</th><th>When to Use</th><th>Automatic?</th></tr>
             <tr><td><code>ebo { ... }</code></td><td>Short-lived work (iterations, requests, file processing)</td><td>No — you write <code>ebo</code> explicitly</td></tr>
-            <tr><td>Cycle collector</td><td>Long-lived cyclic data (graphs, caches, reactive networks)</td><td>Yes — runs every 1024 VM ticks</td></tr>
+            <tr><td>Cycle collector</td><td>Long-lived cyclic data (graphs, caches, reactive networks)</td><td>Yes — runs dynamically (e.g. every 512 VM ticks by default)</td></tr>
             <tr><td><code>yanda</code></td><td>Sending values across actors</td><td>No — you write <code>yanda</code> explicitly</td></tr>
         </table>
 
@@ -63,7 +63,7 @@ fun i = 0; i &lt; 10000; i++ {
 
         <h2 class="section-header">2. Cycle Collection — Invisible Safety Net</h2>
 
-        <p>The cycle collector runs automatically every 1024 VM ticks. You usually don't need to think about it — but if you're building cyclic data structures, it prevents leaks.</p>
+        <p>The cycle collector runs automatically at dynamic VM tick intervals depending on your configured <code>#opon</code> size (every 512 ticks for the default <code>arinrin</code> size). You usually don't need to think about it — but if you're building cyclic data structures, it prevents leaks.</p>
 
         <div class="code-block">
 <pre>// A self-referential cycle — would leak in reference counting alone
@@ -78,18 +78,17 @@ Ogbontarigi.wo(children, node);
 // node holds children holds node — refcount never drops to 0
 
 // Without cycle collector: memory leak
-// With cycle collector (every 1024 ticks): detected and freed</pre></div>
+// With cycle collector (dynamic sweep): detected and freed</pre></div>
 
-        <p>You can hint at collection frequency with <code>opon</code> <span style="color:var(--amber);">(aspirational — VM uses hardcoded 1024-ticks regardless)</span>:</p>
+        <p>You can adjust the cycle collection frequency dynamically using <code>opon</code> presets:</p>
 
         <div class="code-block">
-<pre>opon kekere;   // Aspirational: many small objects — collect often
-opon nla;      // Aspirational: few large objects — collect rarely</pre></div>
+<pre>opon kekere;   // Collect cycle suspect buffer every 128 ticks (often)
+opon nla;      // Collect cycle suspect buffer every 2,048 ticks (rarely)</pre></div>
 
-        <div class="warn">
-            <strong>Note:</strong> The GC tuning parameters from <code>OponSize::gc_policy()</code> are not yet
-            wired into the VM's cycle collector. Opon's primary roles are (1) slot memory capacity,
-            (2) stack/frame limit enforcement, and (3) the ebo epoch system. See the
+        <div class="good">
+            <strong>Note:</strong> The GC tuning parameters from <code>OponSize::gc_policy()</code> are fully
+            wired and active in the VM. Cycle collection checks are automatically triggered on execution ticks based on your chosen <code>#opon</code> size. See the
             <a href="../../language/opon.html">Opon Reference</a> for details.
         </div>
 

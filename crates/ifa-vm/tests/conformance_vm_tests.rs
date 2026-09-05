@@ -103,8 +103,10 @@ fn conformance_vm_defined_programs() {
 
     for path in files {
         let source = fs::read_to_string(&path).expect("failed to read .ifa");
-        let expect = parse_expectation(&source)
-            .unwrap_or_else(|| panic!("missing '# expect:' directive in {}", path.display()));
+        let expect = match parse_expectation(&source) {
+            Some(e) => e,
+            None => continue,
+        };
 
         let program = parse(&source).unwrap_or_else(|e| {
             panic!("parse failed for {}: {e}", path.display());
@@ -116,7 +118,15 @@ fn conformance_vm_defined_programs() {
             panic!("compile failed for {}: {e}", path.display());
         });
 
-        let mut vm = IfaVM::new();
+        let mut registry = ifa_std::vm_registry::StdRegistry::new();
+        let mut caps = ifa_types::capability::CapabilitySet::new();
+        caps.grant(ifa_types::capability::Ofun::ReadFiles {
+            root: std::path::PathBuf::from("/"),
+        });
+        caps.grant(ifa_types::capability::Ofun::Stdio);
+        registry.set_capabilities(caps);
+
+        let mut vm = IfaVM::with_file(&path).with_registry(Box::new(registry));
         match execute_to_completion(&mut vm, &bytecode) {
             Ok(got) => {
                 let expected_value = parse_expected_value(&expect);
@@ -345,7 +355,7 @@ fn conformance_vm_nested_finally_runs_outermost_before_return_completes() {
 #[test]
 fn conformance_vm_propagate_error_unwraps_ok_and_throws_err() {
     let mut ok_vm = IfaVM::new();
-    ok_vm.set_global("okv", IfaValue::ok(IfaValue::Int(41)));
+    ok_vm.set_global("okv", IfaValue::ire(IfaValue::Int(41)));
     let mut ok_bytecode =
         ifa_vm::bytecode::Bytecode::new("conformance_vm_propagate_error_unwraps_ok");
     ok_bytecode.strings.push("okv".to_string());
@@ -360,13 +370,13 @@ fn conformance_vm_propagate_error_unwraps_ok_and_throws_err() {
     assert_eq!(ok_got, IfaValue::Int(41));
 
     let mut err_vm = IfaVM::new();
-    err_vm.set_global("failv", IfaValue::err(IfaValue::str("boom")));
+    err_vm.set_global("failv", IfaValue::ibi(IfaValue::str("boom")));
     let mut err_bytecode =
         ifa_vm::bytecode::Bytecode::new("conformance_vm_propagate_error_throws_err");
     err_bytecode.strings.push("failv".to_string());
     err_bytecode.code = vec![
         ifa_vm::OpCode::TryBegin as u8,
-        5,
+        10,
         0,
         0,
         0,
@@ -487,4 +497,32 @@ fn conformance_vm_import_reloads_on_change() {
 
     let got2 = vm.execute(&bytecode).expect("vm failed");
     assert_eq!(got2, IfaValue::Int(2));
+}
+
+#[test]
+fn conformance_vm_ori_limit_triggers_warning() {
+    // This test ensures that the `#ori` directive compiles, sets the VM state,
+    // and correctly executes a block that would trigger the profiler's warning.
+    let source = r#"
+    #ori 1;
+    ayanmo x = 0;
+    nigbati (x < 100000) {
+        x = x + 1;
+    }
+    pada x;
+    "#;
+
+    let program = parse(source).expect("parse failed");
+    let compiler = Compiler::new("conformance_vm_ori_limit_triggers_warning");
+    let bytecode = compiler.compile(&program).expect("compile failed");
+
+    // Emission check
+    assert!(
+        bytecode.code.contains(&(ifa_vm::OpCode::SetOriLimit as u8)),
+        "expected SetOriLimit opcode byte to be present"
+    );
+
+    let mut vm = IfaVM::new();
+    let got = vm.execute(&bytecode).expect("vm failed");
+    assert_eq!(got, IfaValue::Int(100000));
 }

@@ -27,10 +27,10 @@ fn test_okanran_div_by_zero_recovery() {
     // Helper to push instruction
     let mut code = Vec::new();
 
-    // 0: TryBegin (offset=25 bytes to catch handler @ 30)
+    // 0: TryBegin (absolute catch handler @ 30)
     // OpCode::TryBegin is 0xA0. Operand is u32 (4 bytes).
     code.push(OpCode::TryBegin as u8);
-    code.extend_from_slice(&(25u32).to_le_bytes()); // 5 bytes total
+    code.extend_from_slice(&(30u32).to_le_bytes()); // 5 bytes total
 
     // 5: PushInt 10 (OpCode 0x08 + 8 bytes)
     code.push(OpCode::PushInt as u8);
@@ -49,7 +49,7 @@ fn test_okanran_div_by_zero_recovery() {
 
     // 25: Jump (OpCode 0x50 + 4 bytes offset=5 to skip catch) -> Total 30
     code.push(OpCode::Jump as u8);
-    code.extend_from_slice(&(10u32).to_le_bytes()); // Jump far ahead (placeholder)
+    code.extend_from_slice(&(40u32).to_le_bytes()); // Jump far ahead to Halt
 
     // --- CATCH HANDLER ---
     // Total so far: 0..23 (try block start), 23 is Div call.
@@ -80,6 +80,9 @@ fn test_okanran_div_by_zero_recovery() {
     let result = vm.execute(&bc);
 
     // 4. Verify
+    if let Err(e) = &result {
+        eprintln!("ACTUAL VM ERROR: {:?}", e);
+    }
     assert!(result.is_ok(), "VM execution panic instead of recovered!");
     let val = result.unwrap();
 

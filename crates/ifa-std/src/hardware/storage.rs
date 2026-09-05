@@ -1,5 +1,9 @@
 //! Storage Domain (Domain 20) wrapper
 //! Bridges the VM dispatch to the async OduStore persistence layer.
+//!
+//! The storage worker thread owns a `SysRuntime` (from `ifa-infra`) rather than
+//! building a raw tokio runtime inline. This ensures the runtime lifecycle is
+//! managed through the shared abstraction layer used by the rest of `ifa-infra`.
 
 use ifa_types::value_union::IfaValue;
 use ifa_types::{IfaError, IfaResult};
@@ -13,7 +17,11 @@ pub enum StorageCmd {
     Set {
         id: u64,
         key: String,
-        val: Vec<u8>,
+        /// The pre-serialized value bytes (bincode(IfaValue)). Passing Vec<u8> ensures
+        /// StorageCmd is Send (since IfaValue contains IfaGc which is !Send).
+        /// OduStore::set_bytes writes these raw bytes directly into the store so that
+        /// OduStore::get::<IfaValue> deserializes them in a single pass.
+        val_bytes: Vec<u8>,
         cell: ifa_types::value_union::NativeFutureCell,
     },
     Get {
@@ -45,6 +53,7 @@ impl Default for StorageWorker {
     }
 }
 
+#[cfg(all(feature = "tokio", feature = "persistence"))]
 impl StorageWorker {
     pub fn new() -> Self {
         let (tx, rx) = std::sync::mpsc::sync_channel::<StorageCmd>(64);
@@ -52,12 +61,14 @@ impl StorageWorker {
         std::thread::Builder::new()
             .name("ifa-storage".into())
             .spawn(move || {
+                use ifa_infra::runtime::SysRuntime;
                 use ifa_infra::storage::OduStore;
 
-                let rt = tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .expect("ifa-storage runtime");
+                // Use the shared SysRuntime abstraction instead of building a raw
+                // tokio runtime inline. The .expect() is safe: SysRuntime::new()
+                // only fails if tokio's builder fails, which cannot happen here
+                // since this block is already gated on feature = "tokio".
+                let rt = SysRuntime::new().expect("ifa-storage SysRuntime failed");
 
                 let mut stores: std::collections::HashMap<u64, OduStore> =
                     std::collections::HashMap::new();
@@ -66,7 +77,13 @@ impl StorageWorker {
                 while let Ok(cmd) = rx.recv() {
                     match cmd {
                         StorageCmd::Open { path, cell } => {
-                            let val = match rt.block_on(OduStore::open(&path)) {
+                            // SysRuntime::block_on returns IfaResult<F::Output>.
+                            // The outer .expect() panics on runtime failure (impossible here).
+                            // The inner match handles OduStore's own Result.
+                            let val = match rt
+                                .block_on(OduStore::open(&path))
+                                .expect("ifa-storage runtime")
+                            {
                                 Ok(store) => {
                                     let id = next_id;
                                     next_id += 1;
@@ -75,16 +92,20 @@ impl StorageWorker {
                                 }
                                 Err(e) => IfaValue::str(format!("StorageError: {e}")),
                             };
-                            if let Ok(mut lock) = cell.write() {
-                                *lock = ifa_types::value_union::NativeFutureState::Ready(
-                                    bincode::serialize(&bincode::serialize(&val).unwrap()).unwrap(),
+                            // Lock poison handling: if the VM thread panicked while holding
+                            // the future lock, recover the inner value so the future resolves.
+                            *cell.write().unwrap_or_else(|e| e.into_inner()) =
+                                ifa_types::value_union::NativeFutureState::Ready(
+                                    bincode::serialize(&val).unwrap(),
                                 );
-                            }
                         }
                         StorageCmd::Get { id, key, cell } => {
                             let val = match stores.get(&id) {
                                 Some(store) => {
-                                    match rt.block_on(async { store.get::<IfaValue>(&key).await }) {
+                                    match rt
+                                        .block_on(async { store.get::<IfaValue>(&key).await })
+                                        .expect("ifa-storage runtime")
+                                    {
                                         Ok(v) => v,
                                         Err(ifa_infra::storage::StorageError::KeyNotFound) => {
                                             IfaValue::null()
@@ -94,25 +115,32 @@ impl StorageWorker {
                                 }
                                 None => IfaValue::str("StorageError: Invalid store handle"),
                             };
-                            // SAFETY: Resolving the future safely clears the poison flag implicitly for this assignment
+                            // Lock poison handling: recover the inner value if the lock is poisoned.
                             *cell.write().unwrap_or_else(|e| e.into_inner()) =
                                 ifa_types::value_union::NativeFutureState::Ready(
                                     bincode::serialize(&val).unwrap(),
                                 );
                         }
-                        StorageCmd::Set { id, key, val, cell } => {
+                        StorageCmd::Set {
+                            id,
+                            key,
+                            val_bytes,
+                            cell,
+                        } => {
                             let res_val = match stores.get_mut(&id) {
                                 Some(store) => {
-                                    match rt.block_on(async { store.set(&key, &val).await }) {
+                                    match rt
+                                        .block_on(async { store.set_bytes(&key, &val_bytes).await })
+                                        .expect("ifa-storage runtime")
+                                    {
                                         Ok(_) => IfaValue::null(),
                                         Err(e) => IfaValue::str(format!("StorageError: {e}")),
                                     }
                                 }
                                 None => IfaValue::str("StorageError: Invalid store handle"),
                             };
-                            // SAFETY: If the receiver thread panicked, the lock is poisoned.
-                            // We use into_inner() to force write the Ready state anyway,
-                            // allowing any surviving handles to access the result safely.
+                            // Lock poison handling: if the worker thread panicked, force-write
+                            // the Ready state so surviving handles can still access the result.
                             *cell.write().unwrap_or_else(|e| e.into_inner()) =
                                 ifa_types::value_union::NativeFutureState::Ready(
                                     bincode::serialize(&res_val).unwrap(),
@@ -121,14 +149,17 @@ impl StorageWorker {
                         StorageCmd::Delete { id, key, cell } => {
                             let val = match stores.get_mut(&id) {
                                 Some(store) => {
-                                    match rt.block_on(async { store.delete(&key).await }) {
+                                    match rt
+                                        .block_on(async { store.delete(&key).await })
+                                        .expect("ifa-storage runtime")
+                                    {
                                         Ok(_) => IfaValue::null(),
                                         Err(e) => IfaValue::str(format!("StorageError: {e}")),
                                     }
                                 }
                                 None => IfaValue::str("StorageError: Invalid store handle"),
                             };
-                            // SAFETY: Resolving the future safely clears the poison flag implicitly for this assignment
+                            // Lock poison handling: recover the inner value if the lock is poisoned.
                             *cell.write().unwrap_or_else(|e| e.into_inner()) =
                                 ifa_types::value_union::NativeFutureState::Ready(
                                     bincode::serialize(&val).unwrap(),
@@ -136,13 +167,16 @@ impl StorageWorker {
                         }
                         StorageCmd::Compact { id, cell } => {
                             let val = match stores.get_mut(&id) {
-                                Some(store) => match rt.block_on(async { store.compact().await }) {
+                                Some(store) => match rt
+                                    .block_on(async { store.compact().await })
+                                    .expect("ifa-storage runtime")
+                                {
                                     Ok(_) => IfaValue::null(),
                                     Err(e) => IfaValue::str(format!("StorageError: {e}")),
                                 },
                                 None => IfaValue::str("StorageError: Invalid store handle"),
                             };
-                            // SAFETY: Resolving the future safely clears the poison flag implicitly for this assignment
+                            // Lock poison handling: recover the inner value if the lock is poisoned.
                             *cell.write().unwrap_or_else(|e| e.into_inner()) =
                                 ifa_types::value_union::NativeFutureState::Ready(
                                     bincode::serialize(&val).unwrap(),
@@ -199,19 +233,12 @@ pub fn dispatch(worker: &StorageWorker, method: &str, args: Vec<IfaValue>) -> If
                 };
                 let key = args.get(1).map(|v| v.to_string()).unwrap_or_default();
                 let val = args.into_iter().nth(2).unwrap_or(IfaValue::null());
-                let serialized_val = match bincode::serialize(&val) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        return Err(IfaError::Runtime(format!(
-                            "Serialization failed (ensure acyclic, uniquely-owned data): {}",
-                            e
-                        )));
-                    }
-                };
+                let val_bytes = bincode::serialize(&val)
+                    .map_err(|e| IfaError::Runtime(format!("Storage serialization error: {e}")))?;
                 StorageCmd::Set {
                     id,
                     key,
-                    val: serialized_val,
+                    val_bytes,
                     cell: cell.clone(),
                 }
             }
@@ -263,14 +290,14 @@ pub fn dispatch(worker: &StorageWorker, method: &str, args: Vec<IfaValue>) -> If
 
     #[cfg(not(all(feature = "tokio", feature = "persistence")))]
     {
-        let _ = (method, args);
+        let _ = (worker, method, args);
         Err(IfaError::Runtime(
             "Storage requires the 'tokio' and 'persistence' features".into(),
         ))
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 #[cfg(not(all(feature = "tokio", feature = "persistence")))]
 pub struct StorageWorker;
 

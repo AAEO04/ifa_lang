@@ -77,14 +77,24 @@ pub fn suspect_count() -> usize {
 
 /// A native cycle-collected reference-counted pointer.
 /// Replaces `Arc<T>` for heap variants (`List`, `Map`, `Closure`) in the native VM.
-/// Enforces per-actor isolation (`!Send` and `!Sync`).
+///
+/// Thread-safety is conditional on T. IfaGc<T> is Send + Sync when T: Send + Sync.
+/// The PhantomData<*mut ()> opts out of auto-Send/Sync; the unsafe impls restore it
+/// for thread-safe T. For VM-internal heap types (List, Map, Closure) where T is
+/// !Send, IfaGc acts as !Send, providing per-actor isolation.
+///
+/// NOTE: The thread-local SUSPECT_BUFFER means cycle collection cannot reach cycles
+/// that span actor thread boundaries. Do not send IfaGc pointers across actors
+/// without proving acyclicity first (see: iso — not yet implemented).
 pub struct IfaGc<T: Trace> {
     pub(crate) ptr: NonNull<CycleNode<T>>,
     _marker: PhantomData<*mut ()>, // Explicitly !Send and !Sync
 }
 
-unsafe impl<T: Trace + Send + Sync> Send for IfaGc<T> {}
-unsafe impl<T: Trace + Send + Sync> Sync for IfaGc<T> {}
+// Removed unsafe impl Send/Sync for IfaGc
+// IfaGc relies on a thread-local suspect buffer for Bacon-Rajan cycle collection.
+// It is structurally unsafe to send it across threads. Actor boundaries must pass
+// deep-copied values (IfaShared) instead of references.
 
 impl<T: Trace> IfaGc<T> {
     /// Allocate a new object on the cycle-collected heap
@@ -168,11 +178,15 @@ impl<T: Trace> Drop for IfaGc<T> {
         h.strong.store(rc, Ordering::Relaxed);
 
         if rc == 0 {
+            // FIX: When strong hits 0, the node is unreachable regardless of
+            // buffered state. Previously, if buffered==true, we skipped the free
+            // and the collector would also skip it (strong==0 → not marked gray,
+            // removed from roots, never collected). That was a memory leak on
+            // every cloned IfaGc where both refs drop.
             h.color.store(Color::Black as u8, Ordering::Relaxed);
-            if !h.buffered.load(Ordering::Relaxed) {
-                (h.drop_data_fn)(self.ptr.cast());
-                (h.dealloc_fn)(self.ptr.cast());
-            }
+            h.buffered.store(false, Ordering::Relaxed);
+            (h.drop_data_fn)(self.ptr.cast());
+            (h.dealloc_fn)(self.ptr.cast());
         } else if Color::try_from(h.color.load(Ordering::Relaxed)).unwrap_or(Color::Black)
             == Color::Black
         {
@@ -228,8 +242,20 @@ impl<T: Trace> From<T> for IfaGc<T> {
 // BACON-RAJAN CYCLE COLLECTOR IMPLEMENTATION
 // =========================================================================
 
+/// Free a collected node: drop its data then deallocate the node memory.
+/// Separated from collect_cycles so we can release the SUSPECT_BUFFER RefMut first.
+unsafe fn free_red_node(s: NonNull<CycleHeader>) {
+    let h = unsafe { s.as_ref() };
+    (h.drop_data_fn)(s);
+    (h.dealloc_fn)(s);
+}
+
 pub fn collect_cycles() -> usize {
-    SUSPECT_BUFFER.with(|buf| {
+    // FIX: Collect the list of reds first, then release the RefMut before
+    // calling drop_data_fn. Previously, the RefMut was held across phases 4-5,
+    // so any IfaGc::drop triggered by drop_data_fn would call
+    // add_to_suspect_buffer → SUSPECT_BUFFER.borrow_mut() → panic.
+    let reds: Vec<NonNull<CycleHeader>> = SUSPECT_BUFFER.with(|buf| {
         let mut roots = buf.borrow_mut();
 
         // 1. Mark Roots
@@ -262,77 +288,117 @@ pub fn collect_cycles() -> usize {
 
         roots.clear();
 
-        let count = reds.len();
+        reds
+    });
 
-        // 4. Free Red (Data Drop)
-        for &s in reds.iter() {
-            let h = unsafe { s.as_ref() };
-            (h.drop_data_fn)(s);
-        }
+    // 4 & 5. Free Red nodes — RefMut is released, so IfaGc::drop can safely
+    // call add_to_suspect_buffer without panicking.
+    let count = reds.len();
+    for &s in &reds {
+        unsafe { free_red_node(s); }
+    }
 
-        // 5. Free Red (Deallocate)
-        for &s in reds.iter() {
-            let h = unsafe { s.as_ref() };
-            (h.dealloc_fn)(s);
-        }
-
-        count
-    })
+    count
 }
 
-fn mark_gray(s: NonNull<CycleHeader>) {
-    let h = unsafe { s.as_ref() };
-    if Color::try_from(h.color.load(Ordering::Relaxed)).unwrap_or(Color::Black) != Color::Gray {
+// =========================================================================
+// ITERATIVE MARK/SCAN/COLLECT (no recursion → no stack overflow)
+// =========================================================================
+
+fn mark_gray(root: NonNull<CycleHeader>) {
+    let mut stack: Vec<NonNull<CycleHeader>> = vec![root];
+
+    while let Some(s) = stack.pop() {
+        let h = unsafe { s.as_ref() };
+        if Color::try_from(h.color.load(Ordering::Relaxed)).unwrap_or(Color::Black) == Color::Gray {
+            continue;
+        }
         h.color.store(Color::Gray as u8, Ordering::Relaxed);
         h.tracing_rc
             .store(h.strong.load(Ordering::Relaxed), Ordering::Relaxed);
 
+        // Collect children, decrement their tracing_rc, push onto stack
+        let mut children = Vec::new();
         (h.trace_fn)(s, &mut |child| {
-            mark_gray(child);
+            children.push(child);
+        });
+        for child in children {
             let ch = unsafe { child.as_ref() };
             ch.tracing_rc.store(
                 ch.tracing_rc.load(Ordering::Relaxed).saturating_sub(1),
                 Ordering::Relaxed,
             );
-        });
+            // Only push if not already gray (avoid redundant work)
+            if Color::try_from(ch.color.load(Ordering::Relaxed)).unwrap_or(Color::Black)
+                != Color::Gray
+            {
+                stack.push(child);
+            }
+        }
     }
 }
 
-fn scan(s: NonNull<CycleHeader>) {
-    let h = unsafe { s.as_ref() };
-    if Color::try_from(h.color.load(Ordering::Relaxed)).unwrap_or(Color::Black) == Color::Gray {
+fn scan(root: NonNull<CycleHeader>) {
+    let mut stack: Vec<NonNull<CycleHeader>> = vec![root];
+
+    while let Some(s) = stack.pop() {
+        let h = unsafe { s.as_ref() };
+        if Color::try_from(h.color.load(Ordering::Relaxed)).unwrap_or(Color::Black) != Color::Gray {
+            continue;
+        }
         if h.tracing_rc.load(Ordering::Relaxed) > 0 {
             scan_black(s);
         } else {
             h.color.store(Color::White as u8, Ordering::Relaxed);
+            let mut children = Vec::new();
             (h.trace_fn)(s, &mut |child| {
-                scan(child);
+                children.push(child);
             });
+            for child in children {
+                stack.push(child);
+            }
         }
     }
 }
 
 fn scan_black(s: NonNull<CycleHeader>) {
-    let h = unsafe { s.as_ref() };
-    h.color.store(Color::Black as u8, Ordering::Relaxed);
-    (h.trace_fn)(s, &mut |child| {
-        let ch = unsafe { child.as_ref() };
-        if Color::try_from(ch.color.load(Ordering::Relaxed)).unwrap_or(Color::Black) != Color::Black
-        {
-            scan_black(child);
+    let mut stack: Vec<NonNull<CycleHeader>> = vec![s];
+
+    while let Some(s) = stack.pop() {
+        let h = unsafe { s.as_ref() };
+        h.color.store(Color::Black as u8, Ordering::Relaxed);
+        let mut children = Vec::new();
+        (h.trace_fn)(s, &mut |child| {
+            children.push(child);
+        });
+        for child in children {
+            let ch = unsafe { child.as_ref() };
+            if Color::try_from(ch.color.load(Ordering::Relaxed)).unwrap_or(Color::Black)
+                != Color::Black
+            {
+                stack.push(child);
+            }
         }
-    });
+    }
 }
 
 fn collect_white(s: NonNull<CycleHeader>, reds: &mut Vec<NonNull<CycleHeader>>) {
-    let h = unsafe { s.as_ref() };
-    if Color::try_from(h.color.load(Ordering::Relaxed)).unwrap_or(Color::Black) == Color::White
-        && !h.buffered.load(Ordering::Relaxed)
-    {
-        h.color.store(Color::Red as u8, Ordering::Relaxed);
-        reds.push(s);
-        (h.trace_fn)(s, &mut |child| {
-            collect_white(child, reds);
-        });
+    let mut stack: Vec<NonNull<CycleHeader>> = vec![s];
+
+    while let Some(s) = stack.pop() {
+        let h = unsafe { s.as_ref() };
+        if Color::try_from(h.color.load(Ordering::Relaxed)).unwrap_or(Color::Black) == Color::White
+            && !h.buffered.load(Ordering::Relaxed)
+        {
+            h.color.store(Color::Red as u8, Ordering::Relaxed);
+            reds.push(s);
+            let mut children = Vec::new();
+            (h.trace_fn)(s, &mut |child| {
+                children.push(child);
+            });
+            for child in children {
+                stack.push(child);
+            }
+        }
     }
 }

@@ -28,7 +28,7 @@
 
         <div class="step">
             <h2>Overview</h2>
-            <p>Ifa-Lang uses a memory management system based on Opon (the divination tray/calabash). The system tracks memory allocation, provides scoped allocation epochs, and includes a flight recorder for debugging. Memory is reference-counted via <code>Arc</code> with no generational garbage collection. The implementation lives in <code>crates/ifa-vm/src/opon.rs</code>.</p>
+            <p>Ifa-Lang uses a memory management system based on Opon (the divination tray/calabash). The system tracks memory allocation, provides scoped allocation epochs, and includes a flight recorder for debugging. Memory is reference-counted with a dynamically tuned tracing cycle collector (Bacon-Rajan algorithm) running at configured intervals to clean up reference cycles. The implementation lives in <code>crates/ifa-vm/src/opon.rs</code> and <code>crates/ifa-types/src/gc.rs</code>.</p>
         </div>
 
         <div class="step">
@@ -102,6 +102,10 @@ ebo file = Odi.ka("data.txt");
                 <li>Circular buffer: oldest events are overwritten when full</li>
                 <li>Used by the VM for tracing and debugging</li>
             </ul>
+
+            <div class="note" style="border-left: 3px solid var(--amber); background: var(--bg-code); padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.8rem;">
+                <strong>Scoping distinction:</strong> The Opon runtime flight recorder (256-event circular buffer) is a completely separate system from the 32-step compile-time <code>StateHistoryBuffer</code>. While the flight recorder tracks domain events at runtime for logging and debugging, the <code>StateHistoryBuffer</code> operates during static analysis in the Babalawo linter to provide time-travel diagnostics for borrow checking.
+            </div>
         </div>
 
         <div class="step">
@@ -109,15 +113,15 @@ ebo file = Odi.ka("data.txt");
             <p>Based on the tagged union implementation in <code>crates/ifa-types/src/value_union.rs</code>:</p>
 
             <div class="code-example">
-                <pre><code>// Tagged union layout — 32 bytes on 64-bit
+                <pre><code>// Tagged union layout — 16 bytes on 64-bit
 pub enum IfaValue {
     Null,                       // 0 bytes (discriminant only)
     Bool(bool),                 // 1 byte + padding
     Int(i64),                   // 8 bytes
     Float(f64),                 // 8 bytes
-    Str(CompactString),         // 23 bytes (inline) or 16 bytes (heap arc)
-    List(Arc&lt;Vec&lt;IfaValue&gt;&gt;), // 8 bytes (pointer)
-    Map(Arc&lt;HashMap&lt;...&gt;&gt;),   // 8 bytes (pointer)
+    Str(Box&lt;String&gt;),           // 8 bytes (thin pointer)
+    List(IfaGc&lt;Vec&lt;IfaValue&gt;&gt;),// 8 bytes (pointer)
+    Map(IfaGc&lt;HashMap&lt;...&gt;&gt;),  // 8 bytes (pointer)
     Fn(Arc&lt;BytecodeFnData&gt;),   // 8 bytes (pointer)
     Result(Box&lt;ResultPayload&gt;),// 8 bytes (pointer)
     Resource(Arc&lt;ResourceToken&gt;),// 8 bytes (pointer)
@@ -125,22 +129,22 @@ pub enum IfaValue {
 }</code></pre>
             </div>
 
-            <h3>CompactString (SSO)</h3>
+            <h3>CompactString (Map Keys)</h3>
             <ul>
+                <li>Used for <code>HashMap&lt;CompactString, IfaValue&gt;</code> map keys</li>
                 <li><strong>Inline branch:</strong> <code>{ len: u8, char_len: u8, data: [u8; 21] }</code> — strings up to 21 bytes stored inline</li>
                 <li><strong>Heap branch:</strong> <code>Arc&lt;str&gt;</code> — strings over 21 bytes</li>
-                <li><strong>char_len</strong> is precomputed for inline strings for O(1) character count</li>
             </ul>
         </div>
 
         <div class="step">
             <h2>Memory Safety</h2>
             
-            <h3>Reference Counting</h3>
+            <h3>Reference Counting &amp; Cycle Collection</h3>
             <ul>
-                <li>List, Map, Str (heap), Fn, Resource use <code>Arc&lt;T&gt;</code> for shared ownership</li>
+                <li>List, Map, Fn, Resource use <code>IfaGc&lt;T&gt;</code> or <code>Arc&lt;T&gt;</code> for shared ownership</li>
                 <li>Automatic deallocation when refcount reaches 0</li>
-                <li>No garbage collector — purely deterministic</li>
+                <li>Bacon-Rajan cycle collector checks for and collects cycle suspects at dynamic tick intervals configured by <code>#opon</code> size</li>
             </ul>
 
             <h3>Bounds Checking</h3>

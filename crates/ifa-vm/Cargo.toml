@@ -29,12 +29,15 @@ ifa-bytecode = { path = "../ifa-bytecode", features = ["serde"] }
 ifa-parser = { path = "../ifa-parser", optional = true }
 ifa-compiler = { path = "../ifa-compiler", optional = true }
 ifa-transpiler = { path = "../ifa-transpiler", optional = true }
+ifa-macros = { path = "../ifa-macros" }
 
 # For CPU thread count (lightweight, no cycle)
 num_cpus = "1.16"
 
 # Sandbox is only for native builds (not WASM)
 ifa-sandbox = { path = "../ifa-sandbox", optional = true }
+
+ifa-infra = { path = "../ifa-infra" }
 
 # Error handling
 thiserror.workspace = true

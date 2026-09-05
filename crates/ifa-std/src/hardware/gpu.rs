@@ -5,6 +5,7 @@ use ifa_infra::gpu::GpuContext;
 use ifa_types::value_union::{IfaValue, NativeFutureCell, NativeFutureState};
 use ifa_types::{IfaError, IfaResult};
 use std::sync::Arc;
+#[cfg(feature = "gpu")]
 use wgpu;
 
 #[cfg(target_arch = "wasm32")]
@@ -21,6 +22,9 @@ pub struct GpuBufferView {
     pub size_in_floats: usize,
 }
 
+// SAFETY: wasm32 is single-threaded. `wgpu::Buffer` does not implement `Send`/`Sync`
+// on wasm32 because it contains wasm_bindgen types. Since the wasm32 target has no
+// true thread concurrency, implementing these traits is sound for our usage pattern.
 #[cfg(all(feature = "gpu", target_arch = "wasm32"))]
 unsafe impl Send for GpuBufferView {}
 #[cfg(all(feature = "gpu", target_arch = "wasm32"))]
@@ -31,9 +35,10 @@ fn pending_cell() -> NativeFutureCell {
 }
 
 fn resolve_cell(cell: &NativeFutureCell, value: IfaValue) {
-    if let Ok(mut lock) = cell.write() {
-        *lock = NativeFutureState::Ready(bincode::serialize(&value).unwrap());
-    }
+    // If the lock is poisoned (the holding thread panicked), recover the inner value
+    // so the future resolves rather than hanging as Pending forever.
+    *cell.write().unwrap_or_else(|e| e.into_inner()) =
+        NativeFutureState::Ready(bincode::serialize(&value).unwrap());
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -346,3 +351,21 @@ fn bytes_to_ifa_list(bytes: &[u8], size_in_floats: usize) -> IfaValue {
     }
     IfaValue::List(ifa_types::gc::IfaGc::new(list))
 }
+
+#[cfg(feature = "gpu")]
+pub fn dispatch(
+    method: &str,
+    args: Vec<IfaValue>,
+    ctx: &mut ifa_vm::native::VmContext,
+) -> IfaResult<IfaValue> {
+    match method {
+        "init" => handle_init(args, ctx),
+        "dispatch" => handle_dispatch_pipeline(args, ctx),
+        "sync" => handle_sync(args, ctx),
+        "alloc_buffer" => handle_alloc_buffer(args, ctx),
+        "read_buffer" => handle_read_buffer(args, ctx),
+        "write_buffer" => handle_write_buffer(args, ctx),
+        _ => Err(IfaError::Custom(format!("Gpu: unknown method '{}'", method))),
+    }
+}
+

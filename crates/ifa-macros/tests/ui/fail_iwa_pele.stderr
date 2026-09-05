@@ -1,0 +1,7 @@
+error: iwa_pele requires paired arguments, e.g., #[iwa_pele(open, close)]
+  --> tests/ui/fail_iwa_pele.rs:14:1
+   |
+14 | #[iwa_pele]
+   | ^^^^^^^^^^^
+   |
+   = note: this error originates in the attribute macro `iwa_pele` (in Nightly builds, run with -Z macro-backtrace for more info)

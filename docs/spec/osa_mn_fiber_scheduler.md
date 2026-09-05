@@ -160,7 +160,7 @@ pub fn spawn_actor(...) -> IfaResult<IfaValue> {
 
     let handle = ActorHandle { id, tx: Arc::new(tx), resource_registry };
     table.insert(handle.clone());
-    Ok(IfaValue::Actor { id, handle: Arc::new(handle) as _ })
+    Ok(IfaValue::Actor(Arc::new(ifa_types::ActorData { id, handle: Arc::new(handle) as _ })))
 }
 ```
 

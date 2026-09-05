@@ -1,10 +1,9 @@
 #![cfg(feature = "std")]
 
-use ifa_types::ErrorCode;
+use ifa_types::{ErrorCode, IfaValue};
 use ifa_vm::compiler::Compiler;
 use ifa_vm::parser::parse;
 use ifa_vm::transpile_to_rust;
-use ifa_vm::value::IfaValue;
 use ifa_vm::vm::IfaVM;
 
 /// Evaluates source code on VM and Transpiler.

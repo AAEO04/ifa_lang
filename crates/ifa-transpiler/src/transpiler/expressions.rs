@@ -8,13 +8,13 @@ use ifa_types::ast::*;
 impl RustTranspiler {
     /// Transpile an expression to Rust
     pub fn transpile_expression(&mut self, expr: &Expression) -> String {
-        match expr {
-            Expression::Int(n) => format!("IfaValue::Int({})", n),
-            Expression::Float(f) => format!("IfaValue::Float({})", f),
-            Expression::String(s) => format!("IfaValue::Str(\"{}\".to_string())", s),
-            Expression::Bool(b) => format!("IfaValue::Bool({})", b),
-            Expression::Nil => "IfaValue::Nil".to_string(),
-            Expression::Identifier(name) => {
+        match &expr.kind {
+            ExprKind::Int(n) => format!("IfaValue::Int({})", n),
+            ExprKind::Float(f) => format!("IfaValue::Float({})", f),
+            ExprKind::String(s) => format!("IfaValue::Str(\"{}\".to_string())", s),
+            ExprKind::Bool(b) => format!("IfaValue::Bool({})", b),
+            ExprKind::Nil => "IfaValue::Nil".to_string(),
+            ExprKind::Identifier(name) => {
                 if let Some(target) = self.aliases.get(name).cloned() {
                     return self.transpile_expression(&target);
                 }
@@ -27,7 +27,7 @@ impl RustTranspiler {
                 }
             }
 
-            Expression::BinaryOp { left, op, right } => {
+            ExprKind::BinaryOp { left, op, right } => {
                 if let Some(opt) = self.try_transpile_literal_binop(left, op, right) {
                     return opt;
                 }
@@ -135,11 +135,12 @@ impl RustTranspiler {
                 }
             }
 
-            Expression::UnaryOp { op, expr } => {
+            ExprKind::UnaryOp { op, expr } => {
                 let o = self.transpile_expression(expr);
                 match op {
                     UnaryOperator::Neg => format!("(-{})", o),
                     UnaryOperator::Not => format!("(!{})", o),
+                    UnaryOperator::AddressOfMut => unimplemented!("AddressOfMut not supported"),
                     UnaryOperator::AddressOf => {
                         format!(
                             "IfaValue::Ptr(std::sync::Arc::new(std::sync::Mutex::new({})))",
@@ -155,13 +156,13 @@ impl RustTranspiler {
                 }
             }
 
-            Expression::List(items) => {
+            ExprKind::List(items) => {
                 let items_str: Vec<String> =
                     items.iter().map(|i| self.transpile_expression(i)).collect();
                 format!("IfaValue::List(vec![{}])", items_str.join(", "))
             }
 
-            Expression::Map(pairs) => {
+            ExprKind::Map(pairs) => {
                 let pairs_str: Vec<String> = pairs
                     .iter()
                     .map(|(k, v)| {
@@ -178,9 +179,9 @@ impl RustTranspiler {
                 )
             }
 
-            Expression::OduCall(call) => self.transpile_odu_call(call),
+            ExprKind::OduCall(call) => self.transpile_odu_call(call),
 
-            Expression::Call { name, args } => {
+            ExprKind::Call { name, args } => {
                 if let Some(domain) = self.std_named.get(name) {
                     let call = OduCall {
                         domain: *domain,
@@ -213,13 +214,13 @@ impl RustTranspiler {
                 format!("{}({})", name, args_str.join(", "))
             }
 
-            Expression::Await(expr) => {
+            ExprKind::Await(expr) => {
                 self.has_async = true;
                 let inner = self.transpile_expression(expr);
                 format!("({}).await", inner)
             }
 
-            Expression::Index {
+            ExprKind::Index {
                 object,
                 index,
                 is_optional,
@@ -233,7 +234,7 @@ impl RustTranspiler {
                 }
             }
 
-            Expression::Get {
+            ExprKind::Get {
                 object,
                 name,
                 is_optional,
@@ -246,13 +247,13 @@ impl RustTranspiler {
                 }
             }
 
-            Expression::MethodCall {
+            ExprKind::MethodCall {
                 object,
                 method,
                 args,
                 is_optional,
             } => {
-                if let Expression::Identifier(obj_name) = &**object {
+                if let ExprKind::Identifier(obj_name) = &object.kind {
                     if let Some(domain) = self.std_modules.get(obj_name) {
                         let call = OduCall {
                             domain: *domain,
@@ -276,12 +277,12 @@ impl RustTranspiler {
                     args.iter().map(|a| self.transpile_expression(a)).collect();
                 format!("{}.{}({})", obj, method, args_str.join(", "))
             }
-            Expression::Try(expr) => {
+            ExprKind::Try(expr) => {
                 let inner = self.transpile_expression(expr);
                 format!("{}?", inner)
             }
 
-            Expression::InterpolatedString { parts } => {
+            ExprKind::InterpolatedString { parts } => {
                 let mut fmt_str = String::new();
                 let mut args = Vec::new();
                 for part in parts {
@@ -310,7 +311,7 @@ impl RustTranspiler {
                 }
             }
 
-            Expression::Lambda { params, body } => {
+            ExprKind::Lambda { params, body } => {
                 let params_str: Vec<String> = params
                     .iter()
                     .map(|p| format!("{}: IfaValue", p.name))
@@ -326,9 +327,9 @@ impl RustTranspiler {
                     inner.trim()
                 )
             }
-            Expression::MoveExpr(inner) => {
+            ExprKind::MoveExpr(inner) => {
                 // yanda semantics: true ownership transfer (zero-copy)
-                if let Expression::Identifier(name) = &**inner {
+                if let ExprKind::Identifier(name) = &inner.kind {
                     let m_name = self.mangle_identifier(name);
                     if self.global_vars.contains(name) {
                         format!(
@@ -343,7 +344,7 @@ impl RustTranspiler {
                     self.transpile_expression(inner)
                 }
             }
-            Expression::Set(items) => {
+            ExprKind::Set(items) => {
                 let items_str: Vec<String> =
                     items.iter().map(|i| self.transpile_expression(i)).collect();
                 format!(
@@ -351,17 +352,17 @@ impl RustTranspiler {
                     items_str.join(", ")
                 )
             }
-            Expression::Spanned { expr, span: _ } => self.transpile_expression(expr),
+            ExprKind::Iso(inner) => self.transpile_expression(inner),
         }
     }
 
     fn get_expr_type(&self, expr: &Expression) -> Option<TypeHint> {
-        match expr {
-            Expression::Int(_) => Some(TypeHint::Int),
-            Expression::Float(_) => Some(TypeHint::Float),
-            Expression::String(_) => Some(TypeHint::Str),
-            Expression::Bool(_) => Some(TypeHint::Bool),
-            Expression::Identifier(name) => self.type_env.get(name).cloned(),
+        match &expr.kind {
+            ExprKind::Int(_) => Some(TypeHint::Int),
+            ExprKind::Float(_) => Some(TypeHint::Float),
+            ExprKind::String(_) => Some(TypeHint::Str),
+            ExprKind::Bool(_) => Some(TypeHint::Bool),
+            ExprKind::Identifier(name) => self.type_env.get(name).cloned(),
             // A more complete implementation would recursively call into binary_op_result_type,
             // but for Phase B variable specialization, Identifier is the main target.
             _ => None,
@@ -375,9 +376,9 @@ impl RustTranspiler {
         right: &Expression,
     ) -> Option<String> {
         use BinaryOperator::*;
-        use Expression::*;
+        use ExprKind::*;
 
-        match (left, right) {
+        match (&left.kind, &right.kind) {
             (Int(a), Int(b)) => match op {
                 Add => Some(format!("IfaValue::Int({}i64 + {}i64)", a, b)),
                 Sub => Some(format!("IfaValue::Int({}i64 - {}i64)", a, b)),

@@ -3,6 +3,8 @@
 //! The Messenger - Networking
 //!
 //! Tokio async networking with rustls for TLS and SSRF protection.
+//! Uses a shared `reqwest::Client` for connection pooling and a persistent
+//! tokio runtime (owned by `StdRegistry`) to avoid per-call runtime creation.
 
 use crate::esu::Esu;
 use crate::impl_odu_domain;
@@ -24,16 +26,39 @@ const BLOCKED_HOSTS: &[&str] = &[
 use crate::sandbox_shim::Ofun;
 
 /// Òtúrá - The Messenger (Networking)
-#[derive(Default)]
 pub struct Otura {
     esu: Esu,
+    /// Shared HTTP client with connection pooling and keep-alive.
+    /// Reused across all requests — no per-call client creation.
+    #[cfg(feature = "network")]
+    client: reqwest::Client,
+}
+
+impl Default for Otura {
+    fn default() -> Self {
+        Self {
+            esu: Esu::default(),
+            #[cfg(feature = "network")]
+            client: reqwest::Client::builder()
+                .user_agent("IfaLang/1.3")
+                .build()
+                .expect("reqwest::Client::build failed"),
+        }
+    }
 }
 
 impl_odu_domain!(Otura, "Òtúrá", "1011", "The Messenger - Networking");
 
 impl Otura {
     pub fn new(esu: Esu) -> Self {
-        Otura { esu }
+        Self {
+            esu,
+            #[cfg(feature = "network")]
+            client: reqwest::Client::builder()
+                .user_agent("IfaLang/1.3")
+                .build()
+                .expect("reqwest::Client::build failed"),
+        }
     }
 
     /// Check if host is allowed (SSRF protection + Capability)
@@ -83,6 +108,7 @@ impl Otura {
 #[cfg(feature = "network")]
 impl Otura {
     /// HTTP GET request (gbà)
+    /// Uses the shared `reqwest::Client` for connection pooling and keep-alive.
     pub async fn gba(&self, url: &str) -> IfaResult<String> {
         // Extract host for SSRF check
         if let Some(host) = url.split("://").nth(1).and_then(|s| s.split('/').next()) {
@@ -94,7 +120,9 @@ impl Otura {
             return Err(IfaError::Runtime("Invalid URL".into()));
         }
 
-        reqwest::get(url)
+        self.client
+            .get(url)
+            .send()
             .await
             .map_err(|e| IfaError::ConnectionFailed(e.to_string()))?
             .text()
@@ -103,8 +131,9 @@ impl Otura {
     }
 
     /// HTTP POST request (rán)
+    /// Uses the shared `reqwest::Client` for connection pooling and keep-alive.
     pub async fn ran(&self, url: &str, body: &str) -> IfaResult<String> {
-        // SSFR Check
+        // SSRF Check
         if let Some(host) = url.split("://").nth(1).and_then(|s| s.split('/').next()) {
             let host = host.split(':').next().unwrap_or(host);
             if !self.ṣàyẹ̀wò(host) {
@@ -112,8 +141,7 @@ impl Otura {
             }
         }
 
-        let client = reqwest::Client::new();
-        client
+        self.client
             .post(url)
             .body(body.to_string())
             .send()

@@ -18,9 +18,9 @@ pub enum Severity {
 impl fmt::Display for Severity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Severity::Error => write!(f, "error"),
-            Severity::Warning => write!(f, "warning"),
-            Severity::Info => write!(f, "info"),
+            Severity::Error => write!(f, "error (Ibi)"),
+            Severity::Warning => write!(f, "warning (Ire)"),
+            Severity::Info => write!(f, "info (Ire)"),
             Severity::Style => write!(f, "style"),
         }
     }
@@ -177,7 +177,7 @@ impl Babalawo {
 
     /// Add a warning diagnostic
     pub fn warning(&mut self, code: &str, msg: &str, file: &str, line: usize, col: usize) {
-        if self.is_strict {
+        if self.is_strict && code != "AILEWU_BLOCK" {
             self.add_diagnostic(Severity::Error, code, msg, file, line, col);
         } else {
             self.add_diagnostic(Severity::Warning, code, msg, file, line, col);
@@ -479,7 +479,7 @@ mod tests {
         assert!(baba.has_errors());
 
         let output = baba.format();
-        assert!(output.contains("error[Ogbè]"));
+        assert!(output.contains("error (Ibi)[Ogbè]"));
         assert!(output.contains("Variable 'x' not defined"));
     }
 
@@ -510,6 +510,6 @@ mod tests {
         );
 
         let compact = baba.format_compact();
-        assert!(compact.contains("math.ifa:25:15: error: Cannot divide by zero"));
+        assert!(compact.contains("math.ifa:25:15: error (Ibi): Cannot divide by zero"));
     }
 }

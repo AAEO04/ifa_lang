@@ -1,0 +1,32 @@
+# expect: SUCCESS
+
+# 1. Decimal addition
+ayanmo add_res1 = Obara.fikun_odidi(100, 200, 2);
+ayanmo add_res2 = Obara.fikun_rounded(100, 200, 2, RoundingMode.HalfEven);
+
+# 2. Decimal subtraction
+ayanmo sub_res = Oturupon.din_odidi(100, 30, 2);
+
+# 3. Decimal multiplication
+ayanmo mul_res = Obara.isodipupo_odidi(150, 200, 2);
+
+# 4. Decimal division
+ayanmo div_res1 = Oturupon.pin_odidi_scaled(25, 10, 0, RoundingMode.HalfEven);
+ayanmo div_res2 = Oturupon.pin_odidi_scaled(25, 10, 0, RoundingMode.HalfUp);
+ayanmo div_res3 = Oturupon.pin_odidi_scaled(-25, 10, 0, RoundingMode.Floor);
+
+if add_res1 == 300 {
+  if add_res2 == 300 {
+    if sub_res == 70 {
+      if mul_res == 300 {
+        if div_res1 == 2 {
+          if div_res2 == 3 {
+            if div_res3 == -3 {
+              Irosu.fo("SUCCESS");
+            }
+          }
+        }
+      }
+    }
+  }
+}

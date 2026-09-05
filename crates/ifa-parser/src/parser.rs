@@ -410,6 +410,19 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
             Ok(Some(Statement::Opon { size, span }))
         }
 
+        Rule::ori_stmt => {
+            let mut inner = pair.into_inner();
+            inner.next(); // Skip the ori keyword
+            let limit_str = inner
+                .next()
+                .ok_or(IfaError::Parse("Ori missing limit".into()))?
+                .as_str();
+            let limit_ms = limit_str
+                .parse()
+                .map_err(|_| IfaError::Parse(format!("Invalid Ori limit: {}", limit_str)))?;
+            Ok(Some(Statement::Ori { limit_ms, span }))
+        }
+
         Rule::ebo_stmt => {
             let mut inner = pair.into_inner();
             // inner[0] = offering expression, inner[1..] = optional block body
@@ -470,6 +483,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
         Rule::ese_def => {
             let mut inner = pair.into_inner();
             let mut visibility = Visibility::Private;
+            let mut is_iranti = false;
             let mut effects = Vec::new();
 
             let first = inner
@@ -478,6 +492,12 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
             let mut current = first;
             if current.as_rule() == Rule::public_mod {
                 visibility = Visibility::Public;
+                current = inner
+                    .next()
+                    .ok_or(IfaError::Parse("Ese missing name".into()))?;
+            }
+            if current.as_rule() == Rule::iranti_mod {
+                is_iranti = true;
                 current = inner
                     .next()
                     .ok_or(IfaError::Parse("Ese missing name".into()))?;
@@ -571,6 +591,7 @@ fn parse_statement(pair: pest::iterators::Pair<Rule>) -> IfaResult<Option<Statem
             Ok(Some(Statement::EseDef {
                 name,
                 visibility,
+                is_iranti,
                 params,
                 return_type,
                 body,
@@ -942,15 +963,11 @@ fn parse_lvalue(pair: pest::iterators::Pair<Rule>) -> IfaResult<AssignTarget> {
 }
 
 fn parse_expression(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> {
-    let span = make_span(&pair);
-    let expr = parse_expression_inner(pair)?;
-    Ok(Expression::Spanned {
-        expr: Box::new(expr),
-        span,
-    })
+    parse_expression_inner(pair)
 }
 
 fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expression> {
+    let span = make_span(&pair);
     match pair.as_rule() {
         Rule::pipeline_expr => {
             let mut inner = pair.into_inner();
@@ -978,11 +995,15 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
             }
             let mut result = exprs.pop().unwrap();
             while let Some(left) = exprs.pop() {
-                result = Expression::BinaryOp {
-                    left: Box::new(left),
-                    op: BinaryOperator::Power,
-                    right: Box::new(result),
-                };
+                let new_span = merge_spans(&left.span, &result.span);
+                result = Expression::new(
+                    ExprKind::BinaryOp {
+                        left: Box::new(left),
+                        op: BinaryOperator::Power,
+                        right: Box::new(result),
+                    },
+                    new_span,
+                );
             }
             Ok(result)
         }
@@ -1029,6 +1050,7 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
                     let op = match op_str {
                         "-" => UnaryOperator::Neg,
                         "!" | "kii" | "not" => UnaryOperator::Not,
+                        s if s.starts_with('&') && s.contains("mut") => UnaryOperator::AddressOfMut,
                         "&" => UnaryOperator::AddressOf,
                         "*" => UnaryOperator::Dereference,
                         "+" => {
@@ -1067,10 +1089,13 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
                 // Apply ops in reverse (right-to-left association)
                 // ex: -*p  ->  -(*(p))
                 for op in ops.into_iter().rev() {
-                    expr = Expression::UnaryOp {
-                        op,
-                        expr: Box::new(expr),
-                    };
+                    expr = Expression::new(
+                        ExprKind::UnaryOp {
+                            op,
+                            expr: Box::new(expr),
+                        },
+                        span.clone(),
+                    );
                 }
 
                 return Ok(expr);
@@ -1082,17 +1107,22 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
             while let Some(op_pair) = inner.next() {
                 // Check for postfix `?` (try_op) — not a binary infix, just a postfix marker.
                 if op_pair.as_rule() == Rule::try_op {
-                    left = Expression::Try(Box::new(left));
+                    let new_span = merge_spans(&left.span, &make_span(&op_pair));
+                    left = Expression::new(ExprKind::Try(Box::new(left)), new_span);
                     continue;
                 }
                 if let Some(right_pair) = inner.next() {
                     let op = parse_binary_op(&op_pair)?;
                     let right = parse_expression(right_pair)?;
-                    left = Expression::BinaryOp {
-                        left: Box::new(left),
-                        op,
-                        right: Box::new(right),
-                    };
+                    let new_span = merge_spans(&left.span, &right.span);
+                    left = Expression::new(
+                        ExprKind::BinaryOp {
+                            left: Box::new(left),
+                            op,
+                            right: Box::new(right),
+                        },
+                        new_span,
+                    );
                 }
             }
 
@@ -1135,11 +1165,14 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
                     .as_str()
                     .to_string();
 
-                obj = Expression::Get {
-                    object: Box::new(obj),
-                    name,
-                    is_optional,
-                };
+                obj = Expression::new(
+                    ExprKind::Get {
+                        object: Box::new(obj),
+                        name,
+                        is_optional,
+                    },
+                    span.clone(),
+                );
             }
             Ok(obj)
         }
@@ -1149,33 +1182,48 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
             if let Some(hex) = s.strip_prefix("0x") {
                 let val = i64::from_str_radix(hex, 16)
                     .map_err(|_| IfaError::Parse("Invalid hex literal".to_string()))?;
-                Ok(Expression::Int(val))
+                Ok(Expression::new(ExprKind::Int(val), span))
             } else if let Some(bin) = s.strip_prefix("0b") {
                 let val = i64::from_str_radix(bin, 2)
                     .map_err(|_| IfaError::Parse("Invalid binary literal".to_string()))?;
-                Ok(Expression::Int(val))
+                Ok(Expression::new(ExprKind::Int(val), span))
             } else if s.contains('.') {
-                Ok(Expression::Float(s.parse().unwrap_or(0.0)))
+                Ok(Expression::new(
+                    ExprKind::Float(s.parse().unwrap_or(0.0)),
+                    span,
+                ))
             } else {
-                Ok(Expression::Int(s.parse().unwrap_or(0)))
+                Ok(Expression::new(ExprKind::Int(s.parse().unwrap_or(0)), span))
             }
         }
 
         Rule::string => {
             let s = pair.as_str();
-            Ok(Expression::String(s[1..s.len() - 1].to_string()))
+            Ok(Expression::new(
+                ExprKind::String(s[1..s.len() - 1].to_string()),
+                span,
+            ))
         }
 
         Rule::boolean => {
             let s = pair.as_str();
-            Ok(Expression::Bool(s == "true" || s == "otito"))
+            Ok(Expression::new(
+                ExprKind::Bool(s == "true" || s == "otito"),
+                span,
+            ))
         }
 
-        Rule::nil => Ok(Expression::Nil),
+        Rule::nil => Ok(Expression::new(ExprKind::Nil, span)),
 
-        Rule::ident => Ok(Expression::Identifier(pair.as_str().to_string())),
+        Rule::ident => Ok(Expression::new(
+            ExprKind::Identifier(pair.as_str().to_string()),
+            span,
+        )),
 
-        Rule::odu_call => Ok(Expression::OduCall(parse_odu_call(pair)?)),
+        Rule::odu_call => Ok(Expression::new(
+            ExprKind::OduCall(parse_odu_call(pair)?),
+            span,
+        )),
 
         Rule::method_call => {
             let mut inner = pair.into_inner();
@@ -1201,12 +1249,18 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
                 }
             }
 
-            Ok(Expression::MethodCall {
-                object: Box::new(Expression::Identifier(object_name)),
-                method,
-                args,
-                is_optional,
-            })
+            Ok(Expression::new(
+                ExprKind::MethodCall {
+                    object: Box::new(Expression::new(
+                        ExprKind::Identifier(object_name),
+                        span.clone(),
+                    )),
+                    method,
+                    args,
+                    is_optional,
+                },
+                span,
+            ))
         }
 
         Rule::function_call => {
@@ -1224,7 +1278,7 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
                 }
             }
 
-            Ok(Expression::Call { name, args })
+            Ok(Expression::new(ExprKind::Call { name, args }, span))
         }
 
         Rule::await_expr => {
@@ -1234,7 +1288,7 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
                     .next()
                     .ok_or(IfaError::Parse("Await missing expression".into()))?,
             )?;
-            Ok(Expression::Await(Box::new(expr)))
+            Ok(Expression::new(ExprKind::Await(Box::new(expr)), span))
         }
 
         Rule::move_expr => {
@@ -1244,7 +1298,17 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
                     .next()
                     .ok_or(IfaError::Parse("Move missing expression".into()))?,
             )?;
-            Ok(Expression::MoveExpr(Box::new(expr)))
+            Ok(Expression::new(ExprKind::MoveExpr(Box::new(expr)), span))
+        }
+
+        Rule::iso_expr => {
+            let mut inner = pair.into_inner();
+            let expr = parse_expression(
+                inner
+                    .next()
+                    .ok_or(IfaError::Parse("Iso missing expression".into()))?,
+            )?;
+            Ok(Expression::new(ExprKind::Iso(Box::new(expr)), span))
         }
 
         Rule::index_access => {
@@ -1269,11 +1333,17 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
             };
 
             let index = parse_expression(index_expr_pair)?;
-            Ok(Expression::Index {
-                object: Box::new(Expression::Identifier(object_name)),
-                index: Box::new(index),
-                is_optional,
-            })
+            Ok(Expression::new(
+                ExprKind::Index {
+                    object: Box::new(Expression::new(
+                        ExprKind::Identifier(object_name),
+                        span.clone(),
+                    )),
+                    index: Box::new(index),
+                    is_optional,
+                },
+                span,
+            ))
         }
 
         Rule::list_literal => {
@@ -1281,7 +1351,7 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
             for item in pair.into_inner() {
                 items.push(parse_expression(item)?);
             }
-            Ok(Expression::List(items))
+            Ok(Expression::new(ExprKind::List(items), span))
         }
 
         Rule::map_literal => {
@@ -1300,7 +1370,7 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
                 )?;
                 entries.push((key, value));
             }
-            Ok(Expression::Map(entries))
+            Ok(Expression::new(ExprKind::Map(entries), span))
         }
 
         Rule::set_literal => {
@@ -1308,7 +1378,7 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
             for item in pair.into_inner() {
                 items.push(parse_expression(item)?);
             }
-            Ok(Expression::Set(items))
+            Ok(Expression::new(ExprKind::Set(items), span))
         }
 
         Rule::interpolated_string => {
@@ -1331,7 +1401,10 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
                     _ => return Err(IfaError::Parse("Unexpected token in PEG match".into())),
                 }
             }
-            Ok(Expression::InterpolatedString { parts })
+            Ok(Expression::new(
+                ExprKind::InterpolatedString { parts },
+                span,
+            ))
         }
 
         Rule::lambda_expr => {
@@ -1374,7 +1447,7 @@ fn parse_expression_inner(pair: pest::iterators::Pair<Rule>) -> IfaResult<Expres
                     _ => return Err(IfaError::Parse("Unexpected token in PEG match".into())),
                 }
             }
-            Ok(Expression::Lambda { params, body })
+            Ok(Expression::new(ExprKind::Lambda { params, body }, span))
         }
 
         _ => Err(IfaError::Parse(format!(
@@ -1474,36 +1547,81 @@ fn parse_odu_domain(s: &str) -> IfaResult<OduDomain> {
 }
 
 fn parse_type_hint(pair: pest::iterators::Pair<Rule>) -> IfaResult<TypeHint> {
-    let inner = pair
-        .into_inner()
-        .next()
-        .ok_or(IfaError::Parse("Type hint missing inner".into()))?;
-    match inner.as_str() {
-        "Int" | "Number" | "int" => Ok(TypeHint::Int),
-        "Float" | "float" => Ok(TypeHint::Float),
-        "Str" | "String" | "str" => Ok(TypeHint::Str),
-        "Bool" | "bool" => Ok(TypeHint::Bool),
-        "List" | "Array" | "list" => Ok(TypeHint::List),
-        "Map" | "Dict" | "map" => Ok(TypeHint::Map),
-        "Any" | "any" => Ok(TypeHint::Any),
-        "i8" => Ok(TypeHint::I8),
-        "i16" => Ok(TypeHint::I16),
-        "i32" => Ok(TypeHint::I32),
-        "i64" => Ok(TypeHint::I64),
-        "u8" => Ok(TypeHint::U8),
-        "u16" => Ok(TypeHint::U16),
-        "u32" => Ok(TypeHint::U32),
-        "u64" => Ok(TypeHint::U64),
-        "f32" => Ok(TypeHint::F32),
-        "f64" => Ok(TypeHint::F64),
-        "void" => Ok(TypeHint::Void),
-        other => {
-            if other.starts_with("Iwa<") && other.ends_with('>') {
-                Ok(TypeHint::Iwa(other[4..other.len() - 1].to_string()))
-            } else {
-                Ok(TypeHint::Custom(other.to_string()))
+    let mut current = pair;
+    if current.as_rule() == Rule::type_hint {
+        current = current
+            .into_inner()
+            .next()
+            .ok_or_else(|| IfaError::Parse("Type hint missing type_name".into()))?;
+    }
+    if current.as_rule() == Rule::type_name {
+        current = current
+            .into_inner()
+            .next()
+            .ok_or_else(|| IfaError::Parse("type_name missing inner".into()))?;
+    }
+    match current.as_rule() {
+        Rule::ref_mut_type => {
+            let mut inner = current.into_inner();
+            inner
+                .next()
+                .ok_or_else(|| IfaError::Parse("Missing mut_keyword in ref_mut".into()))?;
+            let next_type = inner
+                .next()
+                .ok_or_else(|| IfaError::Parse("Missing type in ref_mut".into()))?;
+            let parsed = parse_type_hint(next_type)?;
+            Ok(TypeHint::RefMut(Box::new(parsed)))
+        }
+        Rule::ref_type => {
+            let next_type = current
+                .into_inner()
+                .next()
+                .ok_or_else(|| IfaError::Parse("Missing type in ref".into()))?;
+            let parsed = parse_type_hint(next_type)?;
+            Ok(TypeHint::Ref(Box::new(parsed)))
+        }
+        Rule::ptr_type => {
+            let next_type = current
+                .into_inner()
+                .next()
+                .ok_or_else(|| IfaError::Parse("Missing type in ptr".into()))?;
+            let parsed = parse_type_hint(next_type)?;
+            Ok(TypeHint::Ptr(Box::new(parsed)))
+        }
+        Rule::primitive_type => {
+            let s = current.as_str();
+            match s {
+                "Int" | "Number" | "int" => Ok(TypeHint::Int),
+                "Float" | "float" => Ok(TypeHint::Float),
+                "Str" | "String" | "str" => Ok(TypeHint::Str),
+                "Bool" | "bool" => Ok(TypeHint::Bool),
+                "List" | "Array" | "list" => Ok(TypeHint::List),
+                "Map" | "Dict" | "map" => Ok(TypeHint::Map),
+                "Any" | "any" => Ok(TypeHint::Any),
+                "i8" => Ok(TypeHint::I8),
+                "i16" => Ok(TypeHint::I16),
+                "i32" => Ok(TypeHint::I32),
+                "i64" => Ok(TypeHint::I64),
+                "u8" => Ok(TypeHint::U8),
+                "u16" => Ok(TypeHint::U16),
+                "u32" => Ok(TypeHint::U32),
+                "u64" => Ok(TypeHint::U64),
+                "f32" => Ok(TypeHint::F32),
+                "f64" => Ok(TypeHint::F64),
+                "void" => Ok(TypeHint::Void),
+                other => {
+                    if other.starts_with("Iwa<") && other.ends_with('>') {
+                        Ok(TypeHint::Iwa(other[4..other.len() - 1].to_string()))
+                    } else {
+                        Ok(TypeHint::Custom(other.to_string()))
+                    }
+                }
             }
         }
+        _ => Err(IfaError::Parse(format!(
+            "Unexpected type rule: {:?}",
+            current.as_rule()
+        ))),
     }
 }
 
@@ -1585,43 +1703,55 @@ fn make_span(pair: &pest::iterators::Pair<Rule>) -> Span {
 }
 
 fn desugar_pipeline(lhs: Expression, rhs: Expression) -> IfaResult<Expression> {
-    match rhs {
-        Expression::Call { name, mut args } => {
-            args.insert(0, lhs);
-            Ok(Expression::Call { name, args })
+    match rhs.kind {
+        ExprKind::Call { name, mut args } => {
+            args.insert(0, lhs.clone());
+            Ok(Expression::new(
+                ExprKind::Call { name, args },
+                lhs.span.clone(),
+            ))
         }
-        Expression::Identifier(name) => Ok(Expression::Call {
-            name,
-            args: vec![lhs],
-        }),
-        Expression::MethodCall {
+        ExprKind::Identifier(name) => Ok(Expression::new(
+            ExprKind::Call {
+                name,
+                args: vec![lhs.clone()],
+            },
+            lhs.span.clone(),
+        )),
+        ExprKind::MethodCall {
             object,
             method,
             mut args,
             is_optional,
         } => {
-            args.insert(0, lhs);
-            Ok(Expression::MethodCall {
-                object,
-                method,
-                args,
-                is_optional,
-            })
+            args.insert(0, lhs.clone());
+            Ok(Expression::new(
+                ExprKind::MethodCall {
+                    object,
+                    method,
+                    args,
+                    is_optional,
+                },
+                lhs.span.clone(),
+            ))
         }
-        Expression::OduCall(mut call) => {
-            call.args.insert(0, lhs);
-            Ok(Expression::OduCall(call))
+        ExprKind::OduCall(mut call) => {
+            call.args.insert(0, lhs.clone());
+            Ok(Expression::new(ExprKind::OduCall(call), lhs.span.clone()))
         }
-        Expression::Get {
+        ExprKind::Get {
             object,
             name,
             is_optional,
-        } => Ok(Expression::MethodCall {
-            object,
-            method: name,
-            args: vec![lhs],
-            is_optional,
-        }),
+        } => Ok(Expression::new(
+            ExprKind::MethodCall {
+                object,
+                method: name,
+                args: vec![lhs.clone()],
+                is_optional,
+            },
+            lhs.span.clone(),
+        )),
         other => Err(IfaError::Parse(format!(
             "RHS of pipeline operator must be a function, method, or domain call. Found: {:?}",
             other
@@ -1639,12 +1769,12 @@ mod tests {
         assert_eq!(program.statements.len(), 1);
 
         if let Statement::Expr { expr, .. } = &program.statements[0] {
-            if let Expression::Call { name, args } = expr {
+            if let ExprKind::Call { name, args } = expr {
                 assert_eq!(name, "print");
                 assert_eq!(args.len(), 1);
-                assert!(matches!(&args[0], Expression::String(s) if s == "hello"));
+                assert!(matches!(&args[0], ExprKind::String(s) if s == "hello"));
             } else {
-                assert!(false, "Expected Expression::Call");
+                assert!(false, "Expected ExprKind::Call");
             }
         } else {
             assert!(false, "Expected Statement::Expr");
@@ -1658,7 +1788,7 @@ mod tests {
 
         if let Statement::VarDecl { name, value, .. } = &program.statements[0] {
             assert_eq!(name, "x");
-            assert!(matches!(value, Expression::Int(42)));
+            assert!(matches!(value, ExprKind::Int(42)));
         } else {
             assert!(false, "Expected VarDecl");
         }
@@ -1682,5 +1812,14 @@ mod tests {
         let program = parse("ti x { ayanmo y = 1; }").unwrap();
         assert_eq!(program.statements.len(), 1);
         assert!(matches!(&program.statements[0], Statement::If { .. }));
+    }
+}
+
+fn merge_spans(a: &ifa_types::ast::Span, b: &ifa_types::ast::Span) -> ifa_types::ast::Span {
+    ifa_types::ast::Span {
+        start: std::cmp::min(a.start, b.start),
+        end: std::cmp::max(a.end, b.end),
+        line: a.line,
+        column: a.column,
     }
 }

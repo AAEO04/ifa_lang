@@ -50,7 +50,7 @@ ring.workspace = true
 
 # System info for memory tracking
 sysinfo = "0.30"
-ifa-compiler = { version = "1.3.0", path = "../ifa-compiler" }
+ifa-compiler = { version = "1.3.1", path = "../ifa-compiler" }
 
 
 dirs = "5.0"

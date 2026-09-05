@@ -82,9 +82,10 @@ Irosu.fo(b());  // 101  — independent from a</pre></div>
 
 // Move ownership to a new variable
 ayanmo moved = yanda original;
-// original is still usable in the same thread (deep-copied in native mode)</pre></div>
+// original is Null at runtime (MoveLocal opcode clears the slot)
+// Babalawo flags any use-after-move as a compile error</pre></div>
 
-        <p>In the native VM, <code>yanda</code> performs a deep-copy. This guarantees the receiver has full ownership with no shared mutable state. In embedded mode, the original is invalidated (true move semantics).</p>
+        <p>The <code>MoveLocal</code> opcode (0x1F) clears the source slot to <code>Null</code> at runtime for identifier moves. For cross-actor transfer, the value is serialized and deserialized on the receiver's heap — guaranteeing full ownership with no shared mutable state.</p>
 
         <div class="code-block">
 <pre>// Practical: send data to an actor

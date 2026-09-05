@@ -7,7 +7,7 @@
 
 use crate::bytecode::Bytecode;
 use crate::error::{IfaError, IfaResult};
-use crate::value::IfaValue;
+use ifa_types::IfaValue;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -27,18 +27,12 @@ pub struct Ikin {
     /// Lookup map for deduplication (String -> ID)
     string_map: HashMap<Arc<str>, u32>,
 
-    /// Precomputed lengths for interned strings (index matches string ID).
-    string_lengths: Vec<usize>,
-
     /// Mapping from bytecode string index to local deduplicated string ID.
     bytecode_to_ikin: Vec<u32>,
 
     /// Cached Constants (Numbers, Arrays, Structs)
     /// Reserved for heavy constants that don't fit inline in bytecode.
     constants: Vec<IfaValue>,
-
-    /// Pointer to length cache for fast string_len lookups
-    ptr_to_len: HashMap<usize, usize>,
 }
 
 impl Ikin {
@@ -47,10 +41,8 @@ impl Ikin {
         Ikin {
             strings: Vec::with_capacity(256),
             string_map: HashMap::with_capacity(256),
-            string_lengths: Vec::with_capacity(256),
             bytecode_to_ikin: Vec::new(),
             constants: Vec::with_capacity(64),
-            ptr_to_len: HashMap::with_capacity(256),
         }
     }
 
@@ -74,10 +66,6 @@ impl Ikin {
         self.strings.push(arc.clone());
         self.string_map.insert(arc.clone(), id);
 
-        let len = ifa_types::value_union::IfaValue::unicode_string_len(s);
-        self.string_lengths.push(len);
-        self.ptr_to_len.insert(arc.as_ptr() as usize, len);
-
         Ok(id)
     }
 
@@ -92,27 +80,15 @@ impl Ikin {
         self.strings.get(actual_idx)
     }
 
-    /// Return the cached Unicode scalar length for an interned string.
-    ///
-    /// The cache key is the allocation pointer for the `Arc<str>`, which is
-    /// stable across clones of the same interned string.
-    pub fn string_len(&self, s: &ifa_types::CompactString) -> usize {
-        let s_str = s.as_str();
-        if s_str.is_ascii() {
-            return s_str.len();
+    /// Return the Unicode scalar length for a string.
+    /// Fast path for ASCII-only strings.
+    pub fn string_len(&self, s: &str) -> usize {
+        if s.is_ascii() {
+            return s.len();
         }
 
-        match s {
-            ifa_types::CompactString::Inline { char_len, .. } => *char_len as usize,
-            ifa_types::CompactString::Heap(arc) => {
-                let ptr = arc.as_ptr() as usize;
-                if let Some(&len) = self.ptr_to_len.get(&ptr) {
-                    len
-                } else {
-                    s_str.chars().count()
-                }
-            }
-        }
+        // Non-ASCII: fall back to counting code points
+        s.chars().count()
     }
 
     /// Store a heavy constant (like a Struct, Array, or Large Integer).
@@ -174,9 +150,6 @@ impl Ikin {
                 let new_id = self.strings.len() as u32;
                 self.string_map.insert(arc.clone(), new_id);
                 self.strings.push(arc.clone());
-                let len = ifa_types::value_union::IfaValue::unicode_string_len(s.as_str());
-                self.string_lengths.push(len);
-                self.ptr_to_len.insert(arc.as_ptr() as usize, len);
                 new_id
             };
             self.bytecode_to_ikin.push(id);
@@ -221,16 +194,11 @@ impl<'de> Deserialize<'de> for Ikin {
         let data = IkinData::deserialize(deserializer)?;
         let mut ikin = Ikin::new();
         ikin.strings.reserve(data.strings.len());
-        ikin.string_lengths.clear();
 
         for (i, s) in data.strings.into_iter().enumerate() {
             let arc: std::sync::Arc<str> = s.as_str().into();
             ikin.strings.push(arc.clone());
             ikin.string_map.insert(arc, i as u32);
-            ikin.string_lengths
-                .push(ifa_types::value_union::IfaValue::unicode_string_len(
-                    s.as_str(),
-                ));
         }
         ikin.constants = data.constants;
         Ok(ikin)
@@ -263,23 +231,20 @@ mod tests {
     #[test]
     fn load_from_bytecode_rejects_oversized_string_pool() {
         let mut bytecode = Bytecode::new("ikin_limit");
-        bytecode.strings = vec![String::new(); MAX_INTERNED_STRINGS + 1];
+        bytecode.strings = (0..=MAX_INTERNED_STRINGS).map(|i| i.to_string()).collect();
 
         let err = Ikin::new()
             .load_from_bytecode(&bytecode)
             .expect_err("oversized pool should fail");
-        assert!(err.to_string().contains("string pool exceeds limit"));
+        assert!(err.to_string().contains("pool exhausted"));
     }
 
     #[test]
-    fn string_lengths_lookup() {
+    fn string_len_counts_code_points() {
         let mut ikin = Ikin::new();
         let s = "e\u{301}".repeat(16); // 48 bytes, heap allocated
         ikin.intern(&s).unwrap();
 
-        let value = ifa_types::CompactString::new(&s);
-
-        assert_eq!(ikin.string_len(&value), 32);
-        assert_eq!(ikin.string_lengths.len(), 1);
+        assert_eq!(ikin.string_len(&s), 32);
     }
 }

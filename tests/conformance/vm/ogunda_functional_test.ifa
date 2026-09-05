@@ -1,4 +1,4 @@
-# expect: SUCCESS
+# expect: "SUCCESS"
 
 # 1. Initialize list
 ayanmo nums = Ogunda.da(1, 2, 3, 4, 5);
@@ -46,7 +46,7 @@ if m1 == 2 {
               if f3 == 5 {
                 if sum == 25 {
                   if product == 120 {
-                    Irosu.fo("SUCCESS");
+                    pada "SUCCESS";
                   }
                 }
               }

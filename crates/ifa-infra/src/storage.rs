@@ -315,13 +315,10 @@ impl OduStore {
         Ok(offset)
     }
 
-    /// Set a key-value pair
-    pub async fn set<V: Serialize>(&mut self, key: &str, value: &V) -> Result<(), StorageError> {
-        let serialized = bincode::serialize(value)?;
-
-        // Validate sizes
+    /// Set a raw pre-serialized byte payload by key
+    pub async fn set_bytes(&mut self, key: &str, bytes: &[u8]) -> Result<(), StorageError> {
         let key_len = key.len() as u64;
-        let val_len = serialized.len() as u64;
+        let val_len = bytes.len() as u64;
 
         if key_len > MAX_KEY_SIZE {
             return Err(StorageError::KeyTooLarge(key_len));
@@ -336,12 +333,18 @@ impl OduStore {
         }
 
         let offset = self
-            .write_record(RecordType::Put, key, Some(&serialized))
+            .write_record(RecordType::Put, key, Some(bytes))
             .await?;
         self.tombstones.remove(key);
         self.index.insert(key.to_string(), offset);
 
         Ok(())
+    }
+
+    /// Set a key-value pair
+    pub async fn set<V: Serialize>(&mut self, key: &str, value: &V) -> Result<(), StorageError> {
+        let serialized = bincode::serialize(value)?;
+        self.set_bytes(key, &serialized).await
     }
 
     /// Get a value by key

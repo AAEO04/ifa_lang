@@ -31,15 +31,14 @@
             <strong>Source-verified.</strong> Extracted from
             <code>crates/ifa-types/src/value_union.rs</code>,
             <code>crates/ifa-types/src/compact_str.rs</code>,
-            <code>crates/ifa-types/src/nan_box.rs</code>,
             <code>crates/ifa-vm/src/vm_ikin.rs</code>.
         </div>
 
         <h2 class="section-header">1. IfaValue Layout</h2>
 
         <p>The active VM path uses <code>value_union.rs</code> (gated by
-        <code>feature = "vm"</code>). Size: <strong>32 bytes</strong> on 64-bit
-        (<code>value_union.rs:595</code>). Regular Rust enum — not a hand-packed union.</p>
+        <code>feature = "vm"</code>). Size: <strong>16 bytes</strong> on 64-bit
+        (<code>value_union.rs</code>). Regular Rust enum — not a hand-packed union.</p>
 
         <table class="field-table">
             <tr><th>Variant</th><th>Storage</th><th>Heap?</th><th>Notes</th></tr>
@@ -47,14 +46,14 @@
             <tr><td><code>Bool(bool)</code></td><td>1 byte</td><td>No</td><td></td></tr>
             <tr><td><code>Int(i64)</code></td><td>8 bytes</td><td>No</td><td>Values 0–255 cached in <code>OnceLock</code> pool</td></tr>
             <tr><td><code>Float(f64)</code></td><td>8 bytes</td><td>No</td><td></td></tr>
-            <tr><td><code>Str(CompactString)</code></td><td>24 bytes (Inline) or 8 bytes (Heap pointer)</td><td>Small: No; Large: Yes (Arc)</td><td>≤21 bytes inline, else Arc&lt;str&gt;</td></tr>
+            <tr><td><code>Str(Box&lt;String&gt;)</code></td><td>8 bytes (thin pointer)</td><td>Yes (Box)</td><td>Heap-allocated String</td></tr>
             <tr><td><code>List(IfaGc&lt;Vec&lt;IfaValue&gt;&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (IfaGc)</td><td>Cycle-collected — Bacon-Rajan</td></tr>
             <tr><td><code>Map(IfaGc&lt;HashMap&lt;CompactString, IfaValue&gt;&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (IfaGc)</td><td>Cycle-collected — Bacon-Rajan</td></tr>
             <tr><td><code>Fn(Arc&lt;BytecodeFnData&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>name, start_ip, arity, is_async</td></tr>
             <tr><td><code>Closure(IfaGc&lt;ClosureData&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (IfaGc)</td><td>Cycle-collected — fn_data + captured env</td></tr>
             <tr><td><code>Upvalue(UpvalueCell)</code></td><td>8 bytes (pointer)</td><td>Yes (IfaGc&lt;Mutex&gt;)</td><td>Cycle-collected — mutable binding cell</td></tr>
             <tr><td><code>Future(FutureCell)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc&lt;Mutex&gt;)</td><td>async task state</td></tr>
-            <tr><td><code>Actor { id, handle }</code></td><td>u64 + pointer</td><td>Yes (Arc&lt;dyn Any&gt;)</td><td>Type-erased actor handle</td></tr>
+            <tr><td><code>Actor(Arc&lt;ActorData&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>Type-erased actor handle</td></tr>
             <tr><td><code>Return(Arc&lt;IfaValue&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Arc)</td><td>Return signal with value</td></tr>
             <tr><td><code>Result(Box&lt;ResultPayload&gt;)</code></td><td>8 bytes (pointer)</td><td>Yes (Box)</td><td>ok/err discriminated</td></tr>
             <tr><td><code>Break / Continue</code></td><td>0 bytes (unit variants)</td><td>No</td><td>Loop control signals</td></tr>
@@ -84,25 +83,9 @@
     IfaValue::Int(n)
 }</pre></div>
 
-        <h2 class="section-header">3. NaN-Boxing Fast Path</h2>
+        <h2 class="section-header">3. CompactString (Map Keys)</h2>
 
-        <p><code>nan_box.rs</code> implements a NaN-boxing scheme that packs
-        Null, Bool (true/false), Int (47-bit signed), and Float (including NaN)
-        into a single 64-bit value (<code>NanBox</code>).</p>
-
-        <p><code>IfaValue::to_nan_boxed_primitive()</code>
-        (<code>value_union.rs:245</code>) converts the four primitive variants
-        to <code>NanBox</code>. Returns <code>None</code> for heap-backed variants.
-        Ints outside the 47-bit range cannot be NaN-boxed.</p>
-
-        <p>Used by <strong>arithmetic opcode handlers</strong> in the VM
-        (<code>vm.rs</code>): operands are first converted to <code>NanBox</code>,
-        the operation is performed on 64-bit values directly, and the result is
-        converted back. This avoids the full enum match for Int/Float operations.</p>
-
-        <h2 class="section-header">4. CompactString (SSO)</h2>
-
-        <p><code>compact_str.rs</code> — Small String Optimization.</p>
+        <p><code>compact_str.rs</code> — Small String Optimization for map keys.</p>
 
         <table class="field-table">
             <tr><th>Variant</th><th>Capacity</th><th>Allocation</th></tr>
@@ -121,7 +104,6 @@
         <p><code>vm_ikin.rs</code> — the VM's runtime interned string table.</p>
         <ul>
             <li>Stores strings as <code>Arc&lt;str&gt;</code> in a flat <code>Vec</code></li>
-            <li>String length cached via <code>string_lengths: Vec&lt;usize&gt;</code> indexed by string ID for O(1) length lookup</li>
             <li>ASCII fast path: returns byte length directly without lookup</li>
             <li>Access by <code>consult_string(idx: usize) -> Option&lt;&Arc&lt;str&gt;&gt;</code> with a <code>bytecode_to_ikin: Vec&lt;u32&gt;</code> mapping</li>
             <li>Loaded from bytecode at each <code>execute()</code> call (<code>vm.rs:539</code>, ikin load at <code>vm.rs:547</code>)</li>
@@ -178,17 +160,11 @@
         serialization between <code>yanda</code> and <code>Storage</code> — if a value can be sent across
         actors, it can also be persisted to disk.</p>
 
-        <h2 class="section-header">8. Legacy IfaValue (value.rs)</h2>
+        <h2 class="section-header">8. IfaValue — Single Canonical Definition</h2>
 
-        <p>An older <code>IfaValue</code> definition exists at <code>value.rs</code>,
-        used when <code>feature = "vm"</code> is not enabled. Differences:</p>
-        <ul>
-            <li><code>Str</code> uses <code>Arc&lt;str&gt;</code> directly (no CompactString)</li>
-            <li>Has <code>AstFn</code>, <code>BytecodeFn</code>, <code>Class</code>,
-            <code>Ptr</code>, <code>Ref</code> variants directly in the enum</li>
-            <li>Uses <code>Arc&lt;Mutex&lt;HashMap&gt;&gt;</code> for Object (not RwLock/DashMap)</li>
-            <li>No small-int pool, no NaN-boxing support</li>
-        </ul>
+        <p>The canonical <code>IfaValue</code> enum lives in <code>value_union.rs</code>.
+        The legacy <code>value.rs</code> re-export shim in <code>ifa-vm</code> has been
+        <strong>deleted</strong> — all imports now use <code>ifa_types::IfaValue</code> directly.</p>
 
         <footer>
             <p><a href="index.html">← Back to Development Docs</a></p>

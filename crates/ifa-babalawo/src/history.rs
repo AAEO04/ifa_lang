@@ -42,6 +42,7 @@ impl StateSnapshot {
 }
 
 /// 32-step circular buffer for time-travel debugging
+#[derive(Debug, Clone)]
 pub struct StateHistoryBuffer {
     buffer: Vec<StateSnapshot>,
     capacity: usize,

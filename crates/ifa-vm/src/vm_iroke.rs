@@ -16,9 +16,10 @@ use crate::vm::IfaVM;
 #[inline(always)]
 pub fn tap(vm: &mut IfaVM, bytecode: &Bytecode) -> IfaResult<OpCode> {
     // 1. Check for Interrupts (GC, Signals) - "Clearing the Board"
-    // We check every 1024 ticks to amortize the cost.
-    if vm.ticks & 1023 == 0 {
-        // Periodic tasks (GC, signals) will go here.
+    // We check using the dynamic GC interval to amortize the cost.
+    let (gc_interval, _) = vm.opon_size.gc_policy();
+    if vm.ticks > 0 && vm.ticks.is_multiple_of(gc_interval as usize) {
+        ifa_types::gc::collect_cycles();
     }
 
     if let Some(ref mut remaining) = vm.fuel {

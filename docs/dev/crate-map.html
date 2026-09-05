@@ -108,7 +108,7 @@
 
         <table>
             <tr><th>Crate</th><th>Version</th><th>Std</th><th>Unsafe</th><th>Docs</th><th>Entry</th></tr>
-            <tr><td>ifa-bytecode</td><td>0.1.0</td><td class="pill no-std">no_std</td><td class="pill safe">forbid</td><td class="pill docs">warn</td><td>lib.rs</td></tr>
+            <tr><td>ifa-bytecode</td><td>1.3.0</td><td class="pill no-std">no_std</td><td class="pill safe">forbid</td><td class="pill docs">warn</td><td>lib.rs</td></tr>
             <tr><td>ifa-types</td><td>1.3.0</td><td class="pill no-std">cond</td><td class="pill safe">forbid</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
             <tr><td>ifa-vm</td><td>1.3.0</td><td>std</td><td class="pill unsafe">allow</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
             <tr><td>ifa-parser</td><td>1.3.0</td><td>std</td><td>—</td><td class="pill" style="color:var(--dim)">—</td><td>lib.rs</td></tr>
@@ -141,11 +141,10 @@
             <h3>ifa-bytecode</h3>
             <div class="crate-meta">
                 <span>→ <code>crates/ifa-bytecode/Cargo.toml:2</code></span>
-                <span>Version 0.1.0 (standalone, not workspace)</span>
-                <span>Edition 2021 (not workspace)</span>
+                <span>Version 1.3.0 (workspace)</span>
             </div>
             <p>The binary interface contract. Defines the <code>OpCode</code> enum
-            (60+ variants), bytecode format (MAGIC, VERSION, header), and error codes.
+            (97 variants), bytecode format (MAGIC, VERSION, header), and error codes.
             Zero dependencies (serde optional). The only crate with
             <code>#![warn(missing_docs)]</code> (<code>lib.rs:16</code>).</p>
             <div class="crate-exports">
@@ -165,17 +164,16 @@
                 <span>→ <code>crates/ifa-types/Cargo.toml:2</code></span>
                 <span>Version 1.3.0 (workspace)</span>
             </div>
-            <p>Shared type system: <code>IfaValue</code> (32-byte enum with
-            <code>CompactString</code> SSO, small-int pool 0–255, NaN-boxing path),
+            <p>Shared type system: <code>IfaValue</code> (16-byte enum with
+            <code>Box&lt;String&gt;</code> for strings, small-int pool 0–255),
             <code>OduDomain</code> (fixed 16 canonical Odù + 4 infrastructure + 2 reserved
             — <strong>not extensible</strong>, see <code>domain.rs:14-17</code>),
-            <code>IfaError</code>/<code>IfaResult</code>, <code>NanBox</code>,
-            <code>IfaShared</code> (Arc+RwLock/DashMap). Dual-path design:
-            <code>value_union.rs</code> (VM path, gated by <code>feature = "vm"</code>)
-            vs <code>value.rs</code> (legacy path).</p>
+            <code>IfaError</code>/<code>IfaResult</code>,
+            <code>IfaShared</code> (Arc+RwLock/DashMap). Single canonical definition
+            in <code>value_union.rs</code> (the legacy <code>value.rs</code> has been deleted).</p>
             <div class="crate-exports">
                 <strong>Key public types:</strong> <code>IfaValue</code>, <code>OduDomain</code>,
-                <code>IfaError</code>, <code>IfaResult</code>, <code>NanBox</code>,
+                <code>IfaError</code>, <code>IfaResult</code>,
                 <code>CompactString</code>, <code>IfaShared</code>, <code>OpCode</code> (re-export),
                 <code>Statement</code> (behind <code>vm</code> feature),
                 <code>Bytecode</code> (behind <code>vm</code> feature)
@@ -201,8 +199,8 @@
             async task queue (<code>vm.rs:948</code>), actor system (<code>actor.rs</code>),
             and Opon memory protection (<code>opon.rs</code>). The largest crate.</p>
             <div class="crate-deps">
-                <strong>Internal deps:</strong> ifa-types (vm), ifa-bytecode, ifa-parser,
-                ifa-compiler, ifa-transpiler, ifa-sandbox (optional)
+                <strong>Internal deps:</strong> ifa-types (vm), ifa-bytecode, ifa-macros,
+                ifa-parser, ifa-compiler, ifa-transpiler, ifa-sandbox (optional)
             </div>
             <div class="crate-exports">
                 <strong>Key public types:</strong> <code>IfaVM</code>, <code>Bytecode</code>,
@@ -214,9 +212,10 @@
             <div class="crate-features">
                 <strong>Features:</strong> <code>default = ["native", "parallel", "sysinfo"]</code>,
                 <code>native</code> (enables sandbox),
+                <code>compiler</code> (enables parser/compiler/transpiler),
                 <code>network</code> (ureq), <code>audio</code> (rodio),
                 <code>parallel</code> (rayon), <code>gpu</code> (wgpu),
-                <code>persistence</code>, <code>sysinfo</code>
+                <code>sysinfo</code>
             </div>
             <div class="crate-features">
                 <strong>Bench:</strong> <code>opcode_dispatch</code> (Criterion,
@@ -242,7 +241,7 @@
             <div class="crate-meta">
                 <span>→ <code>crates/ifa-compiler/Cargo.toml:2</code></span>
             </div>
-            <p>AST → bytecode compiler. Single-file (no submodules). Key features:
+            <p>AST → bytecode compiler. Two active modules: <code>lib.rs</code> and <code>embedded.rs</code>. Key features:
             tail call optimization (<code>return f(x)</code> → <code>TailCall</code>,
             <code>lib.rs:592</code>), constant inlining (<code>lib.rs:1214</code>),
             string dedup via HashMap (<code>lib.rs:127</code>), static Odu method
@@ -349,7 +348,7 @@
                 <span>→ <code>crates/ifa-fmt/Cargo.toml:2</code></span>
             </div>
             <p>Source code formatter. Uses <code>#![forbid(unsafe_code)]</code>.
-            Requires <code>--unstable</code> flag in CLI.</p>
+            Accepts <code>--unstable</code> flag (experimental).</p>
         </div>
 
         <div class="crate-block">

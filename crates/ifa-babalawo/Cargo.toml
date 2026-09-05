@@ -13,6 +13,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 once_cell = "1.19"
 ifa-sandbox = { path = "../ifa-sandbox" }
+ifa-macros = { path = "../ifa-macros" }
 
 [dev-dependencies]
 ifa-parser = { path = "../ifa-parser" }

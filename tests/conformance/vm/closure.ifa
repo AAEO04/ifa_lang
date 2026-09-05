@@ -4,4 +4,4 @@ ese make_adder(x) {
 }
 
 ayanmo add5 = make_adder(5);
-Irosu.fo(add5(8));
+pada add5(8);

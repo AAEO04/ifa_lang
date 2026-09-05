@@ -1183,7 +1183,7 @@ lto = true
             use std::io::{self, BufRead, Write};
 
             println!("╔═══════════════════════════════════════════════════════════════╗");
-            println!("║  🔮 Ifá-Lang REPL v1.2.0 (VM-backed)                         ║");
+            println!("║  🔮 Ifá-Lang REPL v1.3.0 (VM-backed)                         ║");
             println!("║  The Yoruba Programming Language                              ║");
             println!("╠═══════════════════════════════════════════════════════════════╣");
             println!("║  Type Ifá-Lang code to execute. Commands:                     ║");
@@ -1335,7 +1335,7 @@ lto = true
 
         Commands::Version => {
             println!("╔═══════════════════════════════════════════╗");
-            println!("║  Ifá-Lang v1.2.0                          ║");
+            println!("║  Ifá-Lang v1.3.0                          ║");
             println!("║  The Yoruba Programming Language          ║");
             println!("╠═══════════════════════════════════════════╣");
             println!(

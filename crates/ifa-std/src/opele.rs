@@ -306,6 +306,22 @@ impl Odu {
     pub fn is_principal(&self) -> bool {
         self.right == self.left
     }
+
+    /// Get the category of this Odu
+    pub fn category(&self) -> OduCategory {
+        if self.is_principal() {
+            OduCategory::OjuOdu
+        } else {
+            OduCategory::OmoOdu
+        }
+    }
+}
+
+/// Category of an Odu pattern
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OduCategory {
+    OjuOdu, // The 16 Meji (principal) — both legs equal
+    OmoOdu, // The 240 derived — legs differ
 }
 
 // =============================================================================
@@ -591,15 +607,38 @@ pub fn cast_seeded(seed: u64) -> Odu {
 
 /// Divine with a question - returns interpretation
 pub fn divine(question: &str) -> DivineResult {
-    let odu = cast();
+    let seed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(0);
+
+    // First cast (reveals Odu)
+    let random1 = seed
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
+    let odu = Odu::from_byte((random1 >> 32) as u8);
+
+    // Second LCG step/cast (determines orientation)
+    let random2 = random1
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
+    let orientation = if ((random2 >> 32) as u8) % 2 == 0 {
+        OduOrientation::Ire
+    } else {
+        OduOrientation::Ibi
+    };
+
     let proverb = proverb_for(&odu);
     let guidance = guidance_for(&odu);
+    let prescription = prescription_for(&odu);
 
     DivineResult {
         question: question.to_string(),
         odu,
+        orientation,
         proverb,
         guidance,
+        prescription,
     }
 }
 
@@ -659,24 +698,85 @@ pub fn create_compound(ancestors: Vec<PrincipalOdu>) -> CompoundOdu {
     CompoundOdu::new(ancestors)
 }
 
+/// Orientation of a divination cast (positive vs negative energy/alignment)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OduOrientation {
+    Ire, // Blessing, positive alignment
+    Ibi, // Obstacle, negative alignment
+}
+
+impl std::fmt::Display for OduOrientation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OduOrientation::Ire => write!(f, "Ire"),
+            OduOrientation::Ibi => write!(f, "Ibi"),
+        }
+    }
+}
+
+/// Helper function to retrieve wisdom prescription matching the right (primary) leg of the Odu
+fn prescription_for(odu: &Odu) -> String {
+    match odu.right {
+        PrincipalOdu::Ogbe => {
+            "Check your initialization. All things must have a proper beginning.".to_string()
+        }
+        PrincipalOdu::Oyeku => "Ensure proper termination. Endings must be honored.".to_string(),
+        PrincipalOdu::Iwori => "Check your loop conditions. Cycles must have purpose.".to_string(),
+        PrincipalOdu::Odi => {
+            "Verify your file operations. Vessels must be opened before use and closed after."
+                .to_string()
+        }
+        PrincipalOdu::Irosu => "Check your output format. Communication must be clear.".to_string(),
+        PrincipalOdu::Owonrin => {
+            "Account for randomness. Chaos must be embraced, not feared.".to_string()
+        }
+        PrincipalOdu::Obara => {
+            "Check your arithmetic. Expansion must respect boundaries.".to_string()
+        }
+        PrincipalOdu::Okanran => "Handle your exceptions. Errors are teachers.".to_string(),
+        PrincipalOdu::Ogunda => "Check your array bounds. Cutting must be precise.".to_string(),
+        PrincipalOdu::Osa => "Verify your conditionals. Flow must have logic.".to_string(),
+        PrincipalOdu::Ika => {
+            "Check your string operations. Binding must be intentional.".to_string()
+        }
+        PrincipalOdu::Oturupon => {
+            "Watch for division by zero. Subtraction requires substance.".to_string()
+        }
+        PrincipalOdu::Otura => {
+            "Check your network connections. Messages need receivers.".to_string()
+        }
+        PrincipalOdu::Irete => "Secure your data. Compress what is bloated.".to_string(),
+        PrincipalOdu::Ose => {
+            "Check your display coordinates. Beauty requires precision.".to_string()
+        }
+        PrincipalOdu::Ofun => {
+            "Verify your object creation. Creation requires intention.".to_string()
+        }
+    }
+}
+
 /// Result of a divination
 #[derive(Debug)]
 pub struct DivineResult {
     pub question: String,
     pub odu: Odu,
+    pub orientation: OduOrientation,
     pub proverb: String,
     pub guidance: String,
+    pub prescription: String,
 }
 
 impl std::fmt::Display for DivineResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Question: {}\nOdu: {}\nProverb: {}\nGuidance: {}",
+            "Question: {}\nOdu: {}\nOrientation: {}\nProverb: {}\nGuidance: {}\nPrescription: {}",
             self.question,
             self.odu.name(),
+            self.orientation,
             self.proverb,
-            self.guidance
+            self.guidance,
+            self.prescription
         )
     }
 }
@@ -789,6 +889,10 @@ mod tests {
         let result = divine("Will this test pass?");
         assert!(!result.proverb.is_empty());
         assert!(!result.guidance.is_empty());
+        assert!(!result.prescription.is_empty());
+        let disp = format!("{}", result);
+        assert!(disp.contains("Orientation:"));
+        assert!(disp.contains("Prescription:"));
     }
 
     #[test]

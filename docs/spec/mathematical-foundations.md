@@ -313,7 +313,7 @@ This is a deliberate trade-off: Ifá's performance model depends on **transpilat
 ### 5.3 Encoding
 
 - **Bytecode format** (`bytecode/src/format.rs:1-109`): Binary format with magic bytes (`IFA\0`), version, section sizes. No compression, no entropy coding.
-- **NaN boxing** (`value_union.rs:150+`): Encodes primitive values in `f64` bit patterns — a form of information-dense encoding where 64 bits discriminate between 5+ value types with canonical NaN payloads.
+- **NaN boxing** (deleted): Previously encoded primitive values in `f64` bit patterns. The `nan_box.rs` file has been removed — `IfaValue` is now a plain Rust enum with direct variant dispatch.
 
 ### 5.4 What's Missing (Information Theory)
 
@@ -325,7 +325,7 @@ This is a deliberate trade-off: Ifá's performance model depends on **transpilat
 
 ### 5.5 Information-Theoretic Observations
 
-**NaN boxing efficiency**: The current NaN-boxing encoding at `value_union.rs:150+` uses 64 bits per value. With 5 scalar types (Null, Bool, Int, Float, pointer), the theoretical information content is log₂(5) ≈ 2.32 bits per value, plus the value payload. The encoding uses the full 64-bit space efficiently for payloads but the type tag is embedded in the NaN payload bits rather than in separate metadata — this is an information-theoretic tradeoff trading decoding speed (single `f64` load, no tag dispatch) for the complexity of NaN payload arithmetic.
+**NaN boxing efficiency (historical)**: The NaN-boxing encoding (now deleted) previously used 64 bits per value for scalar types. With 5 scalar types (Null, Bool, Int, Float, pointer), the theoretical information content was log₂(5) ≈ 2.32 bits per value, plus the value payload. `IfaValue` now uses a plain Rust enum (16 bytes) with direct variant dispatch — trading density for simplicity and wider numeric range (full i64, not 47-bit).
 
 ---
 

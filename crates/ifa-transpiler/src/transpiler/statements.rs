@@ -485,6 +485,7 @@ impl std::ops::Not for IfaValue {{
                 body,
                 visibility,
                 effects,
+                is_iranti: _,
                 ..
             } => {
                 let vis = self.visibility_prefix(*visibility);
@@ -571,6 +572,10 @@ impl std::ops::Not for IfaValue {{
                     .clone()
                     .unwrap_or_else(|| "Assertion failed".to_string());
                 format!("{}assert(({}).is_truthy(), \"{}\");", indent, cond, msg)
+            }
+
+            Statement::Ori { limit_ms, .. } => {
+                format!("{}/* Ori (Time Limit): {}ms */", indent, limit_ms)
             }
 
             Statement::Opon { size, .. } => {

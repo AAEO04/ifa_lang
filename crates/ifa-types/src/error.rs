@@ -147,8 +147,8 @@ pub enum IfaError {
     /// User-raised error via `ta` (throw). Carries the original thrown value
     /// unchanged — may be a String, Map, List, or any other IfaValue.
     /// §12.2: `ta` accepts any expression, not just strings.
-    #[error("User error: {0}")]
-    UserError(Box<crate::IfaValue>),
+    #[error("User error: {0:?}")]
+    UserError(crate::IfaShared),
 
     // =========================================================================
     // PARSER/INTERPRETER ERRORS
@@ -252,9 +252,9 @@ impl IfaError {
         }
     }
 
-    /// If this is a `UserError`, extract the inner `IfaValue`.
+    /// If this is a `UserError`, extract the inner `IfaShared`.
     /// Used by the VM's catch handler to bind the error variable.
-    pub fn user_value(&self) -> Option<&crate::IfaValue> {
+    pub fn user_value(&self) -> Option<&crate::IfaShared> {
         if let IfaError::UserError(v) = self {
             Some(v)
         } else {

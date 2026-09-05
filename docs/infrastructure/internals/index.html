@@ -68,8 +68,8 @@
         </div>
 
         <div class="step">
-            <h2>IfaValue (32-byte Tagged Union)</h2>
-            <p><code>IfaValue</code> is a 32-byte tagged union with SSO (small-string optimization) up to 21 bytes. Uses Arc&lt;Mutex&gt; (not Rc&lt;RefCell&gt;) for shared mutable state and Arc&lt;str&gt; for strings. IfaShared uses Arc&lt;RwLock&gt; and DashMap for Send+Sync concurrency.</p>
+            <h2>IfaValue (16-byte Tagged Union)</h2>
+            <p><code>IfaValue</code> is a 16-byte tagged union. Strings use <code>Box&lt;String&gt;</code> (8-byte thin pointer). Uses IfaGc (not Rc/RefCell) for cycle-collected shared mutable state. IfaShared uses Arc&lt;RwLock&gt; and DashMap for Send+Sync concurrency.</p>
             <p><strong>Source:</strong> <code>crates/ifa-types/src/value_union.rs</code></p>
         </div>
 

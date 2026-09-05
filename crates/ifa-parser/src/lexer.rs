@@ -204,6 +204,11 @@ pub enum Token {
     #[token("class")]
     Class,
 
+    #[token("iranti")]
+    #[token("ìrántí")]
+    #[token("memoize")]
+    Iranti,
+
     #[token("iwa")]
     #[token("ìwà")]
     #[token("protocol")]
@@ -272,6 +277,12 @@ pub enum Token {
     #[token("èèwọ̀")]
     #[token("taboo")]
     Taboo,
+
+    #[token("#ori")]
+    #[token("ori")]
+    #[token("#Ori")]
+    #[token("Ori")]
+    Ori,
 
     // Visibility modifiers
     #[token("gbangba")] // Public (Yoruba: "open/public")

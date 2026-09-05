@@ -5,10 +5,8 @@
 //! Efficient string manipulation using ropey and regex.
 
 use crate::impl_odu_domain;
-use ifa_vm::{
-    error::{IfaError, IfaResult},
-    value::IfaValue,
-};
+use ifa_types::IfaValue;
+use ifa_vm::error::{IfaError, IfaResult};
 use regex::Regex;
 use ropey::Rope;
 use std::collections::HashMap;
@@ -339,7 +337,7 @@ impl Ika {
     ///
     /// Returns `IfaValue::Null` — callers must check for this.
     pub fn tumo(&self, _html: &str) -> IfaValue {
-        IfaValue::err(IfaValue::str("DOM parse handles are not implemented"))
+        IfaValue::ibi(IfaValue::str("DOM parse handles are not implemented"))
     }
 
     #[cfg(feature = "html")]
@@ -389,7 +387,7 @@ impl Ika {
 
     #[cfg(not(feature = "html"))]
     pub fn tumo(&self, _html: &str) -> IfaValue {
-        IfaValue::err(IfaValue::str("DOM parse handles are not implemented"))
+        IfaValue::ibi(IfaValue::str("DOM parse handles are not implemented"))
     }
 
     #[cfg(not(feature = "html"))]

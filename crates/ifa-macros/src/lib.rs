@@ -11,7 +11,17 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::visit::Visit;
-use syn::{DeriveInput, Expr, ItemFn, Token, parse::Parse, parse::ParseStream, parse_macro_input};
+use syn::{
+    DeriveInput, Expr, ItemFn, ItemStruct, Token, parse::Parse, parse::ParseStream,
+    parse_macro_input,
+};
+
+mod odu_registry;
+
+#[proc_macro]
+pub fn odu_registry_dispatch(input: TokenStream) -> TokenStream {
+    odu_registry::odu_registry_dispatch(input)
+}
 
 /// # Ẹbọ Derive Macro
 ///
@@ -34,19 +44,20 @@ pub fn derive_ebo(input: TokenStream) -> TokenStream {
     // Parse ebo attribute for custom cleanup method
     let mut cleanup_method = None;
     for attr in &input.attrs {
-        if attr.path().is_ident("ebo")
-            && let Ok(meta) = attr.meta.require_list()
-        {
-            let tokens = meta.tokens.to_string();
-            if tokens.contains("cleanup") {
-                // Extract method name from cleanup = "method"
-                if let Some(start) = tokens.find('"')
-                    && let Some(end) = tokens.rfind('"')
-                {
-                    cleanup_method = Some(tokens[start + 1..end].to_string());
-                }
-            }
+        if !attr.path().is_ident("ebo") {
+            continue;
         }
+        let Ok(meta) = attr.meta.require_list() else {
+            continue;
+        };
+        let tokens = meta.tokens.to_string();
+        if !tokens.contains("cleanup") {
+            continue;
+        }
+        // Extract method name from cleanup = "method_name"
+        let Some(start) = tokens.find('"') else { continue };
+        let Some(end) = tokens.rfind('"') else { continue };
+        cleanup_method = Some(tokens[start + 1..end].to_string());
     }
 
     let drop_impl = if let Some(method) = cleanup_method {
@@ -54,7 +65,8 @@ pub fn derive_ebo(input: TokenStream) -> TokenStream {
         quote! {
             impl Drop for #name {
                 fn drop(&mut self) {
-                    println!("[Ebo] Sacrificing {}", stringify!(#name));
+                    #[cfg(feature = "dep:log")]
+                    log::debug!("[Ebo] Sacrificing {}", stringify!(#name));
                     self.#method_ident();
                 }
             }
@@ -63,7 +75,8 @@ pub fn derive_ebo(input: TokenStream) -> TokenStream {
         quote! {
             impl Drop for #name {
                 fn drop(&mut self) {
-                    println!("[Ebo] Sacrificed: {}", stringify!(#name));
+                    #[cfg(feature = "dep:log")]
+                    log::debug!("[Ebo] Sacrificed: {}", stringify!(#name));
                 }
             }
         }
@@ -127,10 +140,16 @@ pub fn iwa_pele(attr: TokenStream, item: TokenStream) -> TokenStream {
             for (open, close) in self.pairs {
                 let open_count = *counts.get(open).unwrap_or(&0);
                 let close_count = *counts.get(close).unwrap_or(&0);
-                if open_count > close_count {
+                let yanda_count = *counts.get("yanda").unwrap_or(&0);
+                let or_gentle_count = *counts.get("or_gentle").unwrap_or(&0);
+                let or_recover_count = *counts.get("or_recover").unwrap_or(&0);
+
+                let total_close = close_count + yanda_count + or_gentle_count + or_recover_count;
+
+                if open_count > total_close {
                     self.errors.push(format!(
-                        "Ìwà Pẹ̀lẹ́ violation: Block leaks resource. {} '{}' calls but only {} '{}' calls inside this lexical scope.",
-                        open_count, open, close_count, close
+                        "Ìwà Pẹ̀lẹ́ violation: Block leaks resource. {} '{}' calls but only {} balancing calls ({} '{}', {} yanda, {} or_gentle, {} or_recover) inside this lexical scope.",
+                        open_count, open, total_close, close_count, close, yanda_count, or_gentle_count, or_recover_count
                     ));
                 }
             }
@@ -173,7 +192,7 @@ pub fn iwa_pele(attr: TokenStream, item: TokenStream) -> TokenStream {
         });
     }
 
-    // Function passes static CFG balance check - emit ZERO-COST wrapper (no runtime prints)
+    // Function passes static CFG balance check
     TokenStream::from(quote! {
         #fn_vis #fn_sig {
             #fn_block
@@ -198,14 +217,7 @@ pub fn ebo_block(input: TokenStream) -> TokenStream {
 
     TokenStream::from(quote! {
         {
-            struct _EboGuard;
-            impl Drop for _EboGuard {
-                fn drop(&mut self) {
-                    println!("--- Ebo Block Complete ---");
-                }
-            }
-            println!("--- Ebo Block Started ---");
-            let _guard = _EboGuard;
+            let _ebo_guard = ifa_vm::ebo::Ebo::new("ebo_block", || {});
             #block
         }
     })
@@ -257,76 +269,44 @@ pub fn ajose(input: TokenStream) -> TokenStream {
     let binding = parse_macro_input!(input as AjoseBinding);
     let source = &binding.source;
     let target = &binding.target;
+
     let freeze_logic = if binding.should_freeze {
-        quote! { .freeze().expect("Failed to freeze value") }
+        quote! { val.freeze().expect("ajose!: #freeze failed — value contains a Set or GC reference that cannot cross thread boundaries. Use a List or Map instead.") }
     } else {
-        quote! { .clone() }
+        quote! { val.clone() }
     };
 
     TokenStream::from(quote! {
-        {
-            println!("[Àjọṣe] Binding: {} => {}", stringify!(#source), stringify!(#target));
-            // Create reactive subscription
-            let _subscription = {
-                let target_clone = #target.clone();
-                move |new_value| {
-                    // Apply freeze or clone based on syntax
-                    *target_clone.borrow_mut() = new_value #freeze_logic;
-                }
-            };
-            // Initial sync
-            #target = #source #freeze_logic;
-            _subscription
-        }
+        ifa_vm::ajose::bind!(#source => #target, |val| #freeze_logic)
     })
 }
 
-/// # Observable Wrapper Derive
+/// # Observable Attribute Macro
 ///
-/// Makes a struct's fields observable for reactive updates.
+/// Transforms a struct's fields into reactive `Signal<T>` fields.
 ///
 /// ## Usage
 /// ```rust,ignore
-/// #[derive(Observable)]
+/// #[observable]
 /// struct Counter {
 ///     value: i32,
 /// }
-/// // Generates Counter::watch_value() method
+/// // Generates: Counter { value: Signal<i32> }
 /// ```
-#[proc_macro_derive(Observable)]
-pub fn derive_observable(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    let name = &input.ident;
+#[proc_macro_attribute]
+pub fn observable(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let mut input = parse_macro_input!(item as ItemStruct);
 
-    let fields = match &input.data {
-        syn::Data::Struct(data) => &data.fields,
-        _ => {
-            return TokenStream::from(quote! {
-                compile_error!("Observable can only be derived for structs");
-            });
-        }
-    };
-
-    let mut watchers = Vec::new();
-
-    for field in fields.iter() {
-        if let Some(ident) = &field.ident {
-            let watcher_name = format_ident!("watch_{}", ident);
-            let field_ty = &field.ty;
-
-            watchers.push(quote! {
-                pub fn #watcher_name<F: Fn(&#field_ty) + 'static>(&self, callback: F) {
-                    // Store callback for field changes
-                    println!("[Observable] Watching: {}.{}", stringify!(#name), stringify!(#ident));
-                    callback(&self.#ident);
-                }
-            });
+    if let syn::Fields::Named(fields) = &mut input.fields {
+        for field in &mut fields.named {
+            let orig_ty = &field.ty;
+            // Wrap the field type in `ifa_vm::ajose::Signal<T>`
+            let new_ty: syn::Type = syn::parse_quote!(ifa_vm::ajose::Signal<#orig_ty>);
+            field.ty = new_ty;
         }
     }
 
     TokenStream::from(quote! {
-        impl #name {
-            #(#watchers)*
-        }
+        #input
     })
 }

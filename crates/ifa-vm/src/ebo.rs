@@ -164,22 +164,6 @@ macro_rules! defer {
     };
 }
 
-/// Ẹbọ block macro - scoped cleanup
-///
-/// # Example
-/// ```rust,ignore
-/// ebo! {
-///     let conn = db.connect()?;
-///     cleanup: conn.close();
-/// }
-/// ```
-#[macro_export]
-macro_rules! ebo {
-    ($($body:tt)*) => {{
-        $($body)*
-    }};
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,3 +1,4 @@
+// Intentionally dormant until embedded CI is standing
 //! # IoT Stack (Tier 1)
 //!
 //! This module contains higher-level features for "Smart" embedded devices.

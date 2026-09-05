@@ -367,7 +367,7 @@ The 16 Odu domains are designed to map to specific domain concerns, but the lang
 
 **Suitability: Medium.**
 - `Obara` (math add/mul) and `Oturupon` (math sub/div) split arithmetic across two domains — unusual for scientific computing where unified `+`, `-`, `*`, `/` are expected.
-- NaN boxing (`to_nan_boxed_primitive` at `value_union.rs:150+`) conflicts with NaN payload encoding used in scientific computing for missing/exceptional values.
+- NaN boxing (previously at `value_union.rs`, now deleted) previously conflicted with NaN payload encoding used in scientific computing for missing/exceptional values. Arithmetic now uses direct enum dispatch.
 - No complex number type, no vector/SIMD types.
 - GPU compute exists (wgpu shader dispatch via `ifa-std/src/hardware/gpu.rs`) but requires explicit buffer management — no automatic array offloading.
 
@@ -393,7 +393,7 @@ The 16 Odu domains are designed to map to specific domain concerns, but the lang
 ### 20.5 Finance
 
 **Suitability: Low.**
-- No `Decimal` type — `f64` only, with NaN boxing conflict.
+- No `Decimal` type — `f64` only (NaN boxing file that previously conflicted with decimal values has been deleted).
 - No fixed-point arithmetic.
 - No formal verification (critical for smart contracts in finance).
 - Audit capability (`oja.rs:1433-1458`) checks checksums but does not analyze dependency diff or supply-chain provenance.

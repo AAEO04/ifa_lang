@@ -18,6 +18,7 @@ ifa-sandbox = { path = "../ifa-sandbox", optional = true }
 ifa-vm = { path = "../ifa-vm", default-features = false }
 ifa-infra = { path = "../ifa-infra" }
 futures-channel = { version = "0.3", optional = true }
+ifa-macros = { path = "../ifa-macros" }
 
 # Error handling
 thiserror.workspace = true

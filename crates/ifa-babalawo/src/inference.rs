@@ -1,16 +1,17 @@
 use crate::checks::LintContext;
+use ifa_types::ast::ExprKind;
 use ifa_types::ast::{Expression, InterpolatedPart, TypeHint};
 use ifa_types::binary_ops::binary_op_result_type;
 
 pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<TypeHint> {
-    match expr {
-        Expression::Int(_) => Some(TypeHint::Int),
-        Expression::Float(_) => Some(TypeHint::Float),
-        Expression::String(_) => Some(TypeHint::Str),
-        Expression::Bool(_) => Some(TypeHint::Bool),
-        Expression::Nil => None,
+    match &expr.kind {
+        ExprKind::Int(_) => Some(TypeHint::Int),
+        ExprKind::Float(_) => Some(TypeHint::Float),
+        ExprKind::String(_) => Some(TypeHint::Str),
+        ExprKind::Bool(_) => Some(TypeHint::Bool),
+        ExprKind::Nil => None,
 
-        Expression::List(items) => {
+        ExprKind::List(items) => {
             if items.is_empty() {
                 Some(TypeHint::List)
             } else {
@@ -18,7 +19,7 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
                     .iter()
                     .map(|i| infer_expression_type(i, ctx))
                     .collect();
-                if inferred.iter().all(|t| t.is_some()) {
+                if inferred.iter().all(|t: &Option<TypeHint>| t.is_some()) {
                     let all_same = inferred.windows(2).all(|w| w[0] == w[1]);
                     if all_same {
                         inferred.into_iter().next().flatten()
@@ -31,25 +32,25 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
             }
         }
 
-        Expression::Map(_) => Some(TypeHint::Map),
+        ExprKind::Map(_) => Some(TypeHint::Map),
 
-        Expression::Identifier(name) => ctx.get_var_type(name).cloned(),
+        ExprKind::Identifier(name) => ctx.get_var_type(name).cloned(),
 
-        Expression::BinaryOp {
+        ExprKind::BinaryOp {
             left, right, op, ..
         } => {
-            let lhs = infer_expression_type(left, ctx)?;
-            let rhs = infer_expression_type(right, ctx)?;
+            let lhs = infer_expression_type(&left, ctx)?;
+            let rhs = infer_expression_type(&right, ctx)?;
             binary_op_result_type(op, &lhs, &rhs)
         }
 
-        Expression::UnaryOp { op: _, expr } => match infer_expression_type(expr, ctx)? {
+        ExprKind::UnaryOp { op: _, expr } => match infer_expression_type(&expr, ctx)? {
             TypeHint::Int => Some(TypeHint::Int),
             TypeHint::Float => Some(TypeHint::Float),
             _ => None,
         },
 
-        Expression::OduCall(call) => {
+        ExprKind::OduCall(call) => {
             if call.method == "iru" || call.method == "typeof" {
                 Some(TypeHint::Str)
             } else if call.method == "wa"
@@ -97,7 +98,7 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
             }
         }
 
-        Expression::MethodCall {
+        ExprKind::MethodCall {
             object,
             method: _,
             args: _,
@@ -107,7 +108,7 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
             Some(TypeHint::Any)
         }
 
-        Expression::Get {
+        ExprKind::Get {
             object,
             name: _,
             is_optional: _,
@@ -120,7 +121,7 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
             }
         }
 
-        Expression::Call { name, args: _ } => {
+        ExprKind::Call { name, args: _ } => {
             if let Some(ret_type) = ctx.var_types.get(name)
                 && let ifa_types::ast::TypeHint::Function { ret, .. } = ret_type
             {
@@ -138,9 +139,9 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
             }
         }
 
-        Expression::Await(inner) => infer_expression_type(inner, ctx),
+        ExprKind::Await(inner) => infer_expression_type(inner, ctx),
 
-        Expression::Index {
+        ExprKind::Index {
             object,
             index: _,
             is_optional: _,
@@ -154,27 +155,28 @@ pub fn infer_expression_type(expr: &Expression, ctx: &LintContext) -> Option<Typ
             }
         }
 
-        Expression::Try(inner) => infer_expression_type(inner, ctx),
+        ExprKind::Try(inner) => infer_expression_type(inner, ctx),
 
-        Expression::InterpolatedString { parts } => {
+        ExprKind::InterpolatedString { parts } => {
             let has_exprs = parts
                 .iter()
                 .any(|p| matches!(p, InterpolatedPart::Expression(_)));
             if has_exprs {
                 for part in parts {
                     if let InterpolatedPart::Expression(expr) = part {
-                        infer_expression_type(expr, ctx);
+                        infer_expression_type(&expr, ctx);
                     }
                 }
             }
             Some(TypeHint::Str)
         }
 
-        Expression::Lambda { params: _, body: _ } => Some(TypeHint::Any),
+        ExprKind::Lambda { params: _, body: _ } => Some(TypeHint::Any),
 
-        Expression::MoveExpr(inner) => infer_expression_type(inner, ctx),
+        ExprKind::MoveExpr(inner) => infer_expression_type(inner, ctx),
 
-        Expression::Set(_) => Some(TypeHint::Any),
-        Expression::Spanned { expr, span: _ } => infer_expression_type(expr, ctx),
+        ExprKind::Iso(inner) => infer_expression_type(inner, ctx),
+
+        ExprKind::Set(_) => Some(TypeHint::Any),
     }
 }

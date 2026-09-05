@@ -63,6 +63,8 @@ pub enum EmbeddedOpCode {
     Deref = 0x12,
     /// Store Dereference (Write): Pop addr, Pop val -> Write val to address (32-bit store)
     StoreDeref = 0x16,
+    /// Load constant string from Flash memory (followed by 2-byte index)
+    PushStr = 0x0A,
 
     // Sized pointer ops
     /// Store 8-bit value to address
@@ -106,6 +108,7 @@ impl EmbeddedOpCode {
             0x1C => Some(EmbeddedOpCode::Ref),
             0x12 => Some(EmbeddedOpCode::Deref),
             0x16 => Some(EmbeddedOpCode::StoreDeref),
+            0x0A => Some(EmbeddedOpCode::PushStr),
             0x14 => Some(EmbeddedOpCode::Store8),
             0x15 => Some(EmbeddedOpCode::Store16),
             0x10 => Some(EmbeddedOpCode::Load8),

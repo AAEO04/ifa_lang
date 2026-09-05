@@ -1,7 +1,9 @@
 # Zero-Copy Move Semantics (The `yanda` / `move` keyword)
 
 **Status:** `IMPLEMENTED`  
-**Crate:** `ifa-babalawo` (`src/movement.rs`, `src/checks.rs`), `ifa-vm` (`src/actor.rs:273-275`)
+**Crate:** `ifa-babalawo` (`src/movement.rs`, `src/checks.rs`), `ifa-vm` (`src/actor.rs:273-275`), `ifa-bytecode` (`src/lib.rs: OpCode::MoveLocal 0x1F`), `ifa-compiler` (`src/lib.rs: MoveExpr compilation`)
+
+At runtime, the `MoveLocal` opcode (0x1F) replaces the source local with `Null` when an identifier is moved via `yanda`. This closes the gap between static move intent and runtime behavior for the variable-move case. General expression moves (non-identifier) remain a static-only check.
 
 Ifá-Lang introduces mathematically-proven zero-copy ownership transfer for concurrent programming using the `yanda` (surrender) or `move` keyword.
 

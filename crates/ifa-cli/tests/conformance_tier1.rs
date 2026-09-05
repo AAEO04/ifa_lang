@@ -44,7 +44,8 @@ fn run_test_file(path: &Path, engine: &str) {
                 .arg("bytecode")
                 .arg(path)
                 .arg("-o")
-                .arg(&bytecode_path);
+                .arg(&bytecode_path)
+                .arg("--force");
             let compile_output = compile_cmd.output().expect("Failed to compile to bytecode");
             assert!(
                 compile_output.status.success(),
@@ -54,7 +55,7 @@ fn run_test_file(path: &Path, engine: &str) {
                 String::from_utf8_lossy(&compile_output.stderr)
             );
 
-            cmd.arg("runb").arg(&bytecode_path);
+            cmd.arg("runb").arg(&bytecode_path).arg("--force");
         }
         "build" => {
             // Transpile and build native binary

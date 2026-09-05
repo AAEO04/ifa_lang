@@ -47,7 +47,7 @@ pub static LIFECYCLE_RULES: Lazy<HashMap<&'static str, Option<&'static str>>> = 
 pub static AUTO_CLOSE: &[&str] = &["ogbe.bi", "ogbe.bere"];
 
 /// A resource debt - something opened that needs closing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ResourceDebt {
     pub var_name: Option<String>,
     pub opener: String,
@@ -85,7 +85,7 @@ pub enum BorrowError {
 
 /// The Ìwà Engine - ensures resource lifecycle balance
 /// Also tracks borrow lifetimes for Ref/RefMut types
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IwaEngine {
     pub strict_mode: bool,
     /// Resource lifecycle debts (open -> close)
@@ -222,6 +222,46 @@ impl IwaEngine {
     /// Get all active borrows
     pub fn active_borrows(&self) -> &[BorrowDebt] {
         &self.borrow_ledger
+    }
+
+    pub fn snapshot(&self) -> Self {
+        self.clone()
+    }
+
+    pub fn apply(&mut self, other: &Self) {
+        self.debt_ledger = other.debt_ledger.clone();
+        self.borrow_ledger = other.borrow_ledger.clone();
+        self.scope_depth = other.scope_depth;
+        self.errors.extend(other.errors.clone());
+        self.warnings.extend(other.warnings.clone());
+    }
+
+    pub fn merge_branches(then_engine: &Self, else_engine: &Self) -> Self {
+        let mut merged = then_engine.clone();
+
+        // Merge debts: if a resource is opened in one branch but not another, it's a mismatch.
+        // For simplicity, we keep the union of debts so it forces closure, but we could add a MaybeOpened state.
+        for debt in &else_engine.debt_ledger {
+            if !merged.debt_ledger.contains(debt) {
+                merged.debt_ledger.push(debt.clone());
+            }
+        }
+
+        // Merge borrows: union of borrows
+        for borrow in &else_engine.borrow_ledger {
+            if !merged
+                .borrow_ledger
+                .iter()
+                .any(|b| b.var_name == borrow.var_name)
+            {
+                merged.borrow_ledger.push(borrow.clone());
+            }
+        }
+
+        merged.errors.extend(else_engine.errors.clone());
+        merged.warnings.extend(else_engine.warnings.clone());
+
+        merged
     }
 
     /// Normalize Yoruba text to ASCII for matching

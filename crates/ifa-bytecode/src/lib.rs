@@ -108,6 +108,8 @@ pub enum OpCode {
     LoadUpvalue = 0x1D,
     /// Store captured upvalue (followed by 2-byte upvalue index)
     StoreUpvalue = 0x1E,
+    /// Move from Local: load and zero slot (followed by 2-byte index)
+    MoveLocal = 0x1F,
 
     // === Arithmetic Operations (0x20-0x2F) ===
     /// Add top two stack values
@@ -176,6 +178,10 @@ pub enum OpCode {
     TailCall = 0x57,
     /// Await a future (unwrap async value)
     Await = 0x58,
+    /// Move from Global: load and remove global entry (followed by 2-byte name index)
+    MoveGlobal = 0x59,
+    /// Move from captured upvalue: load and zero upvalue (followed by 2-byte upvalue index)
+    MoveUpvalue = 0x5A,
     /// E6: Statically resolved domain and method CallOdu (followed by 1-byte domain id, 2-byte method id, 1-byte arg count)
     CallOduFast = 0x5B,
     /// H4: Execute a parallel map/for over an iterable using a closure
@@ -268,6 +274,8 @@ pub enum OpCode {
     PropagateError = 0xA5,
     /// Assert runtime type (followed by 1-byte type ID)
     AssertType = 0xA6,
+    /// Set Ori limit (followed by 8-byte limit in ms)
+    SetOriLimit = 0xA7,
 }
 
 impl OpCode {
@@ -301,6 +309,7 @@ impl OpCode {
             0x1C => Some(OpCode::Ref),
             0x1D => Some(OpCode::LoadUpvalue),
             0x1E => Some(OpCode::StoreUpvalue),
+            0x1F => Some(OpCode::MoveLocal),
 
             0x20 => Some(OpCode::Add),
             0x21 => Some(OpCode::Sub),
@@ -335,6 +344,8 @@ impl OpCode {
             0x56 => Some(OpCode::Yield),
             0x57 => Some(OpCode::TailCall),
             0x58 => Some(OpCode::Await),
+            0x59 => Some(OpCode::MoveGlobal),
+            0x5A => Some(OpCode::MoveUpvalue),
             0x5B => Some(OpCode::CallOduFast),
             0x5C => Some(OpCode::ParallelFor),
             0x5D => Some(OpCode::EpochBegin),
@@ -378,6 +389,7 @@ impl OpCode {
             0xA4 => Some(OpCode::FinallyEnd),
             0xA5 => Some(OpCode::PropagateError),
             0xA6 => Some(OpCode::AssertType),
+            0xA7 => Some(OpCode::SetOriLimit),
 
             _ => None,
         }
@@ -418,6 +430,7 @@ impl OpCode {
             OpCode::Ref => "ref",
             OpCode::LoadUpvalue => "load_upvalue",
             OpCode::StoreUpvalue => "store_upvalue",
+            OpCode::MoveLocal => "move_local",
 
             OpCode::Add => "add",
             OpCode::Sub => "sub",
@@ -452,6 +465,8 @@ impl OpCode {
             OpCode::Yield => "yield",
             OpCode::TailCall => "tail_call",
             OpCode::Await => "await",
+            OpCode::MoveGlobal => "move_global",
+            OpCode::MoveUpvalue => "move_upvalue",
 
             OpCode::ToInt => "to_int",
             OpCode::ToFloat => "to_float",
@@ -495,6 +510,7 @@ impl OpCode {
             OpCode::ParallelFor => "parallel_for",
             OpCode::EpochBegin => "epoch_begin",
             OpCode::EpochEnd => "epoch_end",
+            OpCode::SetOriLimit => "set_ori_limit",
         }
     }
 
@@ -581,8 +597,11 @@ impl OpCode {
             | OpCode::AssertType => Some(1),
             OpCode::LoadLocal
             | OpCode::StoreLocal
+            | OpCode::MoveLocal
             | OpCode::LoadGlobal
             | OpCode::StoreGlobal
+            | OpCode::MoveGlobal
+            | OpCode::MoveUpvalue
             | OpCode::LoadUpvalue
             | OpCode::StoreUpvalue
             | OpCode::PushStr
@@ -591,7 +610,7 @@ impl OpCode {
             | OpCode::SetField => Some(2),
             OpCode::CallMethod => Some(3),
             OpCode::CallOdu | OpCode::CallOduFast => Some(4),
-            OpCode::PushFn => Some(8),
+            OpCode::PushFn | OpCode::SetOriLimit => Some(8),
 
             // Variable length operands
             OpCode::DefineClass | OpCode::MakeClosure => None,
@@ -619,7 +638,12 @@ impl OpCode {
             // Memory operations
             OpCode::Load8 | OpCode::Load16 | OpCode::Load32 | OpCode::Load64 => Some((1, 1)), // [addr] -> [value]
 
-            OpCode::LoadLocal | OpCode::LoadGlobal | OpCode::LoadUpvalue => Some((0, 1)), // Locals/Globals/Upvalues load from env, not stack addr
+            OpCode::LoadLocal
+            | OpCode::MoveLocal
+            | OpCode::LoadGlobal
+            | OpCode::MoveGlobal
+            | OpCode::LoadUpvalue
+            | OpCode::MoveUpvalue => Some((0, 1)), // Locals/Globals/Upvalues load from env, not stack addr
 
             OpCode::Ref => Some((0, 1)), // Pushes address
 
@@ -691,6 +715,7 @@ impl OpCode {
             OpCode::EpochBegin => Some((1, 0)), // Pops name from stack
             OpCode::EpochEnd => Some((0, 0)),
             OpCode::AssertType => Some((1, 1)), // [val] -> [val] (validation only)
+            OpCode::SetOriLimit => Some((0, 0)), // Modifies VM state
         }
     }
 

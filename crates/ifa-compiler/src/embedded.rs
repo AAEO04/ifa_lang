@@ -3,7 +3,9 @@
 //! Compiles an AST directly to the embedded instruction set.
 
 use ifa_bytecode::embedded::EmbeddedOpCode;
-use ifa_types::ast::{BinaryOperator, Expression, Program, Statement};
+use ifa_types::ast::{
+    ExprKind, {BinaryOperator, Expression, Program, Statement},
+};
 use ifa_types::target::Target;
 
 /// Compiles AST to EmbeddedOpCode bytes
@@ -78,25 +80,25 @@ impl EmbeddedCodegen {
     }
 
     fn compile_expression(&mut self, expr: &Expression) -> Result<(), String> {
-        match expr {
-            Expression::Int(val) => {
+        match &expr.kind {
+            ExprKind::Int(val) => {
                 self.emit(EmbeddedOpCode::PushInt);
                 self.emit_i32(*val as i32); // Note: Lossy for now
             }
-            Expression::Float(_) => {
+            ExprKind::Float(_) => {
                 // Not supported in this simplified impl yet
                 return Err("Floats not yet supported in codegen".to_string());
             }
-            Expression::Bool(true) => {
+            ExprKind::Bool(true) => {
                 self.emit(EmbeddedOpCode::PushTrue);
             }
-            Expression::Bool(false) => {
+            ExprKind::Bool(false) => {
                 self.emit(EmbeddedOpCode::PushFalse);
             }
-            Expression::Nil => {
+            ExprKind::Nil => {
                 self.emit(EmbeddedOpCode::PushNull);
             }
-            Expression::Identifier(name) => {
+            ExprKind::Identifier(name) => {
                 if let Some(&idx) = self.locals.get(name) {
                     self.emit(EmbeddedOpCode::LoadLocal);
                     self.emit_u8(idx);
@@ -104,7 +106,7 @@ impl EmbeddedCodegen {
                     return Err(format!("Undefined variable '{}'", name));
                 }
             }
-            Expression::BinaryOp { left, op, right } => {
+            ExprKind::BinaryOp { left, op, right } => {
                 self.compile_expression(left)?;
                 self.compile_expression(right)?;
                 match op {

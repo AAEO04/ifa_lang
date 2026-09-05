@@ -10,7 +10,7 @@ fn test_parse_var_decl() {
 
     if let Statement::VarDecl { name, value, .. } = &program.statements[0] {
         assert_eq!(name, "x");
-        if let Expression::Int(i) = value {
+        if let ExprKind::Int(i) = value {
             assert_eq!(*i, 42);
         } else {
             panic!("Expected Int literal, got {:?}", value);

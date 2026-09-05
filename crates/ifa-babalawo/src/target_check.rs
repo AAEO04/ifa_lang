@@ -1,6 +1,7 @@
 //! Target-specific incompatibility checks
 
 use crate::diagnose::Babalawo;
+use ifa_types::ast::ExprKind;
 use ifa_types::ast::{Expression, Span, Statement};
 use ifa_types::target::Target;
 
@@ -39,8 +40,8 @@ pub fn check_expression_target(
     file: &str,
     span: &Span,
 ) {
-    match expr {
-        Expression::String(_) | Expression::InterpolatedString { .. } => {
+    match &expr.kind {
+        ExprKind::String(_) | ExprKind::InterpolatedString { .. } => {
             if !target.allows_strings() {
                 baba.error(
                     "EMBEDDED_FEATURE",
@@ -51,7 +52,7 @@ pub fn check_expression_target(
                 );
             }
         }
-        Expression::Lambda { .. } => {
+        ExprKind::Lambda { .. } => {
             if !target.allows_closures() {
                 baba.error(
                     "EMBEDDED_FEATURE",
@@ -62,7 +63,7 @@ pub fn check_expression_target(
                 );
             }
         }
-        Expression::List(_) | Expression::Map(_) | Expression::Set(_) => {
+        ExprKind::List(_) | ExprKind::Map(_) | ExprKind::Set(_) => {
             if !target.allows_collections() {
                 baba.error(
                     "EMBEDDED_FEATURE",
@@ -73,7 +74,7 @@ pub fn check_expression_target(
                 );
             }
         }
-        Expression::MoveExpr(_) => {
+        ExprKind::MoveExpr(_) => {
             if target.is_embedded() {
                 baba.error(
                     "EMBEDDED_FEATURE",
@@ -87,7 +88,7 @@ pub fn check_expression_target(
                 );
             }
         }
-        Expression::MethodCall { method, .. } => {
+        ExprKind::MethodCall { method, .. } => {
             if method == "yanda" && target.is_embedded() {
                 baba.error(
                     "EMBEDDED_FEATURE",

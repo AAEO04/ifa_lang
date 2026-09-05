@@ -3,23 +3,63 @@
 //! Signal-based reactivity with proper observer pattern.
 //! No raw callbacks - actual push-based updates.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, RwLock, Weak};
+use std::sync::{Arc, Mutex, RwLock, Weak};
 
 // ============================================================================
-// TYPE ALIASES for complex types (reduces clippy::type_complexity warnings)
+// TYPE ALIASES & OBSERVER CONTEXT
 // ============================================================================
 
 type SubscriberId = u64;
 
-/// Type alias for signal subscribers
-type Subscribers<T> = Arc<RwLock<HashMap<SubscriberId, Box<dyn Fn(&T) + Send + Sync>>>>;
+type ObserverCallback = Arc<dyn Fn() + Send + Sync + 'static>;
+
+pub type CleanupFn = Box<dyn FnOnce() + Send + Sync>;
+pub type EpochCleanups = Arc<Mutex<Vec<CleanupFn>>>;
+type SubscribersMap<T> = Arc<RwLock<HashMap<SubscriberId, Box<dyn Fn(&T) + Send + Sync>>>>;
+
+thread_local! {
+    static ACTIVE_OBSERVER: RefCell<Option<ObserverCallback>> = const { RefCell::new(None) };
+    pub static ACTIVE_EPOCH_CLEANUPS: RefCell<Option<EpochCleanups>> = const { RefCell::new(None) };
+}
+
+/// Guard representing an epoch cleanup association.
+pub struct EpochCleanupGuard {
+    prev: Option<EpochCleanups>,
+}
+
+impl EpochCleanupGuard {
+    pub fn new(cleanups: EpochCleanups) -> Self {
+        let prev = ACTIVE_EPOCH_CLEANUPS.with(|cell| cell.replace(Some(cleanups)));
+        EpochCleanupGuard { prev }
+    }
+}
+
+impl Drop for EpochCleanupGuard {
+    fn drop(&mut self) {
+        ACTIVE_EPOCH_CLEANUPS.with(|cell| {
+            *cell.borrow_mut() = self.prev.take();
+        });
+    }
+}
+
+// Helper to register cleanups with the current active epoch if one is active.
+fn register_subscription_cleanup(cleanup: Box<dyn FnOnce() + Send + Sync>) {
+    ACTIVE_EPOCH_CLEANUPS.with(|cell| {
+        if let Some(cleanups) = &*cell.borrow()
+            && let Ok(mut c) = cleanups.lock()
+        {
+            c.push(cleanup);
+        }
+    });
+}
 
 /// Guard representing a subscription. Unsubscribes on drop.
 pub struct SubscriptionGuard<T> {
-    subscribers: Subscribers<T>,
+    subscribers: SubscribersMap<T>,
     id: SubscriberId,
 }
 
@@ -35,85 +75,100 @@ impl<T> Drop for SubscriptionGuard<T> {
 // SIGNALS - Core reactive primitive
 // ============================================================================
 
-/// A reactive signal that notifies subscribers on change.
-///
-/// # Example
-/// ```rust,ignore
-/// let count = Signal::new(0);
-/// let label = Signal::new(String::new());
-///
-/// // Create derived signal
-/// effect(move || {
-///     label.set(format!("Count: {}", count.get()));
-/// });
-///
-/// count.set(5);  // label automatically updates to "Count: 5"
-/// ```
+struct SignalInner<T> {
+    value: RwLock<T>,
+    subscribers: SubscribersMap<T>,
+    version: AtomicU64,
+    next_sub_id: AtomicU64,
+}
+
 pub struct Signal<T> {
-    value: Arc<RwLock<T>>,
-    subscribers: Subscribers<T>,
-    version: Arc<AtomicU64>,
-    next_sub_id: Arc<AtomicU64>,
+    inner: Arc<SignalInner<T>>,
 }
 
 impl<T: Clone + Send + Sync + 'static> Signal<T> {
-    // SAFETY [Poisoning]: Signal data represents isolated reactive states.
-    // If a reader or writer panics, the inner generic value remains structurally sound in memory.
-    // We safely bypass lock poisoning via `into_inner()` to ensure surviving subscribers can still process updates.
     pub fn new(initial: T) -> Self {
         Signal {
-            value: Arc::new(RwLock::new(initial)),
-            subscribers: Arc::new(RwLock::new(HashMap::new())),
-            version: Arc::new(AtomicU64::new(0)),
-            next_sub_id: Arc::new(AtomicU64::new(0)),
+            inner: Arc::new(SignalInner {
+                value: RwLock::new(initial),
+                subscribers: Arc::new(RwLock::new(HashMap::new())),
+                version: AtomicU64::new(0),
+                next_sub_id: AtomicU64::new(0),
+            }),
         }
     }
 
-    /// Get current value
+    /// Get current value and dynamically track dependency
     pub fn get(&self) -> T {
-        self.value.read().unwrap_or_else(|e| e.into_inner()).clone()
+        if let Some(obs) = ACTIVE_OBSERVER.with(|cell| cell.borrow().clone()) {
+            self.subscribe_internal(obs);
+        }
+        self.inner
+            .value
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
-    /// Get reference to value
+    fn subscribe_internal(&self, callback: ObserverCallback) {
+        let id = Arc::as_ptr(&callback) as *const () as usize as u64;
+        let mut subs = self
+            .inner
+            .subscribers
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
+        if let std::collections::hash_map::Entry::Vacant(e) = subs.entry(id) {
+            let callback_clone = callback.clone();
+            e.insert(Box::new(move |_| callback_clone()));
+
+            // Register with Ebo Epoch cleanups to auto-unsubscribe when the epoch scope exits
+            let subs_weak = Arc::downgrade(&self.inner.subscribers);
+            register_subscription_cleanup(Box::new(move || {
+                if let Some(subs_arc) = subs_weak.upgrade()
+                    && let Ok(mut s) = subs_arc.write()
+                {
+                    s.remove(&id);
+                }
+            }));
+        }
+    }
+
     pub fn with<R>(&self, f: impl FnOnce(&T) -> R) -> R {
-        f(&self.value.read().unwrap_or_else(|e| e.into_inner()))
+        f(&self.inner.value.read().unwrap_or_else(|e| e.into_inner()))
     }
 
-    /// Set value and notify subscribers
     pub fn set(&self, new_value: T) {
-        *self.value.write().unwrap_or_else(|e| e.into_inner()) = new_value;
-        self.version.fetch_add(1, Ordering::Relaxed);
+        *self.inner.value.write().unwrap_or_else(|e| e.into_inner()) = new_value;
+        self.inner.version.fetch_add(1, Ordering::Relaxed);
         self.notify();
     }
 
-    /// Update value with function
     pub fn update(&self, f: impl FnOnce(&mut T)) {
-        f(&mut self.value.write().unwrap_or_else(|e| e.into_inner()));
-        self.version.fetch_add(1, Ordering::Relaxed);
+        f(&mut self.inner.value.write().unwrap_or_else(|e| e.into_inner()));
+        self.inner.version.fetch_add(1, Ordering::Relaxed);
         self.notify();
     }
 
-    /// Subscribe to changes
     pub fn subscribe(&self, callback: impl Fn(&T) + Send + Sync + 'static) -> SubscriptionGuard<T> {
-        let id = self.next_sub_id.fetch_add(1, Ordering::Relaxed);
-        self.subscribers
+        let id = self.inner.next_sub_id.fetch_add(1, Ordering::Relaxed);
+        self.inner
+            .subscribers
             .write()
             .unwrap_or_else(|e| e.into_inner())
             .insert(id, Box::new(callback));
         SubscriptionGuard {
-            subscribers: Arc::clone(&self.subscribers),
+            subscribers: Arc::clone(&self.inner.subscribers),
             id,
         }
     }
 
-    /// Get version number (for dirty checking)
     pub fn version(&self) -> u64 {
-        self.version.load(Ordering::Relaxed)
+        self.inner.version.load(Ordering::Relaxed)
     }
 
     fn notify(&self) {
-        let value = self.value.read().unwrap_or_else(|e| e.into_inner());
-        if let Ok(subs) = self.subscribers.read() {
+        let value = self.inner.value.read().unwrap_or_else(|e| e.into_inner());
+        if let Ok(subs) = self.inner.subscribers.read() {
             for sub in subs.values() {
                 sub(&value);
             }
@@ -124,10 +179,7 @@ impl<T: Clone + Send + Sync + 'static> Signal<T> {
 impl<T: Clone + 'static> Clone for Signal<T> {
     fn clone(&self) -> Self {
         Signal {
-            value: Arc::clone(&self.value),
-            subscribers: Arc::clone(&self.subscribers),
-            version: Arc::clone(&self.version),
-            next_sub_id: Arc::clone(&self.next_sub_id),
+            inner: Arc::clone(&self.inner),
         }
     }
 }
@@ -137,7 +189,7 @@ impl<T: fmt::Debug + Clone + 'static> fmt::Debug for Signal<T> {
         write!(
             f,
             "Signal({:?})",
-            self.value.read().unwrap_or_else(|e| e.into_inner())
+            self.inner.value.read().unwrap_or_else(|e| e.into_inner())
         )
     }
 }
@@ -146,7 +198,6 @@ impl<T: fmt::Debug + Clone + 'static> fmt::Debug for Signal<T> {
 // COMPUTED - Derived reactive values
 // ============================================================================
 
-/// A computed value that auto-updates when dependencies change.
 pub struct Computed<T> {
     value: Arc<RwLock<T>>,
     compute: Arc<dyn Fn() -> T + Send + Sync>,
@@ -154,18 +205,39 @@ pub struct Computed<T> {
 
 impl<T: Clone + Send + Sync + 'static> Computed<T> {
     pub fn new<F: Fn() -> T + Send + Sync + 'static>(compute: F) -> Self {
-        let value = compute();
+        let compute_arc = Arc::new(compute);
+        let compute_clone = compute_arc.clone();
+
+        // Initial compute
+        let initial_val = compute_clone();
+        let value = Arc::new(RwLock::new(initial_val));
+        let value_clone = value.clone();
+
+        // Computed is backed by an effect that recalculates the cached value
+        // when its dependencies (signals accessed inside compute) change.
+        let effect_fn = move || {
+            let next_val = compute_clone();
+            *value_clone.write().unwrap_or_else(|e| e.into_inner()) = next_val;
+        };
+
+        effect(effect_fn);
+
         Computed {
-            value: Arc::new(RwLock::new(value)),
-            compute: Arc::new(compute),
+            value,
+            compute: compute_arc,
         }
     }
 
     pub fn get(&self) -> T {
-        // Recompute (in real impl, would track dependencies)
-        let new_val = (self.compute)();
-        *self.value.write().unwrap_or_else(|e| e.into_inner()) = new_val;
-        self.value.read().unwrap_or_else(|e| e.into_inner()).clone()
+        // If we are currently inside another reactive context (e.g. nested computed or effect),
+        // we re-run compute to register dependencies. Otherwise, read cached value.
+        if ACTIVE_OBSERVER.with(|cell| cell.borrow().is_some()) {
+            let next_val = (self.compute)();
+            *self.value.write().unwrap_or_else(|e| e.into_inner()) = next_val.clone();
+            next_val
+        } else {
+            self.value.read().unwrap_or_else(|e| e.into_inner()).clone()
+        }
     }
 }
 
@@ -173,24 +245,18 @@ impl<T: Clone + Send + Sync + 'static> Computed<T> {
 // EFFECT - Side effects on signal changes
 // ============================================================================
 
-/// Run a side effect whenever any accessed signal changes.
-///
-/// # Example
-/// ```rust,ignore
-/// let count = Signal::new(0);
-/// effect(move || {
-///     println!("Count is now: {}", count.get());
-/// });
-/// ```
 pub fn effect<F: Fn() + Send + Sync + 'static>(f: F) -> EffectGuard {
-    // Initial run
-    f();
+    let f_arc = Arc::new(f);
+    run_effect(f_arc.clone());
+    EffectGuard { callback: f_arc }
+}
 
-    // In a full implementation, we'd track which signals were accessed
-    // and subscribe to them. For now, just store the callback.
-    EffectGuard {
-        callback: Arc::new(f),
-    }
+fn run_effect(f: Arc<dyn Fn() + Send + Sync + 'static>) {
+    let prev = ACTIVE_OBSERVER.with(|obs| obs.replace(Some(f.clone())));
+    f();
+    ACTIVE_OBSERVER.with(|obs| {
+        *obs.borrow_mut() = prev;
+    });
 }
 
 pub struct EffectGuard {
@@ -198,9 +264,8 @@ pub struct EffectGuard {
 }
 
 impl EffectGuard {
-    /// Manually trigger the effect
     pub fn run(&self) {
-        (self.callback)();
+        run_effect(self.callback.clone());
     }
 }
 
@@ -208,7 +273,6 @@ impl EffectGuard {
 // RELATIONSHIPS - Type-safe entity bindings
 // ============================================================================
 
-/// Define a relationship type
 #[derive(Debug, Clone)]
 pub struct Relationship {
     pub name: String,
@@ -233,7 +297,6 @@ impl Relationship {
     }
 }
 
-/// Context data for relationship events
 #[derive(Debug, Clone, Default)]
 pub struct RelContext {
     pub data: HashMap<String, String>,
@@ -260,7 +323,6 @@ pub type AjoseRelationship<S, T> = (
     Box<dyn Fn(&S, &mut T) + Send + Sync>,
 );
 
-/// The Àjọṣe Engine - manages reactive relationships
 pub struct Ajose<S: 'static, T: 'static> {
     relationships: Vec<AjoseRelationship<S, T>>,
 }
@@ -272,7 +334,6 @@ impl<S: Send + Sync + 'static, T: Send + Sync + 'static> Ajose<S, T> {
         }
     }
 
-    /// Bind source to target with transformation
     pub fn bind(
         &mut self,
         source: &Arc<RwLock<S>>,
@@ -282,7 +343,6 @@ impl<S: Send + Sync + 'static, T: Send + Sync + 'static> Ajose<S, T> {
         let source_weak = Arc::downgrade(source);
         let target_weak = Arc::downgrade(target);
 
-        // Initial sync (must happen before we move transform into the Box)
         transform(
             &source.read().unwrap_or_else(|e| e.into_inner()),
             &mut target.write().unwrap_or_else(|e| e.into_inner()),
@@ -292,7 +352,6 @@ impl<S: Send + Sync + 'static, T: Send + Sync + 'static> Ajose<S, T> {
             .push((source_weak, target_weak, Box::new(transform)));
     }
 
-    /// Propagate changes from source to targets
     pub fn propagate(&self, source: &Arc<RwLock<S>>) {
         for (src_weak, tgt_weak, transform) in &self.relationships {
             if let Some(src) = src_weak.upgrade()
@@ -307,7 +366,6 @@ impl<S: Send + Sync + 'static, T: Send + Sync + 'static> Ajose<S, T> {
         }
     }
 
-    /// Cleanup dead references
     pub fn gc(&mut self) {
         self.relationships
             .retain(|(s, t, _)| s.upgrade().is_some() && t.upgrade().is_some());
@@ -320,11 +378,7 @@ impl<S: Send + Sync + 'static, T: Send + Sync + 'static> Default for Ajose<S, T>
     }
 }
 
-// ============================================================================
 // MACROS
-// ============================================================================
-
-/// Create a reactive binding
 #[macro_export]
 macro_rules! bind {
     ($source:expr => $target:expr) => {{
@@ -341,234 +395,6 @@ macro_rules! bind {
             target.set($transform);
         })
     }};
-}
-
-// ============================================================================
-// FFI BRIDGE - Cross-language interop via Ajose
-// ============================================================================
-
-/// Ajose FFI Bridge - The gateway to other languages
-///
-/// Provides high-level access to Python, C, and other languages.
-/// For full FFI capabilities, use `ifa_std::ffi::IfaFfi` directly.
-///
-/// This bridge provides:
-/// - Built-in math functions (no external deps)
-/// - Sandboxed shell execution
-/// - Placeholder for native FFI (requires ifa-std)
-pub struct AjoseBridge {
-    /// Cached module imports
-    py_cache: std::collections::HashMap<String, String>,
-    /// Blocked shell commands for security
-    blocked_commands: Vec<&'static str>,
-}
-
-impl AjoseBridge {
-    pub fn new() -> Self {
-        AjoseBridge {
-            py_cache: std::collections::HashMap::new(),
-            blocked_commands: vec![
-                "rm",
-                "del",
-                "format",
-                "mkfs",
-                "dd",
-                "sudo",
-                "chmod",
-                "chown",
-                "kill",
-                "pkill",
-                "shutdown",
-                "reboot",
-                "curl",
-                "wget",
-                "nc",
-                "netcat",
-                "powershell",
-                "cmd.exe",
-            ],
-        }
-    }
-
-    /// Call a built-in Python-compatible math/utility function.
-    ///
-    /// Ifá syntax: `coop.py("math", "sqrt", 16)`
-    ///
-    /// Supported modules & functions:
-    /// - `math`: sqrt, pow, sin, cos, tan, log, log10, exp, floor, ceil, abs, factorial, pi, e
-    /// - `json`: dumps, loads (basic)
-    /// - `str`: upper, lower, len
-    ///
-    /// Returns `Err` for any unknown module/function.
-    /// For real Python interop, use `ifa_std::ffi::IfaFfi`.
-    pub fn py(&mut self, module: &str, func: &str, args: &[&str]) -> Result<String, String> {
-        let result = match (module, func) {
-            // Math module
-            ("math", "sqrt") => self
-                .parse_f64(args, 0)
-                .map(|n| n.sqrt())
-                .unwrap_or(f64::NAN)
-                .to_string(),
-            ("math", "pow") => {
-                let base = self.parse_f64(args, 0).unwrap_or(0.0);
-                let exp = self.parse_f64(args, 1).unwrap_or(1.0);
-                base.powf(exp).to_string()
-            }
-            ("math", "sin") => self
-                .parse_f64(args, 0)
-                .map(|n| n.sin())
-                .unwrap_or(f64::NAN)
-                .to_string(),
-            ("math", "cos") => self
-                .parse_f64(args, 0)
-                .map(|n| n.cos())
-                .unwrap_or(f64::NAN)
-                .to_string(),
-            ("math", "tan") => self
-                .parse_f64(args, 0)
-                .map(|n| n.tan())
-                .unwrap_or(f64::NAN)
-                .to_string(),
-            ("math", "log") => self
-                .parse_f64(args, 0)
-                .map(|n| n.ln())
-                .unwrap_or(f64::NAN)
-                .to_string(),
-            ("math", "log10") => self
-                .parse_f64(args, 0)
-                .map(|n| n.log10())
-                .unwrap_or(f64::NAN)
-                .to_string(),
-            ("math", "exp") => self
-                .parse_f64(args, 0)
-                .map(|n| n.exp())
-                .unwrap_or(f64::NAN)
-                .to_string(),
-            ("math", "floor") => self
-                .parse_f64(args, 0)
-                .map(|n| n.floor())
-                .unwrap_or(f64::NAN)
-                .to_string(),
-            ("math", "ceil") => self
-                .parse_f64(args, 0)
-                .map(|n| n.ceil())
-                .unwrap_or(f64::NAN)
-                .to_string(),
-            ("math", "abs") => self
-                .parse_f64(args, 0)
-                .map(|n| n.abs())
-                .unwrap_or(f64::NAN)
-                .to_string(),
-            ("math", "factorial") => {
-                if let Some(n) = self.parse_u64(args, 0) {
-                    if n <= 20 {
-                        return Ok((1..=n).product::<u64>().to_string());
-                    }
-                    return Err(
-                        "factorial: argument too large (max 20 to avoid overflow)".to_string()
-                    );
-                }
-                return Err("factorial: argument must be a non-negative integer".to_string());
-            }
-            ("math", "pi") => std::f64::consts::PI.to_string(),
-            ("math", "e") => std::f64::consts::E.to_string(),
-
-            // JSON module
-            ("json", "dumps") => format!("\"{}\"", args.join(", ")),
-            ("json", "loads") => args.first().map(|s| s.to_string()).unwrap_or_default(),
-
-            // String module
-            ("str", "upper") => args.first().map(|s| s.to_uppercase()).unwrap_or_default(),
-            ("str", "lower") => args.first().map(|s| s.to_lowercase()).unwrap_or_default(),
-            ("str", "len") => args
-                .first()
-                .map(|s| s.len().to_string())
-                .unwrap_or("0".to_string()),
-
-            // Unknown module or function — explicit error, never a stub string in user data
-            _ => {
-                return Err(format!(
-                    "Unknown Python module or function: {}.{}. \
-                Supported: math.{{sqrt,pow,sin,cos,tan,log,log10,exp,floor,ceil,abs,factorial,pi,e}}, \
-                json.{{dumps,loads}}, str.{{upper,lower,len}}. \
-                For real Python interop, use ifa_std::ffi::IfaFfi.",
-                    module, func
-                ));
-            }
-        };
-        Ok(result)
-    }
-
-    fn parse_f64(&self, args: &[&str], idx: usize) -> Option<f64> {
-        args.get(idx).and_then(|s| s.parse::<f64>().ok())
-    }
-
-    fn parse_u64(&self, args: &[&str], idx: usize) -> Option<u64> {
-        args.get(idx).and_then(|s| s.parse::<u64>().ok())
-    }
-
-    /// Execute a shell command (heavily sandboxed)
-    /// Ifá syntax: coop.sh("echo hello")
-    ///
-    /// SECURITY: Many dangerous commands are blocked by default.
-    /// For unrestricted shell access, use ifa_std::ffi with proper capabilities.
-    pub fn sh(&self, cmd: &str) -> Result<String, String> {
-        let _ = cmd;
-        let _ = &self.blocked_commands;
-        Err(
-            "Security: coop.sh is disabled. Use an explicit capability-gated FFI path instead."
-                .to_string(),
-        )
-    }
-
-    /// Call a built-in integer math function.
-    ///
-    /// This does **not** load native shared libraries. It only exposes a small
-    /// set of hardcoded arithmetic operations for testing and sandboxed environments.
-    ///
-    /// Supported: `add`, `sub`, `mul`, `div`, `max`, `min`, `abs`.
-    ///
-    /// For real dynamic native FFI (loading `.so`/`.dll` symbols at runtime),
-    /// use `ifa_std::ffi::IfaFfi` which provides `libloading` integration.
-    pub fn builtin_math(&self, func: &str, args: &[i64]) -> Result<i64, String> {
-        match func {
-            "add" if args.len() >= 2 => Ok(args[0].saturating_add(args[1])),
-            "sub" if args.len() >= 2 => Ok(args[0].saturating_sub(args[1])),
-            "mul" if args.len() >= 2 => Ok(args[0].saturating_mul(args[1])),
-            "div" if args.len() >= 2 && args[1] != 0 => Ok(args[0] / args[1]),
-            "div" if args.len() >= 2 => Err("div: division by zero".to_string()),
-            "max" if args.len() >= 2 => Ok(args[0].max(args[1])),
-            "min" if args.len() >= 2 => Ok(args[0].min(args[1])),
-            "abs" if !args.is_empty() => Ok(args[0].abs()),
-            _ => Err(format!(
-                "builtin_math: unknown function '{}'. \
-                Supported: add, sub, mul, div, max, min, abs. \
-                For native FFI (loading .so/.dll symbols), use ifa_std::ffi::IfaFfi.",
-                func
-            )),
-        }
-    }
-
-    /// Import a Python module for caching
-    pub fn import_py(&mut self, module: &str) {
-        self.py_cache.insert(module.to_string(), module.to_string());
-    }
-
-    /// Check if a module is cached
-    pub fn has_module(&self, module: &str) -> bool {
-        self.py_cache.contains_key(module)
-    }
-
-    /// List all blocked shell commands
-    pub fn blocked_commands(&self) -> &[&'static str] {
-        &self.blocked_commands
-    }
-}
-
-impl Default for AjoseBridge {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 #[cfg(test)]
@@ -675,18 +501,5 @@ mod tests {
         engine.propagate(&source);
 
         assert_eq!(*target.read().unwrap(), "Value: 42");
-    }
-
-    #[test]
-    fn test_ajose_bridge_py() {
-        let mut bridge = AjoseBridge::new();
-        let result = bridge.py("math", "sqrt", &["16"]).unwrap();
-        assert_eq!(result, "4");
-
-        let result = bridge.py("math", "factorial", &["5"]).unwrap();
-        assert_eq!(result, "120");
-
-        let err = bridge.py("numpy", "array", &["1", "2"]);
-        assert!(err.is_err(), "unknown module must return Err");
     }
 }

@@ -2,4 +2,4 @@
 
 iba import_helper;
 
-Irosu.fo(import_helper.get_val());
+pada import_helper.get_val();

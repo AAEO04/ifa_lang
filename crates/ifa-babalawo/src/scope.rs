@@ -1,4 +1,4 @@
-use ifa_types::ast::{Span, TypeHint, Visibility};
+use ifa_types::ast::{ExprKind, Span, TypeHint, Visibility};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -48,7 +48,7 @@ impl Scope {
     }
 
     pub fn resolve_mut(&mut self, name: &str) -> Option<&mut VarInfo> {
-        if self.values.contains_key(name) {
+        if self.values.contains_key(AsRef::<str>::as_ref(&name)) {
             self.values.get_mut(name)
         } else if let Some(ref mut parent) = self.parent {
             parent.resolve_mut(name)
@@ -58,7 +58,7 @@ impl Scope {
     }
 
     pub fn set(&mut self, name: &str, info: VarInfo) -> bool {
-        if self.values.contains_key(name) {
+        if self.values.contains_key(AsRef::<str>::as_ref(&name)) {
             self.values.insert(name.to_string(), info);
             true
         } else if let Some(ref mut parent) = self.parent {
@@ -123,7 +123,7 @@ impl ScopeChain {
     }
 
     pub fn contains(&self, name: &str) -> bool {
-        self.current.contains(name)
+        self.current.contains(AsRef::<str>::as_ref(&name))
     }
 }
 

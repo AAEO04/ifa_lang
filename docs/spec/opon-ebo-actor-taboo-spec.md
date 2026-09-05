@@ -247,11 +247,11 @@ Parent VM                          Actor VM (dedicated OS thread)
 spawn_actor(init_fn, bytecode, table, registry, resource_registry) → IfaValue::Actor
 
 1. id = NEXT_ACTOR_ID.fetch_add(1, Relaxed)
-2. (tx, rx) = mpsc::sync_channel(ACTOR_INBOX_CAPACITY = 64)
+2. (tx, rx) = mpsc::channel(ACTOR_INBOX_CAPACITY = 64)
 3. handle = ActorHandle { id, tx: Arc::new(tx), resource_registry }
 4. table.insert(handle.clone())
-5. spawn_actor_task(move || actor_loop(id, init_fn, rx, &bytecode, &table, registry, ...))
-6. Return IfaValue::Actor { id, handle: Arc::new(handle) }
+5. spawn_actor_task(async { actor_loop(id, init_fn, rx, &bytecode, &table, registry, ...) })
+6. Return IfaValue::Actor(Arc::new(ActorData { id, handle: Arc::new(handle) as _ }))
 ```
 
 `spawn_actor_task` uses `tokio::runtime::Handle::spawn_blocking` (or a dedicated multi-threaded tokio runtime on first call). On WASM targets, the function panics with "not supported on WASM" (`actor.rs:53`).

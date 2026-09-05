@@ -55,18 +55,16 @@
         binary_ops.rs    // Binary operator type checking (vm feature)
         bytecode.rs      // Bytecode structures (vm feature)
         capability.rs    // Capability security types (std feature)
-        compact_str.rs   // CompactString wrapper for string interning
+        compact_str.rs   // CompactString for map key SSO
         domain.rs        // OduDomain enum (16 Odu + infrastructure + reserved)
         error.rs         // IfaError / IfaResult (canonical error types)
         methods.rs       // Stable method ID resolution
-        nan_box.rs       // NaN boxing for primitive values
         odu_metadata.rs  // Domain method metadata
         registry.rs      // ResourceRegistry (The Gatekeeper)
         shared.rs        // IfaShared (thread-safe values)
         token.rs         // ResourceToken (resource management)
         traits.rs        // Core traits and protocols
-        value.rs         // IfaValue (legacy enum - deprecated)
-        value_union.rs   // IfaValue (current clean enum implementation)</code></pre>
+        value_union.rs   // IfaValue (canonical enum — legacy value.rs deleted)</code></pre>
             </div>
 
             <h3>Feature Flags</h3>
@@ -169,7 +167,7 @@
 
         <div class="step">
             <h2>IfaValue - Dynamic Type System</h2>
-            <p>The universal container for Ifa-Lang's dynamic typing. Implemented as a regular Rust enum (not a hand-packed union) with 32-byte size on 64-bit systems.</p>
+            <p>The universal container for Ifa-Lang's dynamic typing. Implemented as a regular Rust enum (not a hand-packed union) with 16-byte size on 64-bit systems.</p>
 
             <h3>Current Implementation (value_union.rs)</h3>
             
@@ -177,7 +175,7 @@
                 <div class="code-header">
                     <span class="code-title">IfaValue Variants</span>
                 </div>
-                <pre><code>// IfaValue is a regular Rust enum (32 bytes on 64-bit)
+                <pre><code>// IfaValue is a regular Rust enum (16 bytes on 64-bit)
 pub enum IfaValue {
     // Primitives (Inline, No Alloc)
     Null,
@@ -186,7 +184,7 @@ pub enum IfaValue {
     Float(f64),
 
     // Heap Objects (Ref-Counted via Arc)
-    Str(CompactString),              // CompactString wrapper
+    Str(Box&lt;String&gt;),                   // Heap-allocated string
     List(Arc&lt;Vec&lt;IfaValue&gt;&gt;),       // Immutable list
     Map(Arc&lt;HashMap&lt;CompactString, IfaValue&gt;&gt;),  // Immutable map
 
@@ -209,7 +207,7 @@ pub enum IfaValue {
     #[cfg(feature = "vm")]
     Future(FutureCell),              // Async future
     #[cfg(feature = "vm")]
-    Actor { id: u64, handle: Arc&lt;dyn Any + Send + Sync&gt; },
+    Actor(Arc&lt;ActorData&gt;),
     #[cfg(feature = "vm")]
     Return(Arc&lt;IfaValue&gt;),           // Return signal
     #[cfg(feature = "vm")]
@@ -233,7 +231,7 @@ pub enum IfaValue {
                     <tr><td>Bool</td><td>IfaValue::Bool(bool)</td><td>Boolean</td></tr>
                     <tr><td>Int</td><td>IfaValue::Int(i64)</td><td>64-bit signed integer</td></tr>
                     <tr><td>Float</td><td>IfaValue::Float(f64)</td><td>64-bit float</td></tr>
-                    <tr><td>Str</td><td>IfaValue::Str(CompactString)</td><td>String (CompactString)</td></tr>
+                    <tr><td>Str</td><td>IfaValue::Str(Box&lt;String&gt;)</td><td>Heap-allocated string</td></tr>
                     <tr><td>List</td><td>IfaValue::List(Arc&lt;Vec&gt;)</td><td>Immutable list</td></tr>
                     <tr><td>Map</td><td>IfaValue::Map(Arc&lt;HashMap&gt;)</td><td>Immutable map</td></tr>
                     <tr><td>Fn</td><td>IfaValue::Fn(Arc&lt;BytecodeFnData&gt;)</td><td>Bytecode function</td></tr>
@@ -244,20 +242,13 @@ pub enum IfaValue {
 
             <h3>Performance Optimizations</h3>
             <ul>
-                <li><strong>CompactString:</strong> Small string optimization for string interning</li>
-                <li><strong>NaN Boxing:</strong> Primitives (Null, Bool, Int, Float) can be NaN-boxed for efficient inline representation</li>
-                <li><strong>Arc:</strong> Reference-counted sharing for heap types</li>
+                <li><strong>Box&lt;String&gt;:</strong> 8-byte thin pointer keeps IfaValue at 16 bytes</li>
+                <li><strong>Arc/IfaGc:</strong> Reference-counted sharing for heap types</li>
                 <li><strong>Small Int Pool:</strong> Integers 0-255 are cached (with <code>std</code> feature)</li>
             </ul>
 
-            <h3>Legacy Implementation (value.rs)</h3>
-            <p>The <code>value.rs</code> module contains the older enum implementation, now deprecated but kept for compatibility. It differs from the current implementation:</p>
-            <ul>
-                <li>Uses <code>Arc&lt;str&gt;</code> instead of <code>CompactString</code></li>
-                <li>Has <code>Object(Arc&lt;Mutex&lt;HashMap&gt;&gt;)</code> variant (The Hut - thread-local object)</li>
-                <li>Has <code>Fn(IfaFn)</code> where <code>IfaFn = Arc&lt;dyn Fn(Vec&lt;IfaValue&gt;) -&gt; IfaValue + Send + Sync&gt;</code></li>
-                <li>No VM-specific variants</li>
-            </ul>
+            <h3>Legacy Implementation (value.rs — deleted)</h3>
+            <p>The legacy <code>value.rs</code> module has been <strong>deleted</strong>. Only <code>value_union.rs</code> remains as the canonical <code>IfaValue</code> definition. All imports across the workspace use <code>ifa_types::IfaValue</code> directly.</p>
         </div>
 
         <div class="step">
@@ -439,27 +430,6 @@ pub struct ResourceToken(pub u64);
 
             <h3>Binary Ops Module</h3>
             <p>Type compatibility checking for binary operators: checks numeric types, string concatenation, etc.</p>
-        </div>
-
-        <div class="step">
-            <h2>NaN Boxing</h2>
-            <p>The <code>nan_box.rs</code> module provides a NaN-boxed primitive representation for Ifa values, enabling inline storage of Null, Bool, Int, and Float values within a 64-bit word using the NaN (Not-a-Number) space of IEEE 754 floats.</p>
-
-            <div class="code-example">
-                <div class="code-header">
-                    <span class="code-title">NaN Boxed Primitives</span>
-                </div>
-                <pre><code>pub enum BoxedPrimitive {
-    Null,
-    Bool(bool),
-    Int(i64),   // 47-bit signed integer
-    Float(f64),
-}
-
-// Convert IfaValue to/from NaN-boxed representation
-// Only primitives (Null, Bool, Int, Float) can be NaN-boxed</code></pre>
-            </div>
-            <p><strong>Note:</strong> NaN boxing is used for fast paths in the VM. The maximum boxed integer range is &plusmn;(2^47 - 1). Values outside this range fall back to the IfaValue::Int(i64) variant.</p>
         </div>
 
         <div class="step">

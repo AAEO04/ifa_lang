@@ -1,4 +1,6 @@
-use ifa_types::ast::{Expression, Program, Statement};
+use ifa_types::ast::{
+    ExprKind, {Expression, Program, Statement},
+};
 use ifa_types::capability::{CapabilitySet, Ofun};
 use std::path::PathBuf;
 
@@ -154,26 +156,26 @@ fn scan_statement(stmt: &Statement, caps: &mut CapabilitySet) {
 }
 
 fn scan_expression(expr: &Expression, caps: &mut CapabilitySet) {
-    match expr {
-        Expression::OduCall(call) => {
+    match &expr.kind {
+        ExprKind::OduCall(call) => {
             scan_odu_call(call, caps);
         }
-        Expression::BinaryOp { left, right, .. } => {
+        ExprKind::BinaryOp { left, right, .. } => {
             scan_expression(left, caps);
             scan_expression(right, caps);
         }
-        Expression::List(items) => {
+        ExprKind::List(items) => {
             for i in items {
                 scan_expression(i, caps);
             }
         }
-        Expression::Map(entries) => {
+        ExprKind::Map(entries) => {
             for (k, v) in entries {
                 scan_expression(k, caps);
                 scan_expression(v, caps);
             }
         }
-        Expression::MethodCall { object, args, .. } => {
+        ExprKind::MethodCall { object, args, .. } => {
             scan_expression(object, caps);
             for arg in args {
                 scan_expression(arg, caps);
@@ -184,9 +186,10 @@ fn scan_expression(expr: &Expression, caps: &mut CapabilitySet) {
 }
 
 fn extract_string_arg(args: &[Expression], index: usize) -> Option<String> {
-    if let Some(Expression::String(s)) = args.get(index) {
-        Some(s.clone())
-    } else {
-        None
+    if let Some(e) = args.get(index) {
+        if let ExprKind::String(s) = &e.kind {
+            return Some(s.clone());
+        }
     }
+    None
 }

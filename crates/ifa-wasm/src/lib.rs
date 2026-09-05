@@ -80,6 +80,9 @@ pub fn run_code(source: String) -> RunResult {
                                         || event.action == "fọ̀ (spoke_raw)"
                                         || event.action == "kígbe (screamed)")
                                 {
+                                    web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(
+                                        &event.value,
+                                    ));
                                     printed.push_str(&event.value);
                                     if event.action == "fọ̀ (spoke)"
                                         || event.action == "kígbe (screamed)"
@@ -141,12 +144,8 @@ pub fn get_version() -> String {
 /// Cast the Opele and return an Odu name using JS-native Math.random()
 #[wasm_bindgen]
 pub fn cast_opele() -> String {
-    let names = [
-        "Ogbe", "Oyeku", "Iwori", "Odi", "Irosu", "Owonrin", "Obara", "Okanran", "Ogunda", "Osa",
-        "Ika", "Oturupon", "Otura", "Irete", "Ose", "Ofun",
-    ];
-
     let random_val = js_sys::Math::random();
-    let idx = (random_val * 16.0).floor() as usize;
-    names[idx].to_string()
+    let byte = (random_val * 256.0).floor() as u8;
+    let odu = ifa_std::opele::Odu::from_byte(byte);
+    odu.name()
 }

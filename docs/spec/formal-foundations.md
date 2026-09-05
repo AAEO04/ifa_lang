@@ -71,7 +71,7 @@ v ::= Null
     | Upvalue(Arc<Mutex<v>>)
     | Closure(Arc<ClosureData>)
     | Future(Arc<Mutex<FutureState>>)
-    | Actor{id, handle}
+    | Actor(Arc<ActorData>)
     | Result(Ok(v) | Err(v))
     | Return(Arc<v>)
     | Break
@@ -338,14 +338,14 @@ if R = ∅:
 ```
 ─── [SPAWN-ACTOR] (host function, within Osa.ran or equivalent)
 SpawnActor(init_fn, bytecode, table, registry)
-  → IfaValue::Actor{id, handle}
+  → IfaValue::Actor(Arc::new(ActorData { id, handle: erased }))
 
   let id = NEXT_ACTOR_ID.fetch_add(1)
-  let (tx, rx) = sync_channel(64)
-  let handle = ActorHandle{id, tx: Arc(tx), ...}
+  let (tx, rx) = mpsc::channel(64)
+  let handle = ActorHandle{id, tx: Arc::new(tx), ...}
   table.insert(handle)
   thread.spawn(move || actor_loop(id, init_fn, rx, bytecode, table, registry))
-  return IfaValue::Actor{id, handle: Arc(handle)}
+  return IfaValue::Actor(Arc::new(ActorData { id, handle: Arc::new(handle) as _ }))
 
 ─── [SEND-ACTOR] (host function)
 actor_send(actor, value, sender_registry) → Result

@@ -4,7 +4,7 @@ These features touch multiple subsystems (parser, type system, VM, Babalawo) and
 
 ---
 
-## 1. OponView Borrow Checker
+## 1. OponView Borrow Checker (Partially Implemented)
 
 **Goal:** A static borrow checker for Ifá-Lang that runs as a Babalawo pass, ensuring memory safety for references and shared state without a tracing GC.
 
@@ -41,17 +41,19 @@ print(t);                // OK
 | Closure captures | Infer borrow kind from body; or explicit `move` keyword |
 | `'static` lifetime | Domain-level: `Ogbe.str("literal")` is always `'static` |
 
-**Implementation Plan:**
-1. Add `Expression::Ref { mutable, inner }`, `Expression::Deref { inner }`, `Expression::Move` to AST
-2. Parser: `&` / `&mut` prefix operators
-3. Babalawo pass: `BorrowChecker` that builds a borrow graph per scope:
-   - Track `Borrow { var, kind: Shared | Mutable, span, lifetime_scope }`
-   - On mutation of a borrowed variable: error if outstanding mutable borrow
-   - On assignment to a variable that owns a value: previous value is "moved"
-4. Compiler: emit reference/deref opcodes
-5. No runtime borrow-check overhead (all checks are static)
+**Implementation Status:**
+1. ✅ **Done** — AST nodes exist: `Expression::Iso(Box<Expression>)` at ast.rs:528, `UnaryOperator::AddressOf` and `UnaryOperator::AddressOfMut` at ast.rs:588-589, `TypeHint::Ref(Box<TypeHint>)` and `TypeHint::RefMut(Box<TypeHint>)` at ast.rs:372-374.
+2. ✅ **Done** — Parser: `&` / `&mut` prefix operators in grammar.pest:316, `*` dereference prefix. Parser maps `&mut` to `AddressOfMut` and `&` to `AddressOf`.
+3. ✅ **Done** — Babalawo pass: `IwaEngine` in `checks.rs` — `borrow()` called for `AddressOf` (line 1774), `borrow_mut()` called for `AddressOfMut` (line 1795). `enter_scope()`/`exit_scope()` wired into all block types (if/while/for/match/ebo/defer/ailewu/try/catch/finally). State history buffer records lifecycle transitions.
+4. ✅ **Done** — Compiler: emits `OpCode::Ref` for both `AddressOf` and `AddressOfMut` (compiler/src/lib.rs:1412-1427). Currently only literal integer addresses are supported.
+5. ✅ **Done** — No runtime borrow-check overhead: all checks are static via Babalawo.
 
-**V1 Limitation:** Lexical borrows only (no NLL). Migration to NLL can follow later.
+**Remaining Work:**
+- `release_borrow()` not called from `checks.rs` — implicit via scope exit, but explicit release could be useful.
+- Compiler only supports literal integer addresses for `&`/`&mut` — variable-address references not yet compiled.
+- `*` dereference not yet emitted as a dedicated opcode (compiler compiles `Expression::Iso` as pass-through).
+- Closure capture borrow inference not implemented.
+- Non-lexical lifetimes (NLL) deferred to future work.
 
 ---
 

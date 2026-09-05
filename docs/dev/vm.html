@@ -124,7 +124,7 @@ pub fn tap(vm: &mut IfaVM, bytecode: &Bytecode) -> IfaResult&lt;OpCode&gt; {
             <tr><td>Load/Store</td><td><code>LoadLocal, StoreLocal, LoadGlobal, StoreGlobal, LoadUpvalue, StoreUpvalue</code></td><td>Local via base_ptr + offset; Global via Vec-index</td></tr>
             <tr><td>Jumps</td><td><code>Jump, JumpIfFalse, JumpIfTrue</code></td><td>Conditional + unconditional; JumpIfFalse tracks loop stack</td></tr>
             <tr><td>Functions</td><td><code>PushFn, MakeClosure, Call, TailCall, Return</code></td><td>Frame push/pop; TailCall reuses frame</td></tr>
-            <tr><td>Arithmetic</td><td><code>Add, Sub, Mul, Div, Pow, Mod, Neg</code></td><td>NaN-boxing fast path via <code>to_nan_boxed_primitive()</code></td></tr>
+            <tr><td>Arithmetic</td><td><code>Add, Sub, Mul, Div, Pow, Mod, Neg</code></td><td>Int/Float enum dispatch on IfaValue variants</td></tr>
             <tr><td>Collections</td><td><code>ListGet, ListSet, MapGet, MapSet, Push, Pop</code></td><td>List/Map element access</td></tr>
             <tr><td>Odu calls</td><td><code>CallOdu, CallOduFast</code></td><td><code>CallOduFast</code> = static dispatch by method ID (zero string overhead)</td></tr>
             <tr><td>Async</td><td><code>Spawn, Await, Yield</code></td><td>Cooperative multitasking</td></tr>

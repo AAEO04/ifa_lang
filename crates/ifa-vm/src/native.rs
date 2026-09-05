@@ -1,7 +1,7 @@
 use crate::bytecode::Bytecode;
 use crate::error::IfaResult;
-use crate::value::IfaValue;
 use crate::vm::IfaVM;
+use ifa_types::IfaValue;
 use ifa_types::value_union::FutureCell;
 
 pub struct VmContext<'a> {
@@ -77,6 +77,13 @@ pub trait OduRegistry: Send + Sync {
 
     /// Clone the registry for child VMs
     fn clone_registry(&self) -> Box<dyn OduRegistry>;
+
+    /// Check if the sandbox allows side effects for a specific domain.
+    /// Used by the VM for direct opcodes (Print, Import, Store) that bypass `call`.
+    #[inline]
+    fn check_effect(&self, _domain_id: u8) -> IfaResult<()> {
+        Ok(())
+    }
 
     /// E6: Statically-dispatched fast path — integer domain + method ID, no string lookup.
     ///

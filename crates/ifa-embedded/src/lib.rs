@@ -31,6 +31,9 @@ use ifa_bytecode::embedded::EmbeddedOpCode;
 pub mod embedded_ikin;
 pub mod embedded_iroke;
 
+#[cfg(any(feature = "esp32", feature = "stm32", feature = "rp2040"))]
+pub mod targets;
+
 // --- IoT Extensions (Tier 1) ---
 #[cfg(feature = "iot")]
 pub mod iot;
@@ -254,6 +257,8 @@ pub enum EmbeddedValue {
     Float(IfaFloat),
     /// Pointer to Opon memory address (index)
     Ptr(u32),
+    /// Index into Flash Constant Pool (Ikin)
+    FlashString(u16),
 
     // --- Tier 1 (Alloc) Variants ---
     #[cfg(feature = "alloc")]
@@ -273,6 +278,7 @@ impl EmbeddedValue {
             EmbeddedValue::Float(f) => *f != 0.0 && !f.is_nan(),
             // D7: Null pointer (0x0) is falsy per spec §5
             EmbeddedValue::Ptr(p) => *p != 0,
+            EmbeddedValue::FlashString(_) => true,
             #[cfg(feature = "alloc")]
             EmbeddedValue::String(s) => !s.is_empty(),
             #[cfg(feature = "alloc")]
@@ -323,6 +329,8 @@ pub struct EmbeddedVm<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> {
     config: EmbeddedConfig,
     /// Optional MMIO bus
     mmio: Option<&'a mut dyn MmioBus>,
+    /// Optional Flash Constant Pool
+    pub ikin: Option<embedded_ikin::EmbeddedIkin<'a>>,
 }
 
 impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SIZE, STACK_SIZE> {
@@ -336,12 +344,18 @@ impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SI
             running: false,
             config,
             mmio: None,
+            ikin: None,
         }
     }
 
     /// Attach MMIO bus
     pub fn attach_mmio(&mut self, bus: &'a mut dyn MmioBus) {
         self.mmio = Some(bus);
+    }
+
+    /// Attach Flash Constant Pool (Ikin)
+    pub fn attach_ikin(&mut self, ikin: embedded_ikin::EmbeddedIkin<'a>) {
+        self.ikin = Some(ikin);
     }
 
     /// Reset VM state
@@ -460,8 +474,18 @@ impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SI
         }
     }
 
+    /// Start execution from beginning with Iroke Poller
+    pub fn run_with_iroke<P>(&mut self, code: &[u8], poller: &mut P) -> EmbeddedResult<VmExit>
+    where
+        P: crate::embedded_iroke::IrokePoller,
+    {
+        self.reset();
+        self.resume_with_hook(code, || poller.should_yield())
+    }
+
     /// Resume execution with a polling hook
     /// The hook returns `true` if execution should yield immediately.
+    /// Optimized to only poll on branching instructions to minimize interrupt latency overhead.
     pub fn resume_with_hook<F>(&mut self, code: &[u8], mut hook: F) -> EmbeddedResult<VmExit>
     where
         F: FnMut() -> bool,
@@ -469,14 +493,21 @@ impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SI
         self.running = true;
 
         while self.running && self.ip < code.len() {
-            // Check hook (Iroke Polling)
-            if hook() {
-                return Ok(VmExit::Yield(0));
-            }
-
             let opcode_byte = self.read_u8(code)?;
             let opcode = EmbeddedOpCode::from_byte(opcode_byte)
                 .ok_or(EmbeddedError::UnknownOpcode(opcode_byte))?;
+
+            // Poll Iroke only on potentially long-running boundaries (jumps/loops)
+            match opcode {
+                EmbeddedOpCode::Jump | EmbeddedOpCode::JumpIfFalse => {
+                    if hook() {
+                        // Revert IP so we re-execute the jump after yielding
+                        self.ip -= 1;
+                        return Ok(VmExit::Yield(0));
+                    }
+                }
+                _ => {}
+            }
 
             match opcode {
                 EmbeddedOpCode::PushNull => {
@@ -619,6 +650,14 @@ impl<'a, const OPON_SIZE: usize, const STACK_SIZE: usize> EmbeddedVm<'a, OPON_SI
                     if index < self.locals.len() {
                         self.locals[index] = value;
                     }
+                }
+                EmbeddedOpCode::PushStr => {
+                    let index = self.read_u16(code)?;
+                    if self.ikin.is_none() {
+                        return Err(EmbeddedError::HalError("No Ikin attached".into()));
+                    }
+                    // Push flash string index. Let host/print operations resolve it.
+                    self.push(EmbeddedValue::FlashString(index))?;
                 }
                 EmbeddedOpCode::Jump => {
                     let offset = self.read_u16(code)? as usize;

@@ -5,7 +5,6 @@
 
 use rayon::ThreadPoolBuilder;
 use std::collections::HashMap;
-use std::future::Future;
 
 use std::sync::OnceLock;
 
@@ -288,10 +287,11 @@ pub struct TaskResult {
 /// Synchronous task type
 type SyncTask = Box<dyn Fn() -> Result<(), String> + Send + Sync>;
 
-/// Task wrapper that can be sync or async
+/// Task wrapper — currently only synchronous tasks are supported.
+/// Async execution requires an integrated async runtime; add it when SysRuntime
+/// is fully wired through the VM's execution model.
 enum TaskFn {
     Sync(SyncTask),
-    Async(()), // Reserved for async execution path
 }
 
 /// Production TaskGraph with DAG dependencies, async execution, and error handling
@@ -326,19 +326,6 @@ impl TaskGraph {
         let id = TaskId(self.next_id);
         self.next_id += 1;
         self.tasks.insert(id, TaskFn::Sync(Box::new(task)));
-        self.dependencies.insert(id, Vec::new());
-        id
-    }
-
-    /// Add an async task to the graph
-    pub fn add_async_task<F, Fut>(&mut self, _task: F) -> TaskId
-    where
-        F: FnOnce() -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<(), String>> + Send + 'static,
-    {
-        let id = TaskId(self.next_id);
-        self.next_id += 1;
-        self.tasks.insert(id, TaskFn::Async(()));
         self.dependencies.insert(id, Vec::new());
         id
     }
@@ -419,9 +406,6 @@ impl TaskGraph {
                     let result = if let Some(task) = tasks.get(id) {
                         match task {
                             TaskFn::Sync(f) => f(),
-                            TaskFn::Async(_) => {
-                                Err("Async task in sync execution - use execute_async".into())
-                            }
                         }
                     } else {
                         Err("Task not found".into())
@@ -485,6 +469,30 @@ where
     let result = f();
     let _duration = start.elapsed();
     // Profiling output suppressed in library context
+    result
+}
+
+/// Run a function and check if it exceeds its "Orí" limit (Spiritual Exhaustion).
+/// If the time taken exceeds the limit in milliseconds, a warning is emitted.
+pub fn profile_with_ori<F, R>(name: &str, ori_limit_ms: Option<u64>, f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    let start = std::time::Instant::now();
+    let result = f();
+    let duration = start.elapsed();
+
+    if let Some(limit_ms) = ori_limit_ms {
+        if duration.as_millis() as u64 > limit_ms {
+            eprintln!(
+                "\n[EWO] Spiritual Exhaustion: '{}' exceeded its Orí limit (took {}ms, limit {}ms)",
+                name,
+                duration.as_millis(),
+                limit_ms
+            );
+        }
+    }
+
     result
 }
 

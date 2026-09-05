@@ -11,6 +11,9 @@ pub struct OduMethodDescriptor {
 }
 
 pub fn validate_odu_call(domain: &OduDomain, method: &str) -> Option<&'static str> {
+    if domain.is_reserved() {
+        return None;
+    }
     if is_valid_odu_method(domain, method) {
         None
     } else {
@@ -24,7 +27,7 @@ pub fn validate_odu_call(domain: &OduDomain, method: &str) -> Option<&'static st
 }
 
 pub fn domain_has_method(domain: &OduDomain, method: &str) -> bool {
-    is_valid_odu_method(domain, method)
+    domain.is_reserved() || is_valid_odu_method(domain, method)
 }
 
 pub fn list_methods_for_domain(domain: &OduDomain) -> Vec<&'static str> {

@@ -201,6 +201,33 @@ impl OduDomain {
                 | OduDomain::Coop
         )
     }
+
+    /// Classify a bytecode instruction's side effects.
+    /// Returns `Some(domain)` if the instruction is associated with a specific Odù domain's side effects.
+    pub fn classify_effect(op: ifa_bytecode::OpCode) -> Option<Self> {
+        match op {
+            ifa_bytecode::OpCode::Print
+            | ifa_bytecode::OpCode::PrintRaw
+            | ifa_bytecode::OpCode::Input => Some(OduDomain::Irosu),
+            ifa_bytecode::OpCode::Import => Some(OduDomain::Odi),
+            ifa_bytecode::OpCode::Yield
+            | ifa_bytecode::OpCode::ParallelFor
+            | ifa_bytecode::OpCode::Await => Some(OduDomain::Osa),
+            ifa_bytecode::OpCode::EpochBegin | ifa_bytecode::OpCode::EpochEnd => {
+                Some(OduDomain::Ogunda)
+            }
+            ifa_bytecode::OpCode::Halt => Some(OduDomain::Oyeku),
+            ifa_bytecode::OpCode::Store8
+            | ifa_bytecode::OpCode::Store16
+            | ifa_bytecode::OpCode::Store32
+            | ifa_bytecode::OpCode::Store64
+            | ifa_bytecode::OpCode::Load8
+            | ifa_bytecode::OpCode::Load16
+            | ifa_bytecode::OpCode::Load32
+            | ifa_bytecode::OpCode::Load64 => Some(OduDomain::Cpu),
+            _ => None,
+        }
+    }
 }
 
 impl std::fmt::Display for OduDomain {

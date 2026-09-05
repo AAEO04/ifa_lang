@@ -152,20 +152,20 @@ RefMut(Box<TypeHint>),  // &mut T — mutable reference
 
 ### Gap
 
-The borrow checker is **not connected to the type system**. `Ref(T)` and `RefMut(T)` are syntactic hints — there is no:
-- Lifetime tracking (lexical or non-lexical).
-- Connection between `IwaEngine.borrow()` calls and code analysis.
-- Compilation of references at the bytecode level.
-- Rust-style `&` and `&mut` operators that actually produce borrow-checked values.
+The borrow checker is **now connected to the analysis pipeline**. As of June 2026:
+- `borrow()` is called from `checks.rs:1774` for `UnaryOperator::AddressOf` (immutable `&`).
+- `borrow_mut()` is called from `checks.rs:1795` for `UnaryOperator::AddressOfMut` (mutable `&mut`).
+- `enter_scope()`/`exit_scope()` wrappers are set up for all block types (if/while/for/match/ebo/defer/ailewu/try/catch/finally).
+- The compiler emits `OpCode::Ref` for `&`/`&mut` expressions (compiler/src/lib.rs:1412-1427), currently supporting only literal integer addresses.
+- A `StateHistoryBuffer` (32-step circular buffer) in `LintContext` records lifecycle transitions (Declared, Initialized, Mutated, Moved, Borrowed, Scope Exit) and appends trace logs to diagnostics.
 
-The existing `IwaEngine` code is **dead infrastructure** — it has tests but is not integrated into the analysis pipeline (`checks.rs` never calls `borrow()` or `borrow_mut()`).
+### Remaining work
 
-### Recommendation
-
-Three-tier approach:
-1. **Tier 1 (now)**: Connect `IwaEngine` to `checks.rs`. When the code contains `&x` or `&mut x`, record the borrow. When the borrowed variable is used, check for conflicts. This gets lexical borrow checking.
-2. **Tier 2**: Add `Statement::RefBinding { name, target, mutable }` to the AST so `if let x = &mut y { }` works syntactically.
-3. **Tier 3**: Non-lexical lifetimes (NLL) — track the *last use* of a borrow rather than its lexical scope.
+1. **Lifetime tracking**: Lexical borrow scopes work via `exit_scope()`. Non-lexical lifetimes (NLL) are not implemented — borrows are released only at scope boundaries, not at last use.
+2. **Release borrow explicitly**: `release_borrow()` exists in `IwaEngine` but is only called from tests. Production borrows are implicitly released via scope exit.
+3. **Variable references**: The compiler currently only supports literal integer addresses for `&`/`&mut`. Variable-address references need compiler support.
+4. **Dereference opcode**: The `*` dereference operator exists in the parser but does not yet emit a dedicated dereference opcode.
+5. **`Statement::RefBinding`**: Not in the AST — `if let x = &mut y { }` syntax is not supported.
 
 ---
 
@@ -528,4 +528,4 @@ These are tokio wrappers, not CSP primitives.
 
 ---
 
-*Specification v0.1. All claims reference specific code locations in crates/. The strongest asymmetry: IwaEngine's borrow checker and MoveTracker exist but are not wired into the compilation pipeline. The effect system is functional but disconnected from the bytecode. These are integration gaps, not architecture gaps.*
+*Specification v0.1. All claims reference specific code locations in crates/. Update (June 2026): IwaEngine's borrow checker and MoveTracker are now wired into the compilation pipeline — `borrow()`/`borrow_mut()`/`enter_scope()`/`exit_scope()` called from `checks.rs` for all block types. MoveLocal opcode (0x1F) provides runtime slot clearing for identifier moves. The effect system remains a Babalawo static pass (not bytecode-level enforcement), which is a deliberate architecture choice.*

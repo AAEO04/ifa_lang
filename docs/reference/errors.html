@@ -52,8 +52,9 @@ ayanmo result = 10 / 0;</code></pre>
                     <p><strong>Message:</strong> "Numeric overflow: {0}"</p>
                     <p><strong>Code:</strong> Overflow</p>
                     <div class="code-example">
-                        <pre><code>// i64 overflow promotes to Float automatically
-// Only checked in explicit operations</code></pre>
+                        <pre><code>// Integer overflow now errors
+// Use explicit Float conversion for large numbers
+ayanmo big = to_float(9223372036854775807) + 1.0;</code></pre>
                     </div>
                 </div>
 

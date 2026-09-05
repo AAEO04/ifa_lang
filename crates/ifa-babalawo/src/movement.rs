@@ -28,7 +28,7 @@
 //! `MAYBE_USE_AFTER_MOVE` warning (not an error) because we cannot prove
 //! which branch runs at compile time.
 
-use ifa_types::ast::Expression;
+use ifa_types::ast::{ExprKind, Expression};
 use std::collections::{HashMap, HashSet};
 
 /// Per-variable move state.
@@ -172,8 +172,8 @@ pub enum MoveCheckResult {
 /// List, Map, custom objects — is moved on transfer to an actor boundary.
 pub fn is_copy_eligible(expr: &Expression) -> bool {
     matches!(
-        expr,
-        Expression::Int(_) | Expression::Float(_) | Expression::Bool(_) | Expression::Nil
+        expr.kind,
+        ExprKind::Int(_) | ExprKind::Float(_) | ExprKind::Bool(_) | ExprKind::Nil
     )
 }
 
@@ -242,11 +242,11 @@ mod tests {
 
     #[test]
     fn copy_eligible_not_moved() {
-        assert!(is_copy_eligible(&Expression::Int(42)));
-        assert!(is_copy_eligible(&Expression::Float(1.5)));
-        assert!(is_copy_eligible(&Expression::Bool(true)));
-        assert!(is_copy_eligible(&Expression::Nil));
-        assert!(!is_copy_eligible(&Expression::String("hello".into())));
-        assert!(!is_copy_eligible(&Expression::Identifier("x".into())));
+        assert!(is_copy_eligible(&ExprKind::Int(42)));
+        assert!(is_copy_eligible(&ExprKind::Float(1.5)));
+        assert!(is_copy_eligible(&ExprKind::Bool(true)));
+        assert!(is_copy_eligible(&ExprKind::Nil));
+        assert!(!is_copy_eligible(&ExprKind::String("hello".into())));
+        assert!(!is_copy_eligible(&ExprKind::Identifier("x".into())));
     }
 }

@@ -56,20 +56,20 @@ A circular buffer (256 events, configurable) recording `(spirit, action, value)`
 
 | Variant | Lines | Heap Type |
 |---------|-------|-----------|
-| `Str` | 46 | `CompactString` (inline ≤21B, else `Arc<str>`) |
-| `List` | 47 | `Arc<Vec<IfaValue>>` |
-| `Map` | 48 | `Arc<HashMap<CompactString, IfaValue>>` |
-| `Fn` | 51 | `Arc<BytecodeFnData>` |
-| `Closure` | 63 | `Arc<ClosureData>` (env: `Arc<Vec<UpvalueCell>>`) |
-| `Future` | 66 | `FutureCell = Arc<Mutex<FutureState>>` |
-| `Actor` | 71 | `Arc<dyn Any + Send + Sync>` |
-| `Resource` | 80 | `Arc<ResourceToken>` |
+| `Str` | 44 | `Box<String>` (heap-allocated) |
+| `List` | 45 | `IfaGc<Vec<IfaValue>>` |
+| `Map` | 46 | `IfaGc<HashMap<CompactString, IfaValue>>` |
+| `Fn` | 50 | `Arc<BytecodeFnData>` |
+| `Closure` | 62 | `IfaGc<ClosureData>` (env: `Vec<UpvalueCell>`) |
+| `Future` | 65 | `FutureCell = Arc<Mutex<FutureState>>` |
+| `Actor` | 72 | `Arc<ActorData>` (type-erased handle) |
+| `Resource` | 75 | `Arc<ResourceToken>` |
 
-**Key design decision**: `Arc` (atomic refcounting) is used everywhere, not `Rc` (non-atomic). This enables `Send + Sync` on `IfaValue` so it can cross thread boundaries in the actor system, but imposes an atomic increment/decrement on every `Clone`/`Drop`.
+**Key design decision**: `Arc` and `IfaGc` are used for heap types. `IfaGc` (Bacon-Rajan cycle collector) handles cyclic references. `IfaValue` is `!Send` due to `IfaGc`'s thread-local nature.
 
-**`CompactString`** at `compact_str.rs:8-15`: Strings ≤21 bytes stored inline (no heap allocation). Larger strings use `Arc<str>` — zero-copy sharing across threads.
+**`CompactString`** at `compact_str.rs`: Used for Map key storage only. Strings ≤21 bytes stored inline (no heap allocation). Larger strings use `Arc<str>`.
 
-**Identity checks**: `Arc::ptr_eq` at `value_union.rs:361,370,385` for detecting same-object references without deep equality.
+**Identity checks**: `Arc::ptr_eq` and `IfaGc::ptr_eq` for detecting same-object references. Content-based hashing for Map and Set (order-independent).
 
 #### 4.2.1 Classification
 

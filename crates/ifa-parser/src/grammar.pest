@@ -14,6 +14,7 @@ statement = {
     | from_import_stmt
     | abo_stmt
     | ase_stmt
+    | ori_stmt
     | opon_stmt
     | ebo_stmt
     | defer_stmt
@@ -62,6 +63,10 @@ opon_size = {
     | "ailopin" | "àìlópin" | "unlimited" | "dynamic" | "max"
 }
 
+// Ori limit (Spiritual Capacity): #ori 500;
+ori_stmt = { ori_kw ~ number ~ ";"? }
+ori_kw = { "#ori" | "ori" | "#Ori" | "Ori" }
+
 // Ebo (offering/initiation): ebo "server"; or ebo "name" { body };
 // With body: creates a scoped memory epoch (allocations released at scope exit)
 ebo_stmt = { ebo_kw ~ expression ~ ("{" ~ statement* ~ "}")? ~ ";"? }
@@ -71,6 +76,18 @@ ebo_kw = { "ebo" | "ẹbọ" | "sacrifice" }
 var_decl = { public_mod? ~ var_kw ~ ident ~ type_hint? ~ "=" ~ expression ~ ";" }
 type_hint = { ":" ~ type_name }
 type_name = {
+    ref_mut_type
+    | ref_type
+    | ptr_type
+    | primitive_type
+}
+ref_mut_type = { "&" ~ mut_keyword ~ type_name }
+ref_type = { "&" ~ type_name }
+ptr_type = { "*" ~ type_name }
+
+mut_keyword = @{ "mut" ~ !ASCII_ALPHANUMERIC }
+
+primitive_type = {
     "Int" | "Float" | "Str" | "Bool" | "List" | "Map" | "Any"
     | "int" | "float" | "str" | "bool" | "list" | "map" | "any"
     | "i8" | "i16" | "i32" | "i64"
@@ -78,6 +95,7 @@ type_name = {
     | "f32" | "f64"
     | "void"
     | ("Iwa<" ~ ident ~ ">")
+    | (!effects_kw ~ ident)
 }
 
 // Constant: const X = 1;
@@ -110,7 +128,7 @@ iwa_method = { attribute* ~ ident ~ "(" ~ params? ~ ")" ~ ("->" ~ type_name)? ~ 
 attribute = { "#[" ~ ident ~ ("(" ~ ident ~ ("," ~ ident)* ~ ")")? ~ "]" }
 
 // Function: ese start() { } or daro ese start() -> effects(Network) { }
-ese_def = { public_mod? ~ async_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ ("->" ~ type_name)? ~ effects_decl? ~ "{" ~ statement* ~ "}" }
+ese_def = { public_mod? ~ iranti_mod? ~ async_mod? ~ ese_kw ~ ident ~ "(" ~ params? ~ ")" ~ ("->" ~ type_name)? ~ effects_decl? ~ "{" ~ statement* ~ "}" }
 effects_decl = { ("->" ~ effects_kw ~ "(" ~ effect_list? ~ ")") | ("pelu" ~ "Ipa") }
 effects_kw = { "effects" | "ipa" | "ipa_wiwole" }
 effect_list = { ident ~ ("," ~ ident)* }
@@ -232,6 +250,7 @@ atom = {
     | index_access
     | await_expr
     | move_expr
+    | iso_expr
     | list_literal
     | map_literal
     | set_literal
@@ -282,6 +301,9 @@ await_expr = { await_kw ~ expression }
 // Move expression (zero-copy ownership transfer): yanda expr
 move_expr = { move_kw ~ expression }
 
+// Iso expression (isolated graph): iso expr
+iso_expr = { iso_kw ~ expression }
+
 // Arguments
 arguments = { expression ~ ("," ~ expression)* }
 
@@ -296,7 +318,7 @@ div_op = { "/" }
 mod_op = { "%" }
 pow_op = { "**" }
 null_coalesce_op = { "??" }
-unary_op = { "+" | "-" | "&" | "*" }
+unary_op = { "+" | "-" | ("&" ~ mut_keyword) | "&" | "*" }
 
 comp_op = { "==" | "!=" | "<=" | ">=" | "<" | ">" }
 and_op = { "&&" | "ati" | "and" }
@@ -328,8 +350,11 @@ match_kw = _{ "yàn" | "yán" | "match" }
 public_mod = { "gbangba" | "public" | "fi" | "export" }
 async_mod = { async_kw }
 async_kw = _{ "daro" | "async" }
+iranti_mod = { iranti_kw }
+iranti_kw = _{ "iranti" | "ìrántí" | "memoize" }
 await_kw = _{ "reti" | "await" }
 move_kw = _{ "yanda" | "free" }
+iso_kw = _{ "iso" | "isolated" }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ODÙ DOMAIN NAMES (The 16 Principal)

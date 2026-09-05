@@ -132,6 +132,7 @@ pub enum Statement {
     EseDef {
         name: String,
         visibility: Visibility,
+        is_iranti: bool,
         params: Vec<Param>,
         return_type: Option<TypeHint>,
         body: Vec<Statement>,
@@ -198,6 +199,12 @@ pub enum Statement {
     /// Opon (memory) directive: #opon kekere;
     Opon {
         size: String, // kekere, arinrin, nla, ailopin (or English aliases)
+        span: Span,
+    },
+
+    /// Ori (Spiritual Exhaustion limit) directive: #ori 500;
+    Ori {
+        limit_ms: u64,
         span: Span,
     },
 
@@ -431,9 +438,22 @@ impl TypeHint {
     }
 }
 
+/// An expression with source location
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Expression {
+    pub kind: ExprKind,
+    pub span: Span,
+}
+
+impl Expression {
+    pub fn new(kind: ExprKind, span: Span) -> Self {
+        Self { kind, span }
+    }
+}
+
 /// All expression types
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Expression {
+pub enum ExprKind {
     /// Integer literal
     Int(i64),
 
@@ -524,8 +544,8 @@ pub enum Expression {
     /// Yoruba: yanda (surrender) or move
     MoveExpr(Box<Expression>),
 
-    /// Wrapper to attach source location (Span) to an expression
-    Spanned { expr: Box<Expression>, span: Span },
+    /// Isolated object graph
+    Iso(Box<Expression>),
 }
 
 /// A part of an interpolated string
@@ -582,8 +602,9 @@ pub enum BinaryOperator {
 pub enum UnaryOperator {
     Neg,
     Not,
-    AddressOf,   // &x
-    Dereference, // *x
+    AddressOf,    // &x
+    AddressOfMut, // &mut x
+    Dereference,  // *x
 }
 
 impl std::fmt::Display for BinaryOperator {
@@ -630,6 +651,7 @@ impl Statement {
             | Statement::Ewo { span, .. }
             | Statement::AssertType { span, .. }
             | Statement::Opon { span, .. }
+            | Statement::Ori { span, .. }
             | Statement::Ebo { span, .. }
             | Statement::Defer { span, .. }
             | Statement::Update { span, .. }

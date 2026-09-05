@@ -1,4 +1,5 @@
-//! # Storage Infrastructure (Tier 1)
+// Intentionally dormant until embedded CI is standing
+//! # Embedded Storage Stack
 //!
 //! Adapted from `ifa-std/infra/storage.rs` for `no_std` + `alloc`.
 //!

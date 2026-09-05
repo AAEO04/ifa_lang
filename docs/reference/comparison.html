@@ -81,10 +81,10 @@
 
             <h3>IfaValue Type System</h3>
             <ul>
-                <li>32-byte tagged union enum</li>
+                <li>16-byte tagged union enum</li>
                 <li>Primitives inlined: Null, Bool, Int(i64), Float(f64)</li>
-                <li>CompactString with SSO (21 bytes inline, else Arc&lt;str&gt;)</li>
-                <li>Heap types via Arc: List, Map, Fn, Resource</li>
+                <li>Str: Box&lt;String&gt; (8-byte thin pointer)</li>
+                <li>Heap types via IfaGc/Arc: List, Map, Fn, Resource</li>
                 <li>VM-specific: AstFn, Closure, Future, Actor, Result, Break, Continue</li>
             </ul>
         </div>
@@ -138,7 +138,7 @@
 
             <h3>Memory Details</h3>
             <ul>
-                <li>IfaValue is 32 bytes (test-verified)</li>
+                <li>IfaValue is 16 bytes (test-verified)</li>
                 <li>CompactString SSO: strings up to 21 bytes stored inline</li>
                 <li>Strings longer than 21 bytes: Arc&lt;str&gt; (heap, ref-counted)</li>
                 <li>Opon sizes: Kekere (256), Arinrin (4096), Nla (65536), Ailopin (1M ceiling)</li>

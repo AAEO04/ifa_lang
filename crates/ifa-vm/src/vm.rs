@@ -3,9 +3,8 @@
 //! Stack-based bytecode interpreter for Ifá-Lang.
 //!
 //! ### ✅ ARCHITECTURAL STATUS (String Operations)
-//! `OpCode::Add` is now PURE NUMERIC (Int/Float only). String concatenation uses
-//! the dedicated `OpCode::Concat (0x27)`, which is strict `Str + Str` only.
-//! The `text += " more"` compiler path emits `ToString` + `Concat` as appropriate.
+//! `OpCode::Add` is polymorphic (supporting Int/Float arithmetic, List concatenation, and String concatenation).
+//! `OpCode::Concat (0x27)` is a strict `Str + Str` Concat-only instruction.
 //!
 //! Refer to `patch.md` for the Phase 7 Hardening Roadmap.
 
@@ -189,12 +188,20 @@ pub struct IfaVM {
     #[serde(skip)]
     pub actor_id: Option<u64>,
 
+    /// Active epoch cleanups to manage reactivity subscription lifespans
+    #[serde(skip)]
+    pub epoch_guards: Vec<crate::ajose::EpochCleanupGuard>,
+
     /// Pending finally continuation (§12.4).
 
     /// Set by `Return`/`Throw` when they are pre-empted by a finally block.
     /// Cleared and executed by `FinallyEnd`.
     #[serde(skip)]
     pending_finally: Option<FinallyResumption>,
+
+    /// Spiritual Capacity/Time Limit (Ori limit)
+    #[serde(skip)]
+    pub ori_limit: Option<u64>,
 }
 
 #[derive(Clone)]
@@ -230,7 +237,7 @@ impl IfaVM {
     fn error_to_catch_value(error: &IfaError) -> IfaValue {
         error
             .user_value()
-            .cloned()
+            .map(|v| v.thaw())
             .unwrap_or_else(|| IfaValue::str(error.to_string()))
     }
 
@@ -300,6 +307,29 @@ impl IfaVM {
             .and_then(Option::as_ref)
             .cloned()
             .ok_or_else(|| IfaError::UndefinedVariable(self.globals.names[slot].clone()))?;
+        if matches!(value, IfaValue::Moved) {
+            return Err(IfaError::UndefinedVariable(format!(
+                "Use of moved global variable '{}'",
+                self.globals.names[slot]
+            )));
+        }
+        self.push(value)
+    }
+
+    fn move_global_slot(&mut self, bytecode: &Bytecode, idx: usize) -> IfaResult<()> {
+        let slot = self.resolve_global_slot(bytecode, idx)?;
+        let value = self
+            .globals
+            .values
+            .get_mut(slot)
+            .and_then(|val| std::mem::replace(val, Some(IfaValue::Moved)))
+            .ok_or_else(|| IfaError::UndefinedVariable(self.globals.names[slot].clone()))?;
+        if matches!(value, IfaValue::Moved) {
+            return Err(IfaError::UndefinedVariable(format!(
+                "Use of moved global variable '{}'",
+                self.globals.names[slot]
+            )));
+        }
         self.push(value)
     }
 
@@ -378,7 +408,9 @@ impl IfaVM {
                 external_cache: None,
             },
             actor_id: None,
+            epoch_guards: Vec::new(),
             pending_finally: None,
+            ori_limit: None,
         }
     }
 
@@ -443,7 +475,9 @@ impl IfaVM {
                 external_cache: None,
             },
             actor_id: None,
+            epoch_guards: Vec::new(),
             pending_finally: None,
+            ori_limit: None,
         }
     }
 
@@ -931,7 +965,9 @@ impl IfaVM {
             self.frame_limit = frame_cap;
             self.opon_size = bytecode.opon_size;
 
-            self.resume_execution(bytecode).map(|_| ())
+            ifa_infra::cpu::profile_with_ori(&bytecode.source_name, self.ori_limit, || {
+                self.resume_execution(bytecode).map(|_| ())
+            })
         })();
 
         self.ctx.stack.truncate(saved_stack_len);
@@ -956,11 +992,6 @@ impl IfaVM {
 
         let mut ip = self.ctx.ip;
         while !self.ctx.halted && ip < bytecode.code.len() {
-            self.ticks = self.ticks.wrapping_add(1);
-            if self.ticks.is_multiple_of(1024) {
-                ifa_types::gc::collect_cycles();
-            }
-
             self.ctx.ip = ip;
             if let Err(e) = self.step(bytecode) {
                 if matches!(e, IfaError::Yielded) {
@@ -1172,11 +1203,50 @@ impl IfaVM {
 
         if !task.started {
             task.base_depth = self.ctx.frames.len();
+            // Push arguments onto the task's stack context
             let arg_count = task.args.len();
             for arg in &task.args {
                 self.push(arg.clone())?;
             }
-            self.call_value(task.func.clone(), arg_count, false, Some(bytecode))?;
+            // Call the function body directly — do NOT use call_value here.
+            // call_value would see is_async=true and spawn ANOTHER task, creating
+            // a recursive pending chain. The task runner is already the async context:
+            // we execute the body synchronously within this task slice.
+            let task_func_data = match &task.func {
+                IfaValue::Fn(data) => Ok((data.start_ip, data.arity as usize, None)),
+                IfaValue::Closure(closure) => Ok((
+                    closure.fn_data.start_ip,
+                    closure.fn_data.arity as usize,
+                    Some(closure.env.clone()),
+                )),
+                other => Err(other.type_name().to_string()),
+            };
+            let (start_ip, arity, env) = match task_func_data {
+                Ok(data) => data,
+                Err(got) => {
+                    self.swap_task_state(task);
+                    return Err(IfaError::TypeError {
+                        expected: "Function".into(),
+                        got,
+                    });
+                }
+            };
+            if arg_count != arity {
+                self.swap_task_state(task);
+                return Err(IfaError::ArityMismatch {
+                    expected: arity,
+                    got: arg_count,
+                });
+            }
+            // async_return: false — the task runner collects the raw return value
+            // and stores it in FutureState::Ready. No wrapping needed.
+            self.push_frame(CallFrame::new(
+                self.ctx.ip,
+                self.ctx.stack.len() - arg_count,
+                env,
+                false,
+            ))?;
+            self.ctx.ip = start_ip;
             task.started = true;
         }
 
@@ -1286,7 +1356,10 @@ impl IfaVM {
             return Err(IfaError::RegistryNotAttached(method_name.to_string()));
         };
         let mut ctx = VmContext { vm: self, bytecode };
-        let result = registry.call(domain_id, method_name, args, &mut ctx);
+        let ori_limit = ctx.vm.ori_limit;
+        let result = ifa_infra::cpu::profile_with_ori(method_name, ori_limit, || {
+            registry.call(domain_id, method_name, args, &mut ctx)
+        });
         self.registry = Some(registry);
         result
     }
@@ -1306,7 +1379,10 @@ impl IfaVM {
             )));
         };
         let mut ctx = VmContext { vm: self, bytecode };
-        let result = registry.call_fast(domain_id, method_id, args, &mut ctx);
+        let ori_limit = ctx.vm.ori_limit;
+        let result = ifa_infra::cpu::profile_with_ori("fast_dispatch", ori_limit, || {
+            registry.call_fast(domain_id, method_id, args, &mut ctx)
+        });
         self.registry = Some(registry);
         result
     }
@@ -1393,24 +1469,24 @@ impl IfaVM {
     }
 
     fn boxed_i64(value: &IfaValue) -> Option<i64> {
-        value.to_nan_boxed_primitive()?.as_int()
-    }
-
-    fn boxed_f64(value: &IfaValue) -> Option<f64> {
-        if let Some(boxed) = value.to_nan_boxed_primitive() {
-            if let Some(i) = boxed.as_int() {
-                return Some(i as f64);
-            }
-            if let Some(f) = boxed.as_float() {
-                return Some(f);
-            }
+        match value {
+            IfaValue::Int(i) => Some(*i),
+            _ => None,
         }
-        None
     }
 
     /// Execute single instruction (The Step of Iroke)
     pub fn step(&mut self, bytecode: &Bytecode) -> IfaResult<()> {
         let opcode = vm_iroke::tap(self, bytecode)?;
+
+        // OduDomain Capability Enforcement for effectful opcodes bypassing CallOdu
+        if let Some(domain) = ifa_types::domain::OduDomain::classify_effect(opcode) {
+            if let Some(registry) = &self.registry {
+                if let Some(id) = domain.dispatch_id() {
+                    registry.check_effect(id)?;
+                }
+            }
+        }
 
         match opcode {
             OpCode::PushNull => self.push(IfaValue::null())?,
@@ -1431,7 +1507,7 @@ impl IfaVM {
                 let arc = self.ikin.consult_string(idx).ok_or_else(|| {
                     IfaError::Custom("Invalid string constant index in Ikin".into())
                 })?;
-                self.push(IfaValue::Str(ifa_types::CompactString::Heap(arc.clone())))?;
+                self.push(IfaValue::Str(Box::new(arc.to_string())))?;
             }
             OpCode::Pop => {
                 self.pop()?;
@@ -1497,6 +1573,33 @@ impl IfaVM {
                     .try_lock()
                     .map_err(|_| IfaError::Runtime("Upvalue lock failed".into()))? = value;
             }
+            OpCode::MoveUpvalue => {
+                let slot = self.read_u16(bytecode)? as usize;
+                let env = self
+                    .ctx
+                    .frames
+                    .last()
+                    .and_then(|f| f.closure_env.clone())
+                    .ok_or_else(|| {
+                        IfaError::Runtime("No closure environment in current frame".into())
+                    })?;
+
+                let cell = env
+                    .get(slot)
+                    .cloned()
+                    .ok_or_else(|| IfaError::UndefinedVariable(format!("<upvalue:{}>", slot)))?;
+
+                let value = {
+                    let mut lock = cell
+                        .try_lock()
+                        .map_err(|_| IfaError::Runtime("Upvalue lock failed".into()))?;
+                    std::mem::replace(&mut *lock, IfaValue::Moved)
+                };
+                if matches!(value, IfaValue::Moved) {
+                    return Err(IfaError::UndefinedVariable("Use of moved variable".into()));
+                }
+                self.push(value)?;
+            }
             OpCode::LoadLocal => {
                 let idx = self.read_u16(bytecode)? as usize;
                 let base = self.ctx.frames.last().map(|f| f.base_ptr).unwrap_or(0);
@@ -1509,11 +1612,19 @@ impl IfaVM {
                     .ok_or_else(|| IfaError::UndefinedVariable(format!("<local:{}>", idx)))?;
 
                 match slot {
+                    IfaValue::Moved => {
+                        return Err(IfaError::UndefinedVariable("Use of moved variable".into()));
+                    }
                     IfaValue::Upvalue(cell) => {
                         let value = cell
                             .try_lock()
                             .map_err(|_| IfaError::Runtime("Upvalue lock failed".into()))?
                             .clone();
+                        if matches!(value, IfaValue::Moved) {
+                            return Err(IfaError::UndefinedVariable(
+                                "Use of moved variable".into(),
+                            ));
+                        }
                         self.push(value)?;
                     }
                     value => self.push(value)?,
@@ -1526,13 +1637,42 @@ impl IfaVM {
                 if base + idx >= self.ctx.stack.len() {
                     return Err(IfaError::UndefinedVariable(format!("<local:{}>", idx)));
                 }
-                match self.ctx.stack[base + idx].clone() {
-                    IfaValue::Upvalue(cell) => {
-                        *cell
-                            .try_lock()
-                            .map_err(|_| IfaError::Runtime("Upvalue lock failed".into()))? = value;
+                if let IfaValue::Upvalue(cell) = &self.ctx.stack[base + idx] {
+                    *cell
+                        .try_lock()
+                        .map_err(|_| IfaError::Runtime("Upvalue lock failed".into()))? = value;
+                } else {
+                    self.ctx.stack[base + idx] = value;
+                }
+            }
+            OpCode::MoveLocal => {
+                let idx = self.read_u16(bytecode)? as usize;
+                let base = self.ctx.frames.last().map(|f| f.base_ptr).unwrap_or(0);
+                if base + idx >= self.ctx.stack.len() {
+                    return Err(IfaError::UndefinedVariable(format!("<local:{}>", idx)));
+                }
+
+                let slot = std::mem::replace(&mut self.ctx.stack[base + idx], IfaValue::Moved);
+
+                match slot {
+                    IfaValue::Moved => {
+                        return Err(IfaError::UndefinedVariable("Use of moved variable".into()));
                     }
-                    _ => self.ctx.stack[base + idx] = value,
+                    IfaValue::Upvalue(cell) => {
+                        let value = {
+                            let mut lock = cell
+                                .try_lock()
+                                .map_err(|_| IfaError::Runtime("Upvalue lock failed".into()))?;
+                            std::mem::replace(&mut *lock, IfaValue::Moved)
+                        };
+                        if matches!(value, IfaValue::Moved) {
+                            return Err(IfaError::UndefinedVariable(
+                                "Use of moved variable".into(),
+                            ));
+                        }
+                        self.push(value)?;
+                    }
+                    value => self.push(value)?,
                 }
             }
             OpCode::LoadGlobal => {
@@ -1542,6 +1682,10 @@ impl IfaVM {
             OpCode::StoreGlobal => {
                 let idx = self.read_u16(bytecode)? as usize;
                 self.store_global_slot(bytecode, idx)?;
+            }
+            OpCode::MoveGlobal => {
+                let idx = self.read_u16(bytecode)? as usize;
+                self.move_global_slot(bytecode, idx)?;
             }
             OpCode::Jump => {
                 self.ctx.ip = self.read_u32(bytecode)? as usize;
@@ -1746,9 +1890,14 @@ impl IfaVM {
                 let name_val = self.pop()?;
                 let name = name_val.to_string();
                 self.opon.begin_epoch(&name);
+                if let Some(epoch) = self.opon.current_epoch() {
+                    let guard = crate::ajose::EpochCleanupGuard::new(epoch.cleanups.clone());
+                    self.epoch_guards.push(guard);
+                }
             }
 
             OpCode::EpochEnd => {
+                self.epoch_guards.pop();
                 self.opon
                     .end_epoch()
                     .map_err(|e| IfaError::Runtime(format!("Ẹbọ epoch error: {}", e)))?;
@@ -1764,7 +1913,7 @@ impl IfaVM {
                 match collection {
                     IfaValue::Map(m) => {
                         let key = match index {
-                            IfaValue::Str(s) => s,
+                            IfaValue::Str(s) => ifa_types::CompactString::new(&*s),
                             _ => {
                                 return Err(IfaError::TypeError {
                                     expected: "Str".into(),
@@ -1851,7 +2000,7 @@ impl IfaVM {
                     }
                     IfaValue::Map(ref mut map_arc) => {
                         let k = match index {
-                            IfaValue::Str(s) => s.clone(),
+                            IfaValue::Str(s) => ifa_types::CompactString::new(&*s),
                             _ => {
                                 return Err(IfaError::TypeError {
                                     expected: "Str".into(),
@@ -1907,14 +2056,11 @@ impl IfaVM {
             OpCode::SetAdd => {
                 let value = self.pop()?;
                 let set_val = self.pop()?;
-                if let IfaValue::Set(set_arc) = &set_val {
-                    // We must mutate the set. Since it's in an Arc, we might need to clone if shared.
-                    // But for simple Set ops, maybe we should use Arc::make_mut.
-                    // Wait, IfaValue::Set holds an Arc.
+                if let IfaValue::Set(mut set_arc) = set_val {
                     #[allow(clippy::mutable_key_type)]
-                    let mut new_set = (**set_arc).clone();
-                    new_set.insert(value);
-                    self.push(IfaValue::set(new_set))?;
+                    let set = Arc::make_mut(&mut set_arc);
+                    set.insert(value);
+                    self.push(IfaValue::Set(set_arc))?;
                 } else {
                     return Err(IfaError::TypeError {
                         expected: "Set".into(),
@@ -1939,11 +2085,11 @@ impl IfaVM {
             OpCode::SetRemove => {
                 let value = self.pop()?;
                 let set_val = self.pop()?;
-                if let IfaValue::Set(set_arc) = &set_val {
+                if let IfaValue::Set(mut set_arc) = set_val {
                     #[allow(clippy::mutable_key_type)]
-                    let mut new_set = (**set_arc).clone();
-                    new_set.remove(&value);
-                    self.push(IfaValue::set(new_set))?;
+                    let set = Arc::make_mut(&mut set_arc);
+                    set.remove(&value);
+                    self.push(IfaValue::Set(set_arc))?;
                 } else {
                     return Err(IfaError::TypeError {
                         expected: "Set".into(),
@@ -2183,52 +2329,55 @@ impl IfaVM {
             OpCode::And => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                if let (Some(i1), Some(i2)) = (Self::boxed_i64(&a), Self::boxed_i64(&b)) {
-                    self.push(IfaValue::int(i1 & i2))?;
-                } else if let (Some(b1), Some(b2)) = (
-                    a.to_nan_boxed_primitive().and_then(|v| v.as_bool()),
-                    b.to_nan_boxed_primitive().and_then(|v| v.as_bool()),
-                ) {
-                    self.push(IfaValue::bool(b1 && b2))?;
-                } else {
-                    return Err(IfaError::TypeError {
-                        expected: "Int or Bool".into(),
-                        got: a.type_name().into(),
-                    });
+                match (a, b) {
+                    (IfaValue::Int(i1), IfaValue::Int(i2)) => {
+                        self.push(IfaValue::int(i1 & i2))?;
+                    }
+                    (IfaValue::Bool(b1), IfaValue::Bool(b2)) => {
+                        self.push(IfaValue::bool(b1 && b2))?;
+                    }
+                    (a, _) => {
+                        return Err(IfaError::TypeError {
+                            expected: "Int or Bool".into(),
+                            got: a.type_name().into(),
+                        });
+                    }
                 }
             }
             OpCode::Or => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                if let (Some(i1), Some(i2)) = (Self::boxed_i64(&a), Self::boxed_i64(&b)) {
-                    self.push(IfaValue::int(i1 | i2))?;
-                } else if let (Some(b1), Some(b2)) = (
-                    a.to_nan_boxed_primitive().and_then(|v| v.as_bool()),
-                    b.to_nan_boxed_primitive().and_then(|v| v.as_bool()),
-                ) {
-                    self.push(IfaValue::bool(b1 || b2))?;
-                } else {
-                    return Err(IfaError::TypeError {
-                        expected: "Int or Bool".into(),
-                        got: a.type_name().into(),
-                    });
+                match (a, b) {
+                    (IfaValue::Int(i1), IfaValue::Int(i2)) => {
+                        self.push(IfaValue::int(i1 | i2))?;
+                    }
+                    (IfaValue::Bool(b1), IfaValue::Bool(b2)) => {
+                        self.push(IfaValue::bool(b1 || b2))?;
+                    }
+                    (a, _) => {
+                        return Err(IfaError::TypeError {
+                            expected: "Int or Bool".into(),
+                            got: a.type_name().into(),
+                        });
+                    }
                 }
             }
             OpCode::Xor => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                if let (Some(i1), Some(i2)) = (Self::boxed_i64(&a), Self::boxed_i64(&b)) {
-                    self.push(IfaValue::int(i1 ^ i2))?;
-                } else if let (Some(b1), Some(b2)) = (
-                    a.to_nan_boxed_primitive().and_then(|v| v.as_bool()),
-                    b.to_nan_boxed_primitive().and_then(|v| v.as_bool()),
-                ) {
-                    self.push(IfaValue::bool(b1 ^ b2))?;
-                } else {
-                    return Err(IfaError::TypeError {
-                        expected: "Int/Bool".into(),
-                        got: a.type_name().into(),
-                    });
+                match (a, b) {
+                    (IfaValue::Int(i1), IfaValue::Int(i2)) => {
+                        self.push(IfaValue::int(i1 ^ i2))?;
+                    }
+                    (IfaValue::Bool(b1), IfaValue::Bool(b2)) => {
+                        self.push(IfaValue::bool(b1 ^ b2))?;
+                    }
+                    (a, _) => {
+                        return Err(IfaError::TypeError {
+                            expected: "Int/Bool".into(),
+                            got: a.type_name().into(),
+                        });
+                    }
                 }
             }
             OpCode::Len => {
@@ -2250,15 +2399,19 @@ impl IfaVM {
             }
             OpCode::Not => {
                 let a = self.pop()?;
-                if let Some(i) = Self::boxed_i64(&a) {
-                    self.push(IfaValue::int(!i))?;
-                } else if let Some(b) = a.to_nan_boxed_primitive().and_then(|v| v.as_bool()) {
-                    self.push(IfaValue::bool(!b))?;
-                } else {
-                    return Err(IfaError::TypeError {
-                        expected: "Int/Bool".into(),
-                        got: a.type_name().into(),
-                    });
+                match a {
+                    IfaValue::Int(i) => {
+                        self.push(IfaValue::int(!i))?;
+                    }
+                    IfaValue::Bool(b) => {
+                        self.push(IfaValue::bool(!b))?;
+                    }
+                    _ => {
+                        return Err(IfaError::TypeError {
+                            expected: "Int/Bool".into(),
+                            got: a.type_name().into(),
+                        });
+                    }
                 }
             }
             OpCode::Shl => {
@@ -2366,30 +2519,42 @@ impl IfaVM {
                     }
                 }
             }
+            OpCode::SetOriLimit => {
+                let limit = self.read_u64(bytecode)?;
+                self.ori_limit = Some(limit);
+            }
             OpCode::ToInt => {
                 let val = self.pop()?;
-                if let Some(i) = Self::boxed_i64(&val) {
-                    self.push(IfaValue::int(i))?;
-                } else if let Some(f) = val.to_nan_boxed_primitive().and_then(|v| v.as_float()) {
-                    self.push(IfaValue::int(f as i64))?;
-                } else if let Some(b) = val.to_nan_boxed_primitive().and_then(|v| v.as_bool()) {
-                    self.push(IfaValue::int(if b { 1 } else { 0 }))?;
-                } else {
-                    match val {
-                        IfaValue::Str(s) => {
-                            let n = s.trim().parse::<i64>().unwrap_or(0);
-                            self.push(IfaValue::int(n))?
-                        }
-                        _ => self.push(IfaValue::int(0))?,
+                match val {
+                    IfaValue::Int(i) => self.push(IfaValue::int(i))?,
+                    IfaValue::Float(f) => self.push(IfaValue::int(f as i64))?,
+                    IfaValue::Bool(b) => self.push(IfaValue::int(if b { 1 } else { 0 }))?,
+                    IfaValue::Str(s) => {
+                        let n = s.trim().parse::<i64>().map_err(|_| IfaError::TypeError {
+                            expected: "numeric String".into(),
+                            got: format!("\"{}\"", s),
+                        })?;
+                        self.push(IfaValue::int(n))?;
+                    }
+                    other => {
+                        return Err(IfaError::TypeError {
+                            expected: "Int, Float, Bool, or numeric String".into(),
+                            got: other.type_name().into(),
+                        })
                     }
                 }
             }
             OpCode::ToFloat => {
                 let val = self.pop()?;
-                if let Some(f) = Self::boxed_f64(&val) {
-                    self.push(IfaValue::float(f))?;
-                } else {
-                    self.push(IfaValue::float(0.0))?;
+                match val {
+                    IfaValue::Int(i) => self.push(IfaValue::float(i as f64))?,
+                    IfaValue::Float(f) => self.push(IfaValue::float(f))?,
+                    other => {
+                        return Err(IfaError::TypeError {
+                            expected: "Int or Float".into(),
+                            got: other.type_name().into(),
+                        })
+                    }
                 }
             }
             OpCode::ToString => {
@@ -2399,19 +2564,15 @@ impl IfaVM {
             OpCode::Add => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                if let (Some(ba), Some(bb)) =
-                    (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                    && let Some(res) = ba.add(bb)
-                {
-                    // SAFETY: Math operations strictly yield numeric NanBox primitives.
-                    return self.push(IfaValue::from_nan_boxed_primitive(res).ok_or_else(
-                        || IfaError::Custom("Math operations yielded invalid primitive".into()),
-                    )?);
-                }
-                match (a.clone(), b.clone()) {
+                match (a, b) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => match ia.checked_add(ib) {
                         Some(r) => self.push(IfaValue::int(r))?,
-                        None => self.push(IfaValue::float(ia as f64 + ib as f64))?,
+                        None => {
+                            return Err(IfaError::Overflow(format!(
+                                "{} + {} (use explicit Float conversion for large numbers)",
+                                ia, ib
+                            )))
+                        }
                     },
                     (IfaValue::Float(fa), IfaValue::Float(fb)) => {
                         self.push(IfaValue::float(fa + fb))?
@@ -2442,7 +2603,7 @@ impl IfaVM {
                         s.push_str(&sb);
                         self.push(IfaValue::str(s))?
                     }
-                    _ => {
+                    (a, b) => {
                         return Err(IfaError::TypeError {
                             expected: "Int, Float, or String".into(),
                             got: format!("{} + {}", a.type_name(), b.type_name()),
@@ -2471,27 +2632,29 @@ impl IfaVM {
             OpCode::Sub => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                if let (Some(ba), Some(bb)) =
-                    (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                    && let Some(res) = ba.sub(bb)
-                {
-                    // SAFETY: Math operations strictly yield numeric NanBox primitives.
-                    return self.push(IfaValue::from_nan_boxed_primitive(res).ok_or_else(
-                        || IfaError::Custom("Math operations yielded invalid primitive".into()),
-                    )?);
-                }
                 match (a, b) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => match ia.checked_sub(ib) {
                         Some(r) => self.push(IfaValue::int(r))?,
-                        None => self.push(IfaValue::float(ia as f64 - ib as f64))?,
+                        None => {
+                            return Err(IfaError::Overflow(format!(
+                                "{} - {} (use explicit Float conversion for large numbers)",
+                                ia, ib
+                            )))
+                        }
                     },
                     (IfaValue::Float(fa), IfaValue::Float(fb)) => {
                         self.push(IfaValue::float(fa - fb))?
                     }
-                    _ => {
+                    (IfaValue::Int(ia), IfaValue::Float(fb)) => {
+                        self.push(IfaValue::float(ia as f64 - fb))?
+                    }
+                    (IfaValue::Float(fa), IfaValue::Int(ib)) => {
+                        self.push(IfaValue::float(fa - ib as f64))?
+                    }
+                    (a, b) => {
                         return Err(IfaError::TypeError {
                             expected: "Int/Float".into(),
-                            got: "Mismatch".into(),
+                            got: format!("{} - {}", a.type_name(), b.type_name()),
                         });
                     }
                 }
@@ -2499,27 +2662,29 @@ impl IfaVM {
             OpCode::Mul => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                if let (Some(ba), Some(bb)) =
-                    (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                    && let Some(res) = ba.mul(bb)
-                {
-                    // SAFETY: Math operations strictly yield numeric NanBox primitives.
-                    return self.push(IfaValue::from_nan_boxed_primitive(res).ok_or_else(
-                        || IfaError::Custom("Math operations yielded invalid primitive".into()),
-                    )?);
-                }
                 match (a, b) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => match ia.checked_mul(ib) {
                         Some(r) => self.push(IfaValue::int(r))?,
-                        None => self.push(IfaValue::float(ia as f64 * ib as f64))?,
+                        None => {
+                            return Err(IfaError::Overflow(format!(
+                                "{} * {} (use explicit Float conversion for large numbers)",
+                                ia, ib
+                            )))
+                        }
                     },
                     (IfaValue::Float(fa), IfaValue::Float(fb)) => {
                         self.push(IfaValue::float(fa * fb))?
                     }
-                    _ => {
+                    (IfaValue::Int(ia), IfaValue::Float(fb)) => {
+                        self.push(IfaValue::float(ia as f64 * fb))?
+                    }
+                    (IfaValue::Float(fa), IfaValue::Int(ib)) => {
+                        self.push(IfaValue::float(fa * ib as f64))?
+                    }
+                    (a, b) => {
                         return Err(IfaError::TypeError {
                             expected: "Int/Float".into(),
-                            got: "Mismatch".into(),
+                            got: format!("{} * {}", a.type_name(), b.type_name()),
                         });
                     }
                 }
@@ -2527,38 +2692,43 @@ impl IfaVM {
             OpCode::Div => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                if let (Some(ba), Some(bb)) =
-                    (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                {
-                    let res = ba.div(bb).map_err(|e| match e {
-                        ifa_types::nan_box::NanBoxError::DivisionByZero => {
-                            IfaError::DivisionByZero("Cannot divide by zero".into())
-                        }
-                        _ => IfaError::TypeError {
-                            expected: "Int/Float".into(),
-                            got: "Mismatch".into(),
-                        },
-                    })?;
-                    // SAFETY: Math operations strictly yield numeric NanBox primitives.
-                    return self.push(
-                        IfaValue::from_nan_boxed_primitive(res)
-                            .expect("Math operations must yield valid primitive"),
-                    );
-                }
                 match (a, b) {
                     (IfaValue::Int(ia), IfaValue::Int(ib)) => {
                         if ib == 0 {
                             return Err(IfaError::DivisionByZero("Cannot divide by zero".into()));
                         }
-                        self.push(IfaValue::int(ia / ib))?;
+                        match ia.checked_div(ib) {
+                            Some(r) => self.push(IfaValue::int(r))?,
+                            None => {
+                                return Err(IfaError::Overflow(format!(
+                                    "{} / {} (use explicit Float conversion for large numbers)",
+                                    ia, ib
+                                )))
+                            }
+                        }
                     }
                     (IfaValue::Float(fa), IfaValue::Float(fb)) => {
+                        if fb == 0.0 {
+                            return Err(IfaError::DivisionByZero("Cannot divide by zero".into()));
+                        }
                         self.push(IfaValue::float(fa / fb))?
                     }
-                    _ => {
+                    (IfaValue::Int(ia), IfaValue::Float(fb)) => {
+                        if fb == 0.0 {
+                            return Err(IfaError::DivisionByZero("Cannot divide by zero".into()));
+                        }
+                        self.push(IfaValue::float(ia as f64 / fb))?
+                    }
+                    (IfaValue::Float(fa), IfaValue::Int(ib)) => {
+                        if ib == 0 {
+                            return Err(IfaError::DivisionByZero("Cannot divide by zero".into()));
+                        }
+                        self.push(IfaValue::float(fa / ib as f64))?
+                    }
+                    (a, b) => {
                         return Err(IfaError::TypeError {
                             expected: "Int/Float".into(),
-                            got: "Mismatch".into(),
+                            got: format!("{} / {}", a.type_name(), b.type_name()),
                         });
                     }
                 }
@@ -2569,81 +2739,60 @@ impl IfaVM {
             }
             OpCode::Neg => {
                 let val = self.pop()?;
-                if let Some(i) = Self::boxed_i64(&val) {
-                    self.push(IfaValue::int(-i))?;
-                } else if let Some(f) = val.to_nan_boxed_primitive().and_then(|v| v.as_float()) {
-                    self.push(IfaValue::float(-f))?;
-                } else {
-                    return Err(IfaError::Runtime("Invalid type for negation".into()));
+                match val {
+                    IfaValue::Int(i) => self.push(IfaValue::int(-i))?,
+                    IfaValue::Float(f) => self.push(IfaValue::float(-f))?,
+                    _ => return Err(IfaError::Runtime("Invalid type for negation".into())),
                 }
             }
             OpCode::Pow => {
                 let exp = self.pop()?;
                 let base = self.pop()?;
-
-                let base_prim = base
-                    .to_nan_boxed_primitive()
-                    .and_then(|n| n.to_primitive().ok())
-                    .ok_or_else(|| IfaError::Runtime("Invalid base for power".into()))?;
-                let exp_prim = exp
-                    .to_nan_boxed_primitive()
-                    .and_then(|n| n.to_primitive().ok())
-                    .ok_or_else(|| IfaError::Runtime("Invalid exp for power".into()))?;
-
-                use ifa_types::nan_box::BoxedPrimitive;
-                let result = match (base_prim, exp_prim) {
-                    (BoxedPrimitive::Int(b), BoxedPrimitive::Int(e)) => {
+                match (base, exp) {
+                    (IfaValue::Int(b), IfaValue::Int(e)) => {
                         let e_u32 = u32::try_from(e).map_err(|_| {
                             IfaError::Runtime("Pow: negative exponent with integer base".into())
                         })?;
-                        IfaValue::int(
-                            b.checked_pow(e_u32)
-                                .ok_or_else(|| IfaError::Runtime("Pow: Integer overflow".into()))?,
-                        )
+                        self.push(IfaValue::int(b.checked_pow(e_u32).ok_or_else(|| {
+                            IfaError::Runtime("Pow: Integer overflow".into())
+                        })?))?;
                     }
-                    (BoxedPrimitive::Float(b), BoxedPrimitive::Float(e)) => {
-                        IfaValue::float(b.powf(e))
+                    (IfaValue::Float(b), IfaValue::Float(e)) => {
+                        self.push(IfaValue::float(b.powf(e)))?;
                     }
-                    (BoxedPrimitive::Int(b), BoxedPrimitive::Float(e)) => {
-                        IfaValue::float((b as f64).powf(e))
+                    (IfaValue::Int(b), IfaValue::Float(e)) => {
+                        self.push(IfaValue::float((b as f64).powf(e)))?;
                     }
-                    (BoxedPrimitive::Float(b), BoxedPrimitive::Int(e)) => {
+                    (IfaValue::Float(b), IfaValue::Int(e)) => {
                         let e_i32 = i32::try_from(e).map_err(|_| {
                             IfaError::Runtime("Pow: exponent out of bounds for float".into())
                         })?;
-                        IfaValue::float(b.powi(e_i32))
+                        self.push(IfaValue::float(b.powi(e_i32)))?;
                     }
                     _ => return Err(IfaError::Runtime("Invalid types for power".into())),
-                };
-                self.push(result)?;
+                }
             }
             OpCode::Mod => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                if let (Some(a), Some(b)) = (Self::boxed_i64(&a), Self::boxed_i64(&b)) {
-                    self.push(IfaValue::int(a % b))?;
-                } else {
-                    return Err(IfaError::Runtime("Modulus requires integers".into()));
+                match (a, b) {
+                    (IfaValue::Int(ia), IfaValue::Int(ib)) => {
+                        if ib == 0 {
+                            return Err(IfaError::DivisionByZero("Modulus by zero".into()));
+                        }
+                        self.push(IfaValue::int(ia % ib))?;
+                    }
+                    (a, b) => {
+                        return Err(IfaError::TypeError {
+                            expected: "Int % Int".into(),
+                            got: format!("{} % {}", a.type_name(), b.type_name()),
+                        });
+                    }
                 }
             }
             OpCode::Lt | OpCode::Le | OpCode::Gt | OpCode::Ge => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                if let (Some(ba), Some(bb)) =
-                    (a.to_nan_boxed_primitive(), b.to_nan_boxed_primitive())
-                {
-                    let res = match opcode {
-                        OpCode::Lt => ba.lt(bb),
-                        OpCode::Le => ba.le(bb),
-                        OpCode::Gt => ba.gt(bb),
-                        OpCode::Ge => ba.ge(bb),
-                        _ => return Err(IfaError::Runtime("Invalid comparison opcode".into())),
-                    };
-                    if let Some(r) = res {
-                        self.push(IfaValue::bool(r))?;
-                        return Ok(());
-                    }
-                }
                 let a_type = a.type_name().to_string();
                 let b_type = b.type_name().to_string();
                 let result = match opcode {
@@ -2652,7 +2801,7 @@ impl IfaVM {
                         (IfaValue::Float(fa), IfaValue::Float(fb)) => fa < fb,
                         (IfaValue::Int(ia), IfaValue::Float(fb)) => (ia as f64) < fb,
                         (IfaValue::Float(fa), IfaValue::Int(ib)) => fa < (ib as f64),
-                        (IfaValue::Str(ref sa), IfaValue::Str(ref sb)) => sa < sb,
+                        (IfaValue::Str(sa), IfaValue::Str(sb)) => sa < sb,
                         _ => {
                             return Err(IfaError::TypeError {
                                 expected: "Int/Float/String".into(),
@@ -2665,7 +2814,7 @@ impl IfaVM {
                         (IfaValue::Float(fa), IfaValue::Float(fb)) => fa <= fb,
                         (IfaValue::Int(ia), IfaValue::Float(fb)) => (ia as f64) <= fb,
                         (IfaValue::Float(fa), IfaValue::Int(ib)) => fa <= (ib as f64),
-                        (IfaValue::Str(ref sa), IfaValue::Str(ref sb)) => sa <= sb,
+                        (IfaValue::Str(sa), IfaValue::Str(sb)) => sa <= sb,
                         _ => {
                             return Err(IfaError::TypeError {
                                 expected: "Int/Float/String".into(),
@@ -2678,7 +2827,7 @@ impl IfaVM {
                         (IfaValue::Float(fa), IfaValue::Float(fb)) => fa > fb,
                         (IfaValue::Int(ia), IfaValue::Float(fb)) => (ia as f64) > fb,
                         (IfaValue::Float(fa), IfaValue::Int(ib)) => fa > (ib as f64),
-                        (IfaValue::Str(ref sa), IfaValue::Str(ref sb)) => sa > sb,
+                        (IfaValue::Str(sa), IfaValue::Str(sb)) => sa > sb,
                         _ => {
                             return Err(IfaError::TypeError {
                                 expected: "Int/Float/String".into(),
@@ -2691,7 +2840,7 @@ impl IfaVM {
                         (IfaValue::Float(fa), IfaValue::Float(fb)) => fa >= fb,
                         (IfaValue::Int(ia), IfaValue::Float(fb)) => (ia as f64) >= fb,
                         (IfaValue::Float(fa), IfaValue::Int(ib)) => fa >= (ib as f64),
-                        (IfaValue::Str(ref sa), IfaValue::Str(ref sb)) => sa >= sb,
+                        (IfaValue::Str(sa), IfaValue::Str(sb)) => sa >= sb,
                         _ => {
                             return Err(IfaError::TypeError {
                                 expected: "Int/Float/String".into(),
@@ -2706,16 +2855,25 @@ impl IfaVM {
             OpCode::Eq => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                self.push(IfaValue::bool(a == b))?;
+                let result = match (&a, &b) {
+                    (IfaValue::Int(ia), IfaValue::Float(fb)) => (*ia as f64) == *fb,
+                    (IfaValue::Float(fa), IfaValue::Int(ib)) => *fa == (*ib as f64),
+                    _ => a == b,
+                };
+                self.push(IfaValue::bool(result))?;
             }
             OpCode::Ne => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                self.push(IfaValue::bool(a != b))?;
+                let result = match (&a, &b) {
+                    (IfaValue::Int(ia), IfaValue::Float(fb)) => (*ia as f64) != *fb,
+                    (IfaValue::Float(fa), IfaValue::Int(ib)) => *fa != (*ib as f64),
+                    _ => a != b,
+                };
+                self.push(IfaValue::bool(result))?;
             }
             OpCode::TryBegin => {
-                let offset = self.read_u32(bytecode)? as usize;
-                let catch_ip = self.ctx.ip + offset;
+                let catch_ip = self.read_u32(bytecode)? as usize;
                 self.ctx.recovery_stack.push(RecoveryFrame {
                     stack_depth: self.ctx.stack.len(),
                     call_depth: self.ctx.frames.len(),
@@ -2733,12 +2891,12 @@ impl IfaVM {
                 {
                     self.ctx.recovery_stack.pop();
                     self.pending_finally = Some(FinallyResumption::Propagate {
-                        error: IfaError::UserError(Box::new(err_val)),
+                        error: IfaError::UserError(err_val.freeze()?),
                     });
                     self.ctx.ip = finally_ip;
                     return Ok(());
                 }
-                return Err(IfaError::UserError(Box::new(err_val)));
+                return Err(IfaError::UserError(err_val.freeze()?));
             }
             OpCode::FinallyBegin => {
                 let finally_ip = self.read_u32(bytecode)? as usize;
@@ -2788,8 +2946,8 @@ impl IfaVM {
                 let value = self.pop()?;
                 match value {
                     IfaValue::Result(payload) => match *payload {
-                        ResultPayload::Ok(ok) => self.push(ok)?,
-                        ResultPayload::Err(err) => return Err(IfaError::UserError(Box::new(err))),
+                        ResultPayload::Ire(ok) => self.push(ok)?,
+                        ResultPayload::Ibi(err) => return Err(IfaError::UserError(err.freeze()?)),
                     },
                     other => self.push(other)?,
                 }
@@ -2835,7 +2993,7 @@ impl IfaVM {
         if stack_len < arg_count + 1 {
             return Err(IfaError::Runtime("Stack underflow in dispatch_call".into()));
         }
-        let func = self.ctx.stack.remove(stack_len - arg_count - 1);
+        let func = self.ctx.stack.swap_remove(stack_len - arg_count - 1);
         self.call_value(func, arg_count, false, Some(bytecode))
     }
 
@@ -2847,7 +3005,7 @@ impl IfaVM {
                 "Stack underflow in dispatch_tail_call".into(),
             ));
         }
-        let func = self.ctx.stack.remove(stack_len - arg_count - 1);
+        let func = self.ctx.stack.swap_remove(stack_len - arg_count - 1);
         self.call_value(func, arg_count, true, Some(bytecode))
     }
 
@@ -3084,35 +3242,53 @@ impl IfaVM {
     }
 
     fn read_u16(&mut self, bytecode: &Bytecode) -> IfaResult<u16> {
-        let mut bytes = [0u8; 2];
-        bytes[0] = self.read_u8(bytecode)?;
-        bytes[1] = self.read_u8(bytecode)?;
-        Ok(u16::from_le_bytes(bytes))
+        let end = self.ctx.ip + 2;
+        if end > bytecode.code.len() {
+            return Err(IfaError::Custom("Unexpected end of bytecode".to_string()));
+        }
+        let value = u16::from_le_bytes(bytecode.code[self.ctx.ip..end].try_into().unwrap());
+        self.ctx.ip = end;
+        Ok(value)
     }
 
     fn read_u32(&mut self, bytecode: &Bytecode) -> IfaResult<u32> {
-        let mut bytes = [0u8; 4];
-        bytes[0] = self.read_u8(bytecode)?;
-        bytes[1] = self.read_u8(bytecode)?;
-        bytes[2] = self.read_u8(bytecode)?;
-        bytes[3] = self.read_u8(bytecode)?;
-        Ok(u32::from_le_bytes(bytes))
+        let end = self.ctx.ip + 4;
+        if end > bytecode.code.len() {
+            return Err(IfaError::Custom("Unexpected end of bytecode".to_string()));
+        }
+        let value = u32::from_le_bytes(bytecode.code[self.ctx.ip..end].try_into().unwrap());
+        self.ctx.ip = end;
+        Ok(value)
     }
 
     fn read_i64(&mut self, bytecode: &Bytecode) -> IfaResult<i64> {
-        let mut bytes = [0u8; 8];
-        for byte in &mut bytes {
-            *byte = self.read_u8(bytecode)?;
+        let end = self.ctx.ip + 8;
+        if end > bytecode.code.len() {
+            return Err(IfaError::Custom("Unexpected end of bytecode".to_string()));
         }
-        Ok(i64::from_le_bytes(bytes))
+        let value = i64::from_le_bytes(bytecode.code[self.ctx.ip..end].try_into().unwrap());
+        self.ctx.ip = end;
+        Ok(value)
+    }
+
+    fn read_u64(&mut self, bytecode: &Bytecode) -> IfaResult<u64> {
+        let end = self.ctx.ip + 8;
+        if end > bytecode.code.len() {
+            return Err(IfaError::Custom("Unexpected end of bytecode".to_string()));
+        }
+        let value = u64::from_le_bytes(bytecode.code[self.ctx.ip..end].try_into().unwrap());
+        self.ctx.ip = end;
+        Ok(value)
     }
 
     fn read_f64(&mut self, bytecode: &Bytecode) -> IfaResult<f64> {
-        let mut bytes = [0u8; 8];
-        for byte in &mut bytes {
-            *byte = self.read_u8(bytecode)?;
+        let end = self.ctx.ip + 8;
+        if end > bytecode.code.len() {
+            return Err(IfaError::Custom("Unexpected end of bytecode".to_string()));
         }
-        Ok(f64::from_le_bytes(bytes))
+        let value = f64::from_le_bytes(bytecode.code[self.ctx.ip..end].try_into().unwrap());
+        self.ctx.ip = end;
+        Ok(value)
     }
 }
 
@@ -3494,7 +3670,7 @@ mod tests {
     #[test]
     fn test_propagate_error_unwraps_ok_and_throws_err() {
         let mut ok_vm = IfaVM::new();
-        ok_vm.set_global("okv", IfaValue::ok(IfaValue::Int(41)));
+        ok_vm.set_global("okv", IfaValue::ire(IfaValue::Int(41)));
         let mut ok_bytecode = Bytecode::new("test_propagate_error_unwraps_ok");
         ok_bytecode.strings.push("okv".to_string());
         ok_bytecode.code = vec![
@@ -3508,12 +3684,12 @@ mod tests {
         assert_eq!(ok_got, IfaValue::Int(41));
 
         let mut err_vm = IfaVM::new();
-        err_vm.set_global("failv", IfaValue::err(IfaValue::str("boom")));
+        err_vm.set_global("failv", IfaValue::ibi(IfaValue::str("boom")));
         let mut err_bytecode = Bytecode::new("test_propagate_error_throws_err");
         err_bytecode.strings.push("failv".to_string());
         err_bytecode.code = vec![
             OpCode::TryBegin as u8,
-            5,
+            10,
             0,
             0,
             0,

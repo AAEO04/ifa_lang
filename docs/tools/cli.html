@@ -34,12 +34,38 @@
             <h3><code>ifa run &lt;file&gt;</code></h3>
             <p>Execute an Ifa-Lang source file using the interpreter. Automatically runs Babalawo static analysis before execution.</p>
             <pre><code>ifa run hello.ifa</code></pre>
+            <table>
+                <tr><th>Flag</th><th>Description</th></tr>
+                <tr><td><code>--sandbox</code></td><td>Enable sandbox isolation</td></tr>
+                <tr><td><code>--allow-all</code></td><td>Grant all capabilities</td></tr>
+                <tr><td><code>--allow-read</code></td><td>Allow file read access</td></tr>
+                <tr><td><code>--allow-write</code></td><td>Allow file write access</td></tr>
+                <tr><td><code>--allow-net</code></td><td>Allow network access</td></tr>
+                <tr><td><code>--allow-env</code></td><td>Allow environment access</td></tr>
+                <tr><td><code>--allow-time</code></td><td>Allow time access</td></tr>
+                <tr><td><code>--allow-random</code></td><td>Allow random access</td></tr>
+                <tr><td><code>--allow-js</code></td><td>Allow JavaScript FFI</td></tr>
+                <tr><td><code>--allow-python</code></td><td>Allow Python FFI</td></tr>
+            </table>
         </div>
 
         <div class="cmd">
             <h3><code>ifa runb &lt;file.ifab&gt;</code></h3>
             <p>Run compiled bytecode. <strong>Requires a matching <code>.ifa</code> source file</strong> in the same directory for Babalawo verification — bytecode cannot run standalone.</p>
             <pre><code>ifa runb program.ifab</code></pre>
+            <table>
+                <tr><th>Flag</th><th>Description</th></tr>
+                <tr><td><code>--force</code></td><td>Skip Babalawo verification</td></tr>
+                <tr><td><code>--allow-all</code></td><td>Grant all capabilities</td></tr>
+                <tr><td><code>--allow-read</code></td><td>Allow file read access</td></tr>
+                <tr><td><code>--allow-write</code></td><td>Allow file write access</td></tr>
+                <tr><td><code>--allow-net</code></td><td>Allow network access</td></tr>
+                <tr><td><code>--allow-env</code></td><td>Allow environment access</td></tr>
+                <tr><td><code>--allow-time</code></td><td>Allow time access</td></tr>
+                <tr><td><code>--allow-random</code></td><td>Allow random access</td></tr>
+                <tr><td><code>--allow-js</code></td><td>Allow JavaScript FFI</td></tr>
+                <tr><td><code>--allow-python</code></td><td>Allow Python FFI</td></tr>
+            </table>
         </div>
 
         <div class="cmd">
@@ -64,6 +90,12 @@
             <h3><code>ifa build &lt;file&gt;</code></h3>
             <p>Transpile to Rust via ifa-transpiler, then compile to a native binary. Requires Rust toolchain.</p>
             <pre><code>ifa build main.ifa -o myapp</code></pre>
+            <table>
+                <tr><th>Flag</th><th>Description</th></tr>
+                <tr><td><code>-o, --output &lt;path&gt;</code></td><td>Output binary path</td></tr>
+                <tr><td><code>--target &lt;triple&gt;</code></td><td>Cross-compilation target triple</td></tr>
+                <tr><td><code>--project</code></td><td>Build as an Oja project</td></tr>
+            </table>
         </div>
 
         <h2>Check, Lint & Format</h2>
@@ -76,18 +108,25 @@
 
         <div class="cmd">
             <h3><code>ifa babalawo &lt;path&gt;</code></h3>
-            <p>Run the Babalawo linter with proverb-based error messages. Flags: <code>--strict</code>, <code>--format json|compact|verbose</code>, <code>--fast</code>.</p>
+            <p>Run the Babalawo linter with proverb-based error messages.</p>
             <pre><code>ifa babalawo script.ifa --strict --format verbose</code></pre>
+            <table>
+                <tr><th>Flag</th><th>Description</th></tr>
+                <tr><td><code>--strict</code></td><td>Enable all lint passes</td></tr>
+                <tr><td><code>--format json|compact|verbose</code></td><td>Output format</td></tr>
+                <tr><td><code>--fast</code></td><td>Skip expensive analyses</td></tr>
+                <tr><td><code>--taboo &lt;caller:callee&gt;</code></td><td>Enforce caller/callee taboo constraints</td></tr>
+            </table>
         </div>
 
         <div class="cmd">
-            <h3><code>ifa fmt &lt;file&gt; --unstable</code></h3>
-            <p>Format Ifa-Lang source code. <strong>Requires <code>--unstable</code></strong> — fails with an error without it.</p>
-            <pre><code>ifa fmt src/*.ifa --unstable --check
-ifa fmt src/*.ifa --unstable</code></pre>
+            <h3><code>ifa fmt &lt;file&gt;</code></h3>
+            <p>Format Ifa-Lang source code.</p>
+            <pre><code>ifa fmt src/*.ifa --check
+ifa fmt src/*.ifa</code></pre>
             <table>
                 <tr><th>Flag</th><th>Description</th></tr>
-                <tr><td><code>--unstable</code></td><td>Required acknowledgement (hard-error otherwise)</td></tr>
+                <tr><td><code>--unstable</code></td><td>Acknowledge formatter is still experimental</td></tr>
                 <tr><td><code>--check</code></td><td>Check only, do not modify</td></tr>
             </table>
         </div>
@@ -99,6 +138,10 @@ ifa fmt src/*.ifa --unstable</code></pre>
             <p>Run Ifa-Lang test files. Matches files named <code>*_test.ifa</code> or <code>test_*.ifa</code>.</p>
             <pre><code>ifa test
 ifa test tests/ --verbose</code></pre>
+            <table>
+                <tr><th>Flag</th><th>Description</th></tr>
+                <tr><td><code>-v, --verbose</code></td><td>Show detailed test output</td></tr>
+            </table>
         </div>
 
         <h2>Documentation</h2>
@@ -119,13 +162,28 @@ ifa test tests/ --verbose</code></pre>
                 <tr><td><code>init &lt;name&gt;</code></td><td>Initialize new project</td></tr>
                 <tr><td><code>add &lt;url&gt;</code></td><td>Add dependency</td></tr>
                 <tr><td><code>remove &lt;name&gt;</code></td><td>Remove dependency</td></tr>
+                <tr><td><code>install &lt;name&gt;</code></td><td>Install a package</td></tr>
+                <tr><td><code>list</code></td><td>List installed packages</td></tr>
                 <tr><td><code>build</code></td><td>Build project</td></tr>
                 <tr><td><code>run [args]</code></td><td>Run project</td></tr>
                 <tr><td><code>test</code></td><td>Run project tests</td></tr>
                 <tr><td><code>search &lt;query&gt;</code></td><td>Search registry</td></tr>
                 <tr><td><code>publish</code></td><td>Publish to registry</td></tr>
                 <tr><td><code>audit</code></td><td>Audit vulnerabilities</td></tr>
+                <tr><td><code>update</code></td><td>Update all dependencies</td></tr>
                 <tr><td><code>upgrade</code></td><td>Upgrade ifa CLI</td></tr>
+                <tr><td><code>tree</code></td><td>Show dependency tree</td></tr>
+            </table>
+        </div>
+
+        <div class="cmd">
+            <h3><code>ifa sandbox &lt;command&gt; [args]</code></h3>
+            <p>Sandbox management subcommands:</p>
+            <table>
+                <tr><th>Command</th><th>Description</th></tr>
+                <tr><td><code>run &lt;file&gt;</code></td><td>Run in sandboxed environment</td></tr>
+                <tr><td><code>demo</code></td><td>Show sandbox demo</td></tr>
+                <tr><td><code>list</code></td><td>List active sandboxes</td></tr>
             </table>
         </div>
 
@@ -137,6 +195,11 @@ ifa test tests/ --verbose</code></pre>
         </div>
 
         <div class="cmd">
+            <h3><code>ifa flash &lt;file&gt; --target &lt;target&gt;</code></h3>
+            <p>Flash compiled bytecode to an embedded device. Targets: <code>esp32</code>, <code>stm32</code>, <code>rp2040</code>.</p>
+        </div>
+
+        <div class="cmd">
             <h3><code>ifa debug --file &lt;path&gt;</code></h3>
             <p>Start the Debug Adapter Protocol (DAP) server.</p>
         </div>
@@ -144,6 +207,16 @@ ifa test tests/ --verbose</code></pre>
         <div class="cmd">
             <h3><code>ifa lsp</code></h3>
             <p>Start the Language Server Protocol server on stdin/stdout.</p>
+        </div>
+
+        <div class="cmd">
+            <h3><code>ifa version</code></h3>
+            <p>Display version information.</p>
+        </div>
+
+        <div class="cmd">
+            <h3><code>ifa self-update</code></h3>
+            <p>Update Ifá-Lang to the latest version.</p>
         </div>
 
         <footer>

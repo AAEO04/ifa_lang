@@ -643,7 +643,7 @@ pub enum Ofun {
 
 **UB that does NOT exist**:
 - No raw pointer dereference in user code.
-- No type punning (NaN boxing uses `f64::to_bits()` — safe).
+- No type punning (the deleted NaN-boxing file previously used `f64::to_bits()` — was safe).
 - No inline assembly.
 - No transmute of invalid bit patterns.
 
@@ -693,7 +693,7 @@ Source (.ifa)
 
 1. **Document the `unsafe` invariant**: Add a `SAFETY.md` in `ifa-vm/src/` listing every `unsafe` block, its invariants, and what would make it unsound (e.g., "adding a non-`Send` variant to `IfaValue` would make `ActorMsg::Send` unsound"). This makes future refactors safer.
 
-2. **Add `#[deny(unsafe_code)]`** to all crates except the three that need it (`ifa-vm`, `ifa-std`, `ifa-types` for NaN boxing). Currently only `ifa-bytecode` and `ifa-babalawo` have it.
+2. **Add `#[deny(unsafe_code)]`** to all crates except those that need it (`ifa-vm`, `ifa-std`). The `ifa-types` crate previously needed it for NaN boxing (now deleted). Currently only `ifa-bytecode` and `ifa-babalawo` have it.
 
 3. **Extend the capability system** to cover more resource types: GPU allocation, file descriptor limits, network bandwidth quotas. The `Ofun` enum is extensible by design.
 

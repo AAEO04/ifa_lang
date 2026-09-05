@@ -37,11 +37,10 @@
 
         <p>Tests run the <code>ifa</code> binary against <code>.ifa</code> source
         files that contain a <code># expect: &lt;output&gt;</code> comment.
-        Three engine modes:</p>
+        Two engine modes:</p>
 
         <table class="field-table">
             <tr><th>Mode</th><th>Command</th><th>What it tests</th></tr>
-            <tr><td><code>ast</code></td><td><code>ifa run &lt;file&gt;</code></td><td>Tree-walking interpreter path</td></tr>
             <tr><td><code>vm</code></td><td><code>ifa bytecode + ifa runb</code></td><td>Bytecode compiler + VM path</td></tr>
             <tr><td><code>build</code></td><td><code>ifa build</code></td><td>Transpiler → native binary path</td></tr>
         </table>
@@ -56,13 +55,16 @@
         <table class="field-table">
             <tr><th>File</th><th>What it tests</th></tr>
             <tr><td><code>conformance_vm_tests.rs</code></td><td>VM-specific conformance tests</td></tr>
-            <tr><td><code>closure_tests.rs</code></td><td>Closure capture and invocation</td></tr>
+            <tr><td><code>vm_closure_opcode_tests.rs</code></td><td>Closure capture and invocation</td></tr>
             <tr><td><code>tailcall_tests.rs</code></td><td>Tail call optimization (TailCall opcode)</td></tr>
-            <tr><td><code>safety_tests.rs</code></td><td>Stack/frame limit enforcement, sandboxing</td></tr>
-            <tr><td><code>async_tests.rs</code></td><td>Async task spawning, await, yield</td></tr>
-            <tr><td><code>okanran_tests.rs</code></td><td>Error recovery (Shield of Ọkànràn)</td></tr>
+            <tr><td><code>safety_check.rs</code></td><td>Stack/frame limit enforcement, sandboxing</td></tr>
+            <tr><td><code>async_not_available_tests.rs</code></td><td>Async task spawning, await, yield</td></tr>
+            <tr><td><code>okanran_compiler_test.rs</code> / <code>okanran_recovery_test.rs</code></td><td>Error recovery (Shield of Ọkànràn)</td></tr>
             <tr><td><code>handler_tests.rs</code></td><td>Odù domain handler dispatch</td></tr>
-            <tr><td><code>proptest_tests.rs</code></td><td>Property-based tests (via proptest dev-dep)</td></tr>
+            <tr><td><code>compiler_ptr_tests.rs</code></td><td>Compiler pointer tests</td></tr>
+            <tr><td><code>conformance_ast_tests.rs</code></td><td>AST-level conformance</td></tr>
+            <tr><td><code>conformance_suite.rs</code></td><td>Conformance test suite</td></tr>
+            <tr><td><code>low_level_tests.rs</code></td><td>Low-level VM tests</td></tr>
         </table>
 
         <h2 class="section-header">3. Other Crate Tests</h2>
@@ -79,8 +81,7 @@
         <h2 class="section-header">4. Property-Based Tests</h2>
 
         <p><code>proptest</code> is a dev-dependency of <code>ifa-vm</code>
-        (<code>Cargo.toml:75</code>). The property tests in
-        <code>tests/proptest_tests.rs</code> generate random bytecode sequences
+        (<code>Cargo.toml:80</code>). Property tests generate random bytecode sequences
         and verify that the VM handles them without crashing (no panics,
         no undefined behavior).</p>
 

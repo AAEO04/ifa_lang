@@ -5,6 +5,7 @@
 //! Handles addition, multiplication, power, and positive math operations.
 
 use crate::impl_odu_domain;
+use ifa_vm::error::{IfaError, IfaResult};
 
 /// Ọ̀bàrà - The Expander (Math Add/Mul)
 pub struct Obara;
@@ -17,9 +18,35 @@ impl Obara {
         a + b
     }
 
+    /// Exact decimal addition
+    pub fn fikun_odidi(&self, a: i64, b: i64, _scale: u32) -> IfaResult<i64> {
+        a.checked_add(b)
+            .ok_or_else(|| IfaError::Overflow(format!("{} + {} overflows", a, b)))
+    }
+
+    /// Exact decimal addition (with rounding signature)
+    pub fn fikun_rounded(
+        &self,
+        a: i64,
+        b: i64,
+        scale: u32,
+        _mode: crate::odu::oturupon::RoundingMode,
+    ) -> IfaResult<i64> {
+        self.fikun_odidi(a, b, scale)
+    }
+
     /// Multiply (ìsọdìpúpọ̀)
     pub fn isodipupo(&self, a: f64, b: f64) -> f64 {
         a * b
+    }
+
+    /// Exact decimal multiplication
+    pub fn isodipupo_odidi(&self, a: i64, b: i64, scale: u32) -> IfaResult<i64> {
+        let prod = (a as i128) * (b as i128);
+        let divisor = 10_i128.checked_pow(scale).ok_or_else(|| {
+            IfaError::Overflow("Decimal multiplication scale overflows i128".into())
+        })?;
+        crate::odu::oturupon::round_div(prod, divisor, crate::odu::oturupon::RoundingMode::HalfEven)
     }
 
     /// Power (agbára)
@@ -129,6 +156,27 @@ mod tests {
         assert_eq!(obara.fikun(5.0, 3.0), 8.0);
         assert_eq!(obara.isodipupo(4.0, 3.0), 12.0);
         assert_eq!(obara.agbara(2.0, 3.0), 8.0);
+    }
+
+    #[test]
+    fn test_decimal_math() {
+        let obara = Obara;
+
+        // addition
+        let res1 = obara.fikun_odidi(100, 200, 2).unwrap();
+        assert_eq!(res1, 300);
+
+        // overflow
+        assert!(obara.fikun_odidi(i64::MAX, 1, 2).is_err());
+
+        // multiplication: 1.50 * 2.00 scaled to 2 decimal places = 150 * 200 = 30000 -> /100 = 300 -> 3.00
+        let res2 = obara.isodipupo_odidi(150, 200, 2).unwrap();
+        assert_eq!(res2, 300);
+
+        // multiplication banker's rounding: 1.25 * 2 = 2.50. Scale 1: 12 * 20 = 240 / 10 = 24 -> 2.4. Wait.
+        // let's do: 15 * 15 = 225. Scale 1: 225 / 10 = 22.5. banker's rounding rounds 22.5 to 22.
+        let res3 = obara.isodipupo_odidi(15, 15, 1).unwrap();
+        assert_eq!(res3, 22);
     }
 
     #[test]

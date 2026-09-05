@@ -320,7 +320,7 @@ This is sound (ManuallyDrop + forget avoids double-free), but the safety invaria
 
 1. **`usize` width**: The bytecode format stores string indices as `u16` (2 bytes), which is fine. But `InstructionCache` in `vm_ikin.rs` uses `u32` for string map values — safe on both 32-bit and 64-bit. The snapshot format uses `bincode` which handles `usize` platform-dependently — **snapshots are not portable between 32-bit and 64-bit hosts**.
 2. **Endianness**: `.ifab` files are hardcoded to little-endian. Running on a big-endian host (e.g., certain embedded targets) would require swapping. The `ESP32` is LE, `STM32` is LE, `RP2040` is LE — so this is de-facto safe for current targets, but not architecturally clean.
-3. **NaN boxing**: The NaN-boxing path (`nan_box.rs`) embeds pointer tags in the NaN space of IEEE 754 doubles. This is inherently endian-sensitive and also assumes `f64` is 8 bytes (true everywhere modern).
+3. **NaN boxing** (deleted): The `nan_box.rs` file previously embedded pointer tags in the NaN space of IEEE 754 doubles for arithmetic fast paths. It has been deleted — arithmetic now uses direct enum dispatch on `IfaValue` variants.
 
 ### Recommendation
 
@@ -438,7 +438,7 @@ Add a `unicode-normalization` dependency to normalize all `CompactString` values
 }
 ```
 
-**NaN boxing** (`nan_box.rs`): NaN space of IEEE 754 is repurposed for tagged pointers.
+**NaN boxing** (deleted): The `nan_box.rs` file previously repurposed NaN space for tagged pointers. It has been deleted — arithmetic now uses direct enum dispatch on `IfaValue` variants.
 
 ### Risks
 
@@ -447,9 +447,6 @@ Add a `unicode-normalization` dependency to normalize all `CompactString` values
 2. **NaN behavior undefined**: `f64::NAN` exists as a valid `IfaValue::Float(f64::NAN)`, but:
    - `is_equal(NaN, NaN)` returns `false` because `(NaN - NaN).abs() < EPSILON` is false — actually `NaN - NaN = NaN`, so this is `NaN < EPSILON = false`. This is consistent with IEEE 754, but surprising to users.
    - `partial_cmp` returns `None` for NaN — correct per IEEE 754, but the VM might not handle `None` gracefully in `If` conditions.
-   - `to_nan_boxed_primitive()` may misinterpret NaN-bit patterns as tagged pointers.
-
-3. **NaN boxing conflict**: The NaN-boxing system (`nan_box.rs`) relies on quiet NaN values. If a user program produces `f64::NAN` via `0.0 / 0.0`, the NaN-boxing path could misinterpret it as a tagged pointer. The current code guards against this (`TAG_FLOAT_NAN = 0x0005` is checked separately), but the interaction is fragile.
 
 ### Recommendation
 
@@ -461,7 +458,7 @@ fn float_eq(a: f64, b: f64) -> bool {
     diff <= f64::EPSILON || diff <= f64::max(a.abs(), b.abs()) * f64::EPSILON
 }
 ```
-Add explicit NaN handling: `FloatEq` should return `false` when either operand is NaN (consistent with IEEE 754, but document it). For NaN boxing, add a check that the entire NaN-boxing path is bypassed when the operand is a true arithmetic NaN (not a tagged pointer).
+Add explicit NaN handling: `FloatEq` should return `false` when either operand is NaN (consistent with IEEE 754, but document it).
 
 ---
 
@@ -488,12 +485,9 @@ Add explicit NaN handling: `FloatEq` should return `false` when either operand i
 
 2. **`unsafe impl Send` for `ActorMsg`**: `actor.rs:86`. The comment says "IfaValue contains only Arc-wrapped heap data and scalars." This is *almost* true, but `Future(Arc<Mutex<FutureState>>)` contains `FutureState` which is an enum — all its variants are Send. This is sound today but fragile.
 
-3. **Type-erased `dyn Any` for ActorHandle**: `value_union.rs:75` — `handle: Arc<dyn Any + Send + Sync>`. The `actor_send` function downcasts with `downcast_ref::<Arc<ActorHandle>>`. If a different `Arc<T>` is stored there, the downcast fails with a runtime error (not UB). This is safe.
+3. **Type-erased `dyn Any` for ActorHandle**: `value_union.rs` — `ActorData { handle: Arc<dyn Any + Send + Sync> }`. The `actor_send` function downcasts with `downcast_ref::<ActorHandle>`. If a different `Arc<T>` is stored there, the downcast fails with a runtime error (not UB). This is safe.
 
-4. **NaN boxing bit manipulation**: `nan_box.rs` reads/writes `u64` representations of `f64` values. This is technically implementation-defined behavior in the Rust abstract machine, but in practice:
-   - All modern Rust targets use IEEE 754 with the same representation
-   - The code uses `f64::to_bits()` / `f64::from_bits()` which are safe and portable
-   - No actual UB, but the semantics are platform-dependent
+4. **NaN boxing bit manipulation** (resolved): The `nan_box.rs` file has been deleted. NaN boxing is no longer part of the codebase.
 
 ### No-UB Guarantees
 

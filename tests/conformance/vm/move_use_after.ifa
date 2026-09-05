@@ -1,0 +1,7 @@
+# expect: [at tests/conformance/vm/move_use_after.ifa:5]
+ese test_move() pelu Ipa {
+  ayanmo x = 42;
+  ayanmo y = yanda x;
+  Irosu.fo(x);
+}
+test_move();

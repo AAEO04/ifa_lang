@@ -7,9 +7,11 @@
 //! - Configurable sizing for embedded vs full systems
 //! - **Memory limit enforcement** - prevents exceeding configured limits
 
-use crate::value::IfaValue;
+use crate::ajose::EpochCleanups;
+use ifa_types::IfaValue;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::sync::{Arc, Mutex};
 
 const AILOPIN_HARD_LIMIT: usize = 1 << 20;
 
@@ -141,7 +143,7 @@ pub struct OponEvent {
 /// An Ẹbọ Epoch - a scoped allocation region
 /// All allocations within an epoch are released together when the epoch ends.
 /// This provides deterministic memory management without garbage collection.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct EboEpoch {
     /// Epoch ID (monotonically increasing)
     pub id: usize,
@@ -153,6 +155,38 @@ pub struct EboEpoch {
     pub alloc_count: usize,
     /// Whether this epoch is still active
     pub active: bool,
+    /// Active reactive subscription cleanups registered during this epoch.
+    #[serde(skip, default = "new_epoch_cleanups")]
+    pub cleanups: EpochCleanups,
+}
+
+fn new_epoch_cleanups() -> EpochCleanups {
+    Arc::new(Mutex::new(Vec::new()))
+}
+
+impl Clone for EboEpoch {
+    fn clone(&self) -> Self {
+        EboEpoch {
+            id: self.id,
+            name: self.name.clone(),
+            start_addr: self.start_addr,
+            alloc_count: self.alloc_count,
+            active: self.active,
+            cleanups: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+}
+
+impl fmt::Debug for EboEpoch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EboEpoch")
+            .field("id", &self.id)
+            .field("name", &self.name)
+            .field("start_addr", &self.start_addr)
+            .field("alloc_count", &self.alloc_count)
+            .field("active", &self.active)
+            .finish()
+    }
 }
 
 impl EboEpoch {
@@ -163,6 +197,7 @@ impl EboEpoch {
             start_addr,
             alloc_count: 0,
             active: true,
+            cleanups: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
@@ -343,6 +378,16 @@ impl Opon {
         })?;
 
         epoch.active = false;
+
+        // Execute and drain all cleanups associated with this epoch
+        if let Ok(mut cleanups) = epoch.cleanups.lock() {
+            let cleanups_to_run: Vec<Box<dyn FnOnce() + Send + Sync>> =
+                cleanups.drain(..).collect();
+            for cleanup in cleanups_to_run {
+                cleanup();
+            }
+        }
+
         self.memory.truncate(epoch.start_addr);
         Ok(())
     }

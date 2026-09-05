@@ -83,9 +83,9 @@ impl Okanran {
     /// The value passed to `ta` is preserved as a structured `IfaValue` in
     /// the catch handler — no lossy string coercion.
     pub fn ta(&self, message: &str) -> IfaResult<()> {
-        Err(IfaError::UserError(Box::new(ifa_vm::IfaValue::Str(
-            ifa_types::CompactString::new(message),
-        ))))
+        Err(IfaError::UserError(ifa_types::IfaShared::Str(
+            message.into(),
+        )))
     }
 
     /// Unreachable code marker

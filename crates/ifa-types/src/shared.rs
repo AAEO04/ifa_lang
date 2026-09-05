@@ -61,7 +61,7 @@ impl IfaShared {
         match self {
             IfaShared::Int(n) => IfaValue::Int(*n),
             IfaShared::Float(n) => IfaValue::Float(*n),
-            IfaShared::Str(s) => IfaValue::Str(crate::CompactString::new(s.as_ref())),
+            IfaShared::Str(s) => IfaValue::Str(Box::new(s.to_string())),
             IfaShared::Bool(b) => IfaValue::Bool(*b),
             IfaShared::Null => IfaValue::Null,
             IfaShared::Resource(token) => IfaValue::Resource(Arc::new(*token)),

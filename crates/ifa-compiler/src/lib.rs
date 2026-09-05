@@ -166,6 +166,10 @@ impl Compiler {
         self.bytecode.code.extend_from_slice(&value.to_le_bytes());
     }
 
+    fn emit_u64(&mut self, value: u64) {
+        self.bytecode.code.extend_from_slice(&value.to_le_bytes());
+    }
+
     fn emit_u32(&mut self, value: u32) {
         self.bytecode.code.extend_from_slice(&value.to_le_bytes());
     }
@@ -598,7 +602,7 @@ impl Compiler {
                 if let Some(expr) = value {
                     // Tail-call optimization: if we're returning a direct function call, emit TailCall
                     // so the VM can reuse the current frame.
-                    if let Expression::Call { name, args } = expr {
+                    if let ExprKind::Call { name, args } = &expr.kind {
                         // Push function
                         if let Some(slot) = self.resolve_local(name) {
                             self.emit(OpCode::LoadLocal);
@@ -638,6 +642,11 @@ impl Compiler {
 
             Statement::Abo { .. } => {}
 
+            Statement::Ori { limit_ms, .. } => {
+                self.emit(OpCode::SetOriLimit);
+                self.emit_u64(*limit_ms);
+            }
+
             Statement::Expr { expr, .. } => {
                 self.compile_expression(expr)?;
                 self.emit(OpCode::Pop);
@@ -648,6 +657,7 @@ impl Compiler {
                 params,
                 body,
                 effects,
+                is_iranti: _,
                 ..
             } => {
                 let is_async = effects.contains(&ifa_types::ast::Effect::Async);
@@ -1258,8 +1268,8 @@ impl Compiler {
             // The VM's Concat opcode is strict: Str + Str only. For numeric Add, we fall through to Add.
             // The tree-walking interpreter handles runtime type dispatch; the bytecode VM is statically
             // correct since the lhs/rhs types must match at this op site.
-            UpdateOp::AddAssign => match val_expr {
-                Expression::String(_) | Expression::InterpolatedString { .. } => {
+            UpdateOp::AddAssign => match &val_expr.kind {
+                ExprKind::String(_) | ExprKind::InterpolatedString { .. } => {
                     self.emit(OpCode::Concat)
                 }
                 _ => self.emit(OpCode::Add),
@@ -1278,23 +1288,23 @@ impl Compiler {
     }
 
     fn compile_expression_inner(&mut self, expr: &Expression) -> IfaResult<()> {
-        match expr {
-            Expression::Int(n) => {
+        match &expr.kind {
+            ExprKind::Int(n) => {
                 self.emit(OpCode::PushInt);
                 self.emit_i64(*n);
             }
 
-            Expression::Float(f) => {
+            ExprKind::Float(f) => {
                 self.emit(OpCode::PushFloat);
                 self.emit_f64(*f);
             }
 
-            Expression::String(s) => {
+            ExprKind::String(s) => {
                 self.emit(OpCode::PushStr);
                 self.emit_string(s);
             }
 
-            Expression::Bool(b) => {
+            ExprKind::Bool(b) => {
                 self.emit(if *b {
                     OpCode::PushTrue
                 } else {
@@ -1302,11 +1312,11 @@ impl Compiler {
                 });
             }
 
-            Expression::Nil => {
+            ExprKind::Nil => {
                 self.emit(OpCode::PushNull);
             }
 
-            Expression::Identifier(name) => {
+            ExprKind::Identifier(name) => {
                 // Check aliases first
                 if let Some(expr) = self.aliases.get(name).cloned() {
                     self.compile_expression(&expr)?;
@@ -1335,7 +1345,7 @@ impl Compiler {
                 }
             }
 
-            Expression::BinaryOp { left, op, right } => {
+            ExprKind::BinaryOp { left, op, right } => {
                 match op {
                     // R4: Short-circuit + operand-return semantics for logical AND/OR
                     BinaryOperator::And => {
@@ -1397,7 +1407,7 @@ impl Compiler {
                 }
             }
 
-            Expression::UnaryOp { op, expr } => {
+            ExprKind::UnaryOp { op, expr } => {
                 match op {
                     UnaryOperator::Neg => {
                         self.compile_expression(expr)?;
@@ -1409,9 +1419,10 @@ impl Compiler {
                         self.emit(OpCode::ToBool);
                         self.emit(OpCode::Not);
                     }
+                    UnaryOperator::AddressOfMut => unimplemented!("AddressOfMut not supported"),
                     UnaryOperator::AddressOf => {
                         // Only support literal addresses for now: &0x4000
-                        if let Expression::Int(addr) = *expr.clone() {
+                        if let ExprKind::Int(addr) = *&expr.kind {
                             self.emit(OpCode::Ref);
                             self.emit_u32(addr as u32);
                         } else {
@@ -1429,7 +1440,7 @@ impl Compiler {
                 }
             }
 
-            Expression::List(items) => {
+            ExprKind::List(items) => {
                 for item in items {
                     self.compile_expression(item)?;
                 }
@@ -1437,7 +1448,7 @@ impl Compiler {
                 self.emit_byte(items.len() as u8);
             }
 
-            Expression::Map(entries) => {
+            ExprKind::Map(entries) => {
                 for (key, value) in entries {
                     self.compile_expression(key)?;
                     self.compile_expression(value)?;
@@ -1446,7 +1457,7 @@ impl Compiler {
                 self.emit_byte(entries.len() as u8);
             }
 
-            Expression::Set(items) => {
+            ExprKind::Set(items) => {
                 for item in items {
                     self.compile_expression(item)?;
                 }
@@ -1454,7 +1465,7 @@ impl Compiler {
                 self.emit_byte(items.len() as u8);
             }
 
-            Expression::Index {
+            ExprKind::Index {
                 object,
                 index,
                 is_optional,
@@ -1478,11 +1489,11 @@ impl Compiler {
                 }
             }
 
-            Expression::OduCall(call) => {
+            ExprKind::OduCall(call) => {
                 self.compile_odu_call(call)?;
             }
 
-            Expression::Call { name, args } => {
+            ExprKind::Call { name, args } => {
                 // Push function
                 if let Some(expr) = self.aliases.get(name).cloned() {
                     self.compile_expression(&expr)?;
@@ -1523,7 +1534,7 @@ impl Compiler {
                 self.emit_byte(total_args as u8);
             }
 
-            Expression::Get {
+            ExprKind::Get {
                 object,
                 name,
                 is_optional,
@@ -1547,18 +1558,18 @@ impl Compiler {
                 }
             }
 
-            Expression::Await(expr) => {
+            ExprKind::Await(expr) => {
                 self.compile_expression(expr)?;
                 self.emit(OpCode::Await);
             }
 
-            Expression::MoveExpr(expr) => {
+            ExprKind::MoveExpr(expr) => {
                 // Babalawo guarantees move safety at compile time.
                 // At runtime, just evaluate the expression and leave its value on the stack.
                 self.compile_expression(expr)?;
             }
 
-            Expression::Try(expr) => {
+            ExprKind::Try(expr) => {
                 // §12.3: Error propagation operator `?`.
                 // Compile the inner expression, then emit PropagateError.
                 // The VM will pop the value: if it's a UserError it re-raises;
@@ -1567,7 +1578,7 @@ impl Compiler {
                 self.emit(OpCode::PropagateError);
             }
 
-            Expression::MethodCall {
+            ExprKind::MethodCall {
                 object,
                 method,
                 args,
@@ -1600,7 +1611,7 @@ impl Compiler {
                 }
             }
 
-            Expression::InterpolatedString { parts } => {
+            ExprKind::InterpolatedString { parts } => {
                 if parts.is_empty() {
                     self.emit(OpCode::PushStr);
                     self.emit_string("");
@@ -1623,16 +1634,14 @@ impl Compiler {
                 }
             }
 
-            Expression::Lambda { params, body } => {
+            ExprKind::Lambda { params, body } => {
                 // Compile as an anonymous function using the existing compile_function path.
                 // The synthetic name encodes the byte-offset so it is unique per compilation unit.
                 let anon_name = format!("<lambda@{}>", self.current_offset());
                 self.compile_function(&anon_name, params, body, false)?;
             }
-
-            Expression::Spanned { expr, span: _ } => {
-                // Compile the inner expression
-                self.compile_expression(expr)?;
+            ExprKind::Iso(inner) => {
+                self.compile_expression_inner(inner)?;
             }
         }
         Ok(())
@@ -1768,6 +1777,7 @@ fn collect_exports(program: &Program) -> Vec<String> {
             Statement::EseDef {
                 name,
                 visibility: Visibility::Public,
+                is_iranti: _,
                 ..
             } => out.push(name.clone()),
             Statement::OduDef {
@@ -1781,162 +1791,183 @@ fn collect_exports(program: &Program) -> Vec<String> {
     out
 }
 fn fold_expression(expr: &Expression) -> Expression {
-    match expr {
-        Expression::BinaryOp { left, op, right } => {
+    match &expr.kind {
+        ExprKind::BinaryOp { left, op, right } => {
             let left_folded = fold_expression(left);
             let right_folded = fold_expression(right);
-            match (left_folded, op, right_folded) {
+            match (left_folded.kind, op, right_folded.kind) {
                 // Arithmetic
-                (Expression::Int(l), BinaryOperator::Add, Expression::Int(r)) => {
-                    Expression::Int(l + r)
+                (ExprKind::Int(l), BinaryOperator::Add, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Int(l + r), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::Sub, Expression::Int(r)) => {
-                    Expression::Int(l - r)
+                (ExprKind::Int(l), BinaryOperator::Sub, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Int(l - r), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::Mul, Expression::Int(r)) => {
-                    Expression::Int(l * r)
+                (ExprKind::Int(l), BinaryOperator::Mul, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Int(l * r), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::Div, Expression::Int(r)) if r != 0 => {
-                    Expression::Int(l / r)
+                (ExprKind::Int(l), BinaryOperator::Div, ExprKind::Int(r)) if r != 0 => {
+                    Expression::new(ExprKind::Int(l / r), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::Mod, Expression::Int(r)) if r != 0 => {
-                    Expression::Int(l % r)
+                (ExprKind::Int(l), BinaryOperator::Mod, ExprKind::Int(r)) if r != 0 => {
+                    Expression::new(ExprKind::Int(l % r), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::Power, Expression::Int(r)) => {
+                (ExprKind::Int(l), BinaryOperator::Power, ExprKind::Int(r)) => {
                     if (0..=30).contains(&r) {
-                        Expression::Int(l.pow(r as u32))
+                        Expression::new(ExprKind::Int(l.pow(r as u32)), expr.span.clone())
                     } else {
-                        Expression::BinaryOp {
-                            left: Box::new(Expression::Int(l)),
-                            op: BinaryOperator::Power,
-                            right: Box::new(Expression::Int(r)),
-                        }
+                        Expression::new(
+                            ExprKind::BinaryOp {
+                                left: Box::new(Expression::new(
+                                    ExprKind::Int(l),
+                                    expr.span.clone(),
+                                )),
+                                op: BinaryOperator::Power,
+                                right: Box::new(Expression::new(
+                                    ExprKind::Int(r),
+                                    expr.span.clone(),
+                                )),
+                            },
+                            expr.span.clone(),
+                        )
                     }
                 }
 
-                (Expression::Float(l), BinaryOperator::Add, Expression::Float(r)) => {
-                    Expression::Float(l + r)
+                (ExprKind::Float(l), BinaryOperator::Add, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Float(l + r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::Sub, Expression::Float(r)) => {
-                    Expression::Float(l - r)
+                (ExprKind::Float(l), BinaryOperator::Sub, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Float(l - r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::Mul, Expression::Float(r)) => {
-                    Expression::Float(l * r)
+                (ExprKind::Float(l), BinaryOperator::Mul, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Float(l * r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::Div, Expression::Float(r)) => {
-                    Expression::Float(l / r)
+                (ExprKind::Float(l), BinaryOperator::Div, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Float(l / r), expr.span.clone())
                 }
 
                 // Mixing Int and Float (coerce to Float)
-                (Expression::Int(l), BinaryOperator::Add, Expression::Float(r)) => {
-                    Expression::Float((l as f64) + r)
+                (ExprKind::Int(l), BinaryOperator::Add, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Float((l as f64) + r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::Add, Expression::Int(r)) => {
-                    Expression::Float(l + (r as f64))
+                (ExprKind::Float(l), BinaryOperator::Add, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Float(l + (r as f64)), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::Sub, Expression::Float(r)) => {
-                    Expression::Float((l as f64) - r)
+                (ExprKind::Int(l), BinaryOperator::Sub, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Float((l as f64) - r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::Sub, Expression::Int(r)) => {
-                    Expression::Float(l - (r as f64))
+                (ExprKind::Float(l), BinaryOperator::Sub, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Float(l - (r as f64)), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::Mul, Expression::Float(r)) => {
-                    Expression::Float((l as f64) * r)
+                (ExprKind::Int(l), BinaryOperator::Mul, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Float((l as f64) * r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::Mul, Expression::Int(r)) => {
-                    Expression::Float(l * (r as f64))
+                (ExprKind::Float(l), BinaryOperator::Mul, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Float(l * (r as f64)), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::Div, Expression::Float(r)) => {
-                    Expression::Float((l as f64) / r)
+                (ExprKind::Int(l), BinaryOperator::Div, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Float((l as f64) / r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::Div, Expression::Int(r)) => {
-                    Expression::Float(l / (r as f64))
+                (ExprKind::Float(l), BinaryOperator::Div, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Float(l / (r as f64)), expr.span.clone())
                 }
 
                 // String concatenation
-                (Expression::String(l), BinaryOperator::Add, Expression::String(r)) => {
-                    Expression::String(format!("{}{}", l, r))
+                (ExprKind::String(l), BinaryOperator::Add, ExprKind::String(r)) => {
+                    Expression::new(ExprKind::String(format!("{}{}", l, r)), expr.span.clone())
                 }
 
                 // Comparison
-                (Expression::Int(l), BinaryOperator::Eq, Expression::Int(r)) => {
-                    Expression::Bool(l == r)
+                (ExprKind::Int(l), BinaryOperator::Eq, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Bool(l == r), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::NotEq, Expression::Int(r)) => {
-                    Expression::Bool(l != r)
+                (ExprKind::Int(l), BinaryOperator::NotEq, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Bool(l != r), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::Lt, Expression::Int(r)) => {
-                    Expression::Bool(l < r)
+                (ExprKind::Int(l), BinaryOperator::Lt, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Bool(l < r), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::LtEq, Expression::Int(r)) => {
-                    Expression::Bool(l <= r)
+                (ExprKind::Int(l), BinaryOperator::LtEq, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Bool(l <= r), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::Gt, Expression::Int(r)) => {
-                    Expression::Bool(l > r)
+                (ExprKind::Int(l), BinaryOperator::Gt, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Bool(l > r), expr.span.clone())
                 }
-                (Expression::Int(l), BinaryOperator::GtEq, Expression::Int(r)) => {
-                    Expression::Bool(l >= r)
+                (ExprKind::Int(l), BinaryOperator::GtEq, ExprKind::Int(r)) => {
+                    Expression::new(ExprKind::Bool(l >= r), expr.span.clone())
                 }
 
-                (Expression::Float(l), BinaryOperator::Eq, Expression::Float(r)) => {
-                    Expression::Bool(l == r)
+                (ExprKind::Float(l), BinaryOperator::Eq, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Bool(l == r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::NotEq, Expression::Float(r)) => {
-                    Expression::Bool(l != r)
+                (ExprKind::Float(l), BinaryOperator::NotEq, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Bool(l != r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::Lt, Expression::Float(r)) => {
-                    Expression::Bool(l < r)
+                (ExprKind::Float(l), BinaryOperator::Lt, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Bool(l < r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::LtEq, Expression::Float(r)) => {
-                    Expression::Bool(l <= r)
+                (ExprKind::Float(l), BinaryOperator::LtEq, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Bool(l <= r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::Gt, Expression::Float(r)) => {
-                    Expression::Bool(l > r)
+                (ExprKind::Float(l), BinaryOperator::Gt, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Bool(l > r), expr.span.clone())
                 }
-                (Expression::Float(l), BinaryOperator::GtEq, Expression::Float(r)) => {
-                    Expression::Bool(l >= r)
+                (ExprKind::Float(l), BinaryOperator::GtEq, ExprKind::Float(r)) => {
+                    Expression::new(ExprKind::Bool(l >= r), expr.span.clone())
                 }
 
                 // Logical
-                (Expression::Bool(l), BinaryOperator::And, Expression::Bool(r)) => {
-                    Expression::Bool(l && r)
+                (ExprKind::Bool(l), BinaryOperator::And, ExprKind::Bool(r)) => {
+                    Expression::new(ExprKind::Bool(l && r), expr.span.clone())
                 }
-                (Expression::Bool(l), BinaryOperator::Or, Expression::Bool(r)) => {
-                    Expression::Bool(l || r)
+                (ExprKind::Bool(l), BinaryOperator::Or, ExprKind::Bool(r)) => {
+                    Expression::new(ExprKind::Bool(l || r), expr.span.clone())
                 }
 
-                (l_f, op, r_f) => Expression::BinaryOp {
-                    left: Box::new(l_f),
-                    op: *op,
-                    right: Box::new(r_f),
-                },
+                (l_f, op, r_f) => Expression::new(
+                    ExprKind::BinaryOp {
+                        left: Box::new(Expression::new(l_f, expr.span.clone())),
+                        op: *op,
+                        right: Box::new(Expression::new(r_f, expr.span.clone())),
+                    },
+                    expr.span.clone(),
+                ),
             }
         }
-        Expression::UnaryOp { op, expr } => {
+        ExprKind::UnaryOp { op, expr } => {
             let expr_folded = fold_expression(expr);
-            match (op, expr_folded) {
-                (UnaryOperator::Neg, Expression::Int(n)) => Expression::Int(-n),
-                (UnaryOperator::Neg, Expression::Float(f)) => Expression::Float(-f),
-                (UnaryOperator::Not, Expression::Bool(b)) => Expression::Bool(!b),
-                (op, e_f) => Expression::UnaryOp {
-                    op: *op,
-                    expr: Box::new(e_f),
-                },
+            match (op, expr_folded.kind) {
+                (UnaryOperator::Neg, ExprKind::Int(n)) => {
+                    Expression::new(ExprKind::Int(-n), expr.span.clone())
+                }
+                (UnaryOperator::Neg, ExprKind::Float(f)) => {
+                    Expression::new(ExprKind::Float(-f), expr.span.clone())
+                }
+                (UnaryOperator::Not, ExprKind::Bool(b)) => {
+                    Expression::new(ExprKind::Bool(!b), expr.span.clone())
+                }
+                (op, e_f) => Expression::new(
+                    ExprKind::UnaryOp {
+                        op: *op,
+                        expr: Box::new(Expression::new(e_f, expr.span.clone())),
+                    },
+                    expr.span.clone(),
+                ),
             }
         }
-        Expression::MoveExpr(inner) => {
+        ExprKind::MoveExpr(inner) => {
             let inner_folded = fold_expression(inner);
-            Expression::MoveExpr(Box::new(inner_folded))
+            Expression::new(
+                ExprKind::MoveExpr(Box::new(inner_folded)),
+                expr.span.clone(),
+            )
         }
-        Expression::OduCall(call) => {
+        ExprKind::OduCall(call) => {
             let folded_args: Vec<Expression> = call.args.iter().map(fold_expression).collect();
             let all_consts = folded_args.iter().all(|a| {
                 matches!(
-                    a,
-                    Expression::Int(_)
-                        | Expression::Float(_)
-                        | Expression::String(_)
-                        | Expression::Bool(_)
+                    a.kind,
+                    ExprKind::Int(_) | ExprKind::Float(_) | ExprKind::String(_) | ExprKind::Bool(_)
                 )
             });
 
@@ -1949,15 +1980,15 @@ fn fold_expression(expr: &Expression) -> Expression {
                         let mut sum_float = 0.0;
                         let mut is_float = false;
                         for arg in &folded_args {
-                            match arg {
-                                Expression::Int(n) => {
+                            match &arg.kind {
+                                ExprKind::Int(n) => {
                                     if is_float {
                                         sum_float += *n as f64;
                                     } else {
                                         sum_int += n;
                                     }
                                 }
-                                Expression::Float(f) => {
+                                ExprKind::Float(f) => {
                                     if !is_float {
                                         is_float = true;
                                         sum_float = sum_int as f64 + *f;
@@ -1966,22 +1997,25 @@ fn fold_expression(expr: &Expression) -> Expression {
                                     }
                                 }
                                 _ => {
-                                    return Expression::OduCall(ifa_types::ast::OduCall {
-                                        domain: call.domain,
-                                        method: call.method.clone(),
-                                        args: folded_args,
-                                        is_optional: call.is_optional,
-                                        resolved_domain: call.resolved_domain,
-                                        resolved_method_id: call.resolved_method_id,
-                                        span: call.span.clone(),
-                                    });
+                                    return Expression::new(
+                                        ExprKind::OduCall(ifa_types::ast::OduCall {
+                                            domain: call.domain,
+                                            method: call.method.clone(),
+                                            args: folded_args,
+                                            is_optional: call.is_optional,
+                                            resolved_domain: call.resolved_domain,
+                                            resolved_method_id: call.resolved_method_id,
+                                            span: call.span.clone(),
+                                        }),
+                                        expr.span.clone(),
+                                    );
                                 }
                             }
                         }
                         return if is_float {
-                            Expression::Float(sum_float)
+                            Expression::new(ExprKind::Float(sum_float), expr.span.clone())
                         } else {
-                            Expression::Int(sum_int)
+                            Expression::new(ExprKind::Int(sum_int), expr.span.clone())
                         };
                     }
                     (ifa_types::OduDomain::Obara, "isodipupo")
@@ -1990,15 +2024,15 @@ fn fold_expression(expr: &Expression) -> Expression {
                         let mut prod_float = 1.0;
                         let mut is_float = false;
                         for arg in &folded_args {
-                            match arg {
-                                Expression::Int(n) => {
+                            match &arg.kind {
+                                ExprKind::Int(n) => {
                                     if is_float {
                                         prod_float *= *n as f64;
                                     } else {
                                         prod_int *= n;
                                     }
                                 }
-                                Expression::Float(f) => {
+                                ExprKind::Float(f) => {
                                     if !is_float {
                                         is_float = true;
                                         prod_float = prod_int as f64 * *f;
@@ -2007,62 +2041,77 @@ fn fold_expression(expr: &Expression) -> Expression {
                                     }
                                 }
                                 _ => {
-                                    return Expression::OduCall(ifa_types::ast::OduCall {
-                                        domain: call.domain,
-                                        method: call.method.clone(),
-                                        args: folded_args,
-                                        is_optional: call.is_optional,
-                                        resolved_domain: call.resolved_domain,
-                                        resolved_method_id: call.resolved_method_id,
-                                        span: call.span.clone(),
-                                    });
+                                    return Expression::new(
+                                        ExprKind::OduCall(ifa_types::ast::OduCall {
+                                            domain: call.domain,
+                                            method: call.method.clone(),
+                                            args: folded_args,
+                                            is_optional: call.is_optional,
+                                            resolved_domain: call.resolved_domain,
+                                            resolved_method_id: call.resolved_method_id,
+                                            span: call.span.clone(),
+                                        }),
+                                        expr.span.clone(),
+                                    );
                                 }
                             }
                         }
                         return if is_float {
-                            Expression::Float(prod_float)
+                            Expression::new(ExprKind::Float(prod_float), expr.span.clone())
                         } else {
-                            Expression::Int(prod_int)
+                            Expression::new(ExprKind::Int(prod_int), expr.span.clone())
                         };
                     }
                     (ifa_types::OduDomain::Ika, "gigun") | (ifa_types::OduDomain::Ika, "len")
                         if folded_args.len() == 1 =>
                     {
-                        if let Expression::String(s) = &folded_args[0] {
-                            return Expression::Int(s.chars().count() as i64);
+                        if let ExprKind::String(s) = &folded_args[0].kind {
+                            return Expression::new(
+                                ExprKind::Int(s.chars().count() as i64),
+                                expr.span.clone(),
+                            );
                         }
                     }
                     (ifa_types::OduDomain::Ika, "upper") if folded_args.len() == 1 => {
-                        if let Expression::String(s) = &folded_args[0] {
-                            return Expression::String(s.to_uppercase());
+                        if let ExprKind::String(s) = &folded_args[0].kind {
+                            return Expression::new(
+                                ExprKind::String(s.to_uppercase()),
+                                expr.span.clone(),
+                            );
                         }
                     }
                     (ifa_types::OduDomain::Ika, "lower") if folded_args.len() == 1 => {
-                        if let Expression::String(s) = &folded_args[0] {
-                            return Expression::String(s.to_lowercase());
+                        if let ExprKind::String(s) = &folded_args[0].kind {
+                            return Expression::new(
+                                ExprKind::String(s.to_lowercase()),
+                                expr.span.clone(),
+                            );
                         }
                     }
                     _ => {}
                 }
             }
 
-            Expression::OduCall(ifa_types::ast::OduCall {
-                domain: call.domain,
-                method: call.method.clone(),
-                args: folded_args,
-                is_optional: call.is_optional,
-                resolved_domain: call.resolved_domain,
-                resolved_method_id: call.resolved_method_id,
-                span: call.span.clone(),
-            })
+            Expression::new(
+                ExprKind::OduCall(ifa_types::ast::OduCall {
+                    domain: call.domain,
+                    method: call.method.clone(),
+                    args: folded_args,
+                    is_optional: call.is_optional,
+                    resolved_domain: call.resolved_domain,
+                    resolved_method_id: call.resolved_method_id,
+                    span: call.span.clone(),
+                }),
+                expr.span.clone(),
+            )
         }
-        Expression::InterpolatedString { parts } => {
+        ExprKind::InterpolatedString { parts } => {
             let folded_parts: Vec<InterpolatedPart> = parts
                 .iter()
                 .map(|part| match part {
                     InterpolatedPart::Literal(s) => InterpolatedPart::Literal(s.clone()),
                     InterpolatedPart::Expression(expr) => {
-                        InterpolatedPart::Expression(Box::new(fold_expression(expr)))
+                        InterpolatedPart::Expression(Box::new(fold_expression(&expr)))
                     }
                 })
                 .collect();
@@ -2073,43 +2122,43 @@ fn fold_expression(expr: &Expression) -> Expression {
                         if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut() {
                             last.push_str(&s);
                         } else {
-                            combined_parts.push(InterpolatedPart::Literal(s));
+                            combined_parts.push(InterpolatedPart::Literal(s.to_string()));
                         }
                     }
-                    InterpolatedPart::Expression(expr) => match *expr {
-                        Expression::String(s) => {
+                    InterpolatedPart::Expression(expr) => match &expr.kind {
+                        ExprKind::String(s) => {
                             if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut()
                             {
                                 last.push_str(&s);
                             } else {
-                                combined_parts.push(InterpolatedPart::Literal(s));
+                                combined_parts.push(InterpolatedPart::Literal(s.to_string()));
                             }
                         }
-                        Expression::Int(n) => {
+                        ExprKind::Int(n) => {
                             let s = n.to_string();
                             if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut()
                             {
                                 last.push_str(&s);
                             } else {
-                                combined_parts.push(InterpolatedPart::Literal(s));
+                                combined_parts.push(InterpolatedPart::Literal(s.to_string()));
                             }
                         }
-                        Expression::Float(f) => {
+                        ExprKind::Float(f) => {
                             let s = f.to_string();
                             if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut()
                             {
                                 last.push_str(&s);
                             } else {
-                                combined_parts.push(InterpolatedPart::Literal(s));
+                                combined_parts.push(InterpolatedPart::Literal(s.to_string()));
                             }
                         }
-                        Expression::Bool(b) => {
+                        ExprKind::Bool(b) => {
                             let s = b.to_string();
                             if let Some(InterpolatedPart::Literal(last)) = combined_parts.last_mut()
                             {
                                 last.push_str(&s);
                             } else {
-                                combined_parts.push(InterpolatedPart::Literal(s));
+                                combined_parts.push(InterpolatedPart::Literal(s.to_string()));
                             }
                         }
                         _ => combined_parts.push(InterpolatedPart::Expression(expr)),
@@ -2119,14 +2168,17 @@ fn fold_expression(expr: &Expression) -> Expression {
             #[allow(clippy::collapsible_if)]
             if combined_parts.len() == 1 {
                 if let InterpolatedPart::Literal(s) = &combined_parts[0] {
-                    return Expression::String(s.clone());
+                    return Expression::new(ExprKind::String(s.clone()), expr.span.clone());
                 }
             }
-            Expression::InterpolatedString {
-                parts: combined_parts,
-            }
+            Expression::new(
+                ExprKind::InterpolatedString {
+                    parts: combined_parts,
+                },
+                expr.span.clone(),
+            )
         }
-        _ => expr.clone(),
+        _ => Expression::new(expr.kind.clone(), expr.span.clone()),
     }
 }
 

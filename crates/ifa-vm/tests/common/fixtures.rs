@@ -43,10 +43,10 @@ pub fn sample_ifa_values() -> Vec<IfaValue> {
 pub fn simple_arithmetic_program() -> Program {
     Program {
         statements: vec![
-            Statement::Expression(Expression::BinaryOp {
-                left: Box::new(Expression::Literal(IfaValue::Int(1))),
+            Statement::Expression(ExprKind::BinaryOp {
+                left: Box::new(ExprKind::Literal(IfaValue::Int(1))),
                 op: crate::ast::BinaryOperator::Add,
-                right: Box::new(Expression::Literal(IfaValue::Int(2))),
+                right: Box::new(ExprKind::Literal(IfaValue::Int(2))),
             })
         ],
     }
@@ -58,16 +58,16 @@ pub fn complex_program() -> Program {
         statements: vec![
             Statement::VariableDeclaration {
                 name: "x".to_string(),
-                value: Expression::Literal(IfaValue::Int(10)),
+                value: ExprKind::Literal(IfaValue::Int(10)),
             },
             Statement::VariableDeclaration {
                 name: "y".to_string(),
-                value: Expression::Literal(IfaValue::Int(20)),
+                value: ExprKind::Literal(IfaValue::Int(20)),
             },
-            Statement::Expression(Expression::BinaryOp {
-                left: Box::new(Expression::Variable("x".to_string())),
+            Statement::Expression(ExprKind::BinaryOp {
+                left: Box::new(ExprKind::Variable("x".to_string())),
                 op: crate::ast::BinaryOperator::Add,
-                right: Box::new(Expression::Variable("y".to_string())),
+                right: Box::new(ExprKind::Variable("y".to_string())),
             }),
         ],
     }

@@ -185,7 +185,7 @@ opon: arinrin</code></pre>
                     runaway recursion from consuming host memory.</li>
             </ul>
 
-            <h3>3. GC Tuning <span class="tag-note">ASPIRATIONAL</span></h3>
+            <h3>3. GC Tuning <span class="tag-fact">WIRED & ACTIVE</span></h3>
             <p>Each <code>OponSize</code> defines a <code>gc_policy()</code> that returns
             tuning parameters for the cycle collector:</p>
 
@@ -201,8 +201,7 @@ opon: arinrin</code></pre>
                 </tbody>
             </table>
 
-            <p>Currently the VM uses a hardcoded 1,024-tick interval for cycle collection
-            — the <code>gc_policy()</code> values are not yet wired into the GC loop.
+            <p>The VM's execution loop queries this policy at runtime (via <code>self.opon_size.gc_policy()</code>) to dynamically trigger cycle collection at the defined tick intervals.
             The Ebo epoch system provides the primary deterministic memory release;
             the cycle collector is a fallback for cyclic <code>List</code>/<code>Map</code>
             structures that cannot be freed by reference counting alone.</p>
@@ -266,6 +265,10 @@ ayanmo log = opon.get_history();
 // Returns events ordered chronologically, oldest first</pre>
             </div>
 
+            <div class="note">
+                <strong>Scoping distinction:</strong> The Opon runtime flight recorder is a completely separate system from the 32-step compile-time <code>StateHistoryBuffer</code>. While the flight recorder tracks domain events at runtime for logging and debugging, the <code>StateHistoryBuffer</code> operates during static analysis in the Babalawo linter to provide time-travel diagnostics for borrow checking.
+            </div>
+
             <p>The flight recorder is used by the WASM bindings to stream "Spirit Logs"
             to the browser playground UI. The capacity of 256 events is a sacred number
             (16 × 16). Oldest events are overwritten when the buffer wraps.</p>
@@ -317,7 +320,7 @@ ayanmo log = opon.get_history();
                     <tr><td><strong>What it manages</strong></td><td>Slot store (addressed memory)</td>
                         <td>IfaGc heap (List, Map, Closure)</td></tr>
                     <tr><td><strong>Release trigger</strong></td><td>Epoch end (scope exit)</td>
-                        <td>Every 1,024 VM ticks</td></tr>
+                        <td>Dynamic VM ticks (e.g. 512 ticks for <code>arinrin</code>)</td></tr>
                     <tr><td><strong>Frees cycles?</strong></td><td>No (linear truncation)</td>
                         <td>Yes (Bacon-Rajan algorithm)</td></tr>
                     <tr><td><strong>Deterministic?</strong></td><td>Yes</td>
@@ -328,13 +331,8 @@ ayanmo log = opon.get_history();
                 </tbody>
             </table>
 
-            <div class="warning">
-                <strong>Note on "opon as GC hint":</strong> Some tutorial sections describe
-                <code>opon kekere</code> as "collect often" and <code>opon nla</code> as
-                "collect rarely". While <code>OponSize::gc_policy()</code> does define
-                tuning parameters for this purpose, the VM currently uses a hardcoded
-                1,024-tick interval regardless of the <code>#opon</code> setting. The
-                primary role of Opon is slot memory and limit enforcement, not GC tuning.
+            <div class="good">
+                <strong>Note on GC tuning:</strong> The <code>#opon</code> presets dynamically configure the cycle collection frequency. For example, <code>opon kekere</code> triggers cycle sweeps every 128 VM ticks, while <code>opon nla</code> runs every 2,048 ticks. This aligns GC overhead with your application's allocation profile.
             </div>
         </div>
 

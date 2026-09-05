@@ -1,5 +1,16 @@
 # Formalizing the Ifá-Lang Closed Effect Algebra
 
+> [!WARNING]
+> **Aspirational Design — The Effect Algebra is Not Completely Closed at the VM Level**
+> As of June 2026, the Ifá-Lang VM has 7 side-effectful opcodes that operate outside the formal 16-domain algebra without proper attribution:
+> 1. `Print` and `PrintRaw` (stdout)
+> 2. `Input` (stdin)
+> 3. `Import` (dynamic loading/module execution)
+> 4. `Yield` (control flow yielding)
+> 5. `EpochBegin` and `EpochEnd` (Ẹbọ epoch memory lifecycle management)
+> 6. `Store8`–`Store64` / `Load8`–`Load64` (MMIO hardware register operations)
+> While statically audited via Babalawo, these VM operations bypass the `CallOdu`/`CallOduFast` index routing checks. The `OduDomain::classify_effect` function has been introduced to resolve this runtime/static discrepancy.
+
 This document establishes the formal mathematical model, semantics, and proofs for Ifá-Lang's domain-indexed effect taxonomy. By indexing all platform-level operations into a closed set of 16 principal Odù, Ifá-Lang enables static auditability and monotonic resource/capability attenuation.
 
 ---

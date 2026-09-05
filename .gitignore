@@ -84,3 +84,12 @@ config.local.toml
 # External Repos (have their own git repos)
 # =============================================================================
 /oja-registry/
+
+# =============================================================================
+# Scratch / Temp Files
+# =============================================================================
+.freebuff/
+clippy_out.txt
+implementatiohhn_plan.md
+implementation_plan.md
+

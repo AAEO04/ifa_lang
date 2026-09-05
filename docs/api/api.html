@@ -36,42 +36,42 @@
             <div class="domain-card">
                 <h3>Ogbe <span class="pattern">1111</span></h3>
                 <p>System / Lifecycle</p>
-                <div class="methods">bere (version)</div>
+                <div class="methods">bere (version), args (àwọn_àríyànjú), env (ayika), cwd (ibi_isisiyi), eto (os), bi (init)</div>
             </div>
             <div class="domain-card">
                 <h3>Oyeku <span class="pattern">0000</span></h3>
                 <p>Exit / Sleep</p>
-                <div class="methods">jade (exit, quit, halt), sun (sleep, wait)</div>
+                <div class="methods">jade (exit, quit, halt), sun (sleep, wait), duro (stop)</div>
             </div>
             <div class="domain-card">
                 <h3>Iwori <span class="pattern">0110</span></h3>
                 <p>Time / Loops</p>
-                <div class="methods">bayi (now, current), akoko (timestamp)</div>
+                <div class="methods">bayi (now, current), akoko (timestamp), sun (sleep, delay)</div>
             </div>
             <div class="domain-card">
                 <h3>Odi <span class="pattern">1001</span></h3>
                 <p>File / I/O</p>
-                <div class="methods">ka (read), ko (write), wa (exists)</div>
+                <div class="methods">ka (read), ko (write), wa (exists), pa (delete), so_po (append), pa_re (rename), is_file, is_dir</div>
             </div>
             <div class="domain-card">
                 <h3>Irosu <span class="pattern">1100</span></h3>
                 <p>Log / Console I/O</p>
-                <div class="methods">fo (println), so (print), gbo (listen), gbo_nomba, mo (clear), san (flush), kigbe (error)</div>
+                <div class="methods">fo (println), so (print), ka (read, input), gbo (listen), gbo_nomba, mo (clear), san (flush), kigbe (error), siro_duro (play_blocking), kigbe_orin (beep)</div>
             </div>
             <div class="domain-card">
                 <h3>Owonrin <span class="pattern">0011</span></h3>
                 <p>Random / Entropy</p>
-                <div class="methods">pese (random)</div>
+                <div class="methods">pese (random, rand, nọmba), yan_bool (random_bool), yan_laarin (range), paaro (shuffle)</div>
             </div>
             <div class="domain-card">
                 <h3>Obara <span class="pattern">1000</span></h3>
                 <p>Math / Aggregation</p>
-                <div class="methods">fikun (add, plus), isodipupo (mul, times), agbara (pow), gbongbo (sqrt)</div>
+                <div class="methods">fikun (add, plus), isodipupo (mul, times), agbara (pow), gbongbo (sqrt), abs, apapo (sum), ile (floor), orule (ceil), yika (round), iyoku (mod), sin, cos, tan, log (ln), log10, exp, aropin (mean, avg), nla_julo (max), kere_julo (min), pi, e</div>
             </div>
             <div class="domain-card">
                 <h3>Okanran <span class="pattern">0001</span></h3>
                 <p>Error / Assert</p>
-                <div class="methods">sise (assert), kigbe (throw)</div>
+                <div class="methods">dajo (assert, se), kigbe (throw, error)</div>
             </div>
             <div class="domain-card">
                 <h3>Ogunda <span class="pattern">1110</span></h3>
@@ -86,7 +86,7 @@
             <div class="domain-card">
                 <h3>Ika <span class="pattern">0100</span></h3>
                 <p>String / Text</p>
-                <div class="methods">gigun (len), ge (slice), so (concat), oruko_html (html_title), tumo_html (strip_html)</div>
+                <div class="methods">gigun (len), ge (slice), so (concat), oruko_html (html_title), tumo_html (strip_html), regex, json, csv, url, rope operations</div>
             </div>
             <div class="domain-card">
                 <h3>Oturupon <span class="pattern">0010</span></h3>
@@ -96,12 +96,12 @@
             <div class="domain-card">
                 <h3>Otura <span class="pattern">1011</span></h3>
                 <p>Net / HTTP</p>
-                <div class="methods">gba (get, fetch), ran (post)</div>
+                <div class="methods">gba (get, fetch), ran (post), de (listen), soro (connect), pa (close), ṣàyẹ̀wò (check_host)</div>
             </div>
             <div class="domain-card">
                 <h3>Irete <span class="pattern">1101</span></h3>
                 <p>Crypto / Hash (requires crypto feature)</p>
-                <div class="methods">hash (sha256), hmac (hmac_sha256), base64 (base64_encode), decode (base64_decode)</div>
+                <div class="methods">hash (sha256), hmac (hmac_sha256), base64 (base64_encode), decode (base64_decode), sha512, ed25519, chacha20, zstd, hex, random_bytes</div>
             </div>
             <div class="domain-card">
                 <h3>Ose <span class="pattern">1010</span></h3>
@@ -139,39 +139,40 @@
             </div>
         </div>
 
-        <h2>Stacks</h2>
+        <h2>Stacks <span style="font-size:0.6em;color:var(--dim);font-weight:normal">(Future / External Packages)</span></h2>
+        <p style="color:var(--dim);font-size:0.85rem">Stacks are external packages resolved via <code>iba</code> imports — not yet implemented in the standard library. Listed here as the product vision.</p>
         <div class="grid">
-            <div class="domain-card">
+            <div class="domain-card" style="opacity:0.7">
                 <h3>Crypto</h3>
                 <p>Production cryptography</p>
                 <div class="methods">SHA, HMAC, Argon2, AES, SecureRng</div>
             </div>
-            <div class="domain-card">
+            <div class="domain-card" style="opacity:0.7">
                 <h3>Backend</h3>
                 <p>HTTP servers</p>
                 <div class="methods">serve, router, get, post, middleware</div>
             </div>
-            <div class="domain-card">
+            <div class="domain-card" style="opacity:0.7">
                 <h3>Frontend</h3>
                 <p>XSS-safe HTML</p>
                 <div class="methods">html, escape, div, form, components</div>
             </div>
-            <div class="domain-card">
+            <div class="domain-card" style="opacity:0.7">
                 <h3>GameDev</h3>
                 <p>Game development</p>
                 <div class="methods">Vec2, AABB, collision, sprites, ECS</div>
             </div>
-            <div class="domain-card">
+            <div class="domain-card" style="opacity:0.7">
                 <h3>ML</h3>
                 <p>Machine learning</p>
                 <div class="methods">tensor, matmul, relu, softmax, conv2d</div>
             </div>
-            <div class="domain-card">
+            <div class="domain-card" style="opacity:0.7">
                 <h3>IoT</h3>
                 <p>Embedded/Hardware</p>
                 <div class="methods">GPIO, Serial, I2C, SPI, sensors</div>
             </div>
-            <div class="domain-card">
+            <div class="domain-card" style="opacity:0.7">
                 <h3>Fusion</h3>
                 <p>Fullstack hybrid</p>
                 <div class="methods">app, api, ui, IPC, state sync</div>

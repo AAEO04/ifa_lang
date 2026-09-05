@@ -37,11 +37,12 @@ Phase 1 (IMPLEMENTED) — freeze/thaw deep copy
     Babalawo MoveTracker enforces use-after-move at compile time.
     Source: crates/ifa-vm/src/actor.rs:275
 
-Phase 1.5 (IMPLEMENTED) — yanda logical move
+Phase 1.5 (IMPLEMENTED) — yanda logical move with MoveLocal
     Babalawo statically guarantees the sender loses access after yanda.
-    The runtime still clones the Arc pointer (O(1) for scalars,
-    O(refcount) for heap types), but no deep copy occurs.
-    Source: crates/ifa-babalawo/src/movement.rs
+    The MoveLocal opcode (0x1F) replaces the source slot with Null
+    at runtime for identifier moves. Arc pointer clone for heap types.
+    Source: crates/ifa-babalawo/src/movement.rs, crates/ifa-bytecode/src/lib.rs,
+            crates/ifa-compiler/src/lib.rs, crates/ifa-vm/src/vm.rs
 
 Phase 2 (DRAFT) — Ìwòrì Arc/Rc toggle
     Compile-time feature flag switches IfaValue heap wrappers
@@ -67,6 +68,9 @@ Phase 3 (DRAFT) — Opon Slab Allocator
 
 | Document | Summary |
 |----------|---------|
+| [unique-memory-safety.md](unique-memory-safety.md) | Source-verified summary of Ifa-Lang's layered memory-safety techniques and roadmap |
+| [cheri-integration.md](cheri-integration.md) | Analysis of CHERI as a hardware hardening target for Ifa-Lang's VM, Opon, and future `iso`/`yanda` transfer model |
+| [crates-engineering-review.md](crates-engineering-review.md) | Engineering review of the `crates/` tree through systems, compiler, VM, algorithm, and invariants lenses |
 | [memory-concurrency-analysis.md](memory-concurrency-analysis.md) | Audit of current memory and concurrency architecture |
 | [engineering-analysis.md](engineering-analysis.md) | Engineering evaluation of the codebase |
 | [formal-foundations.md](formal-foundations.md) | Formal foundations and type theory analysis |

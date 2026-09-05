@@ -26,14 +26,12 @@ pub mod error;
 #[allow(unsafe_code)]
 pub mod gc;
 pub mod methods;
-pub mod nan_box;
 pub mod odu_metadata;
 pub mod registry;
 pub mod shared;
 pub mod target;
 pub mod token;
 pub mod traits;
-pub mod value;
 pub mod value_union; // Unified Type System (Internal)
 
 pub mod ast;
@@ -45,14 +43,15 @@ pub mod bytecode;
 pub use compact_str::CompactString;
 pub use domain::OduDomain;
 pub use error::{IfaError, IfaResult, SpannedError, format_error};
-pub use nan_box::{BoxedPrimitive, NanBox, NanBoxError};
 pub use registry::{ResourceRegistry, get_current_actor_id, set_current_actor_id};
 pub use shared::IfaShared;
 pub use token::ResourceToken;
 pub use traits::*;
-// pub use value::IfaValue; // Old Enum
 pub use gc::{Color, CycleHeader, CycleNode, IfaGc};
 pub use value_union::IfaValue; // New Tagged Union
+
+#[cfg(feature = "vm")]
+pub use value_union::ActorData;
 
 pub use ast::Statement;
 
